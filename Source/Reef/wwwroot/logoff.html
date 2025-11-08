@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging Out &middot; Reef</title>
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <style>
+        body {
+            /* Using Inter font from the original */
+            font-family: 'Inter', sans-serif;
+        }
+        
+        /* Simple fade-in animation for the content */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            /* We'll set a slight delay so the page loads first */
+            animation: fadeIn 0.6s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0; /* Start hidden */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 antialiased">
+    
+    <div class="flex min-h-screen w-full flex-col items-center justify-center space-y-6 p-8">
+        
+        <div class="fade-in flex flex-col items-center space-y-6 text-center">
+            
+            <i data-lucide="loader-2" class="h-16 w-16 animate-spin text-blue-500"></i>
+            
+            <h1 class="text-4xl font-bold tracking-tight text-white">
+                You've been logged out.
+            </h1>
+            <p class="text-lg text-gray-400">
+                Thanks for the hard work. We're redirecting you back...
+            </p>
+        </div>
+        
+    </div>
+
+    <script>
+        // 1. Initialize the Lucide icon so it renders
+        lucide.createIcons();
+
+        // 2. Perform the actual client-side logout by clearing session data
+        localStorage.removeItem('reef_token');
+        localStorage.removeItem('reef_username');
+        localStorage.removeItem('reef_role');
+
+        // 3. Set the total time to show this page (e.g., 2.5 seconds)
+        const redirectDelay = 2500;
+        const fadeOutTime = 500; // 0.5s fade-out
+
+        // 3. Wait for the delay, then start the fade-out
+        setTimeout(() => {
+            
+            // Add a CSS transition for opacity
+            document.body.style.transition = `opacity ${fadeOutTime}ms ease-in`;
+            // Trigger the fade-out
+            document.body.style.opacity = '0';
+            
+            // Wait for the fade-out animation to finish, *then* redirect.
+            // This prevents a jarring "snap" before the page changes.
+            setTimeout(() => {
+                window.location.href = '/index.html';
+            }, fadeOutTime); 
+
+        }, redirectDelay - fadeOutTime); // Start fading out *before* the total delay is over
+    </script>
+</body>
+</html>

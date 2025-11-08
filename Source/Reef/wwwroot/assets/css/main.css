@@ -1,0 +1,17 @@
+body {
+    font-family: 'Inter', sans-serif;
+}
+.user-menu-expanded {
+    max-height: 200px;
+    transition: max-height 0.3s ease-in-out;
+}
+.user-menu-collapsed {
+    max-height: 0;
+    transition: max-height 0.3s ease-in-out;
+}
+.disable-select {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}

@@ -1,0 +1,13 @@
+services:
+  reef:
+    image: ghcr.io/melosso/reef:latest
+    ports:
+      - "8085:8085"
+    volumes:
+      - reef_data:/app
+      - ./exports:/app/exports
+    environment:
+      - REEF_ENCRYPTION_KEY=YourKeyHere
+
+volumes:
+  reef_data:
