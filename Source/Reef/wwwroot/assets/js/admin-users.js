@@ -56,7 +56,7 @@ async function loadUsers() {
             const deleteButtonDisabled = isFirstUser ? 'disabled' : '';
             
             // Handle both camelCase and PascalCase from API
-            const lastSeenAt = user.lastSeenAt || user.LastSeenAt;
+            const lastSeenAt = user.lastLoginAt || user.lastSeenAt || user.LastSeenAt;
             const lastSeenText = getRelativeTime(lastSeenAt);
             const lastSeenTitle = lastSeenAt ? new Date(lastSeenAt).toLocaleString() : 'Never';
 
