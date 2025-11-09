@@ -27,7 +27,6 @@ async function loadProfiles() {
         allProfiles = result.data || [];
         applyFilters();
         renderProfiles();
-        showMessage('Profiles loaded successfully', 'success', true);
     } catch (error) {
         console.error('Error loading profiles:', error);
         showMessage('Error loading profiles: ' + error.message, 'error');

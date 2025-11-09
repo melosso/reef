@@ -23,16 +23,9 @@ async function loadQuarantined() {
         const result = await response.json();
         allQuarantined = result.data || [];
 
-        // If no data, generate mock data for demonstration
-        if (allQuarantined.length === 0) {
-            allQuarantined = generateMockQuarantined();
-        }
-
         applyFilters();
         renderQuarantined();
         updateSummaryCards();
-
-        showMessage('Quarantine data loaded successfully', 'success', true);
     } catch (error) {
         console.error('Error loading quarantine:', error);
         showMessage('Error loading quarantine data: ' + error.message, 'error');
@@ -44,66 +37,6 @@ async function loadQuarantined() {
             </tr>
         `;
     }
-}
-
-// Generate mock quarantined rows for demonstration
-function generateMockQuarantined() {
-    const profiles = [
-        'Customer Import (REST)',
-        'Inventory Sync (S3)',
-        'Orders (Database)',
-        'Product Updates (FTP)'
-    ];
-    const errorTypes = ['validation', 'constraint', 'conversion', 'other'];
-    const statuses = ['pending', 'reviewed', 'resolved'];
-
-    const quarantined = [];
-    for (let i = 1; i <= 15; i++) {
-        const errorType = errorTypes[Math.floor(Math.random() * errorTypes.length)];
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-        quarantined.push({
-            id: 5000 + i,
-            executionId: 1000 + Math.floor(Math.random() * 50),
-            rowId: 10000 + Math.floor(Math.random() * 50000),
-            profileId: Math.floor(Math.random() * 10) + 1,
-            profileName: profiles[Math.floor(Math.random() * profiles.length)],
-            errorType: errorType,
-            errorMessage: getErrorMessage(errorType),
-            rowData: generateRowData(),
-            quarantinedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            status: status,
-            reviewNotes: status === 'pending' ? '' : 'Reviewed and waiting for fix'
-        });
-    }
-
-    return quarantined;
-}
-
-// Generate random row data
-function generateRowData() {
-    return {
-        'id': Math.floor(Math.random() * 100000),
-        'email': `customer${Math.floor(Math.random() * 1000)}@example.com`,
-        'first_name': 'John',
-        'last_name': 'Doe',
-        'phone': '555-0123',
-        'address': '123 Main St',
-        'city': 'Anytown',
-        'state': 'CA',
-        'zip': '12345'
-    };
-}
-
-// Get error message by type
-function getErrorMessage(errorType) {
-    const messages = {
-        'validation': 'Email address validation failed: invalid format',
-        'constraint': 'Unique constraint violation on email column',
-        'conversion': 'Cannot convert value "N/A" to integer for age field',
-        'other': 'Unknown error during row processing'
-    };
-    return messages[errorType] || 'Unknown error';
 }
 
 // Load profiles for dropdown

@@ -21,45 +21,57 @@ public class DatabaseInitializer
 
     public async Task InitializeAsync()
     {
-        using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync();
+            Log.Debug("Database connection opened successfully");
 
-        // Create all tables
-        await CreateConnectionsTableAsync(connection);
-        await CreateProfileGroupsTableAsync(connection);
-        await CreateProfilesTableAsync(connection);
-        await CreateProfileParametersTableAsync(connection);
-        await CreateProfileExecutionsTableAsync(connection);
-        await CreateApiKeysTableAsync(connection);
-        await CreateWebhookTriggersTableAsync(connection);
-        await CreateUsersTableAsync(connection);
-        await CreateAuditLogTableAsync(connection);
-        await CreateProfileDependenciesTableAsync(connection);
-        await CreateScheduledTasksTableAsync(connection);
+            // Create all tables
+            try { await CreateConnectionsTableAsync(connection); Log.Debug("✓ Connections table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating Connections table"); throw; }
+            try { await CreateProfileGroupsTableAsync(connection); Log.Debug("✓ ProfileGroups table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ProfileGroups table"); throw; }
+            try { await CreateProfilesTableAsync(connection); Log.Debug("✓ Profiles table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating Profiles table"); throw; }
+            try { await CreateProfileParametersTableAsync(connection); Log.Debug("✓ ProfileParameters table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ProfileParameters table"); throw; }
+            try { await CreateProfileExecutionsTableAsync(connection); Log.Debug("✓ ProfileExecutions table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ProfileExecutions table"); throw; }
+            try { await CreateApiKeysTableAsync(connection); Log.Debug("✓ ApiKeys table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ApiKeys table"); throw; }
+            try { await CreateWebhookTriggersTableAsync(connection); Log.Debug("✓ WebhookTriggers table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating WebhookTriggers table"); throw; }
+            try { await CreateUsersTableAsync(connection); Log.Debug("✓ Users table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating Users table"); throw; }
+            try { await CreateAuditLogTableAsync(connection); Log.Debug("✓ AuditLog table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating AuditLog table"); throw; }
+            try { await CreateProfileDependenciesTableAsync(connection); Log.Debug("✓ ProfileDependencies table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ProfileDependencies table"); throw; }
+            try { await CreateScheduledTasksTableAsync(connection); Log.Debug("✓ ScheduledTasks table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ScheduledTasks table"); throw; }
 
-        // Reef Tables
-        await CreateDestinationsTableAsync(connection);
-        await CreateQueryTemplatesTableAsync(connection);
-        await CreateProfileTransformationsTableAsync(connection);
-        await CreateJobsTableAsync(connection);
-        await CreateJobExecutionsTableAsync(connection);
-        await CreateJobDependenciesTableAsync(connection);
+            // Reef Tables
+            try { await CreateDestinationsTableAsync(connection); Log.Debug("✓ Destinations table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating Destinations table"); throw; }
+            try { await CreateQueryTemplatesTableAsync(connection); Log.Debug("✓ QueryTemplates table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating QueryTemplates table"); throw; }
+            try { await CreateProfileTransformationsTableAsync(connection); Log.Debug("✓ ProfileTransformations table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ProfileTransformations table"); throw; }
+            try { await CreateJobsTableAsync(connection); Log.Debug("✓ Jobs table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating Jobs table"); throw; }
+            try { await CreateJobExecutionsTableAsync(connection); Log.Debug("✓ JobExecutions table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating JobExecutions table"); throw; }
+            try { await CreateJobDependenciesTableAsync(connection); Log.Debug("✓ JobDependencies table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating JobDependencies table"); throw; }
 
-        // Import Tables
-        await CreateImportProfilesTableAsync(connection);
-        await CreateImportJobsTableAsync(connection);
-        await CreateImportExecutionsTableAsync(connection);
-        await CreateFieldMappingsTableAsync(connection);
-        await CreateValidationRulesTableAsync(connection);
+            // Import Tables
+            try { await CreateImportProfilesTableAsync(connection); Log.Debug("✓ ImportProfiles table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ImportProfiles table"); throw; }
+            try { await CreateImportJobsTableAsync(connection); Log.Debug("✓ ImportJobs table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ImportJobs table"); throw; }
+            try { await CreateImportExecutionsTableAsync(connection); Log.Debug("✓ ImportExecutions table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ImportExecutions table"); throw; }
+            try { await CreateFieldMappingsTableAsync(connection); Log.Debug("✓ FieldMappings table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating FieldMappings table"); throw; }
+            try { await CreateValidationRulesTableAsync(connection); Log.Debug("✓ ValidationRules table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ValidationRules table"); throw; }
+            try { await CreateImportQuarantineTableAsync(connection); Log.Debug("✓ ImportQuarantine table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating ImportQuarantine table"); throw; }
 
-        // Delta Sync Table
-        await CreateDeltaSyncStateTableAsync(connection);
+            // Delta Sync Table
+            try { await CreateDeltaSyncStateTableAsync(connection); Log.Debug("✓ DeltaSyncState table initialized"); } catch (Exception ex) { Log.Error(ex, "Error creating DeltaSyncState table"); throw; }
 
-        // Apply schema migrations for existing databases
-        await ApplyMigrationsAsync(connection);
+            // Apply schema migrations for existing databases
+            try { await ApplyMigrationsAsync(connection); Log.Debug("✓ Schema migrations applied"); } catch (Exception ex) { Log.Error(ex, "Error applying migrations"); throw; }
 
-        // Create default admin user if not exists
-        await CreateDefaultUser(connection);
+            // Create default admin user if not exists
+            try { await CreateDefaultUser(connection); Log.Debug("✓ Default user created"); } catch (Exception ex) { Log.Error(ex, "Error creating default user"); throw; }
+
+            Log.Information("✓ Database initialization completed successfully");
+        }
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Critical error during database initialization");
+            throw;
+        }
     }
 
     // Add missing table: ProfileDependencies
@@ -1292,6 +1304,37 @@ public class DatabaseInitializer
             );
 
             CREATE INDEX IF NOT EXISTS idx_validationrules_profile ON ValidationRules(ImportProfileId);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateImportQuarantineTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS ImportQuarantine (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportExecutionId INTEGER NOT NULL,
+                ImportProfileId INTEGER NOT NULL,
+                RowData TEXT NOT NULL,
+                ErrorType TEXT NOT NULL,
+                ErrorMessage TEXT NOT NULL,
+                ErrorDetails TEXT NULL,
+                SourceRowNumber INTEGER NULL,
+                QuarantinedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                ReviewedAt TEXT NULL,
+                ReviewedBy TEXT NULL,
+                ReviewNotes TEXT NULL,
+                Status TEXT NOT NULL DEFAULT 'Pending',
+                ResolutionAction TEXT NULL,
+
+                FOREIGN KEY (ImportExecutionId) REFERENCES ImportExecutions(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_quarantine_execution ON ImportQuarantine(ImportExecutionId);
+            CREATE INDEX IF NOT EXISTS idx_quarantine_profile ON ImportQuarantine(ImportProfileId);
+            CREATE INDEX IF NOT EXISTS idx_quarantine_status ON ImportQuarantine(Status);
+            CREATE INDEX IF NOT EXISTS idx_quarantine_created ON ImportQuarantine(QuarantinedAt);
         ";
         await connection.ExecuteAsync(sql);
     }

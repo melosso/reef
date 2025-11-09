@@ -436,6 +436,7 @@ public class Program
 
         // Import endpoints (new system)
         app.MapImportEndpoints();
+        app.MapImportExecutionHistoryEndpoints();
 
         Log.Debug("✓ Endpoints mapped");
     }

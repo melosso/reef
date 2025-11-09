@@ -1145,7 +1145,7 @@ async function deleteJob(id) {
 }
 
 function viewJobHistory(jobId) {
-    window.location.href = `/executions.html?jobId=${jobId}`;
+    window.location.href = `/import-executions.html?jobId=${jobId}`;
 }
 
 document.getElementById('add-job-form').addEventListener('submit', async (e) => {

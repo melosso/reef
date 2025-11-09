@@ -28,7 +28,7 @@ function startAutoRefresh() {
 }
 
 // Load all execution histories from API
-async function loadExecutions(showMessage = true) {
+async function loadExecutions(shouldShowMessage = true) {
     try {
         const response = await fetch('/api/imports/executions');
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -36,21 +36,16 @@ async function loadExecutions(showMessage = true) {
         const result = await response.json();
         allExecutions = result.data || [];
 
-        // If no data, generate mock data for demonstration
-        if (allExecutions.length === 0) {
-            allExecutions = generateMockExecutions();
-        }
-
         applyFilters();
         renderExecutions();
         updateSummaryCards();
 
-        if (showMessage) {
-            showMessage('Executions loaded successfully', 'success', true);
+        if (shouldShowMessage) {
+            // Nothing to show on successful load
         }
     } catch (error) {
         console.error('Error loading executions:', error);
-        if (showMessage) {
+        if (shouldShowMessage) {
             showMessage('Error loading executions: ' + error.message, 'error');
         }
         document.getElementById('executions-tbody').innerHTML = `
@@ -61,41 +56,6 @@ async function loadExecutions(showMessage = true) {
             </tr>
         `;
     }
-}
-
-// Generate mock execution data for demonstration
-function generateMockExecutions() {
-    const statuses = ['completed', 'running', 'failed', 'canceled'];
-    const profiles = [
-        'Customer Import (REST)',
-        'Inventory Sync (S3)',
-        'Orders (Database)',
-        'Product Updates (FTP)'
-    ];
-
-    const executions = [];
-    for (let i = 1; i <= 50; i++) {
-        const status = statuses[Math.floor(Math.random() * statuses.length)];
-        const startTime = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000);
-        const endTime = new Date(startTime.getTime() + (10 + Math.random() * 300) * 1000);
-
-        executions.push({
-            id: 1000 + i,
-            profileId: Math.floor(Math.random() * 10) + 1,
-            profileName: profiles[Math.floor(Math.random() * profiles.length)],
-            status: status,
-            startTime: startTime.toISOString(),
-            endTime: status === 'running' ? null : endTime.toISOString(),
-            rowsRead: Math.floor(Math.random() * 10000) + 100,
-            rowsWritten: Math.floor(Math.random() * 10000),
-            rowsFailed: status === 'failed' ? Math.floor(Math.random() * 100) : 0,
-            rowsSkipped: Math.floor(Math.random() * 500),
-            triggeredBy: 'user@example.com',
-            message: status === 'failed' ? 'Connection timeout' : 'Success'
-        });
-    }
-
-    return executions;
 }
 
 // Load profiles for dropdown
