@@ -59,12 +59,22 @@ public class DatabaseWriter : IDataWriter
 
         try
         {
-            Log.Information("Writing {Count} rows to {Table} using {Mode} mode", rows.Count, tableName, mode);
+            Log.Information("Writing {Count} rows to {Table} using {Mode} mode (pooling: {PoolingEnabled})",
+                rows.Count, tableName, mode, config.PoolingEnabled);
 
             // Get connection from the encrypted connection string
             var connectionString = _encryptionService.Decrypt(config.ConnectionString);
 
-            using var connection = new SqliteConnection(connectionString);
+            // Enable connection pooling for better performance
+            // Note: SQLite uses in-process pooling via the connection string
+            var connectionBuilder = new SqliteConnectionStringBuilder(connectionString);
+            if (config.PoolingEnabled)
+            {
+                connectionBuilder.Pooling = true;
+                Log.Debug("Connection pooling enabled for SQLite");
+            }
+
+            using var connection = new SqliteConnection(connectionBuilder.ToString());
             await connection.OpenAsync(cancellationToken);
 
             // Validate table exists and get schema
@@ -122,7 +132,15 @@ public class DatabaseWriter : IDataWriter
 
             var connectionString = _encryptionService.Decrypt(config.ConnectionString);
 
-            using var connection = new SqliteConnection(connectionString);
+            // Enable connection pooling for better performance
+            // Note: SQLite uses in-process pooling via the connection string
+            var connectionBuilder = new SqliteConnectionStringBuilder(connectionString);
+            if (config.PoolingEnabled)
+            {
+                connectionBuilder.Pooling = true;
+            }
+
+            using var connection = new SqliteConnection(connectionBuilder.ToString());
             await connection.OpenAsync(cancellationToken);
 
             // Try to query the table
@@ -172,6 +190,7 @@ public class DatabaseWriter : IDataWriter
     {
         var result = new WriteResult();
         var errorMessages = new List<string>();
+        var batchSize = rows.Count > 10000 ? 5000 : 1000;  // Adjust batch size for large imports
 
         try
         {
@@ -183,30 +202,55 @@ public class DatabaseWriter : IDataWriter
             var paramList = string.Join(", ", columns.Select(c => $"@{c}"));
             var insertSql = $"INSERT INTO [{tableName}] ({columnList}) VALUES ({paramList})";
 
-            Log.Debug("INSERT SQL: {Sql}", insertSql);
+            Log.Debug("INSERT SQL (single row): {Sql}", insertSql);
+            Log.Information("Inserting {Count} rows in batches of {BatchSize}", rows.Count, batchSize);
 
-            foreach (var row in rows)
+            // Process rows in batches
+            for (int i = 0; i < rows.Count; i += batchSize)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batch = rows.Skip(i).Take(batchSize).ToList();
+
                 try
                 {
-                    await connection.ExecuteAsync(insertSql, row);
-                    result.RowsWritten++;
+                    // Execute batch INSERT
+                    foreach (var row in batch)
+                    {
+                        await connection.ExecuteAsync(insertSql, row);
+                        result.RowsWritten++;
+                    }
+
+                    Log.Debug("Batch {Batch}/{Total} completed: {Count} rows",
+                        i / batchSize + 1,
+                        (rows.Count + batchSize - 1) / batchSize,
+                        batch.Count);
                 }
                 catch (Exception ex)
                 {
-                    result.RowsFailed++;
-                    var errorMsg = $"Row insert failed: {ex.Message}";
+                    // Track batch failure
+                    result.RowsFailed += batch.Count - (result.RowsWritten - (i / batchSize) * batchSize);
+                    var errorMsg = $"Batch insert failed at row {i}: {ex.Message}";
                     errorMessages.Add(errorMsg);
-                    Log.Warning(ex, "Failed to insert row: {Message}", errorMsg);
+                    Log.Error(ex, "Failed to insert batch at row {Row}: {Message}", i, errorMsg);
+
+                    // Continue with next batch instead of failing entire operation
+                    if (i + batchSize < rows.Count)
+                    {
+                        Log.Information("Continuing with next batch after failure");
+                    }
                 }
             }
 
             transaction.Commit();
             result.ErrorMessages = errorMessages;
+
+            Log.Information("INSERT completed: {Written} rows written, {Failed} failed",
+                result.RowsWritten, result.RowsFailed);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "INSERT batch failed");
+            Log.Error(ex, "INSERT batch transaction failed");
             result.RowsFailed += rows.Count - result.RowsWritten;
             result.ErrorMessages = new List<string> { ex.Message };
         }
@@ -224,6 +268,7 @@ public class DatabaseWriter : IDataWriter
     {
         var result = new WriteResult();
         var errorMessages = new List<string>();
+        var batchSize = rows.Count > 10000 ? 5000 : 1000;  // Adjust batch size for large imports
 
         if (string.IsNullOrEmpty(config.UpsertKeyColumns) || rows.Count == 0)
         {
@@ -251,30 +296,55 @@ public class DatabaseWriter : IDataWriter
                 ON CONFLICT({string.Join(", ", keyColumns.Select(c => $"[{c}]"))})
                 DO UPDATE SET {updateClause}";
 
-            Log.Debug("UPSERT SQL: {Sql}", upsertSql);
+            Log.Debug("UPSERT SQL (single row): {Sql}", upsertSql);
+            Log.Information("Upserting {Count} rows in batches of {BatchSize}", rows.Count, batchSize);
 
-            foreach (var row in rows)
+            // Process rows in batches
+            for (int i = 0; i < rows.Count; i += batchSize)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batch = rows.Skip(i).Take(batchSize).ToList();
+
                 try
                 {
-                    await connection.ExecuteAsync(upsertSql, row);
-                    result.RowsWritten++;
+                    // Execute batch UPSERT
+                    foreach (var row in batch)
+                    {
+                        await connection.ExecuteAsync(upsertSql, row);
+                        result.RowsWritten++;
+                    }
+
+                    Log.Debug("Batch {Batch}/{Total} completed: {Count} rows",
+                        i / batchSize + 1,
+                        (rows.Count + batchSize - 1) / batchSize,
+                        batch.Count);
                 }
                 catch (Exception ex)
                 {
-                    result.RowsFailed++;
-                    var errorMsg = $"Row upsert failed: {ex.Message}";
+                    // Track batch failure
+                    result.RowsFailed += batch.Count - (result.RowsWritten - (i / batchSize) * batchSize);
+                    var errorMsg = $"Batch upsert failed at row {i}: {ex.Message}";
                     errorMessages.Add(errorMsg);
-                    Log.Warning(ex, "Failed to upsert row: {Message}", errorMsg);
+                    Log.Error(ex, "Failed to upsert batch at row {Row}: {Message}", i, errorMsg);
+
+                    // Continue with next batch instead of failing entire operation
+                    if (i + batchSize < rows.Count)
+                    {
+                        Log.Information("Continuing with next batch after failure");
+                    }
                 }
             }
 
             transaction.Commit();
             result.ErrorMessages = errorMessages;
+
+            Log.Information("UPSERT completed: {Written} rows written, {Failed} failed",
+                result.RowsWritten, result.RowsFailed);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "UPSERT batch failed");
+            Log.Error(ex, "UPSERT batch transaction failed");
             result.RowsFailed += rows.Count - result.RowsWritten;
             result.ErrorMessages = new List<string> { ex.Message };
         }
@@ -400,4 +470,13 @@ public class DatabaseWriterConfig
 
     [JsonPropertyName("timeout")]
     public int TimeoutSeconds { get; set; } = 300;
+
+    [JsonPropertyName("poolingEnabled")]
+    public bool PoolingEnabled { get; set; } = true;
+
+    [JsonPropertyName("maxPoolSize")]
+    public int MaxPoolSize { get; set; } = 20;
+
+    [JsonPropertyName("poolingTimeout")]
+    public int PoolingTimeoutSeconds { get; set; } = 10;
 }

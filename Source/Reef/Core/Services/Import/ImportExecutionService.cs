@@ -40,6 +40,7 @@ public class ImportExecutionService : IImportExecutionService
     /// <summary>
     /// Executes a complete import profile through the 9-stage pipeline
     /// Stages: 1-Validate, 2-SourceRead, 3-Transform, 4-Validate, 5-Write, 6-Commit, 7-Cleanup, 8-Log, 9-Notify
+    /// OPTIMIZATION: Load profile once at start and pass through all stages (eliminates 5+ database lookups)
     /// </summary>
     public async Task<ImportExecutionResult> ExecuteAsync(
         int profileId,
@@ -60,13 +61,21 @@ public class ImportExecutionService : IImportExecutionService
         {
             Log.Information("Import execution started for profile {ProfileId} triggered by {TriggeredBy}", profileId, triggeredBy);
 
+            // Load profile ONCE at the start - OPTIMIZATION: Eliminates repeated lookups
+            var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+            if (profile == null)
+                throw new InvalidOperationException($"Profile {profileId} not found");
+
+            Log.Debug("Profile loaded for {ProfileId}: source={Source}, destination={Destination}",
+                profileId, profile.SourceType, profile.DestinationType);
+
             // Stage 1: Validate Configuration
             execution.CurrentStage = "Validation";
-            await StageValidateAsync(profileId, execution, cancellationToken);
+            await StageValidateAsync(profile, execution, cancellationToken);
 
             // Stage 2: Read from Source
             execution.CurrentStage = "SourceRead";
-            var rows = await StageSourceReadAsync(profileId, execution, cancellationToken);
+            var rows = await StageSourceReadAsync(profile, execution, cancellationToken);
 
             if (rows.Count == 0)
             {
@@ -86,7 +95,7 @@ public class ImportExecutionService : IImportExecutionService
 
             // Stage 2.5: Delta Sync (NEW - Phase 2)
             execution.CurrentStage = "DeltaSync";
-            _deltaSyncResult = await StageDeltaSyncAsync(profileId, rows, execution, cancellationToken);
+            _deltaSyncResult = await StageDeltaSyncAsync(profileId, rows, profile, execution, cancellationToken);
 
             // Only process rows that are new or changed
             var rowsToProcess = _deltaSyncResult.NewRows.Concat(_deltaSyncResult.ChangedRows).ToList();
@@ -101,23 +110,23 @@ public class ImportExecutionService : IImportExecutionService
 
             // Stage 3: Transform Data
             execution.CurrentStage = "Transform";
-            rows = await StageTransformAsync(profileId, rows, execution, cancellationToken);
+            rows = await StageTransformAsync(profile, rows, execution, cancellationToken);
 
             // Stage 4: Validate Data
             execution.CurrentStage = "Validate";
-            var validationResult = await StageValidateDataAsync(profileId, rows, execution, cancellationToken);
+            var validationResult = await StageValidateDataAsync(profile, rows, execution, cancellationToken);
             rows = validationResult.ValidRows;
             execution.RowsSkipped = validationResult.InvalidRowCount;
 
             // Stage 5: Write to Destination
             execution.CurrentStage = "Write";
-            var writeResult = await StageWriteAsync(profileId, rows, execution, cancellationToken);
+            var writeResult = await StageWriteAsync(profile, rows, execution, cancellationToken);
             execution.RowsWritten = writeResult.RowsWritten;
             execution.RowsFailed = writeResult.RowsFailed;
 
             // Stage 6: Commit
             execution.CurrentStage = "Commit";
-            await StageCommitAsync(profileId, execution, cancellationToken);
+            await StageCommitAsync(profileId, profile, execution, cancellationToken);
 
             // Stage 7: Cleanup
             execution.CurrentStage = "Cleanup";
@@ -195,24 +204,25 @@ public class ImportExecutionService : IImportExecutionService
 
     // ===== Pipeline Stages =====
 
-    private async Task StageValidateAsync(int profileId, ImportExecution execution, CancellationToken cancellationToken)
+    private async Task StageValidateAsync(ImportProfile profile, ImportExecution execution, CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         if (!profile.IsEnabled)
-            throw new InvalidOperationException($"Profile {profileId} is disabled");
+            throw new InvalidOperationException($"Profile {profile.Id} is disabled");
 
-        Log.Debug("Stage 1 (Validate) completed for profile {ProfileId}", profileId);
+        Log.Debug("Stage 1 (Validate) completed for profile {ProfileId}", profile.Id);
+        await Task.CompletedTask;
     }
 
     private async Task<List<Dictionary<string, object>>> StageSourceReadAsync(
-        int profileId, ImportExecution execution, CancellationToken cancellationToken)
+        ImportProfile profile, ImportExecution execution, CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         IDataSourceExecutor executor = profile.SourceType switch
         {
@@ -225,22 +235,24 @@ public class ImportExecutionService : IImportExecutionService
         };
 
         var rows = await executor.ExecuteAsync(profile.SourceUri, profile.SourceConfiguration, cancellationToken);
-        Log.Debug("Stage 2 (SourceRead) completed: {Count} rows read for profile {ProfileId}", rows.Count, profileId);
+        Log.Debug("Stage 2 (SourceRead) completed: {Count} rows read for profile {ProfileId}", rows.Count, profile.Id);
         return rows;
     }
 
     /// <summary>
     /// Stage 2.5: Delta Sync - Detect new, changed, and unchanged rows from source
+    /// OPTIMIZATION: Profile is already loaded, no need for lookup
     /// </summary>
     private async Task<ImportDeltaSyncResult> StageDeltaSyncAsync(
         int profileId,
         List<Dictionary<string, object>> sourceRows,
+        ImportProfile profile,
         ImportExecution execution,
         CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         try
         {
@@ -264,49 +276,53 @@ public class ImportExecutionService : IImportExecutionService
     }
 
     private async Task<List<Dictionary<string, object>>> StageTransformAsync(
-        int profileId,
+        ImportProfile profile,
         List<Dictionary<string, object>> rows,
         ImportExecution execution,
         CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         try
         {
             var transformedRows = await _transformationService.TransformRowsAsync(rows, profile, cancellationToken);
-            Log.Debug("Stage 3 (Transform) completed for profile {ProfileId}: {Count} rows transformed", profileId, transformedRows.Count);
+            Log.Debug("Stage 3 (Transform) completed for profile {ProfileId}: {Count} rows transformed", profile.Id, transformedRows.Count);
             return transformedRows;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Transformation failed for profile {ProfileId}, using source rows as-is", profileId);
+            Log.Error(ex, "Transformation failed for profile {ProfileId}, using source rows as-is", profile.Id);
             // Continue with source rows if transformation fails
             return rows;
         }
     }
 
     private Task<(List<Dictionary<string, object>> ValidRows, int InvalidRowCount)> StageValidateDataAsync(
-        int profileId,
+        ImportProfile profile,
         List<Dictionary<string, object>> rows,
         ImportExecution execution,
         CancellationToken cancellationToken)
     {
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
+        if (profile == null)
+            throw new InvalidOperationException($"Profile is null");
+
         // TODO: Implement validation rules in Phase 2
-        Log.Debug("Stage 4 (ValidateData) skipped for profile {ProfileId} (no validation rules defined)", profileId);
+        Log.Debug("Stage 4 (ValidateData) skipped for profile {ProfileId} (no validation rules defined)", profile.Id);
         return Task.FromResult((rows, 0));
     }
 
     private async Task<WriteResult> StageWriteAsync(
-        int profileId,
+        ImportProfile profile,
         List<Dictionary<string, object>> rows,
         ImportExecution execution,
         CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         IDataWriter writer = profile.DestinationType switch
         {
@@ -318,15 +334,15 @@ public class ImportExecutionService : IImportExecutionService
         var writeMode = WriteMode.Insert;  // TODO: Determine from config
 
         var result = await writer.WriteAsync(profile.DestinationUri, profile.DestinationConfiguration, rows, fieldMappings, writeMode, cancellationToken);
-        Log.Debug("Stage 5 (Write) completed: {Written} rows written for profile {ProfileId}", result.RowsWritten, profileId);
+        Log.Debug("Stage 5 (Write) completed: {Written} rows written for profile {ProfileId}", result.RowsWritten, profile.Id);
         return result;
     }
 
-    private async Task StageCommitAsync(int profileId, ImportExecution execution, CancellationToken cancellationToken)
+    private async Task StageCommitAsync(int profileId, ImportProfile profile, ImportExecution execution, CancellationToken cancellationToken)
     {
-        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        // OPTIMIZATION: Profile is already loaded, no need for lookup
         if (profile == null)
-            throw new InvalidOperationException($"Profile {profileId} not found");
+            throw new InvalidOperationException($"Profile is null");
 
         // Commit delta sync state if enabled and we have results
         if (_deltaSyncResult != null && _deltaSyncResult.DeltaSyncEnabled && profile.DeltaSyncMode != DeltaSyncMode.None)
