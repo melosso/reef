@@ -45,6 +45,13 @@ public class DatabaseInitializer
         await CreateJobExecutionsTableAsync(connection);
         await CreateJobDependenciesTableAsync(connection);
 
+        // Import Tables
+        await CreateImportProfilesTableAsync(connection);
+        await CreateImportJobsTableAsync(connection);
+        await CreateImportExecutionsTableAsync(connection);
+        await CreateFieldMappingsTableAsync(connection);
+        await CreateValidationRulesTableAsync(connection);
+
         // Delta Sync Table
         await CreateDeltaSyncStateTableAsync(connection);
 
@@ -1097,6 +1104,195 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "Users", "PasswordChangeRequired", "INTEGER NOT NULL DEFAULT 0");
 
         Log.Debug("Database schema migrations completed");
+    }
+
+    // ===== Import Profile Tables =====
+
+    private async Task CreateImportProfilesTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS ImportProfiles (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name TEXT NOT NULL UNIQUE,
+                Description TEXT NULL,
+
+                -- Source configuration
+                SourceConnectionId INTEGER NOT NULL,
+                SourceType TEXT NOT NULL,
+                SourceUri TEXT NOT NULL,
+                SourceConfiguration TEXT NULL,
+
+                -- Destination configuration
+                DestinationConnectionId INTEGER NOT NULL,
+                DestinationType TEXT NOT NULL,
+                DestinationUri TEXT NOT NULL,
+                DestinationConfiguration TEXT NULL,
+
+                -- Data mapping and validation
+                FieldMappingsJson TEXT NULL,
+                ValidationRulesJson TEXT NULL,
+
+                -- Scheduling
+                ScheduleType TEXT NULL,
+                ScheduleCron TEXT NULL,
+                ScheduleIntervalMinutes INTEGER NULL,
+                WebhookSecret TEXT NULL,
+
+                -- Transformation
+                PreProcessTemplate TEXT NULL,
+                PostProcessTemplate TEXT NULL,
+
+                -- Error handling
+                ErrorStrategy TEXT NOT NULL DEFAULT 'Skip',
+                MaxRetries INTEGER NOT NULL DEFAULT 3,
+                RetryDelaySeconds INTEGER NOT NULL DEFAULT 5,
+
+                -- Delta sync
+                DeltaSyncMode TEXT NOT NULL DEFAULT 'None',
+                DeltaSyncKeyColumns TEXT NULL,
+                TrackChanges INTEGER NOT NULL DEFAULT 0,
+
+                -- Logging and retention
+                LogDetailedErrors INTEGER NOT NULL DEFAULT 0,
+                ExecutionHistoryRetentionDays INTEGER NOT NULL DEFAULT 30,
+
+                -- Status
+                IsEnabled INTEGER NOT NULL DEFAULT 1,
+                Hash TEXT NOT NULL,
+
+                -- Metadata
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NULL,
+                CreatedBy TEXT NULL,
+                LastExecutedAt TEXT NULL,
+
+                FOREIGN KEY (SourceConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
+                FOREIGN KEY (DestinationConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_name ON ImportProfiles(Name);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled ON ImportProfiles(IsEnabled);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_source ON ImportProfiles(SourceType);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_destination ON ImportProfiles(DestinationType);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateImportJobsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS ImportJobs (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId INTEGER NOT NULL,
+                NextRunAt TEXT NOT NULL,
+                LastRunAt TEXT NULL,
+                IsRunning INTEGER NOT NULL DEFAULT 0,
+                FailureCount INTEGER NOT NULL DEFAULT 0,
+                LastError TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
+                UNIQUE(ImportProfileId)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_importjobs_profile ON ImportJobs(ImportProfileId);
+            CREATE INDEX IF NOT EXISTS idx_importjobs_nextrun ON ImportJobs(NextRunAt);
+            CREATE INDEX IF NOT EXISTS idx_importjobs_running ON ImportJobs(IsRunning);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateImportExecutionsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS ImportExecutions (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId INTEGER NOT NULL,
+                JobId INTEGER NULL,
+
+                -- Timing
+                StartedAt TEXT NOT NULL,
+                CompletedAt TEXT NULL,
+                ExecutionTimeMs INTEGER NULL,
+
+                -- Status
+                Status TEXT NOT NULL DEFAULT 'Running',
+
+                -- Metrics
+                RowsRead INTEGER NULL,
+                RowsWritten INTEGER NULL,
+                RowsSkipped INTEGER NULL,
+                RowsFailed INTEGER NULL,
+
+                -- Delta sync metrics
+                DeltaSyncNewRows INTEGER NULL,
+                DeltaSyncChangedRows INTEGER NULL,
+                DeltaSyncUnchangedRows INTEGER NULL,
+
+                -- Error tracking
+                ErrorMessage TEXT NULL,
+                ErrorDetails TEXT NULL,
+
+                -- Pipeline stage tracking
+                CurrentStage TEXT NULL,
+                StageDetails TEXT NULL,
+
+                -- Audit
+                TriggeredBy TEXT NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
+                FOREIGN KEY (JobId) REFERENCES ImportJobs(Id) ON DELETE SET NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_importexecutions_profile ON ImportExecutions(ImportProfileId);
+            CREATE INDEX IF NOT EXISTS idx_importexecutions_status ON ImportExecutions(Status);
+            CREATE INDEX IF NOT EXISTS idx_importexecutions_started ON ImportExecutions(StartedAt);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateFieldMappingsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS FieldMappings (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId INTEGER NOT NULL,
+                SourceColumn TEXT NOT NULL,
+                DestinationColumn TEXT NOT NULL,
+                DataType TEXT NOT NULL DEFAULT 'String',
+                Required INTEGER NOT NULL DEFAULT 0,
+                DefaultValue TEXT NULL,
+                TransformationTemplate TEXT NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_fieldmappings_profile ON FieldMappings(ImportProfileId);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateValidationRulesTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS ValidationRules (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId INTEGER NOT NULL,
+                ColumnName TEXT NOT NULL,
+                ValidationType TEXT NOT NULL,
+                Pattern TEXT NULL,
+                MinValue TEXT NULL,
+                MaxValue TEXT NULL,
+                AllowedValuesJson TEXT NULL,
+                ErrorMessage TEXT NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_validationrules_profile ON ValidationRules(ImportProfileId);
+        ";
+        await connection.ExecuteAsync(sql);
     }
 
     /// <summary>

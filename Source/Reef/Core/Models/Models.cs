@@ -570,3 +570,238 @@ public class DatabaseConfig
 {
     public required string ConnectionString { get; init; }
 }
+
+// ===== IMPORT Models =====
+
+/// <summary>
+/// Enumeration for data source types (REST API, S3, FTP, Database, File, etc.)
+/// </summary>
+public enum DataSourceType
+{
+    Unknown,
+    RestApi,
+    S3,
+    Ftp,
+    Sftp,
+    Database,
+    File,
+    AzureBlob,
+    GoogleCloudStorage,
+    Kafka,           // Future
+    DatabaseCdc      // Future
+}
+
+/// <summary>
+/// Enumeration for import destination types
+/// </summary>
+public enum ImportDestinationType
+{
+    Unknown,
+    Database,
+    File,
+    S3,
+    Ftp,
+    Sftp,
+    AzureBlob,
+    GoogleCloudStorage,
+    Kafka             // Future
+}
+
+/// <summary>
+/// Error handling strategy for imports
+/// </summary>
+public enum ImportErrorStrategy
+{
+    Skip,             // Skip rows with errors, continue
+    Fail,             // Fail entire import on any error
+    Retry,            // Retry with exponential backoff
+    Quarantine        // Write errors to quarantine location
+}
+
+/// <summary>
+/// Delta sync mode for change detection
+/// </summary>
+public enum DeltaSyncMode
+{
+    None,             // No delta sync (full load each time)
+    Hash,             // SHA256 hash of all columns
+    Timestamp,        // Compare timestamp columns
+    Key,              // Natural/synthetic key comparison
+    Incremental       // Auto-increment or sequence ID
+}
+
+/// <summary>
+/// Data type enumeration for field mapping
+/// </summary>
+public enum FieldDataType
+{
+    String,
+    Integer,
+    Decimal,
+    DateTime,
+    Boolean,
+    Json,
+    Binary
+}
+
+/// <summary>
+/// Validation type enumeration
+/// </summary>
+public enum ValidationType
+{
+    Required,
+    Regex,
+    MinLength,
+    MaxLength,
+    MinValue,
+    MaxValue,
+    Enum,
+    Custom
+}
+
+/// <summary>
+/// Import Profile - defines the import configuration and data mapping
+/// </summary>
+public class ImportProfile
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public string? Description { get; set; }
+
+    // Source configuration
+    public int SourceConnectionId { get; set; }
+    public DataSourceType SourceType { get; set; }
+    public required string SourceUri { get; set; }           // API URL, S3 path, FTP path, table name, etc.
+    public string? SourceConfiguration { get; set; }        // JSON: pagination, auth, filters
+
+    // Destination configuration
+    public int DestinationConnectionId { get; set; }
+    public ImportDestinationType DestinationType { get; set; }
+    public required string DestinationUri { get; set; }     // Table name, file path, S3 path
+    public string? DestinationConfiguration { get; set; }   // JSON: format, options, upsert logic
+
+    // Data mapping and validation
+    public string? FieldMappingsJson { get; set; }          // JSON array of FieldMapping
+    public string? ValidationRulesJson { get; set; }        // JSON array of ValidationRule
+
+    // Scheduling
+    public string? ScheduleType { get; set; }               // null, Cron, Interval, Webhook
+    public string? ScheduleCron { get; set; }
+    public int? ScheduleIntervalMinutes { get; set; }
+    public string? WebhookSecret { get; set; }
+
+    // Transformation
+    public string? PreProcessTemplate { get; set; }         // Scriban template
+    public string? PostProcessTemplate { get; set; }        // Scriban template
+
+    // Error handling
+    public ImportErrorStrategy ErrorStrategy { get; set; } = ImportErrorStrategy.Skip;
+    public int MaxRetries { get; set; } = 3;
+    public int RetryDelaySeconds { get; set; } = 5;
+
+    // Delta sync
+    public DeltaSyncMode DeltaSyncMode { get; set; } = DeltaSyncMode.None;
+    public string? DeltaSyncKeyColumns { get; set; }        // Comma-separated column names
+    public bool TrackChanges { get; set; } = false;
+
+    // Logging and retention
+    public bool LogDetailedErrors { get; set; } = false;
+    public int ExecutionHistoryRetentionDays { get; set; } = 30;
+
+    // Status
+    public bool IsEnabled { get; set; } = true;
+    public required string Hash { get; set; }                // SHA256 for integrity
+
+    // Metadata
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    public string? CreatedBy { get; set; }
+    public DateTime? LastExecutedAt { get; set; }
+}
+
+/// <summary>
+/// Import Job - scheduling metadata for import execution
+/// </summary>
+public class ImportJob
+{
+    public int Id { get; set; }
+    public int ImportProfileId { get; set; }
+    public DateTime NextRunAt { get; set; }
+    public DateTime? LastRunAt { get; set; }
+    public bool IsRunning { get; set; } = false;
+    public int FailureCount { get; set; } = 0;
+    public string? LastError { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Import Execution - tracks a single import execution
+/// </summary>
+public class ImportExecution
+{
+    public int Id { get; set; }
+    public int ImportProfileId { get; set; }
+    public int? JobId { get; set; }
+
+    // Timing
+    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? CompletedAt { get; set; }
+    public long? ExecutionTimeMs { get; set; }
+
+    // Status
+    public string Status { get; set; } = "Running";          // Running, Success, Failed
+
+    // Metrics
+    public int? RowsRead { get; set; }
+    public int? RowsWritten { get; set; }
+    public int? RowsSkipped { get; set; }
+    public int? RowsFailed { get; set; }
+
+    // Delta sync metrics (if enabled)
+    public int? DeltaSyncNewRows { get; set; }
+    public int? DeltaSyncChangedRows { get; set; }
+    public int? DeltaSyncUnchangedRows { get; set; }
+
+    // Error tracking
+    public string? ErrorMessage { get; set; }
+    public string? ErrorDetails { get; set; }               // JSON: detailed error information
+
+    // Pipeline stage tracking
+    public string? CurrentStage { get; set; }                // Validation, SourceRead, Transform, Validate, Write, Commit, Cleanup
+    public string? StageDetails { get; set; }               // JSON: per-stage metrics
+
+    // Audit
+    public string? TriggeredBy { get; set; }
+}
+
+/// <summary>
+/// Field mapping between source and destination columns
+/// </summary>
+public class FieldMapping
+{
+    public int Id { get; set; }
+    public int ImportProfileId { get; set; }
+    public required string SourceColumn { get; set; }
+    public required string DestinationColumn { get; set; }
+    public FieldDataType DataType { get; set; } = FieldDataType.String;
+    public bool Required { get; set; } = false;
+    public string? DefaultValue { get; set; }
+    public string? TransformationTemplate { get; set; }     // Scriban for derived fields
+}
+
+/// <summary>
+/// Validation rule for imported data
+/// </summary>
+public class ValidationRule
+{
+    public int Id { get; set; }
+    public int ImportProfileId { get; set; }
+    public required string ColumnName { get; set; }
+    public ValidationType ValidationType { get; set; }
+    public string? Pattern { get; set; }                    // Regex pattern
+    public string? MinValue { get; set; }
+    public string? MaxValue { get; set; }
+    public string? AllowedValuesJson { get; set; }          // JSON array
+    public string? ErrorMessage { get; set; }
+}

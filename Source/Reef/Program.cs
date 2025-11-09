@@ -6,6 +6,8 @@ using Reef.Core.Security;
 using Reef.Core.Data;
 using Reef.Core.Database;
 using Reef.Core.TemplateEngines;
+using Reef.Core.Abstractions;
+using Reef.Core.Services.Import;
 using Reef.Api;
 using Reef.Helpers;
 using Reef.Core.Middleware;
@@ -293,8 +295,20 @@ public class Program
         // Jobs services - NEW SYSTEM
         services.AddScoped<JobService>(sp =>
             new JobService(sp.GetRequiredService<DatabaseConfig>(), sp.GetRequiredService<IConfiguration>()));
-        
+
         services.AddScoped<Reef.Api.JobExecutorService>();
+
+        // Import services - NEW SYSTEM
+        services.AddScoped<IImportProfileService>(sp =>
+            new Reef.Core.Services.Import.ImportProfileService(
+                sp.GetRequiredService<DatabaseConfig>(),
+                sp.GetRequiredService<HashValidator>()));
+
+        services.AddScoped<IImportExecutionService>(sp =>
+            new Reef.Core.Services.Import.ImportExecutionService(
+                sp.GetRequiredService<DatabaseConfig>(),
+                sp.GetRequiredService<IImportProfileService>(),
+                sp.GetRequiredService<EncryptionService>()));
 
         // Background services (hosted services)
         
@@ -414,11 +428,14 @@ public class Program
         ExecutionsEndpoints.Map(app);
         WebhooksEndpoints.Map(app);
         AdminEndpoints.Map(app);
-        
+
         // New endpoints for Jobs, Destinations, and Query Templates (extension methods)
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
+
+        // Import endpoints (new system)
+        app.MapImportEndpoints();
 
         Log.Debug("✓ Endpoints mapped");
     }
