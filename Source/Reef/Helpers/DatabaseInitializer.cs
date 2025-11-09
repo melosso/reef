@@ -774,6 +774,7 @@ public class DatabaseInitializer
 
             Log.Warning("! Created default admin user (username: admin, password: admin123)");
             Log.Warning("! Password change will be required on first login for security");
+            Log.Warning("");
         }
     }
 

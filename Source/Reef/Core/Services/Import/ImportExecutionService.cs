@@ -18,7 +18,12 @@ public class ImportExecutionService : IImportExecutionService
     private readonly string _connectionString;
     private readonly IImportProfileService _profileService;
     private readonly EncryptionService _encryptionService;
+    private readonly ImportDeltaSyncService _deltaSyncService;
+    private readonly ImportTransformationService _transformationService;
     private static readonly ILogger Log = Serilog.Log.ForContext(typeof(ImportExecutionService));
+
+    // Storage for delta sync result during pipeline execution
+    private ImportDeltaSyncResult? _deltaSyncResult;
 
     public ImportExecutionService(
         DatabaseConfig config,
@@ -28,6 +33,8 @@ public class ImportExecutionService : IImportExecutionService
         _connectionString = config.ConnectionString;
         _profileService = profileService;
         _encryptionService = encryptionService;
+        _deltaSyncService = new ImportDeltaSyncService(config);
+        _transformationService = new ImportTransformationService();
     }
 
     /// <summary>
@@ -76,6 +83,21 @@ public class ImportExecutionService : IImportExecutionService
 
             execution.RowsRead = rows.Count;
             Log.Information("Read {Count} rows from source", rows.Count);
+
+            // Stage 2.5: Delta Sync (NEW - Phase 2)
+            execution.CurrentStage = "DeltaSync";
+            _deltaSyncResult = await StageDeltaSyncAsync(profileId, rows, execution, cancellationToken);
+
+            // Only process rows that are new or changed
+            var rowsToProcess = _deltaSyncResult.NewRows.Concat(_deltaSyncResult.ChangedRows).ToList();
+            execution.DeltaSyncNewRows = _deltaSyncResult.NewRows.Count;
+            execution.DeltaSyncChangedRows = _deltaSyncResult.ChangedRows.Count;
+            execution.DeltaSyncUnchangedRows = _deltaSyncResult.UnchangedRows.Count;
+
+            Log.Information("Delta sync: {New} new, {Changed} changed, {Unchanged} unchanged rows",
+                _deltaSyncResult.NewRows.Count, _deltaSyncResult.ChangedRows.Count, _deltaSyncResult.UnchangedRows.Count);
+
+            rows = rowsToProcess;
 
             // Stage 3: Transform Data
             execution.CurrentStage = "Transform";
@@ -195,6 +217,10 @@ public class ImportExecutionService : IImportExecutionService
         IDataSourceExecutor executor = profile.SourceType switch
         {
             DataSourceType.RestApi => new RestDataSourceExecutor(),
+            DataSourceType.S3 => new S3DataSourceExecutor(),
+            DataSourceType.Ftp => new FtpDataSourceExecutor(),
+            DataSourceType.Database => new DatabaseDataSourceExecutor(_encryptionService),
+            DataSourceType.Sftp => new FtpDataSourceExecutor(),
             _ => throw new NotSupportedException($"Source type {profile.SourceType} not yet implemented")
         };
 
@@ -203,15 +229,62 @@ public class ImportExecutionService : IImportExecutionService
         return rows;
     }
 
-    private Task<List<Dictionary<string, object>>> StageTransformAsync(
+    /// <summary>
+    /// Stage 2.5: Delta Sync - Detect new, changed, and unchanged rows from source
+    /// </summary>
+    private async Task<ImportDeltaSyncResult> StageDeltaSyncAsync(
+        int profileId,
+        List<Dictionary<string, object>> sourceRows,
+        ImportExecution execution,
+        CancellationToken cancellationToken)
+    {
+        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        if (profile == null)
+            throw new InvalidOperationException($"Profile {profileId} not found");
+
+        try
+        {
+            var result = await _deltaSyncService.ProcessDeltaAsync(profileId, sourceRows, profile, cancellationToken);
+            Log.Debug("Stage 2.5 (DeltaSync) completed for profile {ProfileId}", profileId);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Delta sync processing failed for profile {ProfileId}, treating all rows as new", profileId);
+            // Fallback: treat all rows as new if delta sync fails
+            return new ImportDeltaSyncResult
+            {
+                NewRows = sourceRows,
+                ChangedRows = new List<Dictionary<string, object>>(),
+                UnchangedRows = new List<Dictionary<string, object>>(),
+                TotalRowsProcessed = sourceRows.Count,
+                DeltaSyncEnabled = false
+            };
+        }
+    }
+
+    private async Task<List<Dictionary<string, object>>> StageTransformAsync(
         int profileId,
         List<Dictionary<string, object>> rows,
         ImportExecution execution,
         CancellationToken cancellationToken)
     {
-        // TODO: Implement Scriban template transformations in Phase 2
-        Log.Debug("Stage 3 (Transform) skipped for profile {ProfileId} (no transformations defined)", profileId);
-        return Task.FromResult(rows);
+        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        if (profile == null)
+            throw new InvalidOperationException($"Profile {profileId} not found");
+
+        try
+        {
+            var transformedRows = await _transformationService.TransformRowsAsync(rows, profile, cancellationToken);
+            Log.Debug("Stage 3 (Transform) completed for profile {ProfileId}: {Count} rows transformed", profileId, transformedRows.Count);
+            return transformedRows;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Transformation failed for profile {ProfileId}, using source rows as-is", profileId);
+            // Continue with source rows if transformation fails
+            return rows;
+        }
     }
 
     private Task<(List<Dictionary<string, object>> ValidRows, int InvalidRowCount)> StageValidateDataAsync(
@@ -251,9 +324,34 @@ public class ImportExecutionService : IImportExecutionService
 
     private async Task StageCommitAsync(int profileId, ImportExecution execution, CancellationToken cancellationToken)
     {
-        // TODO: Implement commit logic in Phase 2 (delta sync state update)
+        var profile = await _profileService.GetByIdAsync(profileId, cancellationToken);
+        if (profile == null)
+            throw new InvalidOperationException($"Profile {profileId} not found");
+
+        // Commit delta sync state if enabled and we have results
+        if (_deltaSyncResult != null && _deltaSyncResult.DeltaSyncEnabled && profile.DeltaSyncMode != DeltaSyncMode.None)
+        {
+            try
+            {
+                await _deltaSyncService.CommitDeltaSyncAsync(
+                    profileId,
+                    execution.Id,
+                    _deltaSyncResult.NewRows,
+                    _deltaSyncResult.ChangedRows,
+                    profile,
+                    cancellationToken);
+
+                Log.Debug("Delta sync state committed for profile {ProfileId}", profileId);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to commit delta sync state for profile {ProfileId}", profileId);
+                // Don't fail the entire execution if delta sync commit fails
+                // The data has already been written to the destination
+            }
+        }
+
         Log.Debug("Stage 6 (Commit) completed for profile {ProfileId}", profileId);
-        await Task.CompletedTask;
     }
 
     private async Task StageCleanupAsync(int profileId, ImportExecution execution, CancellationToken cancellationToken)

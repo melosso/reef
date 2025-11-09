@@ -218,6 +218,8 @@ public class EncryptionService
             // Update current public key
             _currentPublicKeyPem = publicKeyPem;
             Log.Information("! Generated new RSA keypair for encryption");
+            Log.Information("! Keep the .core folder safe to avoid losing access to encrypted data");
+            Log.Information("");
         }
         else
         {
