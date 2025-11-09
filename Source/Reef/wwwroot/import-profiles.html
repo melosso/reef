@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import Profiles &middot; Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i>
+
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles (Export)</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Imports</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/import-profiles.html" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                            <i data-lucide="download" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                        <a href="/import-executions.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                        <a href="/import-quarantine.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="alert-circle" class="h-5 w-5"></i>
+                            <span class="ml-3">Quarantine</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions (Export)</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-gray-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-white font-semibold">&nbsp;</div>
+                            <div class="text-xs text-gray-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                </button>
+
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="code" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between px-6 py-3">
+                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Import Profiles</h1>
+                    <div class="flex space-x-3 items-center">
+                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out" aria-label="Help">
+                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                        </button>
+                        <button onclick="openAddProfileModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                            New Profile
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto p-6">
+                <div id="message-container"></div>
+
+                <!-- Filters Bar -->
+                <div class="bg-white rounded-lg shadow p-4 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-semibold text-gray-700">Filters</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label for="filter-source" class="block text-sm font-medium text-gray-700 mb-1">Source Type</label>
+                            <select id="filter-source" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Sources</option>
+                                <option value="rest">REST API</option>
+                                <option value="s3">AWS S3</option>
+                                <option value="ftp">FTP/SFTP</option>
+                                <option value="database">Database</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select id="filter-status" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Status</option>
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-destination" class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                            <select id="filter-destination" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Destinations</option>
+                                <option value="database">Database</option>
+                                <option value="file">File</option>
+                                <option value="s3">S3</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-group" class="block text-sm font-medium text-gray-700 mb-1">Group</label>
+                            <select id="filter-group" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Groups</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profiles Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th onclick="sortProfiles('name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Name</span>
+                                        <i id="sort-icon-name" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortProfiles('source')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Source</span>
+                                        <i id="sort-icon-source" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortProfiles('destination')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Destination</span>
+                                        <i id="sort-icon-destination" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortProfiles('deltaSync')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Delta Sync</span>
+                                        <i id="sort-icon-deltaSync" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortProfiles('schedule')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Schedule</span>
+                                        <i id="sort-icon-schedule" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th onclick="sortProfiles('status')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Status</span>
+                                        <i id="sort-icon-status" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="profiles-tbody" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                    <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
+                                    Loading profiles...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white mb-20">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-lg font-semibold text-gray-900">Add Import Profile</h3>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-500">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+
+            <div class="border-b border-gray-200 mb-4">
+                <nav class="-mb-px flex space-x-4 overflow-x-auto" aria-label="Tabs">
+                    <button id="generalTabButton" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 whitespace-nowrap"
+                            onclick="showTab('general')">
+                        <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>
+                        General
+                    </button>
+                    <button id="sourceTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('source')">
+                        <i data-lucide="download" class="w-4 h-4 inline mr-1"></i>
+                        Data Source
+                    </button>
+                    <button id="mappingTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('mapping')">
+                        <i data-lucide="link-2" class="w-4 h-4 inline mr-1"></i>
+                        Field Mapping
+                    </button>
+                    <button id="validationTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('validation')">
+                        <i data-lucide="check-circle" class="w-4 h-4 inline mr-1"></i>
+                        Validation
+                    </button>
+                    <button id="destinationTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('destination')">
+                        <i data-lucide="upload" class="w-4 h-4 inline mr-1"></i>
+                        Destination
+                    </button>
+                    <button id="scheduleTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('schedule')">
+                        <i data-lucide="clock" class="w-4 h-4 inline mr-1"></i>
+                        Schedule
+                    </button>
+                    <button id="advancedTabButton" class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 whitespace-nowrap"
+                            onclick="showTab('advanced')">
+                        <i data-lucide="sliders" class="w-4 h-4 inline mr-1"></i>
+                        Advanced
+                    </button>
+                </nav>
+            </div>
+
+            <!-- General Tab -->
+            <div id="generalTab" class="tab-content">
+                <form id="profile-form" class="space-y-4">
+                    <input type="hidden" id="profile-id">
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="profile-name" class="block text-sm font-medium text-gray-700">Name *</label>
+                            <input type="text" id="profile-name" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-description" class="block text-sm font-medium text-gray-700">Description</label>
+                            <input type="text" id="profile-description"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="profile-group" class="block text-sm font-medium text-gray-700">Group (Optional)</label>
+                            <select id="profile-group"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">No Group</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="profile-status" class="block text-sm font-medium text-gray-700">Status</label>
+                            <select id="profile-status" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Data Source Tab -->
+            <div id="sourceTab" class="tab-content hidden">
+                <form class="space-y-4">
+                    <div>
+                        <label for="profile-source-type" class="block text-sm font-medium text-gray-700">Source Type *</label>
+                        <select id="profile-source-type" required onchange="updateSourceFields()"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Source Type...</option>
+                            <option value="rest">REST API</option>
+                            <option value="s3">AWS S3</option>
+                            <option value="ftp">FTP/SFTP</option>
+                            <option value="database">Database</option>
+                        </select>
+                    </div>
+
+                    <!-- REST API Fields -->
+                    <div id="rest-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-rest-url" class="block text-sm font-medium text-gray-700">API URL *</label>
+                            <input type="url" id="profile-rest-url"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="https://api.example.com/data">
+                        </div>
+
+                        <div>
+                            <label for="profile-rest-auth" class="block text-sm font-medium text-gray-700">Authentication Type</label>
+                            <select id="profile-rest-auth" onchange="updateRestAuthFields()"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="none">None</option>
+                                <option value="bearer">Bearer Token</option>
+                                <option value="basic">Basic Auth</option>
+                            </select>
+                        </div>
+
+                        <div id="rest-auth-fields" class="hidden">
+                            <label for="profile-rest-token" class="block text-sm font-medium text-gray-700">Token/Key</label>
+                            <input type="password" id="profile-rest-token"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-rest-pagination" class="block text-sm font-medium text-gray-700">Pagination Type</label>
+                            <select id="profile-rest-pagination"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="none">None</option>
+                                <option value="offset">Offset/Limit</option>
+                                <option value="cursor">Cursor</option>
+                                <option value="page">Page Number</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="profile-rest-page-size" class="block text-sm font-medium text-gray-700">Page Size</label>
+                            <input type="number" id="profile-rest-page-size" value="100" min="1" max="10000"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- S3 Fields -->
+                    <div id="s3-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-s3-bucket" class="block text-sm font-medium text-gray-700">Bucket Name *</label>
+                            <input type="text" id="profile-s3-bucket"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-s3-prefix" class="block text-sm font-medium text-gray-700">File Prefix/Pattern</label>
+                            <input type="text" id="profile-s3-prefix" placeholder="data/*.csv"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-s3-region" class="block text-sm font-medium text-gray-700">AWS Region</label>
+                            <input type="text" id="profile-s3-region" placeholder="us-east-1"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <!-- FTP Fields -->
+                    <div id="ftp-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-ftp-host" class="block text-sm font-medium text-gray-700">Host *</label>
+                            <input type="text" id="profile-ftp-host"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="profile-ftp-username" class="block text-sm font-medium text-gray-700">Username</label>
+                                <input type="text" id="profile-ftp-username"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+
+                            <div>
+                                <label for="profile-ftp-password" class="block text-sm font-medium text-gray-700">Password</label>
+                                <input type="password" id="profile-ftp-password"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="profile-ftp-file-pattern" class="block text-sm font-medium text-gray-700">File Pattern</label>
+                            <input type="text" id="profile-ftp-file-pattern" placeholder="*.csv"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="profile-ftp-sftp" class="rounded border-gray-300">
+                                <span class="ml-2 text-sm font-medium text-gray-700">Use SFTP</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Database Fields -->
+                    <div id="db-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-db-query" class="block text-sm font-medium text-gray-700">SQL Query *</label>
+                            <textarea id="profile-db-query" rows="5" required
+                                      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                                      placeholder="SELECT * FROM table WHERE ..."></textarea>
+                        </div>
+
+                        <div>
+                            <label for="profile-db-connection" class="block text-sm font-medium text-gray-700">Database Connection *</label>
+                            <select id="profile-db-connection" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select Connection...</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Field Mapping Tab -->
+            <div id="mappingTab" class="tab-content hidden">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-sm font-semibold text-gray-700">Field Mappings</h4>
+                        <button type="button" onclick="addFieldMapping()" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                            <i data-lucide="plus" class="h-3 w-3 inline mr-1"></i>Add Mapping
+                        </button>
+                    </div>
+
+                    <div id="field-mappings-container" class="space-y-3">
+                        <div class="text-sm text-gray-500">No field mappings yet. Click "Add Mapping" to create one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Validation Tab -->
+            <div id="validationTab" class="tab-content hidden">
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-sm font-semibold text-gray-700">Validation Rules</h4>
+                        <button type="button" onclick="addValidationRule()" class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                            <i data-lucide="plus" class="h-3 w-3 inline mr-1"></i>Add Rule
+                        </button>
+                    </div>
+
+                    <div id="validation-rules-container" class="space-y-3">
+                        <div class="text-sm text-gray-500">No validation rules yet. Click "Add Rule" to create one.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Destination Tab -->
+            <div id="destinationTab" class="tab-content hidden">
+                <form class="space-y-4">
+                    <div>
+                        <label for="profile-destination-type" class="block text-sm font-medium text-gray-700">Destination Type *</label>
+                        <select id="profile-destination-type" required onchange="updateDestinationFields()"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Select Destination...</option>
+                            <option value="database">Database Table</option>
+                            <option value="file">File (CSV/JSON/Parquet)</option>
+                            <option value="s3">AWS S3</option>
+                        </select>
+                    </div>
+
+                    <!-- Database Destination -->
+                    <div id="dest-db-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-dest-db-connection" class="block text-sm font-medium text-gray-700">Database Connection *</label>
+                            <select id="profile-dest-db-connection" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select Connection...</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="profile-dest-table" class="block text-sm font-medium text-gray-700">Table Name *</label>
+                            <input type="text" id="profile-dest-table" required
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-dest-write-mode" class="block text-sm font-medium text-gray-700">Write Mode *</label>
+                            <select id="profile-dest-write-mode" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="insert">INSERT (Append all rows)</option>
+                                <option value="upsert">UPSERT (Update or insert based on key)</option>
+                                <option value="truncate_insert">TRUNCATE then INSERT (Replace all)</option>
+                            </select>
+                        </div>
+
+                        <div id="upsert-keys-container" class="hidden">
+                            <label for="profile-upsert-keys" class="block text-sm font-medium text-gray-700">Unique Key Columns</label>
+                            <input type="text" id="profile-upsert-keys" placeholder="id,email"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">Comma-separated list of columns that form the unique key</p>
+                        </div>
+                    </div>
+
+                    <!-- File Destination -->
+                    <div id="dest-file-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-dest-file-path" class="block text-sm font-medium text-gray-700">Output Path *</label>
+                            <input type="text" id="profile-dest-file-path" placeholder="/exports/data.csv"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-dest-file-format" class="block text-sm font-medium text-gray-700">File Format *</label>
+                            <select id="profile-dest-file-format" required
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="csv">CSV</option>
+                                <option value="json">JSON</option>
+                                <option value="parquet">Parquet</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- S3 Destination -->
+                    <div id="dest-s3-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-dest-s3-bucket" class="block text-sm font-medium text-gray-700">Bucket Name *</label>
+                            <input type="text" id="profile-dest-s3-bucket"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-dest-s3-key" class="block text-sm font-medium text-gray-700">Object Key/Path *</label>
+                            <input type="text" id="profile-dest-s3-key" placeholder="imports/data.csv"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-dest-s3-region" class="block text-sm font-medium text-gray-700">AWS Region</label>
+                            <input type="text" id="profile-dest-s3-region" placeholder="us-east-1"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Schedule Tab -->
+            <div id="scheduleTab" class="tab-content hidden">
+                <form class="space-y-4">
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="profile-scheduled" onchange="updateScheduleFields()"
+                                   class="rounded border-gray-300">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Enable Scheduled Imports</span>
+                        </label>
+                    </div>
+
+                    <div id="schedule-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-schedule-type" class="block text-sm font-medium text-gray-700">Schedule Type</label>
+                            <select id="profile-schedule-type" onchange="updateScheduleTypeFields()"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="cron">Cron Expression</option>
+                                <option value="interval">Interval (minutes)</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+
+                        <div id="cron-field" class="space-y-2">
+                            <label for="profile-cron" class="block text-sm font-medium text-gray-700">Cron Expression</label>
+                            <input type="text" id="profile-cron" placeholder="0 2 * * *"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500">e.g., "0 2 * * *" for 2 AM daily</p>
+                        </div>
+
+                        <div id="interval-field" class="hidden">
+                            <label for="profile-interval-minutes" class="block text-sm font-medium text-gray-700">Minutes</label>
+                            <input type="number" id="profile-interval-minutes" min="5" value="60"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div id="daily-field" class="hidden">
+                            <label for="profile-daily-time" class="block text-sm font-medium text-gray-700">Time</label>
+                            <input type="time" id="profile-daily-time"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div id="weekly-field" class="hidden space-y-2">
+                            <label class="block text-sm font-medium text-gray-700">Days of Week</label>
+                            <div class="space-y-1">
+                                <label class="flex items-center"><input type="checkbox" value="mon" class="weekly-day rounded"> <span class="ml-2 text-sm">Monday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="tue" class="weekly-day rounded"> <span class="ml-2 text-sm">Tuesday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="wed" class="weekly-day rounded"> <span class="ml-2 text-sm">Wednesday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="thu" class="weekly-day rounded"> <span class="ml-2 text-sm">Thursday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="fri" class="weekly-day rounded"> <span class="ml-2 text-sm">Friday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="sat" class="weekly-day rounded"> <span class="ml-2 text-sm">Saturday</span></label>
+                                <label class="flex items-center"><input type="checkbox" value="sun" class="weekly-day rounded"> <span class="ml-2 text-sm">Sunday</span></label>
+                            </div>
+                            <label class="block text-sm font-medium text-gray-700 mt-2">Time</label>
+                            <input type="time" id="profile-weekly-time"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Advanced Tab -->
+            <div id="advancedTab" class="tab-content hidden">
+                <form class="space-y-4">
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="profile-delta-sync"
+                                   class="rounded border-gray-300">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Enable Delta Sync (Import only changed rows)</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <label for="profile-error-strategy" class="block text-sm font-medium text-gray-700">Error Strategy</label>
+                        <select id="profile-error-strategy"
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="fail">Fail (abort entire import)</option>
+                            <option value="skip">Skip (continue with next row)</option>
+                            <option value="quarantine">Quarantine (save failed rows for review)</option>
+                            <option value="retry">Retry (exponential backoff)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="profile-batch-size" class="block text-sm font-medium text-gray-700">Batch Size</label>
+                        <input type="number" id="profile-batch-size" value="1000" min="10" max="100000"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">Number of rows to process in each batch</p>
+                    </div>
+
+                    <div>
+                        <label for="profile-timeout" class="block text-sm font-medium text-gray-700">Timeout (seconds)</label>
+                        <input type="number" id="profile-timeout" value="300" min="30" max="3600"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="profile-retry-enabled"
+                                   class="rounded border-gray-300">
+                            <span class="ml-2 text-sm font-medium text-gray-700">Enable Retry on Failure</span>
+                        </label>
+                    </div>
+
+                    <div id="retry-fields" class="hidden space-y-4">
+                        <div>
+                            <label for="profile-max-retries" class="block text-sm font-medium text-gray-700">Max Retries</label>
+                            <input type="number" id="profile-max-retries" value="3" min="1" max="10"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="profile-retry-delay" class="block text-sm font-medium text-gray-700">Initial Retry Delay (seconds)</label>
+                            <input type="number" id="profile-retry-delay" value="5" min="1" max="300"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-4">
+                <button onclick="closeProfileModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button onclick="testConnection()" class="px-4 py-2 border border-blue-300 rounded-lg text-blue-600 hover:bg-blue-50">
+                    <i data-lucide="play" class="h-4 w-4 inline mr-1"></i>Test Connection
+                </button>
+                <button onclick="saveProfile()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    <i data-lucide="save" class="h-4 w-4 inline mr-1"></i>Save Profile
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white mb-20">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Import Profiles Help</h3>
+                <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-500">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 text-sm text-gray-700">
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-2">What is an Import Profile?</h4>
+                    <p>An Import Profile defines how to fetch data from a source (REST API, S3, FTP, Database) and write it to a destination (Database, File, S3). Profiles can run on a schedule or be triggered manually.</p>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Key Features</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Multiple Sources:</strong> Import from REST APIs, AWS S3, FTP/SFTP, or Databases</li>
+                        <li><strong>Delta Sync:</strong> Only import changed or new rows since the last run</li>
+                        <li><strong>Field Mapping:</strong> Transform and map fields from source to destination</li>
+                        <li><strong>Validation:</strong> Validate data before importing (regex, min/max, enums)</li>
+                        <li><strong>Error Handling:</strong> Choose how to handle errors: Skip, Fail, Quarantine, or Retry</li>
+                        <li><strong>Scheduling:</strong> Run imports automatically on a schedule (Cron, Interval, Daily, Weekly)</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-semibold text-gray-900 mb-2">Getting Started</h4>
+                    <ol class="list-decimal pl-5 space-y-1">
+                        <li>Click <strong>New Profile</strong> to create an import</li>
+                        <li>Configure the <strong>Data Source</strong> (where to import from)</li>
+                        <li>Map fields from source to destination (optional)</li>
+                        <li>Set the <strong>Destination</strong> (where to import to)</li>
+                        <li>Configure error handling and advanced options</li>
+                        <li>Enable scheduling if you want the import to run automatically</li>
+                        <li>Click <strong>Save Profile</strong> to create the import</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end">
+                <button onclick="closeHelpModal()" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/js/import-profiles.js"></script>
+</body>
+</html>
