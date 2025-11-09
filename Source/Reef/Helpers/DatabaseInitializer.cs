@@ -159,12 +159,12 @@ public class DatabaseInitializer
                 ConnectionId INTEGER NOT NULL,
                 GroupId INTEGER NULL,
                 Query TEXT NOT NULL,
-                
+
                 -- Scheduling
                 ScheduleType TEXT NULL,
                 ScheduleCron TEXT NULL,
                 ScheduleIntervalMinutes INTEGER NULL,
-                
+
                 -- Output
                 OutputFormat TEXT NOT NULL DEFAULT 'JSON',
                 OutputDestinationType TEXT NULL,
@@ -173,18 +173,18 @@ public class DatabaseInitializer
                 OutputDestinationId INTEGER NULL,
                 TemplateId INTEGER NULL,
                 TransformationOptionsJson TEXT NULL,
-                
+
                 -- Pre-Processing
                 PreProcessType TEXT NULL,
                 PreProcessConfig TEXT NULL,
                 PreProcessRollbackOnFailure INTEGER DEFAULT 1,
-                
+
                 -- Post-Processing
                 PostProcessType TEXT NULL,
                 PostProcessConfig TEXT NULL,
                 PostProcessSkipOnFailure INTEGER DEFAULT 1,
                 PostProcessRollbackOnFailure INTEGER DEFAULT 0,
-                
+
                 -- Delta Sync Configuration
                 DeltaSyncEnabled INTEGER NOT NULL DEFAULT 0,
                 DeltaSyncReefIdColumn TEXT NULL,
@@ -197,21 +197,28 @@ public class DatabaseInitializer
                 DeltaSyncNumericPrecision INTEGER NOT NULL DEFAULT 6,
                 DeltaSyncRemoveNonPrintable INTEGER NOT NULL DEFAULT 0,
                 DeltaSyncReefIdNormalization TEXT NULL DEFAULT 'Trim',
-                
+
                 -- Advanced Output Options
                 ExcludeReefIdFromOutput INTEGER NOT NULL DEFAULT 1,
                 ExcludeSplitKeyFromOutput INTEGER NOT NULL DEFAULT 1,
                 FilenameTemplate TEXT NULL,
-                
+
+                -- Multi-Output Splitting
+                SplitEnabled INTEGER NOT NULL DEFAULT 0,
+                SplitKeyColumn TEXT NULL,
+                SplitFilenameTemplate TEXT NULL DEFAULT '{profile}_{splitkey}_{timestamp}.{format}',
+                SplitBatchSize INTEGER NOT NULL DEFAULT 1,
+                PostProcessPerSplit INTEGER NOT NULL DEFAULT 0,
+
                 -- Dependencies
                 DependsOnProfileIds TEXT NULL,
-                
+
                 -- Notification
                 NotificationConfig TEXT NULL,
-                
+
                 -- Status
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
-                
+
                 -- Metadata
                 Tags TEXT NOT NULL DEFAULT '',
                 CreatedAt TEXT NOT NULL,
@@ -220,7 +227,7 @@ public class DatabaseInitializer
                 CreatedBy TEXT NULL,
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
-                
+
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
                 FOREIGN KEY (OutputDestinationId) REFERENCES Destinations(Id) ON DELETE SET NULL,
@@ -279,28 +286,34 @@ public class DatabaseInitializer
                 ExecutionTimeMs INTEGER NULL,
                 TriggeredBy TEXT NULL,
                 ParametersJson TEXT NULL,
-                
+
                 -- Pre-Processing Tracking
                 PreProcessStartedAt TEXT NULL,
                 PreProcessCompletedAt TEXT NULL,
                 PreProcessStatus TEXT NULL,
                 PreProcessError TEXT NULL,
                 PreProcessTimeMs INTEGER NULL,
-                
+
                 -- Post-Processing Tracking
                 PostProcessStartedAt TEXT NULL,
                 PostProcessCompletedAt TEXT NULL,
                 PostProcessStatus TEXT NULL,
                 PostProcessError TEXT NULL,
                 PostProcessTimeMs INTEGER NULL,
-                
+
                 -- Delta Sync Metrics
                 DeltaSyncNewRows INTEGER NULL,
                 DeltaSyncChangedRows INTEGER NULL,
                 DeltaSyncDeletedRows INTEGER NULL,
                 DeltaSyncUnchangedRows INTEGER NULL,
                 DeltaSyncTotalHashedRows INTEGER NULL,
-                
+
+                -- Split Tracking
+                WasSplit INTEGER NOT NULL DEFAULT 0,
+                SplitCount INTEGER NULL,
+                SplitSuccessCount INTEGER NULL,
+                SplitFailureCount INTEGER NULL,
+
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE
             );
 
@@ -363,7 +376,7 @@ public class DatabaseInitializer
                 CREATE INDEX idx_webhooks_job ON WebhookTriggers(JobId);
             ";
             await connection.ExecuteAsync(sql);
-            Log.Information("Created WebhookTriggers table with JobId support");
+            Log.Debug("Created WebhookTriggers table with JobId support");
         }
         else
         {
@@ -425,8 +438,8 @@ public class DatabaseInitializer
                 CreatedAt TEXT NOT NULL,
                 ModifiedAt TEXT NULL,
                 LastLoginAt TEXT NULL,
-                LastSeenAt TEXT NULL,
-                PasswordChangeRequired INTEGER NOT NULL DEFAULT 0
+                PasswordChangeRequired INTEGER NOT NULL DEFAULT 0,
+                LastSeenAt TEXT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username COLLATE NOCASE);
@@ -542,7 +555,7 @@ public class DatabaseInitializer
                 ProfileId INTEGER NULL,
                 DestinationId INTEGER NULL,
                 CustomActionJson TEXT NULL,
-                
+
                 -- Scheduling
                 ScheduleType INTEGER NOT NULL,
                 CronExpression TEXT NULL,
@@ -551,14 +564,14 @@ public class DatabaseInitializer
                 EndDate TEXT NULL,
                 StartTime TEXT NULL,
                 EndTime TEXT NULL,
-                
+
                 -- Job Configuration
                 MaxRetries INTEGER NOT NULL DEFAULT 3,
                 TimeoutMinutes INTEGER NOT NULL DEFAULT 60,
                 Priority INTEGER NOT NULL DEFAULT 5,
                 AllowConcurrent INTEGER NOT NULL DEFAULT 0,
                 DependsOnJobIds TEXT NULL,
-                
+
                 -- Status
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
                 Status INTEGER NOT NULL DEFAULT 0,
@@ -567,14 +580,15 @@ public class DatabaseInitializer
                 LastSuccessTime TEXT NULL,
                 LastFailureTime TEXT NULL,
                 ConsecutiveFailures INTEGER NOT NULL DEFAULT 0,
-                
+                AutoPauseEnabled INTEGER NOT NULL DEFAULT 1,
+
                 -- Metadata
                 Tags TEXT NOT NULL DEFAULT '',
                 CreatedAt TEXT NOT NULL,
                 ModifiedAt TEXT NULL,
                 CreatedBy TEXT NULL,
                 Hash TEXT NOT NULL,
-                
+
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
                 FOREIGN KEY (DestinationId) REFERENCES Destinations(Id) ON DELETE SET NULL
             );
@@ -720,7 +734,7 @@ public class DatabaseInitializer
                     ON ProfileExecutionSplits(Status);
             ";
             await connection.ExecuteAsync(sql);
-            Log.Information("ProfileExecutionSplits table created");
+            Log.Debug("ProfileExecutionSplits table created");
         }
     }
 
@@ -1054,39 +1068,32 @@ public class DatabaseInitializer
 
     /// <summary>
     /// Apply schema migrations for existing databases
+    /// This method handles migrations for columns that were added after initial release.
+    /// For new installations, all base columns are created in the initial table definitions.
     /// </summary>
     private async Task ApplyMigrationsAsync(SqliteConnection connection)
     {
         Log.Debug("Applying database schema migrations...");
-        
-        // Migration: Add ExcludeReefIdFromOutput and ExcludeSplitKeyFromOutput columns
-        await AddColumnIfNotExistsAsync(connection, "Profiles", "ExcludeReefIdFromOutput", "INTEGER NOT NULL DEFAULT 1");
-        await AddColumnIfNotExistsAsync(connection, "Profiles", "ExcludeSplitKeyFromOutput", "INTEGER NOT NULL DEFAULT 1");
-        
-        // Migration: Add Multi-Output Splitting columns to Profiles table
+
+        // Create ProfileExecutionSplits table (new table for split tracking)
+        await CreateProfileExecutionSplitsTableAsync(connection);
+
+        // Add any missing columns that should exist (for backward compatibility with older databases)
+        // These column additions are only necessary for databases created before all columns were
+        // included in the base schema. They won't log anything on first launch.
         await AddColumnIfNotExistsAsync(connection, "Profiles", "SplitEnabled", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "SplitKeyColumn", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "SplitFilenameTemplate", "TEXT NULL DEFAULT '{profile}_{splitkey}_{timestamp}.{format}'");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "SplitBatchSize", "INTEGER NOT NULL DEFAULT 1");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "PostProcessPerSplit", "INTEGER NOT NULL DEFAULT 0");
-        await AddColumnIfNotExistsAsync(connection, "Profiles", "FilenameTemplate", "TEXT NULL");
-        
-        // Migration: Add split tracking columns to ProfileExecutions table
+
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "WasSplit", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitCount", "INTEGER NULL");
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitSuccessCount", "INTEGER NULL");
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitFailureCount", "INTEGER NULL");
-        
-        // Migration: Create ProfileExecutionSplits table
-        await CreateProfileExecutionSplitsTableAsync(connection);
 
-        // Migration: Add AutoPauseEnabled column to Jobs table
         await AddColumnIfNotExistsAsync(connection, "Jobs", "AutoPauseEnabled", "INTEGER NOT NULL DEFAULT 1");
-
-        // Migration: Add LastSeenAt column to Users table
         await AddColumnIfNotExistsAsync(connection, "Users", "LastSeenAt", "TEXT NULL");
-
-        // Migration: Add PasswordChangeRequired column to Users table
         await AddColumnIfNotExistsAsync(connection, "Users", "PasswordChangeRequired", "INTEGER NOT NULL DEFAULT 0");
 
         Log.Debug("Database schema migrations completed");
