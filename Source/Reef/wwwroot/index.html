@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login &middot; Reef</title>
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* --- Animated Background --- */
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(-45deg, #1e3a8a, #312e81, #111827, #4c1d95);
+            background-size: 400% 400%;
+            animation: gradient-flow 25s ease infinite;
+            opacity: 0.15;
+            z-index: 0;
+        }
+        
+        /* --- Fade-in animation --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        /* --- Slide-down animation for error messages --- */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        
+        .error-slide-in {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        /* --- Spinner transitions --- */
+        #login-spinner {
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        #login-spinner.hidden {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        #login-text {
+            transition: opacity 0.3s ease-in;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 antialiased">
+    <div id="login-page" class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">    
+        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/50 backdrop-blur-lg border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-blue-500/10 rounded-full">
+                    <i data-lucide="waves" class="h-10 w-10 text-blue-400"></i>
+                </div>
+                <h2 id="greeting-header" class="mt-4 text-3xl font-bold text-center text-white disable-select">
+                    Welcome to Reef
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-400 disable-select">
+                    A Lightweight Data Export Service
+                </p>
+            </div>
+            
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-300">Username</label>
+                    <div class="mt-1">
+                        <input id="username" name="username" type="text" autocomplete="username" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="admin" value="">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-300">Password</label>
+                    <div class="mt-1">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="••••••••" value="">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <label for="remember-me" class="flex items-center cursor-pointer text-sm text-gray-300 hover:text-white transition-colors duration-150">
+                            <input id="remember-me" name="remember-me" type="checkbox"
+                                class="h-4 w-4 text-accent bg-gray-800 border-gray-600 rounded focus:ring-accent focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-150 cursor-pointer">
+                            <span class="ml-2">Remember me</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <button id="login-button" type="submit"
+                            class="flex w-full justify-center items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-md
+                                   /* --- Animations --- */
+                                   transition-all duration-200 ease-in-out
+                                   hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/50 hover:-translate-y-0.5
+                                   active:bg-blue-800 active:scale-[0.9 9]
+                                   /* --- Focus States --- */
+                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500
+                                   /* --- Disabled State --- */
+                                   disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md">
+                        
+                        <i id="login-spinner" data-lucide="loader-2" class="h-5 w-5 animate-spin hidden mr-2"></i>
+                        
+                        <span id="login-text">Sign In</span>
+                    </button>
+                </div>
+
+                <!-- Enhanced error message display -->
+                <div id="error-container"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Greeting message logic with first-visit handling
+        (function setGreeting() {
+            const greetings = [
+                "Welcome back to Reef",
+                "Hello from Reef",
+                "Good to see you again on Reef",
+                "Ready to dive into Reef?",
+                "Let's get started with Reef",
+                "This is Reef",
+                "Sign in to Reef",
+                "Login to Reef",
+                "Reef is Ready",
+                "Start your session on Reef",
+                "Enter your Reef credentials"
+            ];
+
+            const GREETING_KEY = 'reef_greeting';
+            const TIMESTAMP_KEY = 'reef_greeting_timestamp';
+            const VISIT_KEY = 'reef_visit_count';
+            const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+            try {
+                const greetingHeader = document.getElementById('greeting-header');
+                if (!greetingHeader) return;
+
+                const cachedTimestamp = localStorage.getItem(TIMESTAMP_KEY);
+                const now = Date.now();
+
+                // Track number of visits (or initialize it)
+                let visitCount = parseInt(localStorage.getItem(VISIT_KEY) || '0', 10);
+                // Only set visitCount to 1 on first visit, do not increment further
+                if (visitCount === 0) {
+                    localStorage.setItem(VISIT_KEY, '1');
+                }
+
+                // If this is the first visit AND no cached greeting, leave HTML as-is
+                if (visitCount === 0 && !cachedTimestamp) {
+                    return;
+                }
+
+                const cachedGreeting = localStorage.getItem(GREETING_KEY);
+
+                // Reuse valid cached greeting if within cache duration
+                if (cachedGreeting && cachedTimestamp && (now - parseInt(cachedTimestamp, 10) < CACHE_DURATION_MS)) {
+                    greetingHeader.textContent = cachedGreeting;
+                } else {
+                    // Otherwise pick and store a new greeting
+                    const newGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+                    localStorage.setItem(GREETING_KEY, newGreeting);
+                    localStorage.setItem(TIMESTAMP_KEY, now.toString());
+                    greetingHeader.textContent = newGreeting;
+                }
+
+            } catch (e) {
+                console.warn('Could not use localStorage for greeting.', e);
+                // fallback: default HTML stays as-is
+            }
+        })();
+
+
+        // Centralized login logic
+        const loginForm = document.getElementById('login-form');
+        const errorContainer = document.getElementById('error-container');
+
+        // Enhanced error display function
+        function showError(message, type = 'error') {
+            const bgColor = type === 'error' ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400';
+            const icon = type === 'error' ? 'alert-circle' : 'alert-triangle';
+            
+            errorContainer.innerHTML = `
+                <div class="${bgColor} border-l-4 p-4 rounded-md error-slide-in" role="alert">
+                    <div class="flex items-center">
+                        <i data-lucide="${icon}" class="h-5 w-5 mr-3 flex-shrink-0"></i>
+                        <p class="text-sm font-medium">${message}</p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            
+            // Auto-dismiss after 6 seconds
+            setTimeout(() => {
+                const firstChild = errorContainer.firstChild;
+                if (firstChild && firstChild.style) {
+                    firstChild.style.opacity = '0';
+                    firstChild.style.transform = 'translateY(-10px)';
+                    firstChild.style.transition = 'all 0.3s ease-out';
+                    setTimeout(() => {
+                        if (errorContainer.contains(firstChild)) {
+                            errorContainer.innerHTML = '';
+                        }
+                    }, 100);
+                }
+            }, 6000);
+        }
+
+        // --- Get references to button and its parts ---
+        const loginButton = document.getElementById('login-button');
+        const loginText = document.getElementById('login-text');
+
+        // Helper function to reset button state
+        function resetLoginButton() {
+            const spinner = document.getElementById('login-spinner');
+            
+            // Fade out spinner first
+            if (spinner) {
+                spinner.classList.add('hidden');
+            }
+            
+            // Wait for spinner fade-out, then re-enable button and update text
+            setTimeout(() => {
+                loginButton.disabled = false;
+                loginText.textContent = 'Sign In';
+            }, 300); // Match the CSS transition duration
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorContainer.innerHTML = ''; // Clear any previous errors
+
+            // --- Activate loading state ---
+            const spinner = document.getElementById('login-spinner');
+            if (spinner) {
+                spinner.classList.remove('hidden');
+            }
+            
+            // Small delay to let spinner appear before disabling button
+            setTimeout(() => {
+                loginButton.disabled = true;
+                loginText.textContent = 'Sign in';
+            }, 10);
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.token && data.token !== 'undefined') {
+                        localStorage.setItem('reef_token', data.token);
+                        localStorage.setItem('reef_username', data.username);
+                        localStorage.setItem('reef_role', data.role);
+                        window.location.href = '/dashboard.html';
+                        return; // Exit early on success
+                    } else {
+                        console.log('No token received');
+                        showError('Login failed: No token received.');
+                        resetLoginButton();
+                    }
+                } else {
+                    // Handle non-OK responses
+                    let errorMsg = 'Invalid username or password';
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMsg = error.message || errorMsg;
+                        }
+                    } catch (parseError) {
+                        // If JSON parsing fails, use default message
+                        console.error('Failed to parse error response:', parseError);                            
+                    }
+                    showError(errorMsg);
+                    resetLoginButton();
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                showError('Connection error. Please check your network and try again.', 'error');
+                resetLoginButton();            }
+        });
+
+        // Use centralized auth check for login page (unchanged)
+        redirectIfAuthenticated();
+    </script>
+</body>
+</html>
