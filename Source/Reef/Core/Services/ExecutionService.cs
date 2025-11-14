@@ -253,7 +253,7 @@ public class ExecutionService
             // Check if there are any rows to export (for both delta sync and regular profiles)
             if (rows.Count == 0)
             {
-                Log.Information("No rows to export - skipping file creation");
+                Log.Information("No rows to export for profile {ProfileId}", profileId);
 
                 var message = profile.DeltaSyncEnabled
                     ? "No changes detected by smart sync"
@@ -406,11 +406,42 @@ public class ExecutionService
                         // Update profile's last executed timestamp
                         await UpdateProfileLastExecutedAsync(profileId);
 
-                        // Commit delta sync if enabled
-                        if (profile.DeltaSyncEnabled && deltaSyncResult != null)
+                        // Commit delta sync for successfully sent emails ONLY
+                        // If some emails failed, only mark the successful ones as synced
+                        if (profile.DeltaSyncEnabled && deltaSyncResult != null && splits.Count > 0)
                         {
-                            await _deltaSyncService.CommitDeltaSyncAsync(profileId, executionId, deltaSyncResult);
-                            await UpdateDeltaSyncMetricsAsync(executionId, deltaSyncResult);
+                            // Determine which rows succeeded based on split results
+                            var successfulRowIndices = new HashSet<int>();
+                            int rowIndex = 0;
+
+                            // Map splits back to row indices
+                            // Splits are created in the same order as rows were processed
+                            foreach (var split in splits)
+                            {
+                                if (split.Status == "Success")
+                                {
+                                    for (int i = 0; i < split.RowCount; i++)
+                                    {
+                                        successfulRowIndices.Add(rowIndex + i);
+                                    }
+                                }
+                                rowIndex += split.RowCount;
+                            }
+
+                            // Filter delta sync result to only include successful rows
+                            var filteredDeltaSyncResult = FilterDeltaSyncByRowIndices(
+                                deltaSyncResult,
+                                rows,
+                                successfulRowIndices,
+                                profile.DeltaSyncReefIdColumn);
+
+                            if (filteredDeltaSyncResult != null)
+                            {
+                                await _deltaSyncService.CommitDeltaSyncAsync(profileId, executionId, filteredDeltaSyncResult);
+                                await UpdateDeltaSyncMetricsAsync(executionId, filteredDeltaSyncResult);
+                                Log.Information("Delta sync committed for {SuccessCount} successfully sent emails, {FailureCount} failed emails not synced",
+                                    successfulRowIndices.Count, splits.Where(s => s.Status == "Failed").Sum(s => s.RowCount));
+                            }
                         }
 
                         await _auditService.LogAsync("Profile", profileId, "Executed", triggeredBy,
@@ -2576,5 +2607,81 @@ public class ExecutionService
             .Replace("\n", "\\n")
             .Replace("\r", "\\r")
             .Replace("\t", "\\t");
+    }
+
+    /// <summary>
+    /// Filters a DeltaSyncResult to only include rows at successful indices.
+    /// This allows partial delta sync commits when some rows fail (e.g., failed email sends).
+    /// </summary>
+    /// <param name="deltaSyncResult">The original delta sync result</param>
+    /// <param name="rows">The original rows list</param>
+    /// <param name="successfulRowIndices">Set of row indices that succeeded</param>
+    /// <param name="reefIdColumn">The column name used as ReefId for delta sync</param>
+    /// <returns>A new DeltaSyncResult with only successful rows, or null if no successful rows</returns>
+    private DeltaSyncResult? FilterDeltaSyncByRowIndices(
+        DeltaSyncResult deltaSyncResult,
+        List<Dictionary<string, object>> rows,
+        HashSet<int> successfulRowIndices,
+        string? reefIdColumn)
+    {
+        if (string.IsNullOrEmpty(reefIdColumn))
+            return null;
+
+        // Filter new rows to only include successful indices
+        var filteredNewRows = deltaSyncResult.NewRows
+            .Where((row, index) => successfulRowIndices.Contains(index))
+            .ToList();
+
+        // For changed rows, we need to match them back to original rows by ReefId
+        var successfulReefIds = new HashSet<string>();
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (successfulRowIndices.Contains(i) && rows[i].TryGetValue(reefIdColumn, out var reefIdVal))
+            {
+                var reefId = reefIdVal?.ToString();
+                if (!string.IsNullOrEmpty(reefId))
+                {
+                    successfulReefIds.Add(reefId);
+                }
+            }
+        }
+
+        var filteredChangedRows = deltaSyncResult.ChangedRows
+            .Where(row => row.TryGetValue(reefIdColumn, out var reefIdVal) &&
+                   successfulReefIds.Contains(reefIdVal?.ToString() ?? ""))
+            .ToList();
+
+        // Filter deleted ReefIds to only include deletions for successful rows
+        var filteredDeletedReefIds = deltaSyncResult.DeletedReefIds
+            .Where(reefId => successfulReefIds.Contains(reefId))
+            .ToList();
+
+        // Filter NewHashState to only include successful rows
+        // This is CRITICAL - we must not commit hashes for failed rows to delta sync state
+        var filteredNewHashState = new Dictionary<string, string>();
+        foreach (var (reefId, hash) in deltaSyncResult.NewHashState)
+        {
+            if (successfulReefIds.Contains(reefId))
+            {
+                filteredNewHashState[reefId] = hash;
+            }
+        }
+
+        // Check if we have any successful rows to commit
+        if (filteredNewRows.Count == 0 && filteredChangedRows.Count == 0 && filteredDeletedReefIds.Count == 0)
+        {
+            return null;
+        }
+
+        // Create a new DeltaSyncResult with only successful rows
+        return new DeltaSyncResult
+        {
+            NewRows = filteredNewRows,
+            ChangedRows = filteredChangedRows,
+            UnchangedRows = deltaSyncResult.UnchangedRows, // Keep unchanged rows as-is
+            DeletedReefIds = filteredDeletedReefIds,
+            TotalRowsProcessed = deltaSyncResult.TotalRowsProcessed,
+            NewHashState = filteredNewHashState
+        };
     }
 }

@@ -152,7 +152,7 @@ public class DeltaSyncService
         int executionId,
         DeltaSyncResult deltaSyncResult)
     {
-        Log.Information("Committing delta sync state for profile {ProfileId}, execution {ExecutionId}", profileId, executionId);
+        Log.Debug("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}", profileId, executionId);
 
         // Update hash state for all current rows
         await UpdateHashStateAsync(profileId, executionId, deltaSyncResult.NewHashState);
@@ -163,7 +163,7 @@ public class DeltaSyncService
             await MarkDeletedRowsAsync(profileId, executionId, deltaSyncResult.DeletedReefIds);
         }
 
-        Log.Information("Delta sync state committed successfully for profile {ProfileId}", profileId);
+        Log.Debug("Delta sync: State committed successfully for profile {ProfileId}", profileId);
     }
 
     /// <summary>

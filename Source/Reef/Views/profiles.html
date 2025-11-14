@@ -3444,7 +3444,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 });
                 
                 if (response.ok) {
-                    showMessage('Delta sync state reset successfully', 'success');
+                    showToast('Delta sync state reset successfully', 'success');
                     await loadDeltaSyncStats(profileId);
                 } else {
                     const error = await response.json();
@@ -3452,7 +3452,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
             } catch (error) {
                 console.error('Error resetting delta sync:', error);
-                showMessage(error.message, 'error');
+                showToast(error.message, 'error');
             }
         }
 
