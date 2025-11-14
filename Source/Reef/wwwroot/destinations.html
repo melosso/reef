@@ -188,6 +188,7 @@
                         <option value="Sftp">SFTP</option>
                         <option value="AzureBlob">Azure Blob Storage</option>
                         <option value="S3">AWS S3</option>
+                        <option value="Email">Email (SMTP)</option>
                         <option value="Http">HTTP/HTTPS REST API</option>
                         <option value="NetworkShare">SMB/CIFS</option>
                     </select>
@@ -662,6 +663,161 @@
                         </div>
                     `;
                     break;
+                case 'Email':
+                    html = `
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Host *</label>
+                                <input type="text" id="config-smtpServer" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       placeholder="smtp.gmail.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Port</label>
+                                <input type="number" id="config-smtpPort" value="587"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From Email Address *</label>
+                                <input type="email" id="config-fromAddress" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       placeholder="noreply@example.com">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+                                <input type="text" id="config-fromName"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       placeholder="Reef Export Service">
+                                <p class="text-xs text-gray-500 mt-1">Display name for sender (optional)</p>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Settings Accordion -->
+                        <div class="border border-gray-200 rounded-lg">
+                            <button type="button" onclick="toggleEmailAdvanced(event)"
+                                    class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="sliders" class="w-4 h-4 text-gray-600"></i>
+                                    <span class="text-sm font-medium text-gray-700">Advanced Settings</span>
+                                </div>
+                                <i data-lucide="chevron-down" id="emailAdvancedChevron" class="w-4 h-4 text-gray-400 transition-transform"></i>
+                            </button>
+                            <div id="emailAdvanced" class="hidden px-4 pb-4 space-y-4 border-t border-gray-200">
+                                <div class="pt-4">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Authentication Type</label>
+                                    <select id="config-authType"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                            onchange="toggleEmailAuthFields()">
+                                        <option value="Basic">Basic (Username & Password)</option>
+                                        <option value="OAuth2">OAuth 2.0 (Access Token)</option>
+                                        <option value="None">No Authentication</option>
+                                    </select>
+                                </div>
+
+                                <!-- Basic Auth Fields -->
+                                <div id="emailBasicAuth" class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                            <input type="email" id="config-smtpUsername"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                   data-secret-field="true"
+                                                   placeholder="your-email@gmail.com">
+                                            <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Password / App Password</label>
+                                            <input type="password" id="config-smtpPassword"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                   data-secret-field="true"
+                                                   placeholder="Your password or app-specific password">
+                                            <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- OAuth2 Auth Fields -->
+                                <div id="emailOAuth2Auth" class="hidden space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">OAuth2 Access Token</label>
+                                        <input type="password" id="config-oauthToken"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                               data-secret-field="true"
+                                               placeholder="OAuth2 access token">
+                                        <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Username (for OAuth2)</label>
+                                        <input type="email" id="config-oauthUsername"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                               placeholder="your-email@gmail.com">
+                                        <p class="text-xs text-gray-500 mt-1">Usually your email address</p>
+                                    </div>
+                                </div>
+
+                                <!-- Connection Settings -->
+                                <div class="border-t border-gray-200 pt-4 space-y-4">
+                                    <div class="mb-4 relative">
+                                        <label for="config-securityMode" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Security
+                                            <span class="ml-1 text-gray-400 cursor-help" 
+                                                data-tooltip="STARTTLS: Secure, standard for most SMTP servers\nNone: For mock servers or local testing (port 2525)\nAuto: Automatically negotiate TLS if available" 
+                                                data-tooltip-position="top">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4 inline">
+                                                    <circle cx="12" cy="12" r="10"></circle>
+                                                    <path d="M12 16v-4"></path>
+                                                    <path d="M12 8h.01"></path>
+                                                </svg>
+                                            </span>
+                                        </label>
+
+                                        <select id="config-securityMode" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                            <option value="StartTls" selected>
+                                                STARTTLS (Encrypted, recommended)
+                                            </option>
+                                            <option value="None">
+                                                None (Plain text, for local or test)
+                                            </option>
+                                            <option value="Auto">
+                                                Auto-detect (Try TLS if available)
+                                            </option>
+                                        </select>
+                                    </div>
+
+
+                                    <div>
+                                        <div class="flex items-start">
+                                            <div class="flex items-center h-5">
+                                                <input type="checkbox" id="config-validateCertificate" checked
+                                                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                            </div>
+                                            <div class="ml-3">
+                                                <label for="config-validateCertificate" class="text-sm font-medium text-gray-700">Validate Server Certificate</label>
+                                                <p class="text-xs text-gray-500 mt-1">Verify SSL/TLS certificate validity. Uncheck only for self-signed certificates</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Connection Timeout (seconds)</label>
+                                        <input type="number" id="config-timeoutSeconds" value="30" min="5" max="300"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                        <p class="text-xs text-gray-500 mt-1">How long to wait for SMTP connection (5-300 seconds)</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Retry Count</label>
+                                        <input type="number" id="config-retryCount" value="3" min="0" max="10"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                        <p class="text-xs text-gray-500 mt-1">Number of retry attempts on failure</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    break;
                 case 'Http':
                     html = `
                         <div>
@@ -1082,6 +1238,7 @@
                             case 'Sftp': icon = 'shield'; break;
                             case 'S3': icon = 'database'; break;
                             case 'AzureBlob': icon = 'cloud'; break;
+                            case 'Email': icon = 'mail'; break;
                             case 'Http': icon = 'globe'; break;
                             case 'NetworkShare': icon = 'network'; break;
                         }
@@ -1379,6 +1536,43 @@
                     chevron.style.transform = 'rotate(0deg)';
                 }
                 setTimeout(() => lucide.createIcons(), 10);
+            }
+        }
+
+        function toggleEmailAdvanced(event) {
+            event.preventDefault();
+            const panel = document.getElementById('emailAdvanced');
+            const chevron = document.getElementById('emailAdvancedChevron');
+
+            if (panel && chevron) {
+                if (panel.classList.contains('hidden')) {
+                    panel.classList.remove('hidden');
+                    chevron.style.transform = 'rotate(180deg)';
+                } else {
+                    panel.classList.add('hidden');
+                    chevron.style.transform = 'rotate(0deg)';
+                }
+                setTimeout(() => lucide.createIcons(), 10);
+            }
+        }
+
+        function toggleEmailAuthFields() {
+            const authType = document.getElementById('config-authType')?.value || 'Basic';
+            const basicAuth = document.getElementById('emailBasicAuth');
+            const oauth2Auth = document.getElementById('emailOAuth2Auth');
+
+            if (basicAuth && oauth2Auth) {
+                if (authType === 'OAuth2') {
+                    basicAuth.classList.add('hidden');
+                    oauth2Auth.classList.remove('hidden');
+                } else if (authType === 'None') {
+                    basicAuth.classList.add('hidden');
+                    oauth2Auth.classList.add('hidden');
+                } else {
+                    // Basic or default
+                    basicAuth.classList.remove('hidden');
+                    oauth2Auth.classList.add('hidden');
+                }
             }
         }
 

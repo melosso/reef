@@ -425,14 +425,24 @@
             document.getElementById('add-template-form').reset();
             document.getElementById('add-template-form').removeAttribute('data-edit-id');
             document.getElementById('template-active').checked = true;
-            
+
             // Reset validation state
             isValidationRequired = false;
             isValidated = false;
             lastValidatedContent = '';
             document.getElementById('validate-btn').classList.add('hidden');
             document.getElementById('validation-status').classList.add('hidden');
-            
+
+            // Initialize output format dropdown with default options
+            // (when no template type is selected, show all basic options)
+            const formatSelect = document.getElementById('template-outputFormat');
+            formatSelect.innerHTML = `
+                <option value="XML">XML</option>
+                <option value="JSON">JSON</option>
+                <option value="CSV">CSV</option>
+                <option value="Text">Text</option>
+            `;
+
             lucide.createIcons();
         }
 
@@ -570,8 +580,10 @@
                     const typeSelect = document.getElementById('template-type');
                     if (typeSelect && template.type) {
                         typeSelect.value = template.type;
+                        // Update output format options based on template type
+                        updateOutputFormatOptions(template.type);
                     }
-                    
+
                     // Initialize validation state for the loaded template
                     isValidationRequired = isScribanTemplate(template.type);
                     if (isValidationRequired) {
@@ -586,11 +598,11 @@
                         document.getElementById('validate-btn').classList.add('hidden');
                         document.getElementById('validation-status').classList.add('hidden');
                     }
-                    
+
                     // Wait again before setting output format
                     await new Promise(resolve => setTimeout(resolve, 50));
-                    
-                    // Set output format dropdown
+
+                    // Set output format dropdown (now with dynamically populated options)
                     const formatSelect = document.getElementById('template-outputFormat');
                     if (formatSelect && template.outputFormat) {
                         formatSelect.value = template.outputFormat;
@@ -712,17 +724,98 @@
         let isValidated = false;
         let lastValidatedContent = '';
 
+        /**
+         * Template Type to Output Format Mapping
+         * Centralized configuration defining which output formats are supported/recommended for each template type.
+         * This maintains a single source of truth for format assignments.
+         */
+        const TEMPLATE_FORMAT_CONFIG = {
+            'ScribanTemplate': {
+                formats: ['CSV', 'JSON', 'XML', 'YAML', 'HTML', 'EDI', 'Text'],
+                defaultFormat: 'CSV',
+                description: 'Supports any output format'
+            },
+            'XsltTransform': {
+                formats: ['XML'],
+                defaultFormat: 'XML',
+                description: 'XSLT always outputs XML'
+            },
+            'ForXmlRaw': {
+                formats: ['XML'],
+                defaultFormat: 'XML',
+                description: 'FOR XML RAW outputs XML'
+            },
+            'ForXmlAuto': {
+                formats: ['XML'],
+                defaultFormat: 'XML',
+                description: 'FOR XML AUTO outputs XML'
+            },
+            'ForXmlPath': {
+                formats: ['XML'],
+                defaultFormat: 'XML',
+                description: 'FOR XML PATH outputs XML'
+            },
+            'ForXmlExplicit': {
+                formats: ['XML'],
+                defaultFormat: 'XML',
+                description: 'FOR XML EXPLICIT outputs XML'
+            },
+            'ForJson': {
+                formats: ['JSON'],
+                defaultFormat: 'JSON',
+                description: 'FOR JSON AUTO outputs JSON'
+            },
+            'ForJsonPath': {
+                formats: ['JSON'],
+                defaultFormat: 'JSON',
+                description: 'FOR JSON PATH outputs JSON'
+            }
+        };
+
         function isScribanTemplate(type) {
             return type === 'ScribanTemplate';
+        }
+
+        /**
+         * Updates the Output Format dropdown based on selected template type
+         * Dynamically populates available formats and sets appropriate default
+         */
+        function updateOutputFormatOptions(templateType) {
+            const formatSelect = document.getElementById('template-outputFormat');
+            const config = TEMPLATE_FORMAT_CONFIG[templateType];
+
+            if (!config) {
+                // Fallback to default options if type not configured
+                formatSelect.innerHTML = `
+                    <option value="XML">XML</option>
+                    <option value="JSON">JSON</option>
+                    <option value="CSV">CSV</option>
+                    <option value="Text">Text</option>
+                `;
+                return;
+            }
+
+            // Rebuild dropdown with type-specific formats
+            formatSelect.innerHTML = config.formats
+                .map(format => `<option value="${format}">${format}</option>`)
+                .join('');
+
+            // Set default format
+            formatSelect.value = config.defaultFormat;
         }
 
         function onTemplateTypeChange() {
             const type = document.getElementById('template-type').value;
             const validateBtn = document.getElementById('validate-btn');
             const validationStatus = document.getElementById('validation-status');
-            
+
+            // Update output format options based on template type
+            if (type) {
+                updateOutputFormatOptions(type);
+            }
+
             isValidationRequired = isScribanTemplate(type);
-            
+
             if (isValidationRequired) {
                 validateBtn.classList.remove('hidden');
                 validationStatus.classList.remove('hidden');
@@ -734,7 +827,7 @@
                 validationStatus.classList.add('hidden');
                 isValidated = true; // Non-Scriban templates don't need validation
             }
-            
+
             lucide.createIcons();
         }
 

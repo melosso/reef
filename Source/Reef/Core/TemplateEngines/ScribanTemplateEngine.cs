@@ -109,6 +109,30 @@ public class ScribanTemplateEngine : ITemplateEngine
             // Import helpers
             scriptObject.Import(new TemplateHelpers());
 
+            // Import helpers - register all static methods as filters/functions
+            //r helpers = new TemplateHelpers();
+            //riptObject.Import(helpers);
+
+            // Manually register static filter methods for proper snake_case support
+            //riptObject.SetValue("parse_json", new Func<string, object>(TemplateHelpers.ParseJson), false);
+            //riptObject.SetValue("to_json", new Func<object, string>(TemplateHelpers.ToJson), false);
+            //riptObject.SetValue("safe_string", new Func<object, string>(TemplateHelpers.SafeString), false);
+            //riptObject.SetValue("has_value", new Func<object, bool>(TemplateHelpers.HasValue), false);
+            //riptObject.SetValue("xml_escape", new Func<object, string>(TemplateHelpers.XmlEscape), false);
+            //riptObject.SetValue("html_escape", new Func<object, string>(TemplateHelpers.HtmlEscape), false);
+            //riptObject.SetValue("csv_escape", new Func<object, string>(TemplateHelpers.CsvEscape), false);
+
+            // For single-row templates (e.g., email previews), flatten the row values into the global context
+            // This allows templates to reference variables directly (e.g., {{ logo_url }}) instead of (e.g., {{ data[0].logo_url }})
+            // (cleanData.Count == 1 && cleanData[0] != null)
+            //
+            //  foreach (var kvp in cleanData[0])
+            //  {
+            //      scriptObject.Add(kvp.Key, kvp.Value);
+            //  }
+            //  Log.Debug("Flattened {Count} variables from single row into global context", cleanData[0].Count);
+            //
+
             // Add any additional context
             if (context != null)
             {
@@ -131,9 +155,8 @@ public class ScribanTemplateEngine : ITemplateEngine
                 EnableRelaxedIndexerAccess = true, // Allow flexible indexer access
                 EnableRelaxedTargetAccess = true,   // Allow relaxed target access
                 LoopLimit = dynamicLoopLimit, // Dynamic limit based on data size and complexity
-                RecursiveLimit = 100 // Protect against infinite recursion
-                // DO NOT set MemberRenamer here - it would rename our ScriptObject keys
-                // MemberRenamer only affects .NET objects, not ScriptObject members we manually add
+                RecursiveLimit = 100, // Protect against infinite recursion
+                MemberRenamer = StandardMemberRenamer.Default // Convert CamelCase to snake_case for .NET objects (safe - only affects methods, not ScriptObject keys)
             };
             
             templateContext.PushGlobal(scriptObject);

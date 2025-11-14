@@ -152,18 +152,20 @@ public class ProfileService
             }
 
             // Validate Multi-Output Splitting configuration
-            if (profile.SplitEnabled)
+            // Note: For email profiles, split key column is optional (enables grouping by column if provided)
+            // For file exports, split key column is required if split is enabled
+            if (profile.SplitEnabled && !profile.IsEmailExport)
             {
                 if (string.IsNullOrWhiteSpace(profile.SplitKeyColumn))
                 {
                     throw new InvalidOperationException("SplitKeyColumn is required when SplitEnabled is true");
                 }
-                
+
                 if (profile.SplitBatchSize < 1)
                 {
                     throw new InvalidOperationException("SplitBatchSize must be at least 1");
                 }
-                
+
                 // Validate filename template has required placeholders (set default if empty)
                 if (string.IsNullOrWhiteSpace(profile.SplitFilenameTemplate))
                 {
@@ -193,6 +195,7 @@ public class ProfileService
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure, PostProcessRollbackOnFailure,
                     NotificationConfig,
+                    IsEmailExport, EmailTemplateId, EmailRecipientsColumn, EmailCcColumn, EmailSubjectColumn,
                     DeltaSyncEnabled, DeltaSyncReefIdColumn, DeltaSyncHashAlgorithm,
                     DeltaSyncDuplicateStrategy, DeltaSyncNullStrategy, DeltaSyncNumericPrecision,
                     DeltaSyncTrackDeletes, DeltaSyncResetOnSchemaChange, DeltaSyncRemoveNonPrintable, DeltaSyncReefIdNormalization,
@@ -207,6 +210,7 @@ public class ProfileService
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure, @PostProcessRollbackOnFailure,
                     @NotificationConfig,
+                    @IsEmailExport, @EmailTemplateId, @EmailRecipientsColumn, @EmailCcColumn, @EmailSubjectColumn,
                     @DeltaSyncEnabled, @DeltaSyncReefIdColumn, @DeltaSyncHashAlgorithm,
                     @DeltaSyncDuplicateStrategy, @DeltaSyncNullStrategy, @DeltaSyncNumericPrecision,
                     @DeltaSyncTrackDeletes, @DeltaSyncResetOnSchemaChange, @DeltaSyncRemoveNonPrintable, @DeltaSyncReefIdNormalization,
@@ -286,18 +290,20 @@ public class ProfileService
             }
 
             // Validate Multi-Output Splitting configuration
-            if (profile.SplitEnabled)
+            // Note: For email profiles, split key column is optional (enables grouping by column if provided)
+            // For file exports, split key column is required if split is enabled
+            if (profile.SplitEnabled && !profile.IsEmailExport)
             {
                 if (string.IsNullOrWhiteSpace(profile.SplitKeyColumn))
                 {
                     throw new InvalidOperationException("SplitKeyColumn is required when SplitEnabled is true");
                 }
-                
+
                 if (profile.SplitBatchSize < 1)
                 {
                     throw new InvalidOperationException("SplitBatchSize must be at least 1");
                 }
-                
+
                 // Validate filename template has required placeholders (set default if empty)
                 if (string.IsNullOrWhiteSpace(profile.SplitFilenameTemplate))
                 {
@@ -333,6 +339,11 @@ public class ProfileService
                     PostProcessSkipOnFailure = @PostProcessSkipOnFailure,
                     PostProcessRollbackOnFailure = @PostProcessRollbackOnFailure,
                     NotificationConfig = @NotificationConfig,
+                    IsEmailExport = @IsEmailExport,
+                    EmailTemplateId = @EmailTemplateId,
+                    EmailRecipientsColumn = @EmailRecipientsColumn,
+                    EmailCcColumn = @EmailCcColumn,
+                    EmailSubjectColumn = @EmailSubjectColumn,
                     DeltaSyncEnabled = @DeltaSyncEnabled,
                     DeltaSyncReefIdColumn = @DeltaSyncReefIdColumn,
                     DeltaSyncHashAlgorithm = @DeltaSyncHashAlgorithm,

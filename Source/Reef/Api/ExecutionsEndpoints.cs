@@ -142,6 +142,8 @@ public static class ExecutionsEndpoints
         [FromServices] ProfileService profileService,
         [FromServices] ConnectionService connectionService,
         [FromServices] AuditService auditService,
+        [FromQuery] bool testMode = false,
+        [FromQuery] int? localDestinationId = null,
         [FromBody] ExecuteProfileRequest? request = null)
     {
         try
@@ -160,34 +162,43 @@ public static class ExecutionsEndpoints
             var connection = await connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)
             {
-                Log.Warning("Connection {ConnectionId} for profile {ProfileId} not found", 
+                Log.Warning("Connection {ConnectionId} for profile {ProfileId} not found",
                     profile.ConnectionId, profileId);
                 return Results.BadRequest(new { message = "Connection not found" });
             }
 
             if (!connection.IsActive)
             {
-                Log.Warning("Execution blocked: Connection {ConnectionId} ({ConnectionName}) is disabled", 
+                Log.Warning("Execution blocked: Connection {ConnectionId} ({ConnectionName}) is disabled",
                     connection.Id, connection.Name);
-                
+
                 await auditService.LogAsync("Profile", profileId, "ExecutionBlocked", username,
-                    System.Text.Json.JsonSerializer.Serialize(new { 
+                    System.Text.Json.JsonSerializer.Serialize(new {
                         reason = "Connection is disabled",
                         connectionId = connection.Id,
-                        connectionName = connection.Name 
-                    }), 
+                        connectionName = connection.Name
+                    }),
                     context);
 
-                return Results.BadRequest(new { 
-                    message = $"Cannot execute profile: Connection '{connection.Name}' is currently disabled" 
+                return Results.BadRequest(new {
+                    message = $"Cannot execute profile: Connection '{connection.Name}' is currently disabled"
                 });
             }
 
-            Log.Information("Triggering execution of profile {ProfileId} by {TriggeredBy}", 
+            // For email profile testing: use local destination override instead of email
+            int? destinationOverride = null;
+            if (testMode && profile.IsEmailExport && localDestinationId.HasValue)
+            {
+                Log.Information("Test mode: Email profile {ProfileId} will use local destination {LocalDestinationId} instead of email",
+                    profileId, localDestinationId);
+                destinationOverride = localDestinationId.Value;
+            }
+
+            Log.Information("Triggering execution of profile {ProfileId} by {TriggeredBy}",
                 profileId, triggeredBy);
 
             var (executionId, success, outputPath, errorMessage) = await service.ExecuteProfileAsync(
-                profileId, request?.Parameters, triggeredBy);
+                profileId, request?.Parameters, triggeredBy, null, destinationOverride);
 
             if (!success)
             {

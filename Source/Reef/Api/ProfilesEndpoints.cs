@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
+using Reef.Core.TemplateEngines;
 using Serilog;
 using Dapper;
 using Microsoft.Data.Sqlite;
@@ -34,6 +35,10 @@ public static class ProfilesEndpoints
         
         // Multi-Output Splitting endpoints
         group.MapGet("/executions/{executionId:int}/splits", GetExecutionSplits);
+
+        // Email Export endpoints
+        group.MapGet("/{id:int}/validate-email-config", ValidateEmailExportConfig);
+        group.MapPost("/{id:int}/preview-email-html", PreviewEmailHtml);
     }
 
     /// <summary>
@@ -234,16 +239,39 @@ public static class ProfilesEndpoints
             existingProfile.ConnectionId = profile.ConnectionId;
             existingProfile.GroupId = profile.GroupId;
             existingProfile.Query = profile.Query;
+
+            // Scheduling
+            existingProfile.ScheduleType = profile.ScheduleType;
+            existingProfile.ScheduleCron = profile.ScheduleCron;
+            existingProfile.ScheduleIntervalMinutes = profile.ScheduleIntervalMinutes;
+
+            // Output
             existingProfile.OutputFormat = profile.OutputFormat;
             existingProfile.TemplateId = profile.TemplateId;
             existingProfile.OutputDestinationId = profile.OutputDestinationId;
+            existingProfile.OutputDestinationType = profile.OutputDestinationType;
+            existingProfile.OutputDestinationConfig = profile.OutputDestinationConfig;
+            existingProfile.OutputPropertiesJson = profile.OutputPropertiesJson;
+            existingProfile.TransformationOptionsJson = profile.TransformationOptionsJson;
+
             existingProfile.IsEnabled = profile.IsEnabled;
+
+            // Pre-Processing
             existingProfile.PreProcessType = profile.PreProcessType;
             existingProfile.PreProcessConfig = profile.PreProcessConfig;
             existingProfile.PreProcessRollbackOnFailure = profile.PreProcessRollbackOnFailure;
+
+            // Post-Processing
             existingProfile.PostProcessType = profile.PostProcessType;
             existingProfile.PostProcessConfig = profile.PostProcessConfig;
             existingProfile.PostProcessSkipOnFailure = profile.PostProcessSkipOnFailure;
+            existingProfile.PostProcessRollbackOnFailure = profile.PostProcessRollbackOnFailure;
+            existingProfile.PostProcessOnZeroRows = profile.PostProcessOnZeroRows;
+
+            // Notification
+            existingProfile.NotificationConfig = profile.NotificationConfig;
+
+            // Delta Sync Configuration
             existingProfile.DeltaSyncEnabled = profile.DeltaSyncEnabled;
             existingProfile.DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn;
             existingProfile.DeltaSyncHashAlgorithm = profile.DeltaSyncHashAlgorithm;
@@ -251,14 +279,28 @@ public static class ProfilesEndpoints
             existingProfile.DeltaSyncNullStrategy = profile.DeltaSyncNullStrategy;
             existingProfile.DeltaSyncNumericPrecision = profile.DeltaSyncNumericPrecision;
             existingProfile.DeltaSyncTrackDeletes = profile.DeltaSyncTrackDeletes;
+            existingProfile.DeltaSyncResetOnSchemaChange = profile.DeltaSyncResetOnSchemaChange;
+            existingProfile.DeltaSyncRemoveNonPrintable = profile.DeltaSyncRemoveNonPrintable;
+            existingProfile.DeltaSyncReefIdNormalization = profile.DeltaSyncReefIdNormalization;
+
+            // Advanced Output Options
             existingProfile.ExcludeReefIdFromOutput = profile.ExcludeReefIdFromOutput;
             existingProfile.ExcludeSplitKeyFromOutput = profile.ExcludeSplitKeyFromOutput;
+            existingProfile.FilenameTemplate = profile.FilenameTemplate;
+
+            // Multi-Output Splitting
             existingProfile.SplitEnabled = profile.SplitEnabled;
             existingProfile.SplitKeyColumn = profile.SplitKeyColumn;
             existingProfile.SplitFilenameTemplate = profile.SplitFilenameTemplate;
             existingProfile.SplitBatchSize = profile.SplitBatchSize;
             existingProfile.PostProcessPerSplit = profile.PostProcessPerSplit;
-            existingProfile.FilenameTemplate = profile.FilenameTemplate;
+
+            // Email Export Configuration
+            existingProfile.IsEmailExport = profile.IsEmailExport;
+            existingProfile.EmailTemplateId = profile.EmailTemplateId;
+            existingProfile.EmailRecipientsColumn = profile.EmailRecipientsColumn;
+            existingProfile.EmailCcColumn = profile.EmailCcColumn;
+            existingProfile.EmailSubjectColumn = profile.EmailSubjectColumn;
 
             var success = await service.UpdateAsync(existingProfile);
             
@@ -591,6 +633,190 @@ public static class ProfilesEndpoints
         {
             Log.Error(ex, "Error retrieving execution splits for execution {ExecutionId}", executionId);
             return Results.Problem("Error retrieving execution splits");
+        }
+    }
+
+    /// <summary>
+    /// POST /api/profiles/{id}/preview-email-html - Preview rendered email HTML using first query result row
+    /// </summary>
+    private static async Task<IResult> PreviewEmailHtml(
+        int id,
+        [FromServices] ProfileService profileService,
+        [FromServices] ConnectionService connectionService,
+        [FromServices] QueryTemplateService templateService,
+        [FromServices] ScribanTemplateEngine templateEngine,
+        [FromServices] QueryExecutor queryExecutor)
+    {
+        try
+        {
+            // Get the profile
+            var profile = await profileService.GetByIdAsync(id);
+            if (profile == null)
+            {
+                return Results.NotFound(new { message = "Profile not found" });
+            }
+
+            // Validate it's an email export profile
+            if (!profile.IsEmailExport)
+            {
+                return Results.BadRequest(new { message = "Profile is not configured for email export" });
+            }
+
+            // Validate email template is set
+            if (!profile.EmailTemplateId.HasValue)
+            {
+                return Results.BadRequest(new { message = "Email template not set" });
+            }
+
+            var emailTemplate = await templateService.GetByIdAsync(profile.EmailTemplateId.Value);
+            if (emailTemplate == null)
+            {
+                return Results.BadRequest(new { message = "Email template not found" });
+            }
+
+            if (emailTemplate.Type != QueryTemplateType.ScribanTemplate)
+            {
+                return Results.BadRequest(new { message = "Email template must be a Scriban template" });
+            }
+
+            // Validate recipients column is set
+            if (string.IsNullOrEmpty(profile.EmailRecipientsColumn))
+            {
+                return Results.BadRequest(new { message = "Email recipients column not configured" });
+            }
+
+            // Get the connection
+            var connection = await connectionService.GetByIdAsync(profile.ConnectionId);
+            if (connection == null)
+            {
+                return Results.BadRequest(new { message = "Connection not found" });
+            }
+
+            // Execute the query to get preview data
+            // Note: We don't modify the query with LIMIT since different databases have different syntax
+            // (SQL Server uses TOP, MySQL/PostgreSQL use LIMIT, Oracle uses ROWNUM, etc.)
+            // Instead, we execute the full query and just use the first row for preview
+            var query = profile.Query;
+
+            // Execute query using QueryExecutor
+            var (success, queryResults, errorMessage, executionTime) = await queryExecutor.ExecuteQueryAsync(connection, query);
+
+            if (!success)
+            {
+                return Results.BadRequest(new { success = false, message = $"Query execution failed: {errorMessage}" });
+            }
+
+            if (queryResults.Count == 0)
+            {
+                return Results.Ok(new { success = true, html = "<p style=\"color: #666;\">Query returned no results. Please ensure your query returns at least one row.</p>", message = "No data to preview" });
+            }
+
+            // Render the template with the first row
+            string renderedHtml;
+            try
+            {
+                renderedHtml = await templateEngine.TransformAsync(new List<Dictionary<string, object>> { queryResults[0] }, emailTemplate.Template);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { success = false, message = $"Template rendering failed: {ex.Message}" });
+            }
+
+            return Results.Ok(new { success = true, html = renderedHtml, message = $"Preview generated using first row (total {queryResults.Count} row(s) available)" });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error previewing email HTML for profile {Id}", id);
+            return Results.Problem($"Error previewing email: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// GET /api/profiles/{id}/validate-email-config - Validate email export configuration
+    /// </summary>
+    private static async Task<IResult> ValidateEmailExportConfig(
+        int id,
+        [FromServices] ProfileService profileService,
+        [FromServices] QueryTemplateService templateService,
+        [FromServices] DestinationService destinationService)
+    {
+        try
+        {
+            var profile = await profileService.GetByIdAsync(id);
+            if (profile == null)
+            {
+                return Results.NotFound(new { error = "Profile not found" });
+            }
+
+            if (!profile.IsEmailExport)
+            {
+                return Results.BadRequest(new { error = "Profile is not configured as email export" });
+            }
+
+            var errors = new List<string>();
+            var warnings = new List<string>();
+
+            // Validate EmailTemplateId
+            if (!profile.EmailTemplateId.HasValue)
+            {
+                errors.Add("EmailTemplateId is not set");
+            }
+            else
+            {
+                var template = await templateService.GetByIdAsync(profile.EmailTemplateId.Value);
+                if (template == null)
+                {
+                    errors.Add($"Email template {profile.EmailTemplateId.Value} not found");
+                }
+                else if (template.Type != QueryTemplateType.ScribanTemplate)
+                {
+                    errors.Add($"Email template must be a Scriban template, got {template.Type}");
+                }
+            }
+
+            // Validate OutputDestinationId
+            if (!profile.OutputDestinationId.HasValue)
+            {
+                errors.Add("OutputDestinationId (SMTP destination) is not set");
+            }
+            else
+            {
+                var destination = await destinationService.GetByIdAsync(profile.OutputDestinationId.Value);
+                if (destination == null)
+                {
+                    errors.Add($"Email destination {profile.OutputDestinationId.Value} not found");
+                }
+                else if (destination.Type != DestinationType.Email)
+                {
+                    errors.Add($"Output destination must be type Email, got {destination.Type}");
+                }
+            }
+
+            // Validate EmailRecipientsColumn
+            if (string.IsNullOrEmpty(profile.EmailRecipientsColumn))
+            {
+                errors.Add("EmailRecipientsColumn is not set");
+            }
+
+            // Validate EmailSubjectColumn (optional warning if empty)
+            if (string.IsNullOrEmpty(profile.EmailSubjectColumn))
+            {
+                warnings.Add("EmailSubjectColumn is not set (will use profile name as subject)");
+            }
+
+            var result = new
+            {
+                isValid = errors.Count == 0,
+                errors = errors,
+                warnings = warnings
+            };
+
+            return Results.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error validating email export config for profile {Id}", id);
+            return Results.Problem("Error validating email export configuration");
         }
     }
 }

@@ -71,6 +71,9 @@ public class DestinationConfiguration
     public string? ToAddresses { get; set; }
     public string? Subject { get; set; }
     public bool EnableSsl { get; set; } = true;
+    public string? SmtpAuthType { get; set; } = "Basic"; // Basic, OAuth2, None
+    public string? OauthToken { get; set; }
+    public string? OauthUsername { get; set; }
     
     // HTTP
     public string? Url { get; set; }

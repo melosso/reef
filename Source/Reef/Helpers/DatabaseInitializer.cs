@@ -216,6 +216,13 @@ public class DatabaseInitializer
                 -- Notification
                 NotificationConfig TEXT NULL,
 
+                -- Email Export Configuration
+                IsEmailExport INTEGER NOT NULL DEFAULT 0,
+                EmailTemplateId INTEGER NULL,
+                EmailRecipientsColumn TEXT NULL,
+                EmailCcColumn TEXT NULL,
+                EmailSubjectColumn TEXT NULL,
+
                 -- Status
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
 
@@ -313,6 +320,9 @@ public class DatabaseInitializer
                 SplitCount INTEGER NULL,
                 SplitSuccessCount INTEGER NULL,
                 SplitFailureCount INTEGER NULL,
+
+                -- Output Format
+                OutputFormat TEXT NULL,
 
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE
             );
@@ -1091,10 +1101,18 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitCount", "INTEGER NULL");
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitSuccessCount", "INTEGER NULL");
         await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "SplitFailureCount", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "OutputFormat", "TEXT NULL");
 
         await AddColumnIfNotExistsAsync(connection, "Jobs", "AutoPauseEnabled", "INTEGER NOT NULL DEFAULT 1");
         await AddColumnIfNotExistsAsync(connection, "Users", "LastSeenAt", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "Users", "PasswordChangeRequired", "INTEGER NOT NULL DEFAULT 0");
+
+        // Email Export configuration columns
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "IsEmailExport", "INTEGER NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailTemplateId", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailRecipientsColumn", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailCcColumn", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailSubjectColumn", "TEXT NULL");
 
         Log.Debug("Database schema migrations completed");
     }

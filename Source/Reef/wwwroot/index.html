@@ -11,35 +11,81 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
         }
 
-        /* --- Animated Background --- */
-        @keyframes gradient-flow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        body::before {
-            content: '';
+        /* --- Animated Blob Background --- */
+        .background-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(-45deg, #1e3a8a, #312e81, #111827, #4c1d95);
-            background-size: 400% 400%;
-            animation: gradient-flow 25s ease infinite;
-            opacity: 0.15;
+            inset: 0;
             z-index: 0;
+            overflow: hidden;
+            background-color: #111827; 
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(250px); 
+            opacity: 0.25;
+            will-change: transform;
+        }
+
+        .blob.color-1 {
+            background: #1e3a8a;
+            width: 450px;
+            height: 450px;
+            top: -100px;
+            left: -150px;
+            /* Slowed down animation */
+            animation: move-blob-1 35s infinite alternate ease-in-out;
+        }
+
+        .blob.color-2 {
+            background: #4c1d95;
+            width: 350px;
+            height: 350px;
+            bottom: -50px;
+            right: -100px;
+            /* Slowed down animation */
+            animation: move-blob-2 40s infinite alternate ease-in-out;
         }
         
-        /* --- Fade-in animation --- */
+        .blob.color-3 {
+            background: #312e81;
+            width: 300px;
+            height: 300px;
+            top: 50%;
+            left: 50%;
+            /* Slowed down animation */
+            animation: move-blob-3 30s infinite alternate ease-in-out;
+        }
+
+        /* Keyframes are unchanged, just the duration */
+        @keyframes move-blob-1 {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(150px, 200px) scale(1.2); }
+        }
+
+        @keyframes move-blob-2 {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(-200px, -100px) scale(0.9); }
+        }
+        
+        @keyframes move-blob-3 {
+            from { transform: translate(-50%, -50%) scale(1.1); }
+            to { transform: translate(-20px, -200px) scale(1); }
+        }
+
+
+        /* --- Fade-in animation for elements --- */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .fade-in {
             animation: fadeIn 0.6s ease-out forwards;
             animation-delay: 0.2s;
@@ -49,9 +95,9 @@
         /* --- Slide-down animation for error messages --- */
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-10px); }
-            to   { opacity: 1; transform: translateY(0); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
+
         .error-slide-in {
             animation: slideDown 0.3s ease-out forwards;
         }
@@ -69,11 +115,44 @@
         #login-text {
             transition: opacity 0.3s ease-in;
         }
+
+        /* --- Hive Overlay --- */
+        .hive-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            transition: transform 1.0s ease-out;
+            will-change: transform;
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 antialiased">
-    <div id="login-page" class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">    
-        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/50 backdrop-blur-lg border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+<body class="text-gray-200 antialiased">
+
+    <div class="background-container">
+       <div class="blob color-1"></div>
+       <div class="blob color-2"></div>
+       <div class="blob color-3"></div>
+    </div>
+
+    <svg class="hive-overlay" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="hexPattern" x="0" y="0" width="100" height="86" patternUnits="userSpaceOnUse">
+            <polygon points="50,0 100,25 100,61 50,86 0,61 0,25"
+                     fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
+            </pattern>
+        </defs>
+
+        <g>
+            <rect width="200%" height="200%" fill="url(#hexPattern)"/>
+        </g>
+    </svg>
+    
+    <div id="login-page" class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">     
+        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/30 backdrop-blur-xl border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+            
             <div class="flex flex-col items-center">
                 <div class="p-3 bg-blue-500/10 rounded-full">
                     <i data-lucide="waves" class="h-10 w-10 text-blue-400"></i>
@@ -109,7 +188,7 @@
                     <div class="flex items-center">
                         <label for="remember-me" class="flex items-center cursor-pointer text-sm text-gray-300 hover:text-white transition-colors duration-150">
                             <input id="remember-me" name="remember-me" type="checkbox"
-                                class="h-4 w-4 text-accent bg-gray-800 border-gray-600 rounded focus:ring-accent focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-150 cursor-pointer">
+                                 class="h-4 w-4 text-accent bg-gray-800 border-gray-600 rounded focus:ring-accent focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 transition-all duration-150 cursor-pointer">
                             <span class="ml-2">Remember me</span>
                         </label>
                     </div>
@@ -133,7 +212,6 @@
                     </button>
                 </div>
 
-                <!-- Enhanced error message display -->
                 <div id="error-container"></div>
             </form>
         </div>
@@ -142,62 +220,65 @@
     <script>
         lucide.createIcons();
 
-        // Greeting message logic with first-visit handling
+        // --- Dynamic Mouse-based Parallax for Hive ---
+        const hiveOverlay = document.querySelector('.hive-overlay');
+        if (hiveOverlay) {
+            const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            if (!isTouchDevice()) {
+                window.addEventListener('mousemove', (e) => {
+                    const { clientX, clientY } = e;
+                    const { innerWidth, innerHeight } = window;
+                    
+                    const x = (clientX / innerWidth - 0.5) * 2; 
+                    const y = (clientY / innerHeight - 0.5) * 2;
+
+                    const moveX = x * -15;
+                    const moveY = y * -15;
+
+                    hiveOverlay.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                });
+            }
+        }
+        
+        // --- All your other JavaScript ---
+
+        // Greeting message logic
         (function setGreeting() {
             const greetings = [
-                "Welcome back to Reef",
-                "Hello from Reef",
-                "Good to see you again on Reef",
-                "Ready to dive into Reef?",
-                "Let's get started with Reef",
-                "This is Reef",
-                "Sign in to Reef",
-                "Login to Reef",
-                "Reef is Ready",
-                "Start your session on Reef",
-                "Enter your Reef credentials"
+                "Welcome back to Reef", "Hello from Reef", "Good to see you again on Reef",
+                "Ready to dive into Reef?", "Let's get started with Reef", "This is Reef",
+                "Sign in to Reef", "Login to Reef", "Reef is Ready",
+                "Start your session on Reef", "Enter your Reef credentials"
             ];
-
             const GREETING_KEY = 'reef_greeting';
             const TIMESTAMP_KEY = 'reef_greeting_timestamp';
             const VISIT_KEY = 'reef_visit_count';
-            const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
+            const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; 
 
             try {
                 const greetingHeader = document.getElementById('greeting-header');
                 if (!greetingHeader) return;
-
                 const cachedTimestamp = localStorage.getItem(TIMESTAMP_KEY);
                 const now = Date.now();
-
-                // Track number of visits (or initialize it)
                 let visitCount = parseInt(localStorage.getItem(VISIT_KEY) || '0', 10);
-                // Only set visitCount to 1 on first visit, do not increment further
                 if (visitCount === 0) {
                     localStorage.setItem(VISIT_KEY, '1');
                 }
-
-                // If this is the first visit AND no cached greeting, leave HTML as-is
                 if (visitCount === 0 && !cachedTimestamp) {
                     return;
                 }
-
                 const cachedGreeting = localStorage.getItem(GREETING_KEY);
-
-                // Reuse valid cached greeting if within cache duration
                 if (cachedGreeting && cachedTimestamp && (now - parseInt(cachedTimestamp, 10) < CACHE_DURATION_MS)) {
                     greetingHeader.textContent = cachedGreeting;
                 } else {
-                    // Otherwise pick and store a new greeting
                     const newGreeting = greetings[Math.floor(Math.random() * greetings.length)];
                     localStorage.setItem(GREETING_KEY, newGreeting);
                     localStorage.setItem(TIMESTAMP_KEY, now.toString());
                     greetingHeader.textContent = newGreeting;
                 }
-
             } catch (e) {
                 console.warn('Could not use localStorage for greeting.', e);
-                // fallback: default HTML stays as-is
             }
         })();
 
@@ -221,7 +302,6 @@
             `;
             lucide.createIcons();
             
-            // Auto-dismiss after 6 seconds
             setTimeout(() => {
                 const firstChild = errorContainer.firstChild;
                 if (firstChild && firstChild.style) {
@@ -237,37 +317,29 @@
             }, 6000);
         }
 
-        // --- Get references to button and its parts ---
         const loginButton = document.getElementById('login-button');
         const loginText = document.getElementById('login-text');
 
-        // Helper function to reset button state
         function resetLoginButton() {
             const spinner = document.getElementById('login-spinner');
-            
-            // Fade out spinner first
             if (spinner) {
                 spinner.classList.add('hidden');
             }
-            
-            // Wait for spinner fade-out, then re-enable button and update text
             setTimeout(() => {
                 loginButton.disabled = false;
                 loginText.textContent = 'Sign In';
-            }, 300); // Match the CSS transition duration
+            }, 300);
         }
 
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            errorContainer.innerHTML = ''; // Clear any previous errors
+            errorContainer.innerHTML = ''; 
 
-            // --- Activate loading state ---
             const spinner = document.getElementById('login-spinner');
             if (spinner) {
                 spinner.classList.remove('hidden');
             }
             
-            // Small delay to let spinner appear before disabling button
             setTimeout(() => {
                 loginButton.disabled = true;
                 loginText.textContent = 'Sign in';
@@ -279,12 +351,9 @@
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json', },
                     body: JSON.stringify({ username, password })
                 });
-
 
                 if (response.ok) {
                     const data = await response.json();
@@ -293,14 +362,13 @@
                         localStorage.setItem('reef_username', data.username);
                         localStorage.setItem('reef_role', data.role);
                         window.location.href = '/dashboard.html';
-                        return; // Exit early on success
+                        return; 
                     } else {
                         console.log('No token received');
                         showError('Login failed: No token received.');
                         resetLoginButton();
                     }
                 } else {
-                    // Handle non-OK responses
                     let errorMsg = 'Invalid username or password';
                     try {
                         const contentType = response.headers.get('content-type');
@@ -309,8 +377,7 @@
                             errorMsg = error.message || errorMsg;
                         }
                     } catch (parseError) {
-                        // If JSON parsing fails, use default message
-                        console.error('Failed to parse error response:', parseError);                            
+                        console.error('Failed to parse error response:', parseError);                        
                     }
                     showError(errorMsg);
                     resetLoginButton();
@@ -318,10 +385,10 @@
             } catch (error) {
                 console.error('Network error:', error);
                 showError('Connection error. Please check your network and try again.', 'error');
-                resetLoginButton();            }
+                resetLoginButton();           
+            }
         });
 
-        // Use centralized auth check for login page (unchanged)
         redirectIfAuthenticated();
     </script>
 </body>

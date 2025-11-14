@@ -98,6 +98,14 @@ public class Profile
     public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
     
     public string? NotificationConfig { get; set; } // JSON configuration
+
+    // Email Export Configuration
+    public bool IsEmailExport { get; set; } = false; // Flag: is this an email export profile?
+    public int? EmailTemplateId { get; set; } // FK to QueryTemplates table - Scriban template for email body
+    public string? EmailRecipientsColumn { get; set; } // Query column name for TO recipients (extracted from results)
+    public string? EmailCcColumn { get; set; } // Query column name for CC recipients (extracted from results)
+    public string? EmailSubjectColumn { get; set; } // Query column name for email subject (extracted from results)
+
     public string? DependsOnProfileIds { get; set; } // Comma-separated profile IDs for dependencies
     public bool IsEnabled { get; set; } = true;
     public required string Hash { get; set; } // SHA256 for tamper detection

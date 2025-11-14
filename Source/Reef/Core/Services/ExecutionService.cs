@@ -24,6 +24,7 @@ public class ExecutionService
     private readonly QueryTemplateService _templateService;
     private readonly ITemplateEngine _templateEngine;
     private readonly DeltaSyncService _deltaSyncService;
+    private readonly EmailExportService _emailExportService;
 
     private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
 
@@ -36,6 +37,7 @@ public class ExecutionService
         AuditService auditService,
         QueryTemplateService templateService,
         DeltaSyncService deltaSyncService,
+        EmailExportService emailExportService,
         Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _connectionString = config.ConnectionString;
@@ -48,6 +50,7 @@ public class ExecutionService
         _configuration = configuration;
         _templateEngine = new ScribanTemplateEngine(_configuration);
         _deltaSyncService = deltaSyncService;
+        _emailExportService = emailExportService;
     }
 
     /// <summary>
@@ -312,6 +315,113 @@ public class ExecutionService
                 return (executionId, true, null, null);
             }
 
+            // ===== PHASE 2.5.5: EMAIL EXPORT (IF ENABLED) =====
+            // Skip email export if there's a destination override (test mode or manual override)
+            if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
+            {
+                Log.Information("Profile {ProfileId} executing as email export (sending {RowCount} rows)", profile.Id, rows.Count);
+
+                try
+                {
+                    // Load email template
+                    if (!profile.EmailTemplateId.HasValue)
+                    {
+                        var errorMsg = "Email export configured but EmailTemplateId not set";
+                        Log.Error(errorMsg);
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, errorMsg);
+                        return (executionId, false, null, errorMsg);
+                    }
+
+                    var emailTemplate = await _templateService.GetByIdAsync(profile.EmailTemplateId.Value);
+                    if (emailTemplate == null || emailTemplate.Type != QueryTemplateType.ScribanTemplate)
+                    {
+                        var errorMsg = $"Email template {profile.EmailTemplateId.Value} not found or not a Scriban template";
+                        Log.Error(errorMsg);
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, errorMsg);
+                        return (executionId, false, null, errorMsg);
+                    }
+
+                    // Load email destination
+                    if (!profile.OutputDestinationId.HasValue)
+                    {
+                        var errorMsg = "Email export configured but OutputDestinationId (SMTP destination) not set";
+                        Log.Error(errorMsg);
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, errorMsg);
+                        return (executionId, false, null, errorMsg);
+                    }
+
+                    var emailDestination = await _destinationService.GetByIdAsync(profile.OutputDestinationId.Value);
+                    if (emailDestination == null || emailDestination.Type != DestinationType.Email)
+                    {
+                        var errorMsg = $"Email destination {profile.OutputDestinationId.Value} not found or not type Email";
+                        Log.Error(errorMsg);
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, errorMsg);
+                        return (executionId, false, null, errorMsg);
+                    }
+
+                    // Send emails
+                    var (emailSuccess, emailMessage, successCount, failureCount, splits) = await _emailExportService.ExportToEmailAsync(
+                        profile,
+                        emailDestination,
+                        emailTemplate,
+                        rows);
+
+                    stopwatch.Stop();
+
+                    // Update execution with split summary (email sends = splits)
+                    // Email exports always use HTML format from the email template
+                    await UpdateExecutionWithSplitSummaryAsync(
+                        executionId,
+                        successCount + failureCount,  // splitCount = total attempts
+                        successCount,
+                        failureCount,
+                        rows.Count,
+                        stopwatch.ElapsedMilliseconds,
+                        "HTML");
+
+                    // Insert split records for email exports
+                    Log.Information("Email export has {SplitCount} splits to record", splits.Count);
+                    if (splits.Count > 0)
+                    {
+                        Log.Information("Inserting {SplitCount} execution split records for execution {ExecutionId}", splits.Count, executionId);
+                        await InsertExecutionSplitsAsync(executionId, splits);
+                        Log.Information("Successfully inserted {SplitCount} execution split records", splits.Count);
+                    }
+
+                    if (emailSuccess)
+                    {
+                        Log.Information("Email export completed for profile {ProfileId}: {Message}", profile.Id, emailMessage);
+
+                        // Update profile's last executed timestamp
+                        await UpdateProfileLastExecutedAsync(profileId);
+
+                        await _auditService.LogAsync("Profile", profileId, "Executed", triggeredBy,
+                            System.Text.Json.JsonSerializer.Serialize(new { RowCount = rows.Count, EmailsSent = emailMessage, ExecutionTimeMs = stopwatch.ElapsedMilliseconds }));
+
+                        return (executionId, true, null, null);
+                    }
+                    else
+                    {
+                        Log.Error("Email export failed for profile {ProfileId}: {Error}", profile.Id, emailMessage);
+                        return (executionId, false, null, emailMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Email export failed for profile {ProfileId}", profile.Id);
+                    stopwatch.Stop();
+                    await UpdateExecutionWithSplitSummaryAsync(
+                        executionId,
+                        0,
+                        0,
+                        1,
+                        rows.Count,
+                        stopwatch.ElapsedMilliseconds,
+                        "HTML");
+                    return (executionId, false, null, $"Email export error: {ex.Message}");
+                }
+            }
+
             // ===== PHASE 2.6: MULTI-OUTPUT SPLITTING (IF ENABLED) =====
             if (profile.SplitEnabled && rows.Count > 0)
             {
@@ -369,19 +479,30 @@ public class ExecutionService
             // Apply template transformation if template is specified
             string? transformedContent = null;
             string actualOutputFormat = profile.OutputFormat;
-            
-            if (profile.TemplateId.HasValue)
+
+            // For email profiles in test mode, use the EmailTemplateId and HTML format; otherwise use TemplateId
+            int? templateIdToUse = (profile.IsEmailExport && destinationOverrideId.HasValue)
+                ? profile.EmailTemplateId
+                : profile.TemplateId;
+
+            if (profile.IsEmailExport && destinationOverrideId.HasValue)
+            {
+                actualOutputFormat = "HTML"; // Email test mode always outputs HTML
+                Log.Information("Email profile test mode: Using EmailTemplateId and HTML output format");
+            }
+
+            if (templateIdToUse.HasValue)
             {
                 try
                 {
-                    Log.Debug("Loading template ID {TemplateId} for transformation", profile.TemplateId.Value);
-                    var template = await _templateService.GetByIdAsync(profile.TemplateId.Value);
-                    
+                    Log.Debug("Loading template ID {TemplateId} for transformation", templateIdToUse.Value);
+                    var template = await _templateService.GetByIdAsync(templateIdToUse.Value);
+
                     if (template == null)
                     {
-                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, 
-                            $"Template {profile.TemplateId.Value} not found");
-                        return (executionId, false, null, $"Template {profile.TemplateId.Value} not found");
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
+                            $"Template {templateIdToUse.Value} not found");
+                        return (executionId, false, null, $"Template {templateIdToUse.Value} not found");
                     }
 
                     if (!template.IsActive)
@@ -479,16 +600,89 @@ public class ExecutionService
                 long fileSize;
                 if (!string.IsNullOrEmpty(transformedContent))
                 {
-                    // Template was applied - write transformed content directly
-                    Log.Debug("Writing template-transformed content to {TempFilePath}", tempFilePath);
-                    var directory = Path.GetDirectoryName(tempFilePath);
-                    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                    // Template was applied - check if this is email test mode with multiple documents
+                    if (profile.IsEmailExport && destinationOverrideId.HasValue)
                     {
-                        Directory.CreateDirectory(directory);
+                        // Split HTML documents and save separately
+                        var htmlDocs = SplitHtmlDocuments(transformedContent);
+                        if (htmlDocs.Count > 1)
+                        {
+                            Log.Information("Test mode: Splitting {Count} HTML documents into separate files", htmlDocs.Count);
+
+                            // Get destination config to determine where to save files
+                            string? destDirectory = null;
+                            try
+                            {
+                                // Get the local destination path from config
+                                var destination = await _destinationService.GetByIdForExecutionAsync(destinationOverrideId.Value);
+                                if (destination != null && !string.IsNullOrEmpty(destination.ConfigurationJson))
+                                {
+                                    var config = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(destination.ConfigurationJson);
+                                    if (config != null && config.TryGetValue("path", out var pathValue))
+                                    {
+                                        var pathStr = pathValue?.ToString() ?? "";
+                                        destDirectory = Path.GetDirectoryName(pathStr);
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "Failed to get destination path, using temp directory");
+                            }
+
+                            // Fall back to temp directory if we couldn't determine destination
+                            var directory = destDirectory ?? Path.GetDirectoryName(tempFilePath);
+                            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                            {
+                                Directory.CreateDirectory(directory);
+                            }
+
+                            var baseFileName = Path.GetFileNameWithoutExtension(tempFilePath);
+                            fileSize = 0;
+                            finalPath = null;
+
+                            // Save each HTML document separately
+                            for (int i = 0; i < htmlDocs.Count && i < rows.Count; i++)
+                            {
+                                var docFileName = $"{baseFileName}_{i + 1:D3}.html";
+                                var docFilePath = Path.Combine(directory, docFileName);
+                                await File.WriteAllTextAsync(docFilePath, htmlDocs[i]);
+                                var docSize = new FileInfo(docFilePath).Length;
+                                fileSize += docSize;
+                                finalPath = docFilePath; // Last one
+                                Log.Information("Saved email document {Number} to {FilePath} ({Size} bytes)",
+                                    i + 1, docFilePath, docSize);
+                            }
+                        }
+                        else
+                        {
+                            // Single document, write normally
+                            Log.Debug("Writing template-transformed content to {TempFilePath}", tempFilePath);
+                            var directory = Path.GetDirectoryName(tempFilePath);
+                            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                            {
+                                Directory.CreateDirectory(directory);
+                            }
+                            await File.WriteAllTextAsync(tempFilePath, transformedContent);
+                            fileSize = new FileInfo(tempFilePath).Length;
+                            finalPath = tempFilePath;
+                            Log.Debug("Wrote {FileSize} bytes of transformed content", fileSize);
+                        }
                     }
-                    await File.WriteAllTextAsync(tempFilePath, transformedContent);
-                    fileSize = new FileInfo(tempFilePath).Length;
-                    Log.Debug("Wrote {FileSize} bytes of transformed content", fileSize);
+                    else
+                    {
+                        // Regular template output - write normally
+                        Log.Debug("Writing template-transformed content to {TempFilePath}", tempFilePath);
+                        var directory = Path.GetDirectoryName(tempFilePath);
+                        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                        {
+                            Directory.CreateDirectory(directory);
+                        }
+                        await File.WriteAllTextAsync(tempFilePath, transformedContent);
+                        fileSize = new FileInfo(tempFilePath).Length;
+                        finalPath = tempFilePath;
+                        Log.Debug("Wrote {FileSize} bytes of transformed content", fileSize);
+                    }
                 }
                 else
                 {
@@ -505,6 +699,75 @@ public class ExecutionService
 
                     fileSize = formatterFileSize;
                     Log.Debug("Formatted {FileSize} bytes", fileSize);
+                }
+
+                // Check if this is email test mode with split HTML files
+                var emailTestHtmlDocs = (!string.IsNullOrEmpty(transformedContent) && profile.IsEmailExport && destinationOverrideId.HasValue)
+                    ? SplitHtmlDocuments(transformedContent)
+                    : new List<string>();
+
+                bool isEmailTestWithSplit = (profile.IsEmailExport && destinationOverrideId.HasValue &&
+                                           finalPath != null && !string.IsNullOrEmpty(transformedContent) &&
+                                           emailTestHtmlDocs.Count > 1);
+
+                // For email test mode with split files, handle destination upload for each file
+                if (isEmailTestWithSplit)
+                {
+                    Log.Information("Email test mode: Uploading {Count} split HTML files to destination",
+                        emailTestHtmlDocs.Count);
+
+                    // Get destination configuration
+                    var destination = await _destinationService.GetByIdForExecutionAsync(destinationOverrideId.Value);
+                    if (destination == null || destination.Type != DestinationType.Local)
+                    {
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
+                            "Test mode requires Local destination");
+                        return (executionId, false, null, "Test mode requires Local destination");
+                    }
+
+                    // Upload each file through the destination service to get proper path handling
+                    string? lastFinalPath = null;
+
+                    for (int i = 0; i < emailTestHtmlDocs.Count && i < rows.Count; i++)
+                    {
+                        var docFileName = $"{Path.GetFileNameWithoutExtension(tempFilePath)}_{i + 1:D3}.html";
+                        var docTempPath = Path.Combine(Path.GetTempPath(), docFileName);
+
+                        // Write each HTML doc to temp
+                        await File.WriteAllTextAsync(docTempPath, emailTestHtmlDocs[i]);
+
+                        // Upload through destination service for proper path resolution
+                        (bool docUploadSuccess, string? docFinalPath, string? docUploadMessage) =
+                            await _destinationService.SaveToDestinationAsync(docTempPath, DestinationType.Local,
+                                destination.ConfigurationJson, maxRetries: 3);
+
+                        if (!docUploadSuccess)
+                        {
+                            Log.Error("Failed to upload email document {Number}: {Error}", i + 1, docUploadMessage);
+                            await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
+                                stopwatch.ElapsedMilliseconds, $"Upload failed: {docUploadMessage}");
+                            return (executionId, false, null, docUploadMessage);
+                        }
+
+                        lastFinalPath = docFinalPath;
+                        Log.Information("Uploaded email document {Number} to {FilePath}", i + 1, docFinalPath);
+
+                        // Clean up temp file
+                        try { File.Delete(docTempPath); } catch { }
+                    }
+
+                    // Create metadata file in the same location
+                    if (lastFinalPath != null)
+                    {
+                        await CreateEmailMetadataFileAsync(profile, rows, lastFinalPath);
+                    }
+
+                    // Update execution as success
+                    await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, lastFinalPath,
+                        stopwatch.ElapsedMilliseconds, null);
+                    await UpdateProfileLastExecutedAsync(profileId);
+
+                    return (executionId, true, lastFinalPath, null);
                 }
 
                 // Get destination configuration (priority: Job override > Profile destination > Profile inline config)
@@ -593,6 +856,12 @@ public class ExecutionService
                 }
 
                 Log.Debug("Output saved to: {OutputPath}", finalPath);
+
+                // Create email metadata file if this is test mode for an email profile
+                if (profile.IsEmailExport && destinationOverrideId.HasValue && finalPath != null)
+                {
+                    await CreateEmailMetadataFileAsync(profile, rows, finalPath);
+                }
 
                 // COMMIT DELTA SYNC: Now that transformation and destination write are successful, commit the hash state
                 if (profile.DeltaSyncEnabled && deltaSyncResult != null)
@@ -1917,6 +2186,56 @@ public class ExecutionService
     }
 
     /// <summary>
+    /// Insert multiple execution split records (used for email exports)
+    /// </summary>
+    private async Task InsertExecutionSplitsAsync(int executionId, List<ProfileExecutionSplit> splits)
+    {
+        if (splits == null || splits.Count == 0)
+        {
+            Log.Debug("No splits to insert for execution {ExecutionId}", executionId);
+            return;
+        }
+
+        Log.Debug("InsertExecutionSplitsAsync called with {SplitCount} splits for execution {ExecutionId}", splits.Count, executionId);
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+            INSERT INTO ProfileExecutionSplits
+                (ExecutionId, SplitKey, RowCount, Status, ErrorMessage, StartedAt, CompletedAt)
+            VALUES
+                (@ExecutionId, @SplitKey, @RowCount, @Status, @ErrorMessage, @StartedAt, @CompletedAt)";
+
+        int insertedCount = 0;
+        foreach (var split in splits)
+        {
+            try
+            {
+                await connection.ExecuteAsync(sql, new
+                {
+                    ExecutionId = executionId,
+                    SplitKey = split.SplitKey,
+                    RowCount = split.RowCount,
+                    Status = split.Status,
+                    ErrorMessage = split.ErrorMessage,
+                    StartedAt = split.StartedAt,
+                    CompletedAt = split.CompletedAt ?? DateTime.UtcNow
+                });
+                insertedCount++;
+                Log.Debug("Inserted split record: {SplitKey} - {Status}", split.SplitKey, split.Status);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Failed to insert split record for execution {ExecutionId}: {SplitKey}", executionId, split.SplitKey);
+                throw;
+            }
+        }
+
+        Log.Information("InsertExecutionSplitsAsync completed: inserted {InsertedCount}/{TotalCount} split records", insertedCount, splits.Count);
+    }
+
+    /// <summary>
     /// Update execution record with split summary
     /// </summary>
     private async Task UpdateExecutionWithSplitSummaryAsync(
@@ -1925,18 +2244,19 @@ public class ExecutionService
         int successCount,
         int failureCount,
         int totalRowCount,
-        long elapsedMs)
+        long elapsedMs,
+        string? outputFormat = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        
-        string status = failureCount == 0 ? "Success" : 
+
+        string status = failureCount == 0 ? "Success" :
                        successCount == 0 ? "Failed" : "Partial";
-        
-        string? errorMessage = failureCount > 0 
-            ? $"{failureCount} of {splitCount} splits failed" 
+
+        string? errorMessage = failureCount > 0
+            ? $"{failureCount} of {splitCount} splits failed"
             : null;
-        
+
         const string sql = @"
             UPDATE ProfileExecutions
             SET Status = @Status,
@@ -1947,9 +2267,10 @@ public class ExecutionService
                 SplitFailureCount = @SplitFailureCount,
                 ErrorMessage = @ErrorMessage,
                 ExecutionTimeMs = @ExecutionTimeMs,
+                OutputFormat = COALESCE(@OutputFormat, OutputFormat),
                 CompletedAt = @CompletedAt
             WHERE Id = @Id";
-        
+
         await connection.ExecuteAsync(sql, new
         {
             Id = executionId,
@@ -1960,6 +2281,7 @@ public class ExecutionService
             SplitFailureCount = failureCount,
             ErrorMessage = errorMessage,
             ExecutionTimeMs = elapsedMs,
+            OutputFormat = outputFormat,
             CompletedAt = DateTime.UtcNow
         });
     }
@@ -2133,9 +2455,108 @@ public class ExecutionService
             filteredRows.Add(filteredRow);
         }
 
-        Log.Information("Filtered {Count} internal columns from output: {Columns}", 
+        Log.Information("Filtered {Count} internal columns from output: {Columns}",
             columnsToRemove.Count, string.Join(", ", columnsToRemove));
 
         return filteredRows;
+    }
+
+    /// <summary>
+    /// Split rendered HTML output into individual HTML documents based on <!doctype html> delimiters
+    /// </summary>
+    private static List<string> SplitHtmlDocuments(string htmlOutput)
+    {
+        if (string.IsNullOrWhiteSpace(htmlOutput))
+            return new List<string> { htmlOutput };
+
+        var documents = htmlOutput
+            .Split(new[] { "<!doctype html>" }, StringSplitOptions.None)
+            .Where(doc => !string.IsNullOrWhiteSpace(doc))
+            .Select(doc => "<!doctype html>" + doc)
+            .ToList();
+
+        return documents.Count > 0 ? documents : new List<string> { htmlOutput };
+    }
+
+    /// <summary>
+    /// Create TOML metadata file for email test mode
+    /// Creates a .toml file with email recipient and configuration data for all split HTML files
+    /// </summary>
+    private async Task CreateEmailMetadataFileAsync(
+        Profile profile,
+        List<Dictionary<string, object>> rows,
+        string? lastOutputPath)
+    {
+        try
+        {
+            if (!profile.IsEmailExport || string.IsNullOrEmpty(lastOutputPath))
+                return;
+
+            var dir = Path.GetDirectoryName(lastOutputPath);
+            var fileNameWithoutExt = Path.GetFileNameWithoutExtension(lastOutputPath);
+
+            // Remove the _001, _002, etc suffix if present to create the metadata file name
+            var baseFileName = System.Text.RegularExpressions.Regex.Replace(fileNameWithoutExt, @"_\d{3}$", "");
+            var metadataPath = Path.Combine(dir ?? "", $"{baseFileName}_metadata.toml");
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("# Email Export Metadata - Test Mode");
+            sb.AppendLine($"# Generated: {DateTime.UtcNow:O}");
+            sb.AppendLine($"# Profile: {profile.Name}");
+            sb.AppendLine($"# Total Recipients: {rows.Count}");
+            sb.AppendLine();
+
+            foreach (var (i, row) in rows.Select((r, idx) => (idx, r)))
+            {
+                var email = row.TryGetValue(profile.EmailRecipientsColumn ?? "email", out var emailVal)
+                    ? emailVal?.ToString()
+                    : "unknown";
+                var cc = string.Empty;
+                if (!string.IsNullOrEmpty(profile.EmailCcColumn) &&
+                    row.TryGetValue(profile.EmailCcColumn, out var ccVal))
+                {
+                    cc = ccVal?.ToString() ?? "";
+                }
+                var subject = string.Empty;
+                if (!string.IsNullOrEmpty(profile.EmailSubjectColumn) &&
+                    row.TryGetValue(profile.EmailSubjectColumn, out var subjectVal))
+                {
+                    subject = subjectVal?.ToString() ?? "";
+                }
+
+                if (i > 0) sb.AppendLine();
+                sb.AppendLine($"[[recipients]]");
+                sb.AppendLine($"file = \"{baseFileName}_{i + 1:D3}.html\"");
+                sb.AppendLine($"email = \"{EscapeTomlString(email ?? "unknown")}\"");
+                if (!string.IsNullOrEmpty(cc))
+                    sb.AppendLine($"cc = \"{EscapeTomlString(cc)}\"");
+                if (!string.IsNullOrEmpty(subject))
+                    sb.AppendLine($"subject = \"{EscapeTomlString(subject)}\"");
+            }
+
+            await File.WriteAllTextAsync(metadataPath, sb.ToString());
+            Log.Information("Created email metadata file: {MetadataPath}", metadataPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to create email metadata file");
+            // Don't fail the execution if metadata file creation fails
+        }
+    }
+
+    /// <summary>
+    /// Escape special characters in TOML strings
+    /// </summary>
+    private static string EscapeTomlString(string input)
+    {
+        if (string.IsNullOrEmpty(input))
+            return "";
+
+        return input
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\n", "\\n")
+            .Replace("\r", "\\r")
+            .Replace("\t", "\\t");
     }
 }

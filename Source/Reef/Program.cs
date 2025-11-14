@@ -278,6 +278,7 @@ public class Program
         services.AddScoped<AdminService>();
         services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
+        services.AddScoped<EmailExportService>();
 
         // Destination services
         services.AddScoped<DestinationService>(sp =>

@@ -120,10 +120,27 @@
                         <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out" aria-label="Help">
                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                         </button>
-                        <button onclick="openAddProfileModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
-                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
-                            New Profile
-                        </button>
+                        <div class="relative">
+                            <button id="newProfileButton" onclick="toggleNewProfileMenu()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                                New Profile
+                                <i data-lucide="chevron-down" class="h-4 w-4 ml-2"></i>
+                            </button>
+                            <div id="newProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 border border-gray-200">
+                                <button onclick="openAddProfileModal('standard')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 flex items-center">
+                                    <i data-lucide="file-code" class="h-4 w-4 mr-2"></i>
+                                    Export Profile
+                                </button>
+                                <button onclick="openAddProfileModal('email')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 flex items-center">
+                                    <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
+                                    Export Email
+                                </button>
+                                <button disabled class="w-full text-left px-4 py-2 text-gray-400 flex items-center cursor-not-allowed opacity-50">
+                                    <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
+                                    Import Profile
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
@@ -259,6 +276,7 @@
             <div id="generalTab" class="tab-content">
                 <form id="profile-form" class="space-y-4">
                     <input type="hidden" id="profile-id">
+                    <input type="hidden" id="isEmailExport" name="isEmailExport" value="false">
                     
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -305,12 +323,13 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Output Format & Custom Template Section (File Export Only) -->
+                    <div id="fileExportFields" class="grid grid-cols-2 gap-4">
                         <div>
                             <label for="output-format" class="block text-sm font-medium text-gray-700">
                                 Output Format *
                             </label>
-                            <select id="output-format" required
+                            <select id="output-format"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="JSON">JSON</option>
                                 <option value="XML">XML</option>
@@ -319,7 +338,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                             </select>
                             <p class="mt-1 text-xs text-gray-500">Standard formatting (no customization)</p>
                         </div>
-                        
+
                         <div>
                             <label for="template-id" class="block text-sm font-medium text-gray-700">
                                 Custom Template (Optional)
@@ -351,28 +370,93 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                             </p>
                         </div>
 
-                        <div id="nonSplitFields">
-                            <!-- Filename Template -->
-                            <div>
-                                <label for="filenameTemplate" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Filename Template (Optional)
-                                </label>
-                                <input type="text" id="filenameTemplate" 
-                                       value="{profile}_{timestamp}.{format}"
-                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm">
-                                <p class="mt-1 text-xs text-gray-500">
-                                    Available placeholders: 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{profile}</code>, 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{timestamp}</code>, 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{date}</code>, 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{time}</code>, 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{guid}</code>, 
-                                    <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{format}</code>
-                                </p>
+                        <div id="nonEmailFields">
+                            <div id="nonSplitFields">
+                                <!-- Filename Template -->
+                                <div>
+                                    <label for="filenameTemplate" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Filename Template (Optional)
+                                    </label>
+                                    <input type="text" id="filenameTemplate"
+                                           value="{profile}_{timestamp}.{format}"
+                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">
+                                        Available placeholders:
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{profile}</code>,
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{timestamp}</code>,
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{date}</code>,
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{time}</code>,
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{guid}</code>,
+                                        <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{format}</code>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    
+
+                    <!-- Email Configuration Section (Email Export Only) -->
+                    <div id="emailConfigSection" class="hidden border-t border-gray-200 pt-4 mt-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <i data-lucide="mail" class="w-4 h-4 mr-2 text-blue-600"></i>
+                            Email Configuration
+                        </h4>
+
+                        <div class="mb-4">
+                            <label for="emailTemplateId" class="block text-sm font-medium text-gray-700 mb-1">
+                                Email Body Template (Scriban HTML) *
+                            </label>
+                            <select id="emailTemplateId"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">-- Select HTML email template --</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">
+                                Only Scriban templates with HTML output format are available. <a href="/templates.html" class="text-blue-600 hover:underline">→ Create a new email template</a>
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="emailRecipientsColumn" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                Recipients Column *
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Column with the recipient’s email. You can use either the plain address (email@example.com) or a name followed by the address (Name;email@example.com). It supports aliases as well." data-tooltip-position="top">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                                </span>
+                            </label>
+                            <input type="text" id="emailRecipientsColumn"
+                                   placeholder="e.g., email"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Column name from query that contains recipient email address (supports "Name;email@address.com" format)
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="emailCcColumn" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                CC Column (Optional)
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Column with the CC email. You can use either the plain address (email@example.com) or a name followed by the address (Name;email@example.com). It supports aliases as well." data-tooltip-position="top">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                                </span>
+                            </label>
+                            <input type="text" id="emailCcColumn"
+                                   placeholder="e.g., email_cc"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Column name from query that contains CC email address (supports "Name;email@address.com" format, optional)
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="emailSubjectColumn" class="block text-sm font-medium text-gray-700 mb-1">
+                                Subject Column (Optional)
+                            </label>
+                            <input type="text" id="emailSubjectColumn"
+                                   placeholder="e.g., subject"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Query column name for email subject. If not provided, will use profile name.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Pre-Processing Section -->
                     <div class="border-t border-gray-200 pt-4 mt-4">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
@@ -516,6 +600,17 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                     </div>
                     
                     <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+                        <div id="emailPreviewButton" class="">
+                            <button type="button" id="preview-email-btn" onclick="previewEmailHtml()"
+                                    class="px-4 py-2 border border-purple-300 bg-purple-50 rounded-md text-purple-700 hover:bg-purple-100 flex items-center font-medium">
+                                <svg id="preview-email-spinner" class="animate-spin h-4 w-4 mr-2 text-purple-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                </svg>
+                                <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
+                                <span id="preview-email-btn-text">Preview HTML</span>
+                            </button>
+                        </div>
                         <button type="button" id="test-profile-btn" onclick="testProfileInModal()" 
                                 class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium">
                             <svg id="test-profile-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -851,44 +946,46 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                             </p>
                         </div>
 
-                        <!-- Batch Size -->
-                        <div>
-                            <label for="splitBatchSize" class="block text-sm font-medium text-gray-700 mb-1">
-                                Batch Size (Advanced)
-                            </label>
-                            <input type="number" id="splitBatchSize" value="1" min="1" max="10000"
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <p class="mt-1 text-xs text-gray-500">
-                                Number of rows per file (default: 1 = one file per split key, 100 = batch 100 rows per file)
-                            </p>
-                        </div>
+                        <!-- Batch Size (File Export Only) -->
+                        <div id="fileExportSplitFields">
+                            <div>
+                                <label for="splitBatchSize" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Batch Size (Advanced)
+                                </label>
+                                <input type="number" id="splitBatchSize" value="1" min="1" max="10000"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Number of rows per file (default: 1 = one file per split key, 100 = batch 100 rows per file)
+                                </p>
+                            </div>
 
-                        <!-- Advanced Output Options for Split Key -->
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0">
-                                    <i data-lucide="eye-off" class="w-5 h-5 text-blue-400"></i>
-                                </div>
-                                <div class="ml-3 flex-1">
-                                    <h4 class="text-sm font-medium text-blue-800 mb-2">Advanced Output Options</h4>
-                                    <p class="text-xs text-blue-700 mb-3">
-                                        Control whether the Split Key column appears in your exported files
-                                    </p>
-                                    <div class="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
-                                        <div class="flex items-center space-x-3">
-                                            <div>
-                                                <label for="excludeSplitKeyFromOutput" class="text-sm font-medium text-gray-900">Exclude Split Key from Exported Data</label>
-                                                <p class="text-xs text-gray-500">Split Key column is used for grouping but not included in output files</p>
-                                            </div>
-                                        </div>
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" id="excludeSplitKeyFromOutput" class="sr-only peer">
-                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                                        </label>
+                            <!-- Advanced Output Options for Split Key -->
+                            <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0">
+                                        <i data-lucide="eye-off" class="w-5 h-5 text-blue-400"></i>
                                     </div>
-                                    <p class="text-xs text-blue-600 mt-2">
-                                        <strong>When enabled (recommended):</strong> The Split Key column is used internally for grouping/filename generation but won't appear in your exported files. Uncheck if you want the Split Key column included in the output.
-                                    </p>
+                                    <div class="ml-3 flex-1">
+                                        <h4 class="text-sm font-medium text-blue-800 mb-2">Advanced Output Options</h4>
+                                        <p class="text-xs text-blue-700 mb-3">
+                                            Control whether the Split Key column appears in your exported files
+                                        </p>
+                                        <div class="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                                            <div class="flex items-center space-x-3">
+                                                <div>
+                                                    <label for="excludeSplitKeyFromOutput" class="text-sm font-medium text-gray-900">Exclude Split Key from Exported Data</label>
+                                                    <p class="text-xs text-gray-500">Split Key column is used for grouping but not included in output files</p>
+                                                </div>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="excludeSplitKeyFromOutput" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+                                        <p class="text-xs text-blue-600 mt-2">
+                                            <strong>When enabled (recommended):</strong> The Split Key column is used internally for grouping/filename generation but won't appear in your exported files. Uncheck if you want the Split Key column included in the output.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -932,6 +1029,107 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             </div>
         </div>
     </div>
+
+    <!-- Email HTML Preview Modal -->
+    <div id="email-preview-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-4xl mx-auto my-8">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Preview</h2>
+                    <button onclick="closeEmailPreviewModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4 max-h-100 overflow-y-auto bg-gray-50 border-b border-gray-200">
+                    <div id="preview-html-content" class="bg-white border border-gray-300 rounded-md p-4">
+                        <p class="text-gray-500 text-sm">Loading preview...</p>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="px-6 py-3 bg-blue-50 border-b border-blue-200">
+                    <p class="text-xs text-blue-700 pb-0 mb-0">
+                        <strong>Note:</strong> This preview uses the first row from your query. Make sure your query returns at least one row.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4">
+                    <button type="button" onclick="closeEmailPreviewModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Close
+                    </button>
+                    <button type="button" id="download-preview-btn" onclick="downloadEmailPreview()"
+                            class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium">
+                        <i data-lucide="download" class="h-4 w-4 mr-2"></i>
+                        Download HTML
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Execution Confirmation Modal -->
+    <div id="email-execute-confirmation-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-md mx-auto my-20">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 disable-select">
+                    <h2 class="text-lg font-semibold text-gray-900">Are you sure?</h2>
+                    <button onclick="closeEmailExecutionConfirmationModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4">
+                    <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
+                        <div class="flex items-start">
+                            <i data-lucide="alert-triangle" class="h-6 w-6 text-yellow-500 mr-3 mt-1"></i>
+                            <div>
+                                <p class="text-sm font-semibold text-yellow-900 mb-1">
+                                    Warning
+                                </p>
+                                <p class="text-sm text-yellow-800">
+                                    This action will send emails to the recipients defined in your profile. Proceed with caution.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Verify by answering the question:
+                        </label>
+                        <p id="math-question" class="text-base text-gray-900 font-semibold mb-3">
+                            Loading question...
+                        </p>
+                        <input type="text" id="math-answer-input"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="Enter your answer"
+                               autocomplete="off">
+                        <p id="math-error" class="text-xs text-red-600 mt-1 hidden"></p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
+                    <button type="button" onclick="closeEmailExecutionConfirmationModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirm-execute-btn" onclick="confirmEmailExecution()"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700">
+                        Execute
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin;
         let token = localStorage.getItem('reef_token'); // Will be validated before use
@@ -940,6 +1138,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
         let connections = [];
         let groups = [];
         let destinations = [];
+        let templates = [];
 
         // Sorting state - Load from localStorage or use defaults
         let currentSortColumn = localStorage.getItem('profiles_sortColumn') || 'name';
@@ -1210,7 +1409,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 });
 
                 if (response.ok) {
-                    const templates = await response.json();
+                    templates = await response.json();
                     const templateSelect = document.getElementById('template-id');
                     
                     // Clear existing options (except the first "None" option)
@@ -1279,29 +1478,35 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             }
 
             tbody.innerHTML = filteredProfiles.map(profile => {
-                const statusBadge = profile.isEnabled 
+                const statusBadge = profile.isEnabled
                     ? '<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">Enabled</span>'
                     : '<span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Disabled</span>';
 
                 // Connection status badge and button state
-                const connectionBadge = profile.connectionIsActive 
-                    ? '' 
+                const connectionBadge = profile.connectionIsActive
+                    ? ''
                     : '<span class="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Connection Disabled</span>';
-                
+
                 const canExecute = profile.connectionIsActive && profile.isEnabled;
-                const testButton = canExecute
-                    ? `<button onclick="testProfile(${profile.id})" class="text-green-600 hover:text-green-900 mr-3" title="Test Profile">
+                const executeButton = canExecute
+                    ? `<button onclick="executeProfileNormal(${profile.id})" class="text-green-600 hover:text-green-900 mr-3" title="Execute Profile">
                           <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
                        </button>`
                     : `<button disabled class="text-gray-400 cursor-not-allowed mr-3" title="${!profile.connectionIsActive ? 'Connection Disabled' : 'Profile Disabled'}">
                           <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
                        </button>`;
 
+                const testButton = canExecute && profile.isEmailExport && 1==2
+                    ? `<button onclick="testProfile(${profile.id})" class="text-orange-600 hover:text-orange-900 mr-3" title="Test Profile (Local Files)">
+                          <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
+                       </button>`
+                    : '';
+
                 return `
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <i data-lucide="file-code" class="h-4 w-4 text-gray-400 mr-2"></i>
+                                <i data-lucide="${profile.isEmailExport ? 'mail' : 'file-code'}" class="h-4 w-4 text-gray-400 mr-2"></i>
                                 <span class="text-sm font-medium text-gray-900">${escapeHtml(profile.name)}</span>
                             </div>
                         </td>
@@ -1317,10 +1522,11 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                         })()}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            ${executeButton}
+                            ${testButton}
                             <button onclick="editProfile(${profile.id})" class="text-blue-600 hover:text-blue-900 mr-3" data-tooltip="Edit Profile">
                                 <i data-lucide="edit" class="h-4 w-4 inline"></i>
                             </button>
-                            ${testButton}
                             <button onclick="exportProfileToml(${profile.id})" class="text-purple-600 hover:text-purple-900 mr-3" data-tooltip="Export as TOML">
                                 <i data-lucide="download" class="h-4 w-4 inline"></i>
                             </button>
@@ -1366,26 +1572,143 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             lucide.createIcons();
         }
 
-        function openAddProfileModal() {
-            document.getElementById('modal-title').textContent = 'Add Profile';
+        function toggleNewProfileMenu() {
+            const menu = document.getElementById('newProfileMenu');
+            menu.classList.toggle('hidden');
+            // Close menu when clicking elsewhere
+            if (!menu.classList.contains('hidden')) {
+                setTimeout(() => {
+                    document.addEventListener('click', function closeMenuOnClick(e) {
+                        const button = document.getElementById('newProfileButton');
+                        if (!menu.contains(e.target) && !button.contains(e.target)) {
+                            menu.classList.add('hidden');
+                            document.removeEventListener('click', closeMenuOnClick);
+                        }
+                    });
+                }, 0);
+            }
+        }
+
+        function openAddProfileModal(profileType = 'standard') {
+            // Hide email config section for standard profiles
+            const emailConfigSection = document.getElementById('emailConfigSection');
+            const emailPreviewButton = document.getElementById('emailPreviewButton');
+            const nonEmailFields = document.getElementById('nonEmailFields');
+            const fileExportFields = document.getElementById('fileExportFields');
+            const fileExportSplitFields = document.getElementById('fileExportSplitFields');
+            const splitOutputTabButton = document.getElementById('splitOutputTabButton');
+            const isEmailExport = profileType === 'email';
+
+            if (emailConfigSection) {
+                if (isEmailExport) {
+                    emailConfigSection.classList.remove('hidden');
+                } else {
+                    emailConfigSection.classList.add('hidden');
+                }
+            }
+            if (emailPreviewButton) {
+                if (isEmailExport) {
+                    emailPreviewButton.classList.remove('hidden');
+                } else {
+                    emailPreviewButton.classList.add('hidden');
+                }
+            }
+            if (nonEmailFields) {
+                if (isEmailExport) {
+                    nonEmailFields.classList.add('hidden');
+                } else {
+                    nonEmailFields.classList.remove('hidden');
+                }
+            }
+            if (fileExportFields) {
+                if (isEmailExport) {
+                    fileExportFields.classList.add('hidden');
+                } else {
+                    fileExportFields.classList.remove('hidden');
+                }
+            }
+            if (fileExportSplitFields) {
+                if (isEmailExport) {
+                    fileExportSplitFields.classList.add('hidden');
+                } else {
+                    fileExportSplitFields.classList.remove('hidden');
+                }
+            }
+
+            // Store profile type
+            document.getElementById('isEmailExport').checked = isEmailExport;
+
+            // For email profiles, enable split by default (split key column is optional)
+            if (isEmailExport) {
+                document.getElementById('splitEnabled').checked = true;
+                const splitFields = document.getElementById('splitFields');
+                if (splitFields) {
+                    splitFields.classList.remove('opacity-50', 'pointer-events-none');
+                }
+            }
+
+            document.getElementById('modal-title').textContent = isEmailExport ? 'Add Email Export Profile' : 'Add Profile';
             document.getElementById('profile-form').reset();
             document.getElementById('profile-id').value = '';
-            
+
+            // Close the dropdown menu
+            document.getElementById('newProfileMenu').classList.add('hidden');
+
             // Populate connection dropdown
             const connectionSelect = document.getElementById('profile-connection');
             connectionSelect.innerHTML = '<option value="">Select Connection...</option>' +
                 connections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-            
+
             // Populate group dropdown
             const groupSelect = document.getElementById('profile-group');
             groupSelect.innerHTML = '<option value="">No Group</option>' +
                 groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-            
-            // Populate destination dropdown
+
+            // Populate destination dropdown (filter based on profile type)
             const destinationSelect = document.getElementById('destination-id');
-            destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
-                destinations.map(d => `<option value="${d.id}">${escapeHtml(d.name)} (${d.type})</option>`).join('');
-            
+            if (isEmailExport) {
+                // Email profiles: only show Email/SMTP destinations
+                const emailDestinations = destinations.filter(d => d.type === 'Email');
+                if (emailDestinations.length === 0) {
+                    destinationSelect.innerHTML = '<option value="">-- No email destinations available --</option>';
+                } else {
+                    destinationSelect.innerHTML = '<option value="">-- Select an email destination --</option>' +
+                        emailDestinations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
+                }
+            } else {
+                // Regular export profiles: exclude Email destinations
+                const fileDestinations = destinations.filter(d => d.type !== 'Email');
+                if (fileDestinations.length === 0) {
+                    destinationSelect.innerHTML = '<option value="">-- No file destinations available --</option>';
+                } else {
+                    destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
+                        fileDestinations.map(d => `<option value="${d.id}">${escapeHtml(d.name)} (${d.type})</option>`).join('');
+                }
+            }
+
+            // Populate email template dropdown (for email profiles)
+            if (isEmailExport) {
+                const emailTemplateSelect = document.getElementById('emailTemplateId');
+                // Filter for Scriban templates with HTML output format only (emails must be HTML)
+                const htmlScribanTemplates = templates.filter(t =>
+                    (t.type === 'ScribanTemplate' || t.type === 10) &&
+                    (t.outputFormat === 'HTML' || t.outputFormat === 'html')
+                );
+
+                if (htmlScribanTemplates.length === 0) {
+                    emailTemplateSelect.innerHTML = '<option value="">-- No HTML Scriban templates available --</option>';
+                } else {
+                    emailTemplateSelect.innerHTML = '<option value="">-- Select HTML email template --</option>' +
+                        htmlScribanTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.outputFormat})</option>`).join('');
+                }
+            }
+
+            // Explicitly initialize email export fields
+            document.getElementById('emailTemplateId').value = '';
+            document.getElementById('emailRecipientsColumn').value = '';
+            document.getElementById('emailCcColumn').value = '';
+            document.getElementById('emailSubjectColumn').value = '';
+
             // Reset pre/post-processing fields
             document.getElementById('preprocess-type').value = '';
             document.getElementById('preprocess-command').value = '';
@@ -1475,6 +1798,14 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             // Note: Schedule fields are deprecated and no longer shown in UI
             document.getElementById('output-format').value = profile.outputFormat;
             document.getElementById('template-id').value = profile.templateId || '';
+            // Update template info display after setting value (only if visible for file exports)
+            if (!profile.isEmailExport && document.getElementById('template-info')) {
+                try {
+                    updateTemplateInfo();
+                } catch (e) {
+                    console.warn('Error updating template info:', e);
+                }
+            }
             document.getElementById('destination-id').value = profile.outputDestinationId || '';
             document.getElementById('is-enabled').checked = profile.isEnabled;
 
@@ -1525,8 +1856,26 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 groups.map(g => `<option value="${g.id}" ${g.id === profile.groupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
 
             const destinationSelect = document.getElementById('destination-id');
-            destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
-                destinations.map(d => `<option value="${d.id}" ${d.id === profile.outputDestinationId ? 'selected' : ''}>${escapeHtml(d.name)} (${d.type})</option>`).join('');
+            // Filter destinations based on profile type
+            if (profile.isEmailExport) {
+                // Email profiles: only show Email/SMTP destinations
+                const emailDestinations = destinations.filter(d => d.type === 'Email');
+                if (emailDestinations.length === 0) {
+                    destinationSelect.innerHTML = '<option value="">-- No email destinations available --</option>';
+                } else {
+                    destinationSelect.innerHTML = '<option value="">-- Select an email destination --</option>' +
+                        emailDestinations.map(d => `<option value="${d.id}" ${d.id === profile.outputDestinationId ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('');
+                }
+            } else {
+                // Regular export profiles: exclude Email destinations
+                const fileDestinations = destinations.filter(d => d.type !== 'Email');
+                if (fileDestinations.length === 0) {
+                    destinationSelect.innerHTML = '<option value="">-- No file destinations available --</option>';
+                } else {
+                    destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
+                        fileDestinations.map(d => `<option value="${d.id}" ${d.id === profile.outputDestinationId ? 'selected' : ''}>${escapeHtml(d.name)} (${d.type})</option>`).join('');
+                }
+            }
 
             document.getElementById('profile-modal').classList.remove('hidden');
             document.getElementById('scheduling-notice').style.display = 'none';
@@ -1552,6 +1901,73 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             document.getElementById('postProcessPerSplit').checked = profile.postProcessPerSplit || false;
             toggleSplitFields();
 
+            // Load Email Export settings
+            document.getElementById('isEmailExport').checked = profile.isEmailExport || false;
+
+            // Populate email template dropdown with HTML templates only (for consistency with new profiles)
+            if (profile.isEmailExport) {
+                const emailTemplateSelect = document.getElementById('emailTemplateId');
+                const htmlScribanTemplates = templates.filter(t =>
+                    (t.type === 'ScribanTemplate' || t.type === 10) &&
+                    (t.outputFormat === 'HTML' || t.outputFormat === 'html')
+                );
+
+                if (htmlScribanTemplates.length === 0) {
+                    emailTemplateSelect.innerHTML = '<option value="">-- No HTML Scriban templates available --</option>';
+                } else {
+                    emailTemplateSelect.innerHTML = '<option value="">-- Select HTML email template --</option>' +
+                        htmlScribanTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.outputFormat})</option>`).join('');
+                }
+
+                // Set the selected template
+                emailTemplateSelect.value = profile.emailTemplateId || '';
+            }
+
+            document.getElementById('emailRecipientsColumn').value = profile.emailRecipientsColumn || '';
+            document.getElementById('emailCcColumn').value = profile.emailCcColumn || '';
+            document.getElementById('emailSubjectColumn').value = profile.emailSubjectColumn || '';
+
+            // Show/hide email config section based on profile type
+            const emailConfigSection = document.getElementById('emailConfigSection');
+            const emailPreviewButton = document.getElementById('emailPreviewButton');
+            const nonEmailFields = document.getElementById('nonEmailFields');
+            const fileExportFields = document.getElementById('fileExportFields');
+            const fileExportSplitFields = document.getElementById('fileExportSplitFields');
+            if (profile.isEmailExport) {
+                emailConfigSection.classList.remove('hidden');
+                if (emailPreviewButton) {
+                    emailPreviewButton.classList.remove('hidden');
+                }
+                if (nonEmailFields) {
+                    nonEmailFields.classList.add('hidden');
+                }
+                if (fileExportFields) {
+                    fileExportFields.classList.add('hidden');
+                }
+                if (fileExportSplitFields) {
+                    fileExportSplitFields.classList.add('hidden');
+                }
+            } else {
+                emailConfigSection.classList.add('hidden');
+                if (emailPreviewButton) {
+                    emailPreviewButton.classList.add('hidden');
+                }
+                if (nonEmailFields) {
+                    nonEmailFields.classList.remove('hidden');
+                }
+                if (fileExportFields) {
+                    fileExportFields.classList.remove('hidden');
+                }
+                if (fileExportSplitFields) {
+                    fileExportSplitFields.classList.remove('hidden');
+                }
+            }
+
+            // Update modal title to reflect email export status
+            if (profile.isEmailExport) {
+                document.getElementById('modal-title').textContent = 'Edit Email Export Profile';
+            }
+
             // Show stats and reset panels only in edit mode
             document.getElementById('deltaSyncStats').classList.remove('hidden');
             document.getElementById('deltaSyncResetPanel').classList.remove('hidden');
@@ -1576,7 +1992,12 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             const scheduleType = null;
             const scheduleCron = null;
             const scheduleIntervalMinutes = null;
-            const outputFormat = document.getElementById('output-format').value;
+
+            // Email Export fields (must be read before checking if email profile)
+            const isEmailExportProfile = document.getElementById('isEmailExport').checked;
+
+            // For email profiles, use HTML (determined by email template)
+            const outputFormat = isEmailExportProfile ? 'HTML' : document.getElementById('output-format').value;
             const templateId = document.getElementById('template-id').value ? parseInt(document.getElementById('template-id').value) : null;
             const outputDestinationId = document.getElementById('destination-id').value ? parseInt(document.getElementById('destination-id').value) : null;
             const isEnabled = document.getElementById('is-enabled').checked;
@@ -1584,6 +2005,25 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             // Validation
             if (!outputDestinationId) {
                 showToast('Please select a destination', 'error');
+                return;
+            }
+
+            // Validate destination type matches profile type
+            const selectedDestination = destinations.find(d => d.id === outputDestinationId);
+            if (selectedDestination) {
+                if (isEmailExportProfile && selectedDestination.type !== 'Email') {
+                    showToast('Email export profiles must use an Email (SMTP) destination', 'error');
+                    return;
+                }
+                if (!isEmailExportProfile && selectedDestination.type === 'Email') {
+                    showToast('Regular export profiles cannot use Email (SMTP) destinations. Please select a file destination.', 'error');
+                    return;
+                }
+            }
+
+            // Validate output format for file exports
+            if (!isEmailExportProfile && !outputFormat) {
+                showToast('Please select an output format', 'error');
                 return;
             }
 
@@ -1635,12 +2075,52 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
 
             // Split Output fields
             const splitEnabled = document.getElementById('splitEnabled').checked;
-            const splitKeyColumn = splitEnabled ? document.getElementById('splitKeyColumn').value.trim() : null;
+            // For email profiles, split key column is optional (empty string is treated as null)
+            // For file exports, split key column is required if split is enabled
+            const splitKeyColumn = splitEnabled ? (document.getElementById('splitKeyColumn').value.trim() || null) : null;
             const splitFilenameTemplate = splitEnabled ? document.getElementById('splitFilenameTemplate').value : null;
             const filenameTemplate = splitEnabled ? null : document.getElementById('filenameTemplate').value;
             const splitBatchSize = splitEnabled ? parseInt(document.getElementById('splitBatchSize').value) : 1;
             // Always retrieve postProcessPerSplit from checkbox, regardless of splitEnabled
             const postProcessPerSplit = document.getElementById('postProcessPerSplit').checked;
+
+            // Email Export fields (isEmailExportProfile already defined above)
+            const emailTemplateId = isEmailExportProfile && document.getElementById('emailTemplateId').value ?
+                parseInt(document.getElementById('emailTemplateId').value) : null;
+            const emailRecipientsColumn = isEmailExportProfile ?
+                document.getElementById('emailRecipientsColumn').value.trim() : null;
+            const emailCcColumn = isEmailExportProfile ?
+                (document.getElementById('emailCcColumn').value.trim() || null) : null;
+            const emailSubjectColumn = isEmailExportProfile ?
+                (document.getElementById('emailSubjectColumn').value.trim() || null) : null;
+
+            // Validate email export configuration
+            if (isEmailExportProfile) {
+                if (!emailTemplateId) {
+                    showToast('Email template is required for email export profiles', 'error');
+                    showTab('general');
+                    return;
+                }
+
+                // Validate that selected template is HTML format
+                const selectedTemplate = templates.find(t => t.id === emailTemplateId);
+                if (!selectedTemplate) {
+                    showToast('Selected email template not found', 'error');
+                    showTab('general');
+                    return;
+                }
+                if (selectedTemplate.outputFormat !== 'HTML' && selectedTemplate.outputFormat !== 'html') {
+                    showToast('Email templates must be HTML format. Selected template is ' + selectedTemplate.outputFormat, 'error');
+                    showTab('general');
+                    return;
+                }
+
+                if (!emailRecipientsColumn) {
+                    showToast('Recipients column is required for email export profiles', 'error');
+                    showTab('general');
+                    return;
+                }
+            }
 
             // Validate Delta Sync configuration
             if (deltaSyncEnabled && !deltaSyncReefIdColumn) {
@@ -1649,8 +2129,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 return;
             }
 
-            // Validate Split configuration
-            if (splitEnabled && !splitKeyColumn) {
+            // Validate Split configuration (only for non-email profiles)
+            if (!isEmailExportProfile && splitEnabled && !splitKeyColumn) {
                 showToast('Split Key Column is required when splitting is enabled', 'error');
                 showTab('splitOutput');
                 return;
@@ -1696,6 +2176,11 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 filenameTemplate: filenameTemplate,
                 splitBatchSize: splitBatchSize,
                 postProcessPerSplit: postProcessPerSplit,
+                isEmailExport: isEmailExportProfile,
+                emailTemplateId: emailTemplateId,
+                emailRecipientsColumn: emailRecipientsColumn,
+                emailCcColumn: emailCcColumn,
+                emailSubjectColumn: emailSubjectColumn,
                 hash
             };
 
@@ -1714,21 +2199,36 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
 
                 if (!response.ok) {
                     const error = await response.json();
-                    throw new Error(error.error || 'Failed to save profile');
+                    throw new Error(error.error || 'Failed to save profile. Reason: ' + response.statusText);
                 }
 
                 showMessage(`Profile ${profileId ? 'updated' : 'created'} successfully`, 'success');
                 closeProfileModal();
                 await loadProfiles();
+                // Apply filters (respecting current filter selections) and render
+                await applyFilters();
             } catch (error) {
                 console.error('Error saving profile:', error);
-                showMessage(error.message, 'error');
+                showToast(error.message, 'error');
             }
         });
 
         async function testProfile(id) {
             try {
-                const response = await fetch(`${API_BASE}/api/executions/execute/${id}`, {
+                // For email export profiles, use local file destination for testing
+                let executeUrl = `${API_BASE}/api/executions/execute/${id}`;
+                const profile = profiles.find(p => p.id === id);
+
+                if (profile && profile.isEmailExport) {
+                    // Find local file destination for testing
+                    const localDest = destinations.find(d => d.type === 'Local');
+                    if (localDest) {
+                        executeUrl += `?testMode=true&localDestinationId=${localDest.id}`;
+                        showToast('Test mode: Using local file destination instead of email for preview', 'info');
+                    }
+                }
+
+                const response = await fetch(executeUrl, {
                     method: 'POST',
                     headers: getAuthHeaders()
                 });
@@ -1751,17 +2251,90 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 if (contentType && contentType.includes('application/json')) {
                     result = await response.json();
                 }
-                
+
                 // Check if execution actually succeeded
                 if (result && result.status === 'Failed') {
                     throw new Error(result.error || 'Profile execution failed');
                 }
-                
+
                 showToast('Profile executed successfully! Check the Executions page for results.', 'success');
                 // Optionally reload profiles to show updated stats
                 await loadProfiles();
             } catch (error) {
                 console.error('Error testing profile:', error);
+                showToast(error.message, 'error');
+            }
+        }
+
+        async function sendEmailProfile(id) {
+            const profile = profiles.find(p => p.id === id);
+            if (!profile) {
+                showToast('Profile not found', 'error');
+                return;
+            }
+
+            // Validate email configuration
+            try {
+                const response = await fetch(`${API_BASE}/api/profiles/${id}/validate-email-config`, {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error('Profile not found');
+                }
+
+                const validation = await response.json();
+                if (!validation.isValid) {
+                    const errorList = validation.errors.join('\n• ');
+                    showToast(`Email configuration incomplete:\n• ${errorList}`, 'error');
+                    return;
+                }
+
+                if (validation.warnings.length > 0) {
+                    console.warn('Email configuration warnings:', validation.warnings);
+                }
+            } catch (error) {
+                console.error('Error validating email config:', error);
+                showToast('Failed to validate email configuration', 'error');
+                return;
+            }
+
+            // Execute the email export
+            try {
+                const response = await fetch(`${API_BASE}/api/executions/execute/${id}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    let errorMsg = 'Failed to send email';
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMsg = error.error || errorMsg;
+                        } else {
+                            errorMsg = await response.text() || errorMsg;
+                        }
+                    } catch {}
+                    throw new Error(errorMsg);
+                }
+
+                let result = null;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await response.json();
+                }
+
+                if (result && result.status === 'Failed') {
+                    throw new Error(result.error || 'Email execution failed');
+                }
+
+                showToast('Email sent successfully! Check the Executions page for details.', 'success');
+                await loadProfiles();
+            } catch (error) {
+                console.error('Error sending email:', error);
                 showToast(error.message, 'error');
             }
         }
@@ -1791,15 +2364,39 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                     const scheduleType = null;
                     const scheduleCron = null;
                     const scheduleIntervalMinutes = null;
-                    const outputFormat = document.getElementById('output-format').value;
+
+                    // Email Export profile check
+                    const isEmailExportProfile = document.getElementById('isEmailExport').checked;
+
+                    // For email profiles, use HTML (determined by email template)
+                    const outputFormat = isEmailExportProfile ? 'HTML' : document.getElementById('output-format').value;
                     const templateId = document.getElementById('template-id').value ? parseInt(document.getElementById('template-id').value) : null;
-                    const outputDestinationId = document.getElementById('destination-id').value ? parseInt(document.getElementById('destination-id').value) : null;
+
+                    // For testing email profiles, use local file destination instead of email destination
+                    let outputDestinationId = document.getElementById('destination-id').value ? parseInt(document.getElementById('destination-id').value) : null;
+                    if (isEmailExportProfile && outputDestinationId) {
+                        // Find local file destination for testing
+                        const localDest = destinations.find(d => d.type === 'Local');
+                        if (localDest) {
+                            outputDestinationId = localDest.id;
+                            showToast('Test mode: Using local file destination instead of email for preview', 'info');
+                        }
+                    }
                     const isEnabled = document.getElementById('is-enabled').checked;
 
                     // Validation (match form submission)
                     if (!outputDestinationId) {
                         showToast('Please select a destination', 'error');
                         throw new Error('Destination required');
+                    }
+
+                    // Validate destination type matches profile type (skip for email test mode which uses local file)
+                    const selectedDestination = destinations.find(d => d.id === outputDestinationId);
+                    if (selectedDestination && !isEmailExportProfile) {
+                        if (selectedDestination.type === 'Email') {
+                            showToast('Regular export profiles cannot use Email (SMTP) destinations. Please select a file destination.', 'error');
+                            throw new Error('Invalid destination type for regular profile');
+                        }
                     }
 
                     // Pre-processing fields
@@ -1850,21 +2447,33 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
 
                     // Split Output fields
                     const splitEnabled = document.getElementById('splitEnabled').checked;
-                    const splitKeyColumn = splitEnabled ? document.getElementById('splitKeyColumn').value.trim() : null;
+                    // For email profiles, split key column is optional (empty string is treated as null)
+                    // For file exports, split key column is required if split is enabled
+                    const splitKeyColumn = splitEnabled ? (document.getElementById('splitKeyColumn').value.trim() || null) : null;
                     const splitFilenameTemplate = splitEnabled ? document.getElementById('splitFilenameTemplate').value : null;
                     const filenameTemplate = splitEnabled ? null : document.getElementById('filenameTemplate').value;
                     const splitBatchSize = splitEnabled ? parseInt(document.getElementById('splitBatchSize').value) : 1;
                     const postProcessPerSplit = document.getElementById('postProcessPerSplit').checked;
-                    
-                                // Validate Delta Sync configuration
+
+                    // Email Export fields
+                    const emailTemplateId = isEmailExportProfile && document.getElementById('emailTemplateId').value ?
+                        parseInt(document.getElementById('emailTemplateId').value) : null;
+                    const emailRecipientsColumn = isEmailExportProfile ?
+                        document.getElementById('emailRecipientsColumn').value.trim() : null;
+                    const emailCcColumn = isEmailExportProfile ?
+                        (document.getElementById('emailCcColumn').value.trim() || null) : null;
+                    const emailSubjectColumn = isEmailExportProfile ?
+                        (document.getElementById('emailSubjectColumn').value.trim() || null) : null;
+
+                    // Validate Delta Sync configuration
                                 if (deltaSyncEnabled && !deltaSyncReefIdColumn) {
                                     showToast('Delta Sync requires a ReefId column name', 'error');
                                     showTab('deltaSync');
                                     throw new Error('Delta Sync ReefId column required');
                                 }
                     
-                                // Validate Split configuration
-                                if (splitEnabled && !splitKeyColumn) {
+                                // Validate Split configuration (only for non-email profiles)
+                                if (!isEmailExportProfile && splitEnabled && !splitKeyColumn) {
                                     showToast('Split Key Column is required when splitting is enabled', 'error');
                                     showTab('splitOutput');
                                     throw new Error('Split Key Column required');
@@ -1944,7 +2553,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 }
             } catch (error) {
                 console.error('Error in testProfileInModal:', error);
-                showMessage(error.message || 'Failed to test profile', 'error');
+                (error.message || 'Failed to test profile', 'error');
             } finally {
                 if (btn && spinner && btnText) {
                     btn.disabled = false;
@@ -1952,6 +2561,171 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                     btnText.textContent = 'Test Profile';
                 }
             }
+        }
+
+        // Variables to track pending email execution
+        let pendingEmailProfileId = null;
+        let currentMathQuestion = null;
+
+        async function executeProfileNormal(id) {
+            try {
+                const profile = profiles.find(p => p.id === id);
+                if (!profile) {
+                    showToast('Profile not found', 'error');
+                    return;
+                }
+
+                // For email profiles, show confirmation modal with math verification
+                if (profile.isEmailExport) {
+                    pendingEmailProfileId = id;
+                    showEmailExecutionConfirmationModal();
+                    return;
+                }
+
+                // For file export profiles, execute directly
+                await performProfileExecution(id);
+            } catch (error) {
+                console.error('Error in executeProfileNormal:', error);
+                showToast(error.message || 'Failed to execute profile', 'error');
+            }
+        }
+
+        function showEmailExecutionConfirmationModal() {
+            const modal = document.getElementById('email-execute-confirmation-modal');
+            if (!modal) return;
+
+            // Generate new math question
+            currentMathQuestion = generateMathQuestion();
+            document.getElementById('math-question').textContent = currentMathQuestion.question;
+            document.getElementById('math-answer-input').value = '';
+            document.getElementById('math-error').classList.add('hidden');
+
+            // Show modal
+            modal.classList.remove('hidden');
+
+            // Focus on input field
+            setTimeout(() => {
+                const input = document.getElementById('math-answer-input');
+                if (input) input.focus();
+            }, 100);
+
+            // Allow Enter key to submit
+            const input = document.getElementById('math-answer-input');
+            if (input) {
+                input.onkeypress = (e) => {
+                    if (e.key === 'Enter') {
+                        confirmEmailExecution();
+                    }
+                };
+            }
+        }
+
+        function closeEmailExecutionConfirmationModal() {
+            const modal = document.getElementById('email-execute-confirmation-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            pendingEmailProfileId = null;
+            currentMathQuestion = null;
+        }
+
+        async function confirmEmailExecution() {
+            if (!pendingEmailProfileId || !currentMathQuestion) {
+                showToast('Invalid execution state', 'error');
+                return;
+            }
+
+            const input = document.getElementById('math-answer-input');
+            const errorMsg = document.getElementById('math-error');
+            const answer = input.value.trim();
+
+            // Validate answer
+            if (!answer) {
+                errorMsg.textContent = 'Please enter an answer';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            if (parseInt(answer) !== currentMathQuestion.answer) {
+                errorMsg.textContent = 'Incorrect answer. Try again.';
+                errorMsg.classList.remove('hidden');
+                input.value = '';
+                input.focus();
+                return;
+            }
+
+            // Answer is correct, proceed with execution
+            const profileId = pendingEmailProfileId;
+            closeEmailExecutionConfirmationModal();
+            await performProfileExecution(profileId);
+        }
+
+        async function performProfileExecution(id) {
+            try {
+                const response = await fetch(`${API_BASE}/api/executions/execute/${id}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    let errorMsg = 'Failed to execute profile';
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMsg = error.error || errorMsg;
+                        } else {
+                            errorMsg = await response.text() || errorMsg;
+                        }
+                    } catch {}
+                    throw new Error(errorMsg);
+                }
+
+                let result = null;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    result = await response.json();
+                }
+
+                if (result && result.status === 'Failed') {
+                    throw new Error(result.error || 'Profile execution failed');
+                }
+
+                const profile = profiles.find(p => p.id === id);
+                const profileType = profile && profile.isEmailExport ? 'Email' : 'Profile';
+                showToast(`${profileType} executed successfully! Check the Executions page for results.`, 'success');
+                await loadProfiles();
+            } catch (error) {
+                console.error('Error executing profile:', error);
+                showToast(error.message || 'Failed to execute profile', 'error');
+            }
+        }
+
+        function generateMathQuestion() {
+            const operators = ['+', '-', '*'];
+            const operator = operators[Math.floor(Math.random() * operators.length)];
+            const num1 = Math.floor(Math.random() * 10) + 1;  // 1-10
+            const num2 = Math.floor(Math.random() * 10) + 1;  // 1-10
+
+            let answer;
+            switch (operator) {
+                case '+':
+                    answer = num1 + num2;
+                    break;
+                case '-':
+                    answer = num1 - num2;
+                    break;
+                case '*':
+                    answer = num1 * num2;
+                    break;
+                default:
+                    answer = num1 + num2;
+            }
+
+            return {
+                question: `What is ${num1} ${operator} ${num2}?`,
+                answer: answer
+            };
         }
 
         async function toggleProfile(id, enable) {
@@ -1978,6 +2752,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
 
                 showMessage(`Profile ${enable ? 'enabled' : 'disabled'} successfully`, 'success');
                 await loadProfiles();
+                // Apply filters (respecting current filter selections) and render
+                await applyFilters();
             } catch (error) {
                 console.error('Error toggling profile:', error);
                 showMessage(error.message, 'error');
@@ -2011,6 +2787,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
 
                 showMessage('Profile deleted successfully', 'success');
                 await loadProfiles();
+                // Apply filters (respecting current filter selections) and render
+                await applyFilters();
             } catch (error) {
                 console.error('Error deleting profile:', error);
                 showMessage(error.message, 'error');
@@ -2848,6 +3626,88 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
         function logout() {
             clearAuth();
             redirectToLogin();
+        }
+
+        // Email HTML Preview Functions
+        function closeEmailPreviewModal() {
+            document.getElementById('email-preview-modal').classList.add('hidden');
+        }
+
+        function downloadEmailPreview() {
+            const content = document.getElementById('preview-html-content').innerHTML;
+            const blob = new Blob([content], { type: 'text/html;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `email-preview-${new Date().toISOString().split('T')[0]}.html`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        async function previewEmailHtml() {
+            const btn = document.getElementById('preview-email-btn');
+            const spinner = document.getElementById('preview-email-spinner');
+            const btnText = document.getElementById('preview-email-btn-text');
+            const profileIdInput = document.getElementById('profile-id');
+
+            if (!profileIdInput || !profileIdInput.value) {
+                showToast('Please save the profile first before previewing', 'error');
+                return;
+            }
+
+            const profileId = profileIdInput.value;
+
+            if (btn && spinner && btnText) {
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+                btnText.textContent = 'Generating Preview...';
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/profiles/${profileId}/preview-email-html`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || `Preview failed: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to generate preview');
+                }
+
+                // Display the preview in the modal
+                const previewContent = document.getElementById('preview-html-content');
+                previewContent.innerHTML = data.html || '<p class="text-gray-500">No HTML content generated</p>';
+
+                // Show the modal
+                document.getElementById('email-preview-modal').classList.remove('hidden');
+
+                // Update download button state
+                document.getElementById('download-preview-btn').disabled = !data.html;
+
+                if (data.message) {
+                    showToast(data.message, 'success');
+                }
+            } catch (error) {
+                console.error('Error previewing email:', error);
+                showToast(`Preview error: ${error.message}`, 'error');
+            } finally {
+                if (btn && spinner && btnText) {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Preview HTML';
+                }
+            }
         }
 
         window.addEventListener('DOMContentLoaded', init);
