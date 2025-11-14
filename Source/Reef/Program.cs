@@ -373,7 +373,7 @@ public class Program
             await next();
         });
 
-        // Cache prevention headers for sensitive API endpoints (prevents browser caching of encrypted data)
+        // Cache prevention for sensitive API endpoints
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.StartsWithSegments("/api/destinations"))
@@ -386,7 +386,61 @@ public class Program
         });
 
         app.UseCors();
-        app.UseStaticFiles();
+        app.UseStaticFiles(); // Serve wwwroot static files
+
+        // Serve HTML views from Views folder
+        var viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
+        if (!Directory.Exists(viewsFolder))
+        {
+            var projectRoot = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.FullName;
+            viewsFolder = Path.Combine(projectRoot, "Views");
+        }
+
+        if (Directory.Exists(viewsFolder))
+        {
+            Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
+
+            var htmlFiles = new[]
+            {
+                "index.html",
+                "dashboard.html",
+                "connections.html",
+                "jobs.html",
+                "admin.html",
+                "destinations.html",
+                "executions.html",
+                "groups.html",
+                "logoff.html",
+                "profiles.html",
+                "templates.html"
+            };
+
+            var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var fileName in htmlFiles)
+            {
+                var filePath = Path.Combine(viewsFolder, fileName);
+                if (File.Exists(filePath))
+                {
+                    var route = "/" + Path.GetFileNameWithoutExtension(fileName);
+                    if (mappedRoutes.Add(route))
+                    {
+                        app.MapGet(route, async context =>
+                        {
+                            Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
+                            context.Response.ContentType = "text/html";
+                            await context.Response.SendFileAsync(filePath);
+                        });
+                    }
+                }
+            }
+
+            // Redirect root "/" to "/index"
+            if (mappedRoutes.Contains("/index"))
+            {
+                app.MapGet("/", () => Results.Redirect("/index"));
+            }
+        }
+
         app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
         app.UseAuthorization();
@@ -396,9 +450,6 @@ public class Program
 
     private static void MapEndpoints(WebApplication app)
     {
-        // Root endpoint - Redirect to dashboard
-        app.MapGet("/", () => Results.Redirect("/index.html"));
-
         // Health check
         app.MapGet("/health", () => Results.Ok(new
         {

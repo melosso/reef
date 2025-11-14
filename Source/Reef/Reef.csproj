@@ -56,5 +56,10 @@
     <Content Remove="log\**" />
     <Content Remove=".core\**" />
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <Content Include="Views\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

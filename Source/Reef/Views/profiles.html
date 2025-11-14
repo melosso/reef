@@ -31,7 +31,7 @@
             </div>
             
             <nav class="flex-1 px-4 py-4">
-                <a href="/dashboard.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                     <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
                     <span class="ml-3">Dashboard</span>
                 </a>
@@ -39,23 +39,23 @@
                 <div class="mt-6">
                     <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
                     <div class="mt-2 space-y-2">
-                        <a href="/connections.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="plug" class="h-5 w-5"></i>
                             <span class="ml-3">Connections</span>
                         </a>
-                        <a href="/destinations.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="send" class="h-5 w-5"></i>
                             <span class="ml-3">Destinations</span>
                         </a>
-                        <a href="/templates.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="file-text" class="h-5 w-5"></i>
                             <span class="ml-3">Templates</span>
                         </a>
-                        <a href="/groups.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="folder" class="h-5 w-5"></i>
                             <span class="ml-3">Groups</span>
                         </a>
-                        <a href="/profiles.html" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
                             <i data-lucide="file-code" class="h-5 w-5"></i>
                             <span class="ml-3">Profiles</span>
                         </a>
@@ -65,11 +65,11 @@
                 <div class="mt-6">
                     <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
                     <div class="mt-2 space-y-2">
-                        <a href="/jobs.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="briefcase" class="h-5 w-5"></i>
                             <span class="ml-3">Jobs</span>
                         </a>
-                        <a href="/executions.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
@@ -94,7 +94,7 @@
                 <!-- Expandable Menu -->
                 <div id="user-menu" class="overflow-hidden user-menu-collapsed">
                     <div class="px-2 pb-2 space-y-1">
-                        <a href="/admin.html" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
                             <i data-lucide="settings" class="h-4 w-4"></i>
                             <span class="ml-3 text-sm">Settings</span>
                         </a>
@@ -318,7 +318,7 @@
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-blue-800">Need to schedule this profile?</h3>
                                 <p class="mt-1 text-sm text-blue-700">
-After saving this profile, head to the <a href="/jobs.html" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
+After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
                             </div>
                         </div>
                     </div>
@@ -366,7 +366,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                 <!-- Will be populated dynamically -->
                             </select>
                             <p class="mt-1 text-xs text-gray-500">
-                                <a href="/destinations.html" class="text-blue-600 hover:underline">→ Manage Destinations</a>
+                                <a href="/destinations" class="text-blue-600 hover:underline">→ Manage Destinations</a>
                             </p>
                         </div>
 
@@ -410,7 +410,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                 <option value="">-- Select HTML email template --</option>
                             </select>
                             <p class="mt-1 text-xs text-gray-500">
-                                Only Scriban templates with HTML output format are available. <a href="/templates.html" class="text-blue-600 hover:underline">→ Create a new email template</a>
+                                Only Scriban templates with HTML output format are available. <a href="/templates" class="text-blue-600 hover:underline">→ Create a new email template</a>
                             </p>
                         </div>
 
@@ -453,6 +453,20 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <p class="mt-1 text-xs text-gray-500">
                                 Query column name for email subject. If not provided, will use profile name.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="emailSuccessThresholdPercent" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                Success Threshold %
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Mark as succeeded if this % or more of emails send successfully. Prevents retries when some emails fail. Default: 60%" data-tooltip-position="top">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                </span>
+                            </label>
+                            <input type="number" id="emailSuccessThresholdPercent" min="0" max="100" value="60"
+                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <p class="mt-1 text-xs text-gray-500">
+                                Set to less than 100 to prevent retries when some recipients fail (e.g., 90 for 90% success)
                             </p>
                         </div>
                     </div>
@@ -1010,7 +1024,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                 <ol class="list-decimal list-inside space-y-2 ml-4">
                                     <li><b>Create Profile:</b> Click <b>"New Profile"</b> and configure your query, connection, output format, and destination.</li>
                                     <li><b>Test Profile:</b> Use the <i data-lucide="play-circle" class="h-4 w-4 inline text-green-600"></i> Test button to verify your query works correctly.</li>
-                                    <li><b>Schedule Execution:</b> Go to the <a href="/jobs.html" class="text-blue-600 hover:underline font-semibold">Jobs</a> page to create a scheduled task that runs this profile automatically.</li>
+                                    <li><b>Schedule Execution:</b> Go to the <a href="/jobs" class="text-blue-600 hover:underline font-semibold">Jobs</a> page to create a scheduled task that runs this profile automatically.</li>
                                 </ol>
                                 
                                 <p>
@@ -1019,7 +1033,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                 
                                 <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-4">
                                     <p class="text-sm text-blue-800">
-                                        <strong>💡 Tip:</strong> Profiles are input configurations. For <em>scheduling</em> (WHEN to run), use the <a href="/jobs.html" class="text-blue-600 hover:underline font-semibold">Jobs</a> page.
+                                        <strong>💡 Tip:</strong> Profiles are input configurations. For <em>scheduling</em> (WHEN to run), use the <a href="/jobs" class="text-blue-600 hover:underline font-semibold">Jobs</a> page.
                                     </p>
                                 </div>
                             </div>
@@ -1193,8 +1207,11 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                         bVal = (b.groupName || '').toLowerCase();
                         break;
                     case 'format':
-                        aVal = (a.outputFormat || '').toLowerCase();
-                        bVal = (b.outputFormat || '').toLowerCase();
+                        // Use template's format if available, otherwise use outputFormat
+                        const aTemplate = a.templateId ? templates.find(t => t.id === a.templateId) : null;
+                        const bTemplate = b.templateId ? templates.find(t => t.id === b.templateId) : null;
+                        aVal = (aTemplate?.outputFormat || a.outputFormat || '').toLowerCase();
+                        bVal = (bTemplate?.outputFormat || b.outputFormat || '').toLowerCase();
                         break;
                     case 'destination':
                         const aDest = destinations.find(d => d.id === a.outputDestinationId);
@@ -1449,15 +1466,22 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
         function updateTemplateInfo() {
             const templateSelect = document.getElementById('template-id');
             const infoElement = document.getElementById('template-info');
+            const outputFormatSelect = document.getElementById('output-format');
             const selectedOption = templateSelect.options[templateSelect.selectedIndex];
-            
+
             if (templateSelect.value) {
                 const format = selectedOption.dataset.outputFormat || 'Unknown';
                 const templateName = selectedOption.textContent;
                 infoElement.innerHTML = `<span class="text-blue-600 font-medium">✓ Will output: ${format}</span> using "${templateName}"`;
+                // Disable output format when template is selected
+                outputFormatSelect.disabled = true;
+                outputFormatSelect.classList.add('opacity-50', 'cursor-not-allowed');
             } else {
                 const outputFormat = document.getElementById('output-format').value;
                 infoElement.innerHTML = `Will use standard <span class="font-medium">${outputFormat}</span> formatter`;
+                // Enable output format when template is cleared
+                outputFormatSelect.disabled = false;
+                outputFormatSelect.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 
@@ -1514,7 +1538,13 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                             ${escapeHtml(profile.connectionName || 'N/A')}${connectionBadge}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(profile.groupName || 'None')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(profile.outputFormat)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(() => {
+                            if (profile.templateId) {
+                                const template = templates.find(t => t.id === profile.templateId);
+                                return template ? escapeHtml(template.outputFormat) : escapeHtml(profile.outputFormat);
+                            }
+                            return escapeHtml(profile.outputFormat);
+                        })()}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${(() => {
                             if (!profile.outputDestinationId) return 'Not configured';
                             const dest = destinations.find(d => d.id === profile.outputDestinationId);
@@ -1708,6 +1738,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             document.getElementById('emailRecipientsColumn').value = '';
             document.getElementById('emailCcColumn').value = '';
             document.getElementById('emailSubjectColumn').value = '';
+            document.getElementById('emailSuccessThresholdPercent').value = '60';
 
             // Reset pre/post-processing fields
             document.getElementById('preprocess-type').value = '';
@@ -1763,7 +1794,16 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             
             // Clear any old webhooks from list
             document.getElementById('webhooksList').innerHTML = '<p class="text-gray-500 text-center py-4">Save the profile to enable webhooks.</p>';
-            
+
+            // Update template info to enable/disable output format field
+            if (!isEmailExport && document.getElementById('template-info')) {
+                try {
+                    updateTemplateInfo();
+                } catch (e) {
+                    console.warn('Error updating template info:', e);
+                }
+            }
+
             document.getElementById('profile-modal').classList.remove('hidden');
             document.getElementById('scheduling-notice').style.display = '';
         }
@@ -1926,6 +1966,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
             document.getElementById('emailRecipientsColumn').value = profile.emailRecipientsColumn || '';
             document.getElementById('emailCcColumn').value = profile.emailCcColumn || '';
             document.getElementById('emailSubjectColumn').value = profile.emailSubjectColumn || '';
+            document.getElementById('emailSuccessThresholdPercent').value = profile.emailSuccessThresholdPercent !== undefined && profile.emailSuccessThresholdPercent !== null ? profile.emailSuccessThresholdPercent : 60;
 
             // Show/hide email config section based on profile type
             const emailConfigSection = document.getElementById('emailConfigSection');
@@ -2093,6 +2134,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 (document.getElementById('emailCcColumn').value.trim() || null) : null;
             const emailSubjectColumn = isEmailExportProfile ?
                 (document.getElementById('emailSubjectColumn').value.trim() || null) : null;
+            const emailSuccessThresholdPercent = isEmailExportProfile ?
+                parseInt(document.getElementById('emailSuccessThresholdPercent').value) || 60 : 60;
 
             // Validate email export configuration
             if (isEmailExportProfile) {
@@ -2136,8 +2179,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 return;
             }
 
-            // Combine fields for hash (including pre/post-processing, delta sync, and splitting)
-            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}`;
+            // Combine fields for hash (including pre/post-processing, delta sync, splitting, and email config)
+            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
             const hash = await window.sha256(hashInput);
 
             const profile = {
@@ -2181,6 +2224,7 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                 emailRecipientsColumn: emailRecipientsColumn,
                 emailCcColumn: emailCcColumn,
                 emailSubjectColumn: emailSubjectColumn,
+                emailSuccessThresholdPercent: emailSuccessThresholdPercent,
                 hash
             };
 
@@ -2479,8 +2523,8 @@ After saving this profile, head to the <a href="/jobs.html" class="font-semibold
                                     throw new Error('Split Key Column required');
                                 }
                     
-                                // Combine fields for hash (including pre/post-processing, delta sync, and splitting)
-                                const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}`;
+                                // Combine fields for hash (including pre/post-processing, delta sync, splitting, and email config)
+                                const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
                                 const hash = await window.sha256(hashInput);
                     
                                 const profile = {

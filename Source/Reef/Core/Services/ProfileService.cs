@@ -344,6 +344,7 @@ public class ProfileService
                     EmailRecipientsColumn = @EmailRecipientsColumn,
                     EmailCcColumn = @EmailCcColumn,
                     EmailSubjectColumn = @EmailSubjectColumn,
+                    EmailSuccessThresholdPercent = @EmailSuccessThresholdPercent,
                     DeltaSyncEnabled = @DeltaSyncEnabled,
                     DeltaSyncReefIdColumn = @DeltaSyncReefIdColumn,
                     DeltaSyncHashAlgorithm = @DeltaSyncHashAlgorithm,

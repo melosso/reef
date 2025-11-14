@@ -388,12 +388,30 @@ public class ExecutionService
                         Log.Information("Successfully inserted {SplitCount} execution split records", splits.Count);
                     }
 
-                    if (emailSuccess)
+                    // Check if email export meets success threshold
+                    int totalEmails = successCount + failureCount;
+                    bool meetsThreshold = totalEmails > 0 && (successCount * 100 / totalEmails) >= profile.EmailSuccessThresholdPercent;
+                    bool finalSuccess = emailSuccess || meetsThreshold;
+
+                    if (meetsThreshold && !emailSuccess)
+                    {
+                        Log.Information("Email export meets success threshold: {SuccessPercent}% >= {ThresholdPercent}%",
+                            (successCount * 100 / totalEmails), profile.EmailSuccessThresholdPercent);
+                    }
+
+                    if (finalSuccess)
                     {
                         Log.Information("Email export completed for profile {ProfileId}: {Message}", profile.Id, emailMessage);
 
                         // Update profile's last executed timestamp
                         await UpdateProfileLastExecutedAsync(profileId);
+
+                        // Commit delta sync if enabled
+                        if (profile.DeltaSyncEnabled && deltaSyncResult != null)
+                        {
+                            await _deltaSyncService.CommitDeltaSyncAsync(profileId, executionId, deltaSyncResult);
+                            await UpdateDeltaSyncMetricsAsync(executionId, deltaSyncResult);
+                        }
 
                         await _auditService.LogAsync("Profile", profileId, "Executed", triggeredBy,
                             System.Text.Json.JsonSerializer.Serialize(new { RowCount = rows.Count, EmailsSent = emailMessage, ExecutionTimeMs = stopwatch.ElapsedMilliseconds }));

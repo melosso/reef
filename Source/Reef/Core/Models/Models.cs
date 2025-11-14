@@ -105,6 +105,7 @@ public class Profile
     public string? EmailRecipientsColumn { get; set; } // Query column name for TO recipients (extracted from results)
     public string? EmailCcColumn { get; set; } // Query column name for CC recipients (extracted from results)
     public string? EmailSubjectColumn { get; set; } // Query column name for email subject (extracted from results)
+    public int EmailSuccessThresholdPercent { get; set; } = 60; // Mark as succeeded if this % or more of emails succeed (prevents retries on partial failures)
 
     public string? DependsOnProfileIds { get; set; } // Comma-separated profile IDs for dependencies
     public bool IsEnabled { get; set; } = true;

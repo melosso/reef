@@ -1,22 +1,38 @@
-// auth.js - Resilient centralized authentication for Reef UI
+// auth.js
 
 let authCache = { token: null, valid: false };
-let refreshPromise = null; // Prevent concurrent refresh attempts
+let refreshPromise = null;
 
 /**
- * Refreshes the JWT token by calling the /api/auth/refresh endpoint.
- * @returns {Promise<string|null>} The new token, or null if refresh failed.
+ * Lightweight API health check with timeout
+ * @param {number} timeout in ms
+ * @returns {Promise<boolean>}
+ */
+async function checkApiAvailability(timeout = 3000) {
+    try {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
+        // Use the correct endpoint
+        const res = await fetch('/health/', { signal: controller.signal });
+        clearTimeout(id);
+
+        return res.ok;
+    } catch (err) {
+        console.warn('API unavailable', err);
+        return false;
+    }
+}
+
+
+/**
+ * Refreshes the JWT token
  */
 async function refreshToken() {
-    // Prevent concurrent refresh attempts
-    if (refreshPromise) {
-        return refreshPromise;
-    }
+    if (refreshPromise) return refreshPromise;
 
     const currentToken = localStorage.getItem('reef_token');
-    if (!currentToken) {
-        return null;
-    }
+    if (!currentToken) return null;
 
     refreshPromise = (async () => {
         try {
@@ -35,13 +51,11 @@ async function refreshToken() {
             }
 
             const data = await res.json();
-            
             if (data.token) {
                 localStorage.setItem('reef_token', data.token);
                 localStorage.setItem('reef_username', data.username);
                 localStorage.setItem('reef_role', data.role);
                 authCache = { token: data.token, valid: true };
-                console.log('Token refreshed successfully');
                 return data.token;
             }
 
@@ -58,10 +72,9 @@ async function refreshToken() {
 }
 
 /**
- * Checks if a valid JWT token exists in localStorage by validating with the backend.
- * If invalid, clears credentials and redirects to /logoff.html.
- * If transient network errors occur, allows a grace period using cached valid token.
- * @returns {Promise<string|null>} Resolves to the valid token, or null if not authenticated.
+ * Require authentication for a page
+ * - Checks API availability
+ * - Uses cached token if offline
  */
 async function requireAuth() {
     const token = localStorage.getItem('reef_token');
@@ -70,9 +83,22 @@ async function requireAuth() {
         return null;
     }
 
-    // Use cached validation if token hasn't changed
+    // If token is cached and valid, use it
     if (authCache.token === token && authCache.valid) {
         return token;
+    }
+
+    // Check API availability first
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) {
+        if (authCache.token === token && authCache.valid) {
+            // allow temporary offline access
+            return token;
+        } else {
+            clearAuth();
+            redirectToLogin();
+            return null;
+        }
     }
 
     try {
@@ -83,18 +109,10 @@ async function requireAuth() {
         });
 
         if (!res.ok) {
-            console.warn('Auth validation error', res.status);
-            
-            // Try to refresh the token if we get a 401
             if (res.status === 401) {
                 const newToken = await refreshToken();
-                if (newToken) {
-                    return newToken;
-                }
+                if (newToken) return newToken;
             }
-            
-            // fallback to cached valid token if available
-            if (authCache.token === token && authCache.valid) return token;
             clearAuth();
             redirectToLogin();
             return null;
@@ -104,12 +122,9 @@ async function requireAuth() {
         authCache = { token, valid: data.valid };
 
         if (!data.valid) {
-            // Try to refresh the token
             const newToken = await refreshToken();
-            if (newToken) {
-                return newToken;
-            }
-            
+            if (newToken) return newToken;
+
             clearAuth();
             redirectToLogin();
             return null;
@@ -119,8 +134,8 @@ async function requireAuth() {
 
     } catch (err) {
         console.warn('Network/auth error', err);
-        // fallback to cached valid token if available
         if (authCache.token === token && authCache.valid) return token;
+
         clearAuth();
         redirectToLogin();
         return null;
@@ -128,7 +143,7 @@ async function requireAuth() {
 }
 
 /**
- * Clears all authentication info from localStorage.
+ * Clear local authentication
  */
 function clearAuth() {
     localStorage.removeItem('reef_token');
@@ -138,26 +153,28 @@ function clearAuth() {
 }
 
 /**
- * Redirects to the login/logoff page.
+ * Redirect to login/logoff page
  */
 function redirectToLogin() {
-    window.location.href = '/logoff.html';
+    window.location.href = '/logoff';
 }
 
 /**
- * Checks if a valid token exists and, if so, redirects to /admin.html.
+ * Redirect if already authenticated
  */
 async function redirectIfAuthenticated() {
     const token = localStorage.getItem('reef_token');
     if (!token) return;
 
-    // Use cached valid token if available
     if (authCache.token === token && authCache.valid) {
-        window.location.href = '/admin.html';
+        window.location.href = '/admin';
         return;
     }
 
     try {
+        const apiAvailable = await checkApiAvailability();
+        if (!apiAvailable) return;
+
         const res = await fetch('/api/auth/validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -165,19 +182,31 @@ async function redirectIfAuthenticated() {
         });
         const data = await res.json();
         authCache = { token, valid: data.valid };
+
         if (data.valid) {
-            window.location.href = '/admin.html';
+            window.location.href = '/admin';
         }
     } catch (err) {
         console.warn('Network/auth error on redirect check', err);
-        // fail silently, don’t redirect
     }
 }
 
-// Background token validation and refresh - runs every 3 minutes
+/**
+ * Background token validation & API monitoring
+ */
 setInterval(async () => {
     const token = localStorage.getItem('reef_token');
     if (!token) return;
+
+    const apiAvailable = await checkApiAvailability();
+    if (!apiAvailable) {
+        if (authCache.token !== token || !authCache.valid) {
+            console.warn('API down, clearing auth');
+            clearAuth();
+            redirectToLogin();
+        }
+        return;
+    }
 
     try {
         const res = await fetch('/api/auth/validate', {
@@ -194,18 +223,21 @@ setInterval(async () => {
 
         const data = await res.json();
         authCache = { token, valid: data.valid };
-        
+
         if (!data.valid) {
             console.warn('Token invalid, attempting refresh');
             await refreshToken();
         }
+
     } catch (err) {
         console.warn('Background auth check error', err);
     }
-}, 3 * 60 * 1000); // Check every 3 minutes
+}, 3 * 60 * 1000); // Every 3 minutes
 
+// Expose globally
 window.requireAuth = requireAuth;
 window.refreshToken = refreshToken;
 window.clearAuth = clearAuth;
 window.redirectToLogin = redirectToLogin;
 window.redirectIfAuthenticated = redirectIfAuthenticated;
+window.checkApiAvailability = checkApiAvailability;

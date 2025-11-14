@@ -301,6 +301,7 @@ public static class ProfilesEndpoints
             existingProfile.EmailRecipientsColumn = profile.EmailRecipientsColumn;
             existingProfile.EmailCcColumn = profile.EmailCcColumn;
             existingProfile.EmailSubjectColumn = profile.EmailSubjectColumn;
+            existingProfile.EmailSuccessThresholdPercent = profile.EmailSuccessThresholdPercent;
 
             var success = await service.UpdateAsync(existingProfile);
             

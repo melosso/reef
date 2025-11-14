@@ -1113,6 +1113,7 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailRecipientsColumn", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailCcColumn", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailSubjectColumn", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailSuccessThresholdPercent", "INTEGER NOT NULL DEFAULT 60");
 
         Log.Debug("Database schema migrations completed");
     }
