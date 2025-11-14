@@ -259,7 +259,7 @@ public class EmailExportService
             else
             {
                 // Send one email per row (or combined if recipients are same)
-                Log.Information("Sending {Count} emails from profile {ProfileId}",
+                Log.Debug("Sending {Count} emails from profile {ProfileId}",
                     queryResults.Count, profile.Id);
 
                 for (int i = 0; i < queryResults.Count; i++)

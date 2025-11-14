@@ -380,12 +380,12 @@ public class ExecutionService
                         "HTML");
 
                     // Insert split records for email exports
-                    Log.Information("Email export has {SplitCount} splits to record", splits.Count);
+                    Log.Debug("Email export has {SplitCount} splits to record", splits.Count);
                     if (splits.Count > 0)
                     {
-                        Log.Information("Inserting {SplitCount} execution split records for execution {ExecutionId}", splits.Count, executionId);
+                        Log.Debug("Inserting {SplitCount} execution split records for execution {ExecutionId}", splits.Count, executionId);
                         await InsertExecutionSplitsAsync(executionId, splits);
-                        Log.Information("Successfully inserted {SplitCount} execution split records", splits.Count);
+                        Log.Debug("Successfully inserted {SplitCount} execution split records", splits.Count);
                     }
 
                     // Check if email export meets success threshold
@@ -2281,7 +2281,7 @@ public class ExecutionService
             }
         }
 
-        Log.Information("InsertExecutionSplitsAsync completed: inserted {InsertedCount}/{TotalCount} split records", insertedCount, splits.Count);
+        Log.Debug("InsertExecutionSplitsAsync completed: inserted {InsertedCount}/{TotalCount} split records", insertedCount, splits.Count);
     }
 
     /// <summary>
