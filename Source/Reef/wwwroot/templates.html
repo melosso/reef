@@ -967,9 +967,10 @@
 
                 const files = await response.json();
 
-                // Filter files based on pattern: *.{Type}.{Extension}
+                // Filter files based on pattern: *.{Type}.{Extension}, exclude .md files
                 const templates = files
                     .filter(file => file.type === 'file')
+                    .filter(file => !file.name.toLowerCase().endsWith('.md'))
                     .map(file => parseTemplateFileName(file.name, file.download_url))
                     .filter(template => template !== null)
                     .filter(template => {
