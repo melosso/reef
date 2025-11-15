@@ -593,17 +593,6 @@ Enable Smart Sync to track changes and only export modified items:
 - **Track Deletions**: Yes (optional - detects removed items)
 - **Exclude ReefId from Output**: Yes (recommended - keeps `ItemCode` internal)
 
-### Configuration Benefits
-
-This pattern offers:
-
-✅ **Simple, Maintainable SQL**: No complex CTEs or nested XML generation  
-✅ **Clear Data Flow**: Easy to debug and understand  
-✅ **Better Performance**: Fewer table scans, especially with Smart Sync  
-✅ **Faster Execution**: Reduced database overhead and network transfer  
-✅ **Flexible Output**: Easy to modify XML structure without changing SQL  
-✅ **Data Integrity**: Consistent hashing and duplicate prevention  
-
 ---
 
 ## Advanced: Conditional Output Techniques
@@ -786,60 +775,6 @@ ISNULL(
 
 ---
 
-## Summary
-
-This example demonstrates:
-
-✅ Converting complex SQL XML generation to simple SELECT + Scriban template  
-✅ Flattening related data for easy template access  
-✅ Using JSON arrays for collections (suppliers, warehouses)  
-✅ Conditional output based on data availability  
-✅ Smart Sync for change tracking and incremental exports  
-✅ Performance optimization through separation of concerns  
-
-**Next Steps:**
-1. Adapt the SQL query to your schema
-2. Customize the Scriban template to match your XML requirements
-3. Configure Smart Sync for your use case
-4. Test with a small dataset before full deployment
-    
-    -- Custom/Dynamic Fields - Numeric
-    COALESCE(c.NumberField1, 0) AS FreeNumber1,
-    COALESCE(c.NumberField2, 0) AS FreeNumber2,
-    COALESCE(c.NumberField3, 0) AS FreeNumber3,
-    COALESCE(c.NumberField4, 0) AS FreeNumber4,
-    COALESCE(c.NumberField5, 0) AS FreeNumber5,
-    
-    -- Custom/Dynamic Fields - Boolean
-    COALESCE(c.YesNoField1, 0) AS FreeYesNo1,
-    COALESCE(c.YesNoField2, 0) AS FreeYesNo2,
-    COALESCE(c.YesNoField3, 0) AS FreeYesNo3,
-    COALESCE(c.YesNoField4, 0) AS FreeYesNo4,
-    COALESCE(c.YesNoField5, 0) AS FreeYesNo5,
-    
-    -- Audit Metadata
-    FORMAT(c.syscreated, 'yyyy-MM-dd HH:mm') AS CreatedDate,
-    FORMAT(
-        (SELECT MAX(ModifiedDate) 
-         FROM (VALUES (c.sysmodified), (cp.LastModifiedDate)) AS v(ModifiedDate)), 
-        'yyyy-MM-dd HH:mm'
-    ) AS ModifiedDate,
-    
-    -- UUID for integration tracking
-    REPLACE(REPLACE(CAST(c.sysguid AS VARCHAR(36)), '{', ''), '}', '') AS UUID
-    
-FROM dbo.cicmpy c 
-OUTER APPLY (
-    -- Example: Include modification dates from related tables
-    SELECT MAX(sysmodified) AS LastModifiedDate 
-    FROM cicntp cp 
-    WHERE cp.cmp_wwn = c.cmp_wwn
-) AS cp
-LEFT JOIN dbo.BTWtrs vat_sales ON c.VatCode = vat_sales.btwtrans
-WHERE 
-    c.debcode IS NOT NULL        -- Filter to only entities with valid identifiers
-ORDER BY c.debcode;
-```
 
 ### Query Design Principles
 
@@ -862,64 +797,7 @@ Create a new Query Template in Reef with the following configuration:
 
 **Template Name:** `eExact XML Template for Debtors`  
 **Template Type:** `Custom (Scriban)`  
-**Description:** Generates eExact-compliant XML output for debtor/customer data with nested custom fields
-
-### Template Code
-
-```xml
-<?xml version="1.0" ?>
-<eExact xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="eExact-Schema.xsd">
-  <!-- Dynamic timestamp showing when the export was generated -->
-  <Timestamp>{{ date.now | date.to_string '%Y-%m-%d.%H:%M' }}</Timestamp>
-  
-  <Accounts>
-{{~ for row in rows ~}}
-    <!-- Each row from the query becomes an Account element -->
-    <Account code="{{ row.Code }}" status="{{ row.Status }}" type="{{ row.Type }}">
-      <Name>{{ row.Name }}</Name>
-      
-      <!-- Nested structure for custom fields -->
-      <FreeFields>
-        <FreeTexts>
-          <FreeText number="1">{{ row.FreeText1 }}</FreeText>
-          <FreeText number="2">{{ row.FreeText2 }}</FreeText>
-          <FreeText number="3">{{ row.FreeText3 }}</FreeText>
-          <FreeText number="4">{{ row.FreeText4 }}</FreeText>
-          <FreeText number="5">{{ row.FreeText5 }}</FreeText>
-          <FreeText number="6">{{ row.FreeText6 }}</FreeText>
-          <FreeText number="7">{{ row.FreeText7 }}</FreeText>
-          <FreeText number="8">{{ row.FreeText8 }}</FreeText>
-          <FreeText number="9">{{ row.FreeText9 }}</FreeText>
-          <FreeText number="10">{{ row.FreeText10 }}</FreeText>
-        </FreeTexts>
-        
-        <FreeNumbers>
-          <!-- Format numbers with specific precision -->
-          <FreeNumber number="1">{{ row.FreeNumber1 | math.format '0.00000' }}</FreeNumber>
-          <FreeNumber number="2">{{ row.FreeNumber2 | math.format '0.00000' }}</FreeNumber>
-          <FreeNumber number="3">{{ row.FreeNumber3 | math.format '0.00000' }}</FreeNumber>
-          <FreeNumber number="4">{{ row.FreeNumber4 | math.format '0.00000' }}</FreeNumber>
-          <FreeNumber number="5">{{ row.FreeNumber5 | math.format '0.00000' }}</FreeNumber>
-        </FreeNumbers>
-        
-        <FreeYesNos>
-          <FreeYesNo number="1">{{ row.FreeYesNo1 }}</FreeYesNo>
-          <FreeYesNo number="2">{{ row.FreeYesNo2 }}</FreeYesNo>
-          <FreeYesNo number="3">{{ row.FreeYesNo3 }}</FreeYesNo>
-          <FreeYesNo number="4">{{ row.FreeYesNo4 }}</FreeYesNo>
-          <FreeYesNo number="5">{{ row.FreeYesNo5 }}</FreeYesNo>
-        </FreeYesNos>
-      </FreeFields>
-      
-      <!-- Audit metadata -->
-      <CreatedDate>{{ row.CreatedDate }}</CreatedDate>
-      <ModifiedDate>{{ row.ModifiedDate }}</ModifiedDate>
-      <UUID>{{ row.UUID }}</UUID>
-    </Account>
-{{~ end ~}}
-  </Accounts>
-</eExact>
-```
+**Description:** Generates eExact-compliant XML output for debtor/customer data with nested custom field
 
 ### Template Features
 

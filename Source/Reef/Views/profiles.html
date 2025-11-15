@@ -2179,6 +2179,28 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 return;
             }
 
+            // Check for duplicate name (only when creating new profile)
+            if (!profileId) {
+                try {
+                    const existingProfiles = await fetch(`${API_BASE}/api/profiles`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (existingProfiles.ok) {
+                        const profiles = await existingProfiles.json();
+                        const duplicate = profiles.find(p => p.name.toLowerCase() === name.toLowerCase());
+
+                        if (duplicate) {
+                            showToast(`Profile with name "${name}" already exists. Please use a different name.`, 'error');
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking for duplicate profiles:', error);
+                    // Continue anyway, let the server handle it
+                }
+            }
+
             // Combine fields for hash (including pre/post-processing, delta sync, splitting, and email config)
             const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
             const hash = await window.sha256(hashInput);

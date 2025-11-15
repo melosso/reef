@@ -1781,8 +1781,9 @@
                 startTime = document.getElementById('job-startTime')?.value || null;
             }
 
+            const jobName = document.getElementById('job-name').value;
             const job = {
-                name: document.getElementById('job-name').value,
+                name: jobName,
                 description: document.getElementById('job-description').value,
                 type: document.getElementById('job-type').value,
                 profileId: parseInt(document.getElementById('job-profileId').value) || null,
@@ -1805,6 +1806,29 @@
             }
 
             try {
+                // Check for duplicate name (only when creating new job)
+                if (!isEdit) {
+                    try {
+                        const existingJobs = await fetch(API_BASE, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (existingJobs.ok) {
+                            const jobs = await existingJobs.json();
+                            // Handle both array and paginated response
+                            const jobsList = Array.isArray(jobs) ? jobs : (jobs.data || []);
+                            const duplicate = jobsList.find(j => j.name.toLowerCase() === jobName.toLowerCase());
+
+                            if (duplicate) {
+                                showToast(`Job with name "${jobName}" already exists. Please use a different name.`, 'error');
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking for duplicate jobs:', error);
+                        // Continue anyway, let the server handle it
+                    }
+                }
                 const url = isEdit ? `${API_BASE}/${editId}` : API_BASE;
                 const method = isEdit ? 'PUT' : 'POST';
 

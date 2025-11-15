@@ -347,11 +347,29 @@
         document.getElementById('group-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const groupId = document.getElementById('group-id').value;
+            const groupName = document.getElementById('group-name').value;
             const group = {
-                name: document.getElementById('group-name').value,
+                name: groupName,
                 description: document.getElementById('group-description').value
             };
             try {
+                // Check for duplicate name (only when creating new group)
+                if (!groupId) {
+                    const existingGroups = await fetch(`${API_BASE}/api/groups`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (existingGroups.ok) {
+                        const groups = await existingGroups.json();
+                        const duplicate = groups.find(g => g.name.toLowerCase() === groupName.toLowerCase());
+
+                        if (duplicate) {
+                            showMessage(`Group with name "${groupName}" already exists. Please use a different name.`, 'error');
+                            return;
+                        }
+                    }
+                }
+
                 const url = groupId ? `${API_BASE}/api/groups/${groupId}` : `${API_BASE}/api/groups`;
                 const method = groupId ? 'PUT' : 'POST';
                 const response = await fetch(url, {

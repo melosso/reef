@@ -9,6 +9,7 @@
     <script src="/assets/js/_lucide.0.552.0.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/connections.js"></script>
+    <script src="/assets/js/filter.js"></script>
     <script src="/assets/js/main.js"></script>
 </head>
 <body class="bg-slate-50">
@@ -131,6 +132,19 @@
             </header>
 
             <main class="flex-1 overflow-y-auto bg-gray-100 p-6">
+                <!-- Filter Bar - with placeholder to prevent layout shift -->
+                <div id="filter-container" class="mb-6">
+                    <div class="bg-white rounded-lg shadow p-4 animate-pulse">
+                        <div class="h-10 bg-gray-200 rounded mb-3"></div>
+                        <div class="flex gap-2 mb-3">
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connections List -->
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-6">
                         <div id="connections-list" class="space-y-4">
@@ -462,8 +476,10 @@
             }
         }
 
-        async function loadConnections() {
+        // Initialize filter for connections
+        let connectionFilter = null;
 
+        async function loadConnections() {
             await checkAuth();
             setUserSidebarInfo();
             const connectionsList = document.getElementById('connections-list');
@@ -476,43 +492,88 @@
                 if (response.ok) {
                     connections = await response.json();
                 }
-                if (!connections || connections.length === 0) {
-                    // Show placeholder if no connections
-                    connectionsList.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-12">
-                            <i data-lucide="plug" class="h-12 w-12 text-gray-300 mb-4"></i>
-                            <p class="text-lg font-semibold text-gray-700 mb-2">No connections found</p>
-                            <p class="text-gray-500 mb-4">Create your first connection to get started.</p>
-                        </div>
-                    `;
-                } else {
-                    // Render connections with working edit/delete
-                    connectionsList.innerHTML = connections.map(conn => `
-                        <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                            <div class="flex items-center space-x-4">
-                                <i data-lucide="database" class="h-8 w-8 text-blue-500"></i>
-                                <div>
-                                    <p class="font-medium text-gray-900">${escapeHtml(conn.name)}</p>
-                                    <p class="text-sm text-gray-500 disable-select">${escapeHtml(conn.type)}${conn.lastTestedAt && conn.lastTestResult ? (conn.lastTestResult.startsWith('Success') ? ` • Last tested successfully ${formatRelativeTime(conn.lastTestedAt)}` : ` • <span class="text-red-600">Last test failed ${formatRelativeTime(conn.lastTestedAt)}</span>`) : ''}</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="px-2 py-1 text-xs ${conn.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">${conn.isActive ? 'Active' : 'Inactive'}</span>
-                                <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editConnection(${conn.id})" data-tooltip="Edit" data-tooltip-position="bottom">
-                                    <i data-lucide="edit" class="h-4 w-4"></i>
-                                </button>
-                                <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteConnection(${conn.id}, '${escapeHtml(conn.name)}')" data-tooltip="Delete" data-tooltip-position="bottom">
-                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
+
+                // Initialize filter if not already done
+                if (!connectionFilter) {
+                    connectionFilter = new ReefFilter({ pageKey: 'reef_filter_connections' });
+                    window.reefFilter = connectionFilter;
+
+                    // Listen for filter changes
+                    window.addEventListener('filterChange', () => {
+                        renderFilteredConnections();
+                    });
                 }
-                lucide.createIcons();
+
+                // Set items and render filter bar
+                connectionFilter.setItems(connections);
+                renderFilterBar(connectionFilter, { containerId: 'filter-container' });
+                renderFilteredConnections();
+
             } catch (error) {
                 connectionsList.innerHTML = `<p class="text-sm text-red-600">Failed to load connections.</p>`;
                 console.error('Failed to load connections:', error);
             }
+        }
+
+        /**
+         * Humanize connection type names
+         * SqlServer → SQL Server, MySQL → MySQL, PostgreSQL → PostgreSQL
+         */
+        function humanizeConnectionType(type) {
+            if (!type) return '';
+            const typeMap = {
+                'SqlServer': 'SQL Server',
+                'MySQL': 'MySQL',
+                'PostgreSQL': 'PostgreSQL'
+            };
+            return typeMap[type] || type;
+        }
+
+        function renderFilteredConnections() {
+            const connectionsList = document.getElementById('connections-list');
+            const filtered = connectionFilter.filteredItems;
+
+            if (!filtered || filtered.length === 0) {
+                connectionsList.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <i data-lucide="plug" class="h-12 w-12 text-gray-300 mb-4"></i>
+                        <p class="text-lg font-semibold text-gray-700 mb-2">No connections found</p>
+                        <p class="text-gray-500 mb-4">${connectionFilter.allItems.length === 0 ? 'Create your first connection to get started.' : 'Try adjusting your filters.'}</p>
+                    </div>
+                `;
+            } else {
+                connectionsList.innerHTML = filtered.map(conn => `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div class="flex items-center space-x-4">
+                            <i data-lucide="database" class="h-8 w-8 text-blue-500"></i>
+                            <div>
+                                <p class="font-medium text-gray-900">${escapeHtml(conn.name)}</p>
+                                <p class="text-sm text-gray-500 disable-select">${humanizeConnectionType(conn.type)}${conn.lastTestedAt && conn.lastTestResult ? (conn.lastTestResult.startsWith('Success') ? ` • Last tested successfully ${formatRelativeTime(conn.lastTestedAt)}` : ` • <span class="text-red-600">Last test failed ${formatRelativeTime(conn.lastTestedAt)}</span>`) : ''}</p>
+                                ${conn.tags ? `<div class="mt-2 flex flex-wrap gap-1">
+                                    ${conn.tags.split(',').map(tag => `
+                                        <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-tag-filter="${escapeHtml(tag.trim())}">
+                                            ${escapeHtml(tag.trim())}
+                                        </span>
+                                    `).join('')}
+                                </div>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 text-xs ${conn.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">${conn.isActive ? 'Active' : 'Inactive'}</span>
+                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editConnection(${conn.id})" data-tooltip="Edit" data-tooltip-position="bottom">
+                                <i data-lucide="edit" class="h-4 w-4"></i>
+                            </button>
+                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteConnection(${conn.id}, '${escapeHtml(conn.name)}')" data-tooltip="Delete" data-tooltip-position="bottom">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Setup tag click handlers
+                connectionFilter.setupTagClickHandlers('[data-tag-filter]');
+            }
+            lucide.createIcons();
         }
 
 
@@ -531,37 +592,53 @@
             // Preserve isActive status when editing
             const isActive = isEdit ? (form.getAttribute('data-is-active') === 'true') : true;
 
-            // For NEW connections only, test the connection first (non-intrusive)
-            if (!isEdit) {
-                try {
-                    const testResponse = await fetch('/api/connections/test', {
-                        method: 'POST',
-                        headers: getAuthHeaders(),
-                        body: JSON.stringify({ type, connectionString })
+            try {
+                // Check for duplicate name (only when creating new connection)
+                if (!isEdit) {
+                    const existingConnections = await fetch('/api/connections', {
+                        headers: getAuthHeaders()
                     });
 
-                    let testResult;
-                    try {
-                        testResult = await testResponse.json();
-                    } catch (jsonError) {
-                        showToast('Connection warning: Unable to verify connection', 'warning');
-                    }
+                    if (existingConnections.ok) {
+                        const connections = await existingConnections.json();
+                        const duplicate = connections.find(c => c.name.toLowerCase() === name.toLowerCase());
 
-                    if (testResult && testResult.success) {
-                        showToast(`Connection verified successfully! (${testResult.responseTimeMs}ms)`, 'success');
-                    } else {
-                        showToast(`We couldn't verify the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
+                        if (duplicate) {
+                            showToast(`Connection with name "${name}" already exists. Please use a different name.`, 'warning');
+                            return;
+                        }
                     }
-                } catch (error) {
-                    showToast(`We couldn't test the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
                 }
-            }
 
-            // Combine fields for hash (can adjust as needed)
-            const hashInput = `${name}|${type}|${connectionString}|${tags}`;
-            const hash = await sha256(hashInput);
+                // For NEW connections only, test the connection first (non-intrusive)
+                if (!isEdit) {
+                    try {
+                        const testResponse = await fetch('/api/connections/test', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ type, connectionString })
+                        });
 
-            try {
+                        let testResult;
+                        try {
+                            testResult = await testResponse.json();
+                        } catch (jsonError) {
+                            showToast('Connection warning: Unable to verify connection', 'warning');
+                        }
+
+                        if (testResult && testResult.success) {
+                            showToast(`Connection verified successfully! (${testResult.responseTimeMs}ms)`, 'success');
+                        } else {
+                            showToast(`We couldn't verify the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
+                        }
+                    } catch (error) {
+                        showToast(`We couldn't test the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
+                    }
+                }
+
+                // Combine fields for hash (can adjust as needed)
+                const hashInput = `${name}|${type}|${connectionString}|${tags}`;
+                const hash = await sha256(hashInput);
                 let url = '/api/connections';
                 let method = 'POST';
                 if (isEdit && editId) {
@@ -574,8 +651,17 @@
                     body: JSON.stringify({ name, type, connectionString, tags, hash, isActive })
                 });
                 if (response.ok) {
+                    const savedConnection = await response.json();
                     closeAddConnectionModal();
-                    await loadConnections(); // Ensure UI updates after creation/update
+                    showToast('Connection saved successfully!', 'success');
+
+                    // Auto-test connection in background (non-intrusive)
+                    if (!isEdit) {
+                        testConnectionInBackground(savedConnection.id, name, type, connectionString);
+                    }
+
+                    // Reload connections list
+                    await loadConnections();
                 } else {
                     let error;
                     try {
@@ -591,7 +677,50 @@
             }
         });
 
-        loadConnections();
+        /**
+         * Test connection in background after creation
+         * Non-intrusive: runs silently, only shows result when done
+         */
+        async function testConnectionInBackground(connectionId, name, type, connectionString) {
+            try {
+                const testResponse = await fetch('/api/connections/test', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ type, connectionString })
+                });
+
+                let testResult;
+                try {
+                    testResult = await testResponse.json();
+                } catch (jsonError) {
+                    console.warn('Unable to parse test response');
+                    return;
+                }
+
+                if (testResult && testResult.success) {
+                    showToast(`✓ Connection "${name}" tested successfully! (${testResult.responseTimeMs}ms)`, 'success');
+                } else {
+                    const errorMsg = testResult && testResult.message ? testResult.message : 'Unknown error';
+                    showToast(`✗ Connection test failed: ${errorMsg}`, 'warning');
+                }
+
+                // Refresh the connection list to show test results
+                await loadConnections();
+            } catch (error) {
+                console.warn('Background connection test error:', error);
+                // Silently fail - don't interrupt user experience
+            }
+        }
+
+        // Ensure ReefFilter is loaded before calling loadConnections
+        function initializeConnections() {
+            if (typeof ReefFilter !== 'undefined') {
+                loadConnections();
+            } else {
+                setTimeout(initializeConnections, 50);
+            }
+        }
+        initializeConnections();
     </script>
 </body>
 </html>
