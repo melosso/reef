@@ -9,14 +9,29 @@ using System.Collections.Concurrent;
 namespace Reef.Core.Services;
 
 /// <summary>
-/// Service for managing webhook triggers for profiles
-/// Implements rate limiting and secure token generation
+/// Service for managing webhook triggers for profiles and jobs
+///
+/// Features:
+/// - Secure token generation (CSPRNG-based)
+/// - Flexible rate limiting (requests per time window)
+/// - "Only once per period" mode (maxRequests=1)
+/// - Unlimited access mode (maxRequests=0)
+///
+/// Rate Limiting Examples:
+/// - Default: 100 requests per hour
+/// - Once per day: CheckRateLimit(webhookId, 1, 24)
+/// - Once per hour: CheckRateLimit(webhookId, 1, 1)
+/// - 10 requests per 6 hours: CheckRateLimit(webhookId, 10, 6)
+/// - Unlimited: CheckRateLimit(webhookId, 0, 0)
 /// </summary>
 public class WebhookService
 {
     private readonly string _connectionString;
     private static readonly ConcurrentDictionary<string, RateLimitInfo> _rateLimits = new();
-    private const int MAX_REQUESTS_PER_HOUR = 100;
+
+    // Default rate limiting: 100 requests per hour
+    private const int DEFAULT_MAX_REQUESTS = 100;
+    private const int DEFAULT_WINDOW_HOURS = 1;
 
     public WebhookService(DatabaseConfig config)
     {
@@ -287,9 +302,21 @@ public class WebhookService
     }
 
     /// <summary>
-    /// Check rate limit for webhook
+    /// Check rate limit for webhook (default: 100 requests per hour)
     /// </summary>
     public bool CheckRateLimit(int webhookId)
+    {
+        return CheckRateLimit(webhookId, DEFAULT_MAX_REQUESTS, DEFAULT_WINDOW_HOURS);
+    }
+
+    /// <summary>
+    /// Check rate limit for webhook with custom limits
+    /// </summary>
+    /// <param name="webhookId">The webhook ID</param>
+    /// <param name="maxRequests">Maximum requests allowed (0 = unlimited, 1 = only once per period)</param>
+    /// <param name="windowHours">Time window in hours</param>
+    /// <returns>True if request is allowed, false if rate limited</returns>
+    public bool CheckRateLimit(int webhookId, int maxRequests, int windowHours)
     {
         var key = $"webhook_{webhookId}";
         var now = DateTime.UtcNow;
@@ -298,13 +325,22 @@ public class WebhookService
 
         lock (rateLimitInfo)
         {
-            // Remove requests older than 1 hour
-            rateLimitInfo.Requests.RemoveAll(r => (now - r).TotalHours >= 1);
+            // Remove requests older than the window
+            var windowCutoff = now.AddHours(-windowHours);
+            rateLimitInfo.Requests.RemoveAll(r => r < windowCutoff);
+
+            // If maxRequests is 0, unlimited access
+            if (maxRequests <= 0)
+            {
+                rateLimitInfo.Requests.Add(now);
+                return true;
+            }
 
             // Check if under limit
-            if (rateLimitInfo.Requests.Count >= MAX_REQUESTS_PER_HOUR)
+            if (rateLimitInfo.Requests.Count >= maxRequests)
             {
-                Log.Warning("Rate limit exceeded for webhook {WebhookId}", webhookId);
+                Log.Warning("Rate limit exceeded for webhook {WebhookId} ({RequestCount}/{MaxRequests} in {WindowHours}h)",
+                    webhookId, rateLimitInfo.Requests.Count, maxRequests, windowHours);
                 return false;
             }
 
@@ -315,19 +351,28 @@ public class WebhookService
     }
 
     /// <summary>
-    /// Get rate limit info for webhook
+    /// Get rate limit info for webhook (default window)
     /// </summary>
     public (int RequestCount, DateTime? OldestRequest) GetRateLimitInfo(int webhookId)
     {
+        return GetRateLimitInfo(webhookId, DEFAULT_WINDOW_HOURS);
+    }
+
+    /// <summary>
+    /// Get rate limit info for webhook with custom window
+    /// </summary>
+    public (int RequestCount, DateTime? OldestRequest) GetRateLimitInfo(int webhookId, int windowHours)
+    {
         var key = $"webhook_{webhookId}";
-        
+
         if (_rateLimits.TryGetValue(key, out var rateLimitInfo))
         {
             lock (rateLimitInfo)
             {
                 var now = DateTime.UtcNow;
-                rateLimitInfo.Requests.RemoveAll(r => (now - r).TotalHours >= 1);
-                
+                var windowCutoff = now.AddHours(-windowHours);
+                rateLimitInfo.Requests.RemoveAll(r => r < windowCutoff);
+
                 return (
                     rateLimitInfo.Requests.Count,
                     rateLimitInfo.Requests.Count > 0 ? rateLimitInfo.Requests.Min() : null

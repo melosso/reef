@@ -354,7 +354,14 @@ public static class WebhooksEndpoints
             if (!WebhookService.IsValidTokenFormat(token))
             {
                 Log.Warning("Invalid webhook token format received for token {Token}", token);
-                return Results.Unauthorized();
+                return Results.Json(
+                    new
+                    {
+                        error = "invalid_token",
+                        message = "Invalid webhook token format"
+                    },
+                    statusCode: 401 // Unauthorized
+                );
             }
 
             // Get webhook by token
@@ -365,10 +372,10 @@ public static class WebhooksEndpoints
                 return Results.Json(
                     new
                     {
-                        error = "Webhook not found",
-                        message = "This webhook is no longer active."
+                        error = "webhook_not_found",
+                        message = "Webhook token is invalid or does not exist"
                     },
-                    statusCode: 410 // Gone - resource existed but is no longer available
+                    statusCode: 404 // Not Found
                 );
             }
 
@@ -379,29 +386,39 @@ public static class WebhooksEndpoints
                 return Results.Json(
                     new
                     {
-                        error = "Webhook disabled",
-                        message = "This webhook is disabled.",
+                        error = "webhook_disabled",
+                        message = "This webhook is disabled",
                         webhookId = webhook.Id
                     },
-                    statusCode: 410 // Gone - resource exists but is permanently unavailable
+                    statusCode: 403 // Forbidden
                 );
             }
 
-            // Check rate limit
+            // Check rate limit (100 requests per hour by default)
+            // To enable "only once per period" mode, call: CheckRateLimit(webhook.Id, 1, 24) for once per 24 hours
             if (!service.CheckRateLimit(webhook.Id))
             {
                 var (count, oldest) = service.GetRateLimitInfo(webhook.Id);
                 Log.Warning("Rate limit exceeded for webhook {WebhookId} and token {Token}", webhook.Id, token);
 
                 var resetTime = oldest.HasValue ? oldest.Value.AddHours(1) : DateTime.UtcNow.AddHours(1);
+                var retryAfterSeconds = (int)Math.Max(1, (resetTime - DateTime.UtcNow).TotalSeconds);
+
                 return Results.Json(
                     new
                     {
-                        error = "Rate limit exceeded",
-                        message = $"This webhook has been triggered {count} times in the last hour. Maximum allowed is 100 requests per hour.",
-                        webhookId = webhook.Id,
-                        retryAfter = (int)(resetTime - DateTime.UtcNow).TotalSeconds,
-                        resetAt = resetTime.ToString("o")
+                        error = "rate_limit_exceeded",
+                        message = "Webhook rate limit exceeded",
+                        details = new
+                        {
+                            webhookId = webhook.Id,
+                            requestsInWindow = count,
+                            maxRequestsPerHour = 100,
+                            windowHours = 1,
+                            oldestRequestAt = oldest?.ToString("o"),
+                            retryAfterSeconds = retryAfterSeconds,
+                            resetAt = resetTime.ToString("o")
+                        }
                     },
                     statusCode: 429 // Too Many Requests
                 );
@@ -445,16 +462,25 @@ public static class WebhooksEndpoints
             else if (webhook.JobId.HasValue)
             {
                 // Trigger job
-                Log.Information("Triggering job {JobId} via webhook {WebhookId} and token {Token}", 
+                Log.Information("Triggering job {JobId} via webhook {WebhookId} and token {Token}",
                     webhook.JobId.Value, webhook.Id, token);
 
                 var jobService = context.RequestServices.GetRequiredService<JobService>();
                 var job = await jobService.GetByIdAsync(webhook.JobId.Value);
-                
+
                 if (job == null)
                 {
                     Log.Error("Job {JobId} not found for webhook {WebhookId}", webhook.JobId.Value, webhook.Id);
-                    return Results.Problem($"Job {webhook.JobId.Value} not found");
+                    return Results.Json(
+                        new
+                        {
+                            error = "job_not_found",
+                            message = "Job not found or deleted",
+                            webhookId = webhook.Id,
+                            jobId = webhook.JobId.Value
+                        },
+                        statusCode: 404 // Not Found
+                    );
                 }
 
                 // Convert string parameters to object parameters for job executor
@@ -479,7 +505,15 @@ public static class WebhooksEndpoints
             else
             {
                 Log.Error("Webhook {WebhookId} has neither ProfileId nor JobId", webhook.Id);
-                return Results.Problem("Invalid webhook configuration");
+                return Results.Json(
+                    new
+                    {
+                        error = "invalid_webhook_configuration",
+                        message = "Webhook is misconfigured",
+                        webhookId = webhook.Id
+                    },
+                    statusCode: 500 // Internal Server Error
+                );
             }
 
             return Results.Ok(result);
@@ -487,7 +521,14 @@ public static class WebhooksEndpoints
         catch (Exception ex)
         {
             Log.Error(ex, "Error processing webhook trigger for token {Token}", token);
-            return Results.Problem("Error processing webhook trigger");
+            return Results.Json(
+                new
+                {
+                    error = "webhook_trigger_error",
+                    message = "An error occurred while processing the webhook trigger"
+                },
+                statusCode: 500 // Internal Server Error
+            );
         }
     }
 }
