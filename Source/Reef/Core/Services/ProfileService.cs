@@ -51,15 +51,32 @@ public class ProfileService
     }
 
     /// <summary>
-    /// Get profile by ID
+    /// Get profile by ID with reference names
     /// </summary>
-    public async Task<Profile?> GetByIdAsync(int id)
+    public async Task<ProfileWithConnection?> GetByIdAsync(int id)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
-        const string sql = "SELECT * FROM Profiles WHERE Id = @Id";
-        return await connection.QueryFirstOrDefaultAsync<Profile>(sql, new { Id = id });
+        const string sql = @"
+            SELECT
+                p.*,
+                c.Name as ConnectionName,
+                c.Type as ConnectionType,
+                c.IsActive as ConnectionIsActive,
+                pg.Name as GroupName,
+                qt.Name as TemplateName,
+                d.Name as OutputDestinationName,
+                emt.Name as EmailTemplateName
+            FROM Profiles p
+            INNER JOIN Connections c ON p.ConnectionId = c.Id
+            LEFT JOIN ProfileGroups pg ON p.GroupId = pg.Id
+            LEFT JOIN QueryTemplates qt ON p.TemplateId = qt.Id
+            LEFT JOIN Destinations d ON p.OutputDestinationId = d.Id
+            LEFT JOIN QueryTemplates emt ON p.EmailTemplateId = emt.Id
+            WHERE p.Id = @Id";
+
+        return await connection.QueryFirstOrDefaultAsync<ProfileWithConnection>(sql, new { Id = id });
     }
 
     /// <summary>
@@ -664,4 +681,7 @@ public class ProfileWithConnection : Profile
     public string? ConnectionType { get; set; }
     public string? GroupName { get; set; }
     public bool ConnectionIsActive { get; set; }
+    public string? TemplateName { get; set; }
+    public string? OutputDestinationName { get; set; }
+    public string? EmailTemplateName { get; set; }
 }

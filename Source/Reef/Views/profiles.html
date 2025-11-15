@@ -2914,21 +2914,33 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             lines.push('[profile]');
             lines.push(`name = ${escapeToml(profile.name)}`);
             lines.push(`connection_id = ${profile.connectionId}`);
-            
+            if (profile.connectionName) {
+                lines.push(`connection_name = ${escapeToml(profile.connectionName)}`);
+            }
+
             if (profile.groupId) {
                 lines.push(`group_id = ${profile.groupId}`);
+                if (profile.groupName) {
+                    lines.push(`group_name = ${escapeToml(profile.groupName)}`);
+                }
             }
-            
+
             lines.push(`output_format = "${profile.outputFormat}"`);
-            
+
             if (profile.templateId) {
                 lines.push(`template_id = ${profile.templateId}`);
+                if (profile.templateName) {
+                    lines.push(`template_name = ${escapeToml(profile.templateName)}`);
+                }
             }
-            
+
             if (profile.outputDestinationId) {
                 lines.push(`output_destination_id = ${profile.outputDestinationId}`);
+                if (profile.outputDestinationName) {
+                    lines.push(`output_destination_name = ${escapeToml(profile.outputDestinationName)}`);
+                }
             }
-            
+
             lines.push(`is_enabled = ${profile.isEnabled}`);
             lines.push('');
             lines.push('# Query');
@@ -3003,7 +3015,30 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     lines.push(`exclude_split_key_from_output = ${profile.excludeSplitKeyFromOutput}`);
                 }
             }
-            
+
+            // Email Export Configuration
+            if (profile.isEmailExport) {
+                lines.push('');
+                lines.push('[email_export]');
+                lines.push(`enabled = ${profile.isEmailExport}`);
+                if (profile.emailTemplateId) {
+                    lines.push(`template_id = ${profile.emailTemplateId}`);
+                    if (profile.emailTemplateName) {
+                        lines.push(`template_name = ${escapeToml(profile.emailTemplateName)}`);
+                    }
+                }
+                if (profile.emailRecipientsColumn) {
+                    lines.push(`recipients_column = ${escapeToml(profile.emailRecipientsColumn)}`);
+                }
+                if (profile.emailCcColumn) {
+                    lines.push(`cc_column = ${escapeToml(profile.emailCcColumn)}`);
+                }
+                if (profile.emailSubjectColumn) {
+                    lines.push(`subject_column = ${escapeToml(profile.emailSubjectColumn)}`);
+                }
+                lines.push(`success_threshold_percent = ${profile.emailSuccessThresholdPercent}`);
+            }
+
             return lines.join('\n');
         }
 

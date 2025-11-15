@@ -412,7 +412,8 @@ public class Program
                 "groups.html",
                 "logoff.html",
                 "profiles.html",
-                "templates.html"
+                "templates.html",
+                "404.html"
             };
 
             var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -471,6 +472,33 @@ public class Program
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
+
+        // Fallback handler for unmapped routes (404)
+        app.MapFallback(async context =>
+        {
+            var viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
+            if (!Directory.Exists(viewsFolder))
+            {
+                var projectRoot = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.FullName;
+                viewsFolder = Path.Combine(projectRoot, "Views");
+            }
+
+            var notFoundPath = Path.Combine(viewsFolder, "404.html");
+            if (File.Exists(notFoundPath))
+            {
+                Log.Debug("Serving 404 page for unmapped route: {Route}", context.Request.Path);
+                context.Response.StatusCode = 404;
+                context.Response.ContentType = "text/html";
+                await context.Response.SendFileAsync(notFoundPath);
+            }
+            else
+            {
+                // Fallback JSON response if 404.html doesn't exist
+                context.Response.StatusCode = 404;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
+            }
+        });
 
         Log.Debug("✓ Endpoints mapped");
     }
