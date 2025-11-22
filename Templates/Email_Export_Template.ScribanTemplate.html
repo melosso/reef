@@ -1,0 +1,123 @@
+{{~ for row in rows ~}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{~ row.subject | html.escape ~}}</title>
+  <style>
+    body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; background-color:#f4f6f8; }
+    table { border-collapse:collapse; }
+    img { border:0; line-height:100%; outline:none; text-decoration:none; }
+    .email-wrapper { width:100%; background:#f4f6f8; padding:24px 12px; }
+    .email-content { max-width:680px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+    .brand { padding:20px 28px; display:flex; align-items:center; gap:12px; }
+    .brand-logo { height:32px; width:auto; }
+    .brand-name { font-family: Google Sans, Roboto, Arial, sans-serif; font-weight:500; font-size:18px; color:#202124; }
+    .email-body { padding:24px 28px 28px 28px; font-family: Roboto, Arial, sans-serif; color:#202124; }
+    h1 { font-size:22px; margin:0 0 12px 0; font-weight:500; letter-spacing:0.1px; }
+    p { font-size:15px; margin:0 0 14px 0; line-height:1.45; color:#3c4043; }
+    .btn { display:inline-block; padding:12px 18px; border-radius:6px; text-decoration:none; font-weight:500; font-family: Roboto, Arial, sans-serif; }
+    .btn-primary { background:#1a73e8; color:#ffffff; }
+    .email-footer { padding:24px 28px; font-size:13px; font-family: Roboto, Arial, sans-serif; color:#5f6368; border-top:1px solid #e8eaed; }
+    .muted { color:#70757a; }
+    .footer-main { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+    .footer-address { flex: 1; }
+    .footer-copyright { white-space: nowrap; }
+    .footer-secondary { font-size:13px; text-align:center; padding-top:16px; border-top:1px solid #f1f3f4; }
+    .footer-secondary a { color:#5f6368; text-decoration:underline; }
+    @media (max-width:600px) {
+      .brand { padding:16px; }
+      .email-body { padding:18px; }
+      .email-footer { padding:20px; }
+      .footer-main { flex-direction:column; align-items:flex-start; gap:8px; }
+      .footer-copyright { align-self:flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <span style="display:none; max-height:0; max-width:0; opacity:0; overflow:hidden;">{{~ row.preheader | html.escape ~}}</span>
+
+  <div class="email-wrapper">
+    <table role="presentation" width="100%">
+      <tr>
+        <td align="center">
+          <table role="presentation" class="email-content" width="100%">
+
+            <!-- Header -->
+            <tr>
+              <td>
+                <div class="brand">
+                  {{~ if row.logo_url ~}}
+                    <img src="{{~ row.logo_url | html.escape ~}}" alt="{{~ row.company | html.escape ~}} logo" class="brand-logo">
+                  {{~ end ~}}
+                  <div class="brand-name">{{~ row.company | html.escape ~}}</div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td class="email-body">
+                <h1>{{~ row.greeting | default "Hi there," | html.escape ~}}</h1>
+
+                <!-- Dynamic body content -->
+                {{~ if row.body ~}}
+                <p>{{~ row.body | html.escape ~}}</p>
+                {{~ end ~}}
+
+                {{~ if row.action_url ~}}
+                  <p style="margin-top:18px;">
+                    <a href="{{~ row.action_url | html.escape ~}}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">{{~ row.action_text | default "View details" | html.escape ~}}</a>
+                  </p>
+                {{~ end ~}}
+
+                <!-- Dynamic details table from JSON -->
+                {{~ if row.details_json ~}}
+                {{~ details = parse_json(row.details_json) ~}}
+                <table role="presentation" width="100%" style="margin-top:18px; border-radius:6px; overflow:hidden;">
+                  {{~ for detail in details ~}}
+                  <tr>
+                    <td style="padding:12px 0; border-bottom:1px solid #f1f3f4; font-size:14px;" width="70%">{{ detail.label | html.escape }}</td>
+                    <td style="padding:12px 0; border-bottom:1px solid #f1f3f4; font-size:14px;" align="right">{{ detail.value | html.escape }}</td>
+                  </tr>
+                  {{~ end ~}}
+                </table>
+                {{~ end ~}}
+
+                <p style="margin-top:20px;">Thanks,<br>{{~ row.sender_name | default ("The " + row.company + " team") | html.escape ~}}</p>
+
+                {{~ if row.note ~}}
+                  <p class="muted" style="font-size:13px; margin-top:8px;">{{~ row.note | html.escape ~}}</p>
+                {{~ end ~}}
+
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="email-footer">
+                <div class="footer-main">
+                  <div class="footer-address muted">{{~ row.company | html.escape ~}} &nbsp;&middot;&nbsp; {{~ row.company_address | default "123 Example St, City" | html.escape ~}}</div>
+                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 ~}} &nbsp; {{~ row.company | html.escape ~}}</div>
+                </div>
+
+                <div class="footer-secondary">
+                  {{~ if row.unsubscribe_url ~}}
+                    <a href="{{~ row.unsubscribe_url | html.escape ~}}">Unsubscribe</a>
+                  {{~ else ~}}
+                    <span class="muted">You are receiving this email because you signed up for updates from {{~ row.company | html.escape ~}}.</span>
+                  {{~ end ~}}
+                </div>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
+
+{{~ end ~}}
