@@ -1,0 +1,86 @@
+{{~ for row in rows ~}}
+<?xml version="1.0" encoding="UTF-8"?>
+<DespatchAdvice xmlns="urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2"
+                xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:DespatchAdvice-2 http://docs.oasis-open.org/ubl/os-ubl-2.1/xsd/maindoc/UBL-DespatchAdvice-2.1.xsd">
+
+    <cbc:UBLVersionID>{{~ row.ubl_version | html.escape ~}}</cbc:UBLVersionID>
+    <cbc:CustomizationID>{{~ row.customization_id | html.escape ~}}</cbc:CustomizationID>
+    <cbc:ID>{{~ row.despatch_id | html.escape ~}}</cbc:ID>
+    <cbc:IssueDate>{{~ row.issue_date | html.escape ~}}</cbc:IssueDate>
+    <cbc:IssueTime>{{~ row.issue_time | html.escape ~}}</cbc:IssueTime>
+    <cbc:DespatchAdviceTypeCode>351</cbc:DespatchAdviceTypeCode>
+    <cbc:Note>{{~ row.note | html.escape ~}}</cbc:Note>
+
+    <!-- Order Reference -->
+    <cac:OrderReference>
+        <cbc:ID>{{~ row.order_reference_id | html.escape ~}}</cbc:ID>
+    </cac:OrderReference>
+
+    <!-- Supplier (Despatch Party) -->
+    {{~ supplier = parse_json(row.supplier_party_json) ~}}
+    <cac:DespatchSupplierParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ supplier.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ supplier.name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ supplier.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ supplier.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ supplier.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ supplier.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+        </cac:Party>
+    </cac:DespatchSupplierParty>
+
+    <!-- Customer (Delivery Party) -->
+    {{~ delivery = parse_json(row.delivery_party_json) ~}}
+    <cac:DeliveryCustomerParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ delivery.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ delivery.name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ delivery.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ delivery.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ delivery.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ delivery.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+        </cac:Party>
+    </cac:DeliveryCustomerParty>
+
+    <!-- Shipment Details -->
+    {{~ ship = parse_json(row.shipment_json) ~}}
+    <cac:Shipment>
+        <cbc:ID>SHP-{{~ row.despatch_id | html.escape ~}}</cbc:ID>
+        <cbc:GrossWeightMeasure unitCode="{{~ ship.weight_unit | html.escape ~}}">{{~ ship.gross_weight_measure | html.escape ~}}</cbc:GrossWeightMeasure>
+        <cac:Consignment>
+            <cbc:ID>{{~ ship.tracking_id | html.escape ~}}</cbc:ID>
+            <cac:CarrierParty>
+                <cac:PartyName>
+                    <cbc:Name>{{~ ship.carrier_name | html.escape ~}}</cbc:Name>
+                </cac:PartyName>
+            </cac:CarrierParty>
+        </cac:Consignment>
+    </cac:Shipment>
+
+    <!-- Despatch Lines -->
+    {{~ lines = parse_json(row.despatch_lines_json) ~}}
+    {{~ for line in lines ~}}
+    <cac:DespatchLine>
+        <cbc:ID>{{~ line.id | html.escape ~}}</cbc:ID>
+        <cbc:DeliveredQuantity unitCode="{{~ line.unit_code | html.escape ~}}">{{~ line.delivered_qty | html.escape ~}}</cbc:DeliveredQuantity>
+        <cac:OrderLineReference>
+            <cbc:LineID>{{~ line.order_line_id | html.escape ~}}</cbc:LineID>
+        </cac:OrderLineReference>
+        <cac:Item>
+            <cbc:Name>{{~ line.item_name | html.escape ~}}</cbc:Name>
+            <cac:SellersItemIdentification>
+                <cbc:ID>{{~ line.sellers_item_id | html.escape ~}}</cbc:ID>
+            </cac:SellersItemIdentification>
+        </cac:Item>
+    </cac:DespatchLine>
+    {{~ end ~}}
+
+</DespatchAdvice>
+{{~ end ~}}

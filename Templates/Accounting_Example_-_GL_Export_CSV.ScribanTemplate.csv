@@ -1,0 +1,10 @@
+Company,ExportDate,ExportPeriod,Currency,FiscalYear,AccountNumber,AccountName,AccountType,OpeningBalance,ClosingBalance,TransactionID,TransactionDate,TransactionDescription,Reference,Debit,Credit,CostCenter
+{{~ for row in rows ~}}
+{{~ accounts = parse_json(row.accounts_json) ~}}
+{{~ for account in accounts ~}}
+{{~ transactions = parse_json(account.transactions_json) ~}}
+{{~ for txn in transactions ~}}
+{{ row.company_name | safe_string | csv_escape }},{{ row.export_date | safe_string | csv_escape }},{{ row.export_period | safe_string | csv_escape }},{{ row.currency | safe_string | csv_escape }},{{ row.fiscal_year }},{{ account.account_number | safe_string | csv_escape }},{{ account.account_name | safe_string | csv_escape }},{{ account.account_type | safe_string | csv_escape }},{{ account.opening_balance }},{{ account.closing_balance }},{{ txn.id | safe_string | csv_escape }},{{ txn.date | safe_string | csv_escape }},{{ txn.description | safe_string | csv_escape }},{{ txn.reference | safe_string | csv_escape }},{{ txn.debit }},{{ txn.credit }},{{ txn.cost_center | safe_string | csv_escape }}
+{{~ end ~}}
+{{~ end ~}}
+{{~ end ~}}

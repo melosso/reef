@@ -1,0 +1,141 @@
+{{~ for row in rows ~}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{~ row.subject | html.escape ~}}</title>
+  <style>
+    body { margin:0; padding:0; background-color:#f4f6f8; font-family: Roboto, Arial, sans-serif; }
+    table { border-collapse:collapse; width:100%; }
+    .email-wrapper { width:100%; background:#f4f6f8; padding:24px 12px; }
+    .email-content { max-width:800px; margin:0 auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); border-top: 6px solid #202124; }
+    
+    /* Header */
+    .header { padding:24px 28px; border-bottom:1px solid #e8eaed; background-color:#fafafa; display:flex; justify-content:space-between; align-items:center; }
+    .header-title { font-size:18px; font-weight:700; color:#202124; }
+    .header-meta { font-size:13px; color:#5f6368; text-align:right; }
+
+    /* Summary Cards */
+    .summary-grid { padding:20px 28px 0 28px; display:flex; gap:12px; }
+    .card { flex:1; padding:12px; background:#f8f9fa; border:1px solid #e8eaed; border-radius:6px; text-align:center; }
+    .card-num { font-size:24px; font-weight:700; display:block; margin-bottom:4px; }
+    .card-label { font-size:11px; text-transform:uppercase; color:#5f6368; letter-spacing:0.5px; }
+    .text-red { color:#d93025; }
+    .text-orange { color:#e37400; }
+    .text-green { color:#188038; }
+
+    /* Main Table */
+    .body-section { padding:20px 28px 28px 28px; }
+    .data-table { width:100%; font-size:13px; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
+    .data-table th { background:#f1f3f4; padding:10px 12px; text-align:left; font-weight:600; color:#5f6368; border-bottom:2px solid #e0e0e0; }
+    .data-table td { padding:10px 12px; border-bottom:1px solid #f1f3f4; color:#3c4043; vertical-align:top; }
+    .data-table tr:last-child td { border-bottom:none; }
+    .data-table tr:nth-child(even) { background-color:#fafafa; }
+    
+    /* Badges */
+    .badge { display:inline-block; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700; text-transform:uppercase; }
+    .badge-critical { background:#fce8e6; color:#d93025; }
+    .badge-warn { background:#fef7e0; color:#b06000; } /* Darker orange text for contrast */
+    .badge-info { background:#e8f0fe; color:#1967d2; }
+    
+    .mono { font-family: 'Courier New', monospace; font-size:12px; }
+    
+    .footer { padding:24px; text-align:center; font-size:12px; color:#70757a; background:#fafafa; border-top:1px solid #e8eaed; }
+    .footer a { color:#5f6368; }
+
+    @media (max-width:600px) {
+      .header { flex-direction:column; align-items:flex-start; gap:12px; }
+      .header-meta { text-align:left; }
+      /* Force horizontal scroll for table on mobile */
+      .table-wrapper { overflow-x:auto; display:block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <div class="email-content">
+      
+      <div class="header">
+        <div class="header-title">Daily System Health Report</div>
+        <div class="header-meta">
+          Report ID: {{~ row.report_id ~}}<br>
+          Generated: {{~ row.generated_at ~}}
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <div class="card">
+          <span class="card-num">{{~ row.total_count ~}}</span>
+          <span class="card-label">Total Events</span>
+        </div>
+        <div class="card">
+          <span class="card-num text-red">{{~ row.critical_count ~}}</span>
+          <span class="card-label">Critical</span>
+        </div>
+        <div class="card">
+          <span class="card-num text-orange">{{~ row.warn_count ~}}</span>
+          <span class="card-label">Warnings</span>
+        </div>
+      </div>
+
+      <div class="body-section">
+        <p>Here is the aggregate log of system anomalies detected in the last 24 hours.</p>
+
+        {{~ if row.error_list_json ~}}
+        {{~ errors = parse_json(row.error_list_json) ~}}
+        <div class="table-wrapper">
+          <table class="data-table" cellspacing="0" cellpadding="0">
+            <thead>
+              <tr>
+                <th width="15%">Time</th>
+                <th width="10%">Level</th>
+                <th width="15%">Source</th>
+                <th width="60%">Message</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{~ for err in errors ~}}
+              <tr>
+                <td class="mono" style="white-space:nowrap;">{{ err.time }}</td>
+                <td>
+                  {{~ if err.level == "CRITICAL" ~}}
+                    <span class="badge badge-critical">CRIT</span>
+                  {{~ else if err.level == "WARNING" ~}}
+                    <span class="badge badge-warn">WARN</span>
+                  {{~ else ~}}
+                    <span class="badge badge-info">INFO</span>
+                  {{~ end ~}}
+                </td>
+                <td style="font-weight:500;">{{ err.source }}</td>
+                <td>
+                  <div>{{ err.message | html.escape }}</div>
+                  <div class="mono" style="color:#70757a; font-size:11px; margin-top:4px;">ID: {{ err.id }}</div>
+                </td>
+              </tr>
+              {{~ end ~}}
+            </tbody>
+          </table>
+        </div>
+        {{~ else ~}}
+          <p>No errors found today.</p>
+        {{~ end ~}}
+
+        <div style="margin-top:20px; text-align:center;">
+            <a href="{{~ row.dashboard_url ~}}" style="background:#202124; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px; font-weight:500; margin-top: 10px; margin-bottom:10px;">Open Full Dashboard</a>
+        </div>
+      </div>
+
+	<div class="footer">
+        <span>&copy;</span>
+		<span>{{~ row.year ~}}</span>
+		<span>{{~ row.company ~}}</span>
+        <br>
+        <a href="{{~ row.unsubscribe_url ~}}">Unsubscribe from daily digests</a>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>
+{{~ end ~}}

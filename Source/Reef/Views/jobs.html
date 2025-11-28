@@ -1,0 +1,2523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobs &middot; Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i> 
+                
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                    </div>
+                </div>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="book-open" class="h-5 w-5"></i>
+                            <span class="ml-3">Documentation</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-gray-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-white font-semibold">&nbsp;</div>
+                            <div class="text-xs text-gray-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                </button>
+                
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="github" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Bar -->
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6">
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-800">Jobs</h1>
+                </div>
+                <button id="newJobButton" onclick="openAddJobModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                    <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                    New Job
+                </button>
+            </header>
+
+            <!-- Content Area -->
+            <main class="flex-1 overflow-y-auto p-6">
+                
+                <!-- Filters and Actions Bar -->
+                <div class="bg-white rounded-lg shadow p-4 mb-6">
+                    <!-- Search Bar -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <i data-lucide="search" class="absolute left-3 top-3 h-4 w-4 text-gray-400"></i>
+                            <input type="text"
+                                   id="search-input"
+                                   placeholder="Search by job name or profile..."
+                                   onkeyup="applyFilters()"
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-sm font-semibold text-gray-700">Filters</h2>
+                        <div class="flex items-center gap-3">
+                            <button onclick="clearAllFilters()" class="text-sm text-blue-600 hover:text-blue-700 font-medium" id="clear-filters-btn" style="display:none;">
+                                Clear All
+                            </button>
+                            <button onclick="toggleQueueMetrics()"
+                                    class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    title="Show Queue Metrics">
+                                    <i data-lucide="chart-area" class="h-5 w-5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        <div>
+                            <label for="filter-health" class="block text-sm font-medium text-gray-700 mb-2">
+                                Job Health
+                            </label>
+                            <select id="filter-health" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                <option value="" selected>All Jobs</option>
+                                <option value="auto-paused">Auto-Paused</option>
+                                <option value="failing">Failing</option>
+                                <option value="warning">Warning</option>
+                                <option value="healthy">Healthy</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-2">
+                                Status
+                            </label>
+                            <select id="filter-status" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                <option value="" selected>Show All</option> <!-- Placeholder -->
+                                <option value="0">Idle</option>
+                                <option value="1">Queued</option>
+                                <option value="2">Running</option>
+                                <option value="3">Completed</option>
+                                <option value="4">Failed</option>
+                                <option value="5">Cancelled</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-profile" class="block text-sm font-medium text-gray-700 mb-2">
+                                Profile
+                            </label>
+                            <select id="filter-profile" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                <option value="" selected>Show All</option> <!-- Placeholder -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-connection" class="block text-sm font-medium text-gray-700 mb-2">
+                                Connection
+                            </label>
+                            <select id="filter-connection" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                <option value="" selected>Show All</option> <!-- Placeholder -->
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="filter-group" class="block text-sm font-medium text-gray-700 mb-2">
+                                Group
+                            </label>
+                            <select id="filter-group" onchange="applyFilters()"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                <option value="" selected>Show All</option> <!-- Placeholder -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Queue Metrics (Hidden by default) -->
+                <div id="queue-metrics-panel" class="bg-white rounded-lg shadow p-4 mb-6 hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                            <i data-lucide="layers" class="h-5 w-5 mr-2 text-blue-600"></i>
+                            Queue Metrics
+                        </h2>
+                        <button onclick="refreshQueueMetrics()" 
+                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                            <i data-lucide="refresh-cw" class="h-4 w-4 mr-1"></i>
+                            Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Queue Depth -->
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-blue-600 font-medium">Queue Depth</p>
+                                    <p id="queue-depth" class="text-2xl font-bold text-blue-700">-</p>
+                                    <p class="text-xs text-blue-500 mt-1">Jobs waiting</p>
+                                </div>
+                                <i data-lucide="inbox" class="h-8 w-8 text-blue-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Active Jobs -->
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-green-600 font-medium">Active</p>
+                                    <p id="queue-active" class="text-2xl font-bold text-green-700">-</p>
+                                    <p class="text-xs text-green-500 mt-1">Currently running</p>
+                                </div>
+                                <i data-lucide="activity" class="h-8 w-8 text-green-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Available Slots -->
+                        <div class="bg-purple-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-purple-600 font-medium">Available</p>
+                                    <p id="queue-available" class="text-2xl font-bold text-purple-700">-</p>
+                                    <p class="text-xs text-purple-500 mt-1">
+                                        of <span id="queue-max">10</span> slots
+                                    </p>
+                                </div>
+                                <i data-lucide="cpu" class="h-8 w-8 text-purple-400"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Throughput -->
+                        <div class="bg-orange-50 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm text-orange-600 font-medium">Processed</p>
+                                    <p id="queue-processed" class="text-2xl font-bold text-orange-700">-</p>
+                                    <p class="text-xs text-orange-500 mt-1">Total executed</p>
+                                </div>
+                                <i data-lucide="trending-up" class="h-8 w-8 text-orange-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mt-4">
+                        <div class="flex justify-between text-xs text-gray-600 mb-1">
+                            <span>Capacity Usage</span>
+                            <span id="queue-usage-percent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="queue-usage-bar" 
+                                 class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                 style="width: 0%">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <div class="bg-gray-50 rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Jobs</p>
+                                <p id="stat-total" class="text-2xl font-bold text-gray-700">0</p>
+                            </div>
+                            <i data-lucide="briefcase" class="h-8 w-8 text-gray-400"></i>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-600">Running</p>
+                                <p id="stat-running" class="text-2xl font-bold text-green-700">0</p>
+                            </div>
+                            <i data-lucide="play-circle" class="h-8 w-8 text-green-500"></i>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-blue-600">Queued</p>
+                                <p id="stat-queued" class="text-2xl font-bold text-blue-700">0</p>
+                            </div>
+                            <i data-lucide="clock" class="h-8 w-8 text-blue-500"></i>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-yellow-600">Idle</p>
+                                <p id="stat-idle" class="text-2xl font-bold text-yellow-700">0</p>
+                            </div>
+                            <i data-lucide="pause-circle" class="h-8 w-8 text-yellow-500"></i>
+                        </div>
+                    </div>
+                    <div class="bg-red-50 rounded-lg shadow p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-red-600">Failed</p>
+                                <p id="stat-failed" class="text-2xl font-bold text-red-700">0</p>
+                            </div>
+                            <i data-lucide="alert-circle" class="h-8 w-8 text-red-500"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Auto-Paused Jobs Banner -->
+                <div id="auto-paused-banner" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg" style="display: none;">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="pause-circle" class="h-6 w-6 text-red-600 flex-shrink-0"></i>
+                            <div>
+                                <p class="text-sm font-medium text-red-800">
+                                    <span id="paused-jobs-count" class="font-bold">0</span> job(s) are auto-paused due to repeated failures
+                                </p>
+                                <p class="text-xs text-red-600 mt-1">
+                                    These jobs stopped running to prevent resource waste. Review the issues and resume them when ready.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="filterPausedJobs()" class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors">
+                                Show Me
+                            </button>
+                            <button onclick="dismissBanner()" class="px-3 py-1 text-red-600 hover:bg-red-100 rounded text-sm transition-colors">
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Jobs Table -->
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8"></th>
+                                    <th onclick="sortJobs('name')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                                        <div class="flex items-center">
+                                            <span>Job Details</span>
+                                            <i id="sort-icon-name" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                        </div>
+                                    </th>
+                                    <th onclick="sortJobs('schedule')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                                        <div class="flex items-center">
+                                            <span>Schedule</span>
+                                            <i id="sort-icon-schedule" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                        </div>
+                                    </th>
+                                    <th onclick="sortJobs('execution')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                                        <div class="flex items-center">
+                                            <span>Execution</span>
+                                            <i id="sort-icon-execution" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                        </div>
+                                    </th>
+                                    <th onclick="sortJobs('status')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none">
+                                        <div class="flex items-center">
+                                            <span>Status</span>
+                                            <i id="sort-icon-status" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                        </div>
+                                    </th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobs-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                        <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
+                                        Loading jobs...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add Job Modal -->
+    <div id="add-job-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="job-modal-title" class="text-lg font-semibold text-gray-900">Add New Job</h3>
+                <button onclick="closeAddJobModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="border-b border-gray-200 mb-4">
+                <nav class="-mb-px flex space-x-8">
+                    <button id="jobGeneralTabButton" onclick="showJobTab('jobGeneral')" 
+                            class="job-tab-btn job-tab-active border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                        General
+                    </button>
+                    <button id="jobWebhooksTabButton" onclick="showJobTab('jobWebhooks')" 
+                            class="job-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                            disabled>
+                        Webhooks
+                    </button>
+                </nav>
+            </div>
+            
+            <form id="add-job-form" class="space-y-4">
+                <!-- General Tab Content -->
+                <div id="jobGeneral" class="job-tab-content space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Name
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <input type="text" id="job-name" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder="Daily Customer Export">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Type
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <select id="job-type" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select type...</option>
+                                <option value="ProfileExecution">Profile Export</option>
+                                <option value="DataTransfer" hidden>Group Export</option>
+                                <option value="CustomScript" hidden>Custom Script</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="job-description" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Optional description"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Profile</label>
+                            <select id="job-profileId"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select profile...</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                            <select id="job-destinationId"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select destination...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Schedule Type</label>
+                            <select id="job-scheduleType" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    onchange="updateScheduleFields()">
+                                <option value="0">Manual</option>
+                                <option value="1">Cron Expression</option>
+                                <option value="2">Interval</option>
+                                <option value="3">Daily</option>
+                                <option value="4">Weekly</option>
+                                <option value="5">Monthly</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <select id="job-priority"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="0">Low</option>
+                                <option value="1" selected>Normal</option>
+                                <option value="2">High</option>
+                                <option value="3">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="schedule-config" class="space-y-4">
+                        <!-- Dynamic schedule configuration fields -->
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="job-maxRetries" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                Max Retries
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Retries per job run cycle. Each run retries this many times before counting as 1 failure. Does not affect consecutive failure count for auto-pause." data-tooltip-position="top">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                                </span>
+                            </label>
+                            <input type="number" id="job-maxRetries" value="3" min="0" max="10"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (minutes)</label>
+                            <input type="number" id="job-timeoutMinutes" value="60" min="1" max="1440"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex items-center mt-6">
+                            <input type="checkbox" id="job-allowConcurrent"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <label for="job-allowConcurrent" class="ml-2 block text-sm text-gray-900">Allow Concurrent</label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                        <input type="text" id="job-tags"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="tag1, tag2, tag3">
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="job-enabled" checked
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="job-enabled" class="ml-2 block text-sm text-gray-900">Enable job</label>
+                    </div>
+
+                    <div class="flex items-center">
+                        <input type="checkbox" id="job-autoPauseEnabled" checked
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="job-autoPauseEnabled" class="ml-2 block text-sm text-gray-900">
+                            Auto-pause after 10 consecutive failures
+                            <span class="text-gray-500 text-xs ml-1">(Recommended)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Webhooks Tab Content -->
+                <div id="jobWebhooks" class="job-tab-content hidden space-y-4">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-blue-700">
+                                    Webhooks allow you to trigger this job via HTTP POST requests from external systems.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-sm font-medium text-gray-900">Active Webhooks</h4>
+                        <button type="button" id="createJobWebhookBtn" 
+                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i data-lucide="plus" class="h-4 w-4 mr-1"></i>
+                            Create Webhook
+                        </button>
+                    </div>
+                    
+                    <div id="jobWebhooksList" class="space-y-2">
+                        <p class="text-gray-500 text-center py-4">Save the job to enable webhooks.</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeAddJobModal()" 
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Save Job
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        const API_BASE = '/api/jobs';
+        let allJobs = [];
+        let filteredJobs = [];
+        let profiles = [];
+        let connections = [];
+        let groups = [];
+        let destinations = [];
+
+        // Sorting state - Load from localStorage or use defaults
+        let currentSortColumn = localStorage.getItem('jobs_sortColumn') || 'name';
+        let currentSortDirection = localStorage.getItem('jobs_sortDirection') || 'asc';
+        
+        // Status mapping: 0=Idle, 1=Queued/Scheduled, 2=Running, 3=Completed, 4=Failed, 5=Cancelled
+        const statusEnumMap = {
+            'Idle': 0,
+            'Scheduled': 1, 
+            'Queued': 1,    // Map Queued to same value as Scheduled
+            'Running': 2,
+            'Completed': 3,
+            'Failed': 4,
+            'Cancelled': 5
+        };
+
+        // Schedule type mapping: 0=Manual, 1=Cron, 2=Interval, 3=Daily, 4=Weekly, 5=Monthly
+        const scheduleTypeEnumMap = {
+            'Manual': 0,
+            'Cron': 1,
+            'CronExpression': 1,
+            'Interval': 2,
+            'Daily': 3,
+            'Weekly': 4,
+            'Monthly': 5
+        };
+
+        function getStatusInfo(status) {
+            const statusValue = typeof status === 'string' ? statusEnumMap[status] : status;
+            
+            switch(statusValue) {
+                case 0: return { label: 'Idle', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'pause-circle' };
+                case 1: return { label: 'Queued', color: 'text-blue-600', bg: 'bg-blue-100', icon: 'clock' };
+                case 2: return { label: 'Running', color: 'text-green-600', bg: 'bg-green-100', icon: 'play-circle' };
+                case 3: return { label: 'Completed', color: 'text-green-600', bg: 'bg-green-100', icon: 'check-circle' };
+                case 4: return { label: 'Failed', color: 'text-red-600', bg: 'bg-red-100', icon: 'alert-circle' };
+                case 5: return { label: 'Cancelled', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'x-circle' };
+                default: return { label: 'Unknown', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'help-circle' };
+            }
+        }
+
+        function getJobTypeInfo(type) {
+            switch(type) {
+                case 'ProfileExecution': 
+                case 0: return { label: 'Profile Export', icon: 'file-code', color: 'text-blue-600' };
+                case 'DataTransfer': 
+                case 1: return { label: 'Data Transfer', icon: 'arrow-right-left', color: 'text-purple-600' };
+                case 'CustomScript': 
+                case 6: return { label: 'Custom Script', icon: 'code', color: 'text-orange-600' };
+                default: return { label: 'Unknown', icon: 'help-circle', color: 'text-gray-600' };
+            }
+        }
+
+        function getScheduleInfo(scheduleType) {
+            let scheduleValue = scheduleType;
+
+            // Convert string enum to number
+            if (typeof scheduleType === 'string') {
+                if (scheduleTypeEnumMap.hasOwnProperty(scheduleType)) {
+                    scheduleValue = scheduleTypeEnumMap[scheduleType];
+                } else {
+                    scheduleValue = parseInt(scheduleType);
+                }
+            }
+
+            switch(scheduleValue) {
+                case 0: return { label: 'Manual', icon: 'hand', color: 'text-gray-600' };
+                case 1: return { label: 'Cron', icon: 'calendar', color: 'text-purple-600' };
+                case 2: return { label: 'Interval', icon: 'repeat', color: 'text-blue-600' };
+                case 3: return { label: 'Daily', icon: 'sun', color: 'text-yellow-600' };
+                case 4: return { label: 'Weekly', icon: 'calendar-days', color: 'text-indigo-600' };
+                case 5: return { label: 'Monthly', icon: 'calendar-range', color: 'text-pink-600' };
+                default: return { label: 'Unknown', icon: 'help-circle', color: 'text-gray-600' };
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return 'Never';
+            let date;
+            try {
+                // If already ends with Z or has timezone, don't add Z
+                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+                    date = new Date(dateString);
+                } else {
+                    date = new Date(dateString + 'Z');
+                }
+                if (isNaN(date.getTime())) return 'Never';
+                return date.toLocaleString();
+            } catch {
+                return 'Never';
+            }
+        }
+
+        function formatRelativeTime(dateString) {
+            if (!dateString) return null;
+            let date;
+            try {
+                // If already ends with Z or has timezone, don't add Z
+                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+                    date = new Date(dateString);
+                } else {
+                    date = new Date(dateString + 'Z');
+                }
+                if (isNaN(date.getTime())) return null;
+            } catch {
+                return null;
+            }
+
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return null;
+        }
+
+        function showJobTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.job-tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.job-tab-btn').forEach(btn => {
+                btn.classList.remove('job-tab-active', 'border-blue-500', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.remove('hidden');
+            
+            // Add active class to selected button
+            const activeBtn = document.getElementById(tabName + 'TabButton');
+            activeBtn.classList.add('job-tab-active', 'border-blue-500', 'text-blue-600');
+            activeBtn.classList.remove('border-transparent', 'text-gray-500');
+            
+            lucide.createIcons();
+        }
+
+        function updateScheduleFields() {
+            const scheduleType = parseInt(document.getElementById('job-scheduleType').value);
+            const scheduleConfig = document.getElementById('schedule-config');
+            
+            let html = '';
+            switch(scheduleType) {
+                case 1: // Cron
+                    html = `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cron Expression</label>
+                            <input type="text" id="job-cronExpression" placeholder="0 2 * * *"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <p class="text-xs text-gray-500 mt-1">Example: 0 2 * * * (daily at 02:00)</p>
+                        </div>
+                    `;
+                    break;
+                case 2: // Interval
+                    html = `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Interval (minutes)</label>
+                            <input type="number" id="job-intervalMinutes" value="60" min="1"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    `;
+                    break;
+                case 3: // Daily
+                    html = `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Start Time
+                                <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                            </label>
+                            <input type="time" id="job-startTime" value="02:00"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        </div>
+                    `;
+                    break;
+                case 4: // Weekly
+                    html = `
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Days of Week</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-0" value="0" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Monday</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-1" value="1" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Tuesday</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-2" value="2" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Wednesday</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-3" value="3" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Thursday</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-4" value="4" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Friday</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="job-weekday-5" value="5" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Saturday</span>
+                                    </label>
+                                    <label class="flex items-center col-span-2">
+                                        <input type="checkbox" id="job-weekday-6" value="6" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2 text-sm text-gray-700">Sunday</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Time
+                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                                </label>
+                                <input type="time" id="job-startTime" value="02:00"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                        </div>
+                    `;
+                    break;
+                case 5: // Monthly
+                    html = `
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Day of Month</label>
+                                <input type="number" id="job-monthday" value="1" min="1" max="31"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                <p class="text-xs text-gray-500 mt-1">Enter day 1-31</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Time
+                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                                </label>
+                                <input type="time" id="job-startTime" value="02:00"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+                        </div>
+                    `;
+                    break;
+            }
+            
+            scheduleConfig.innerHTML = html;
+            updateServerTimeDisplay();
+        }
+            
+        function updateServerTimeDisplay() {
+            const serverTimeElement = document.getElementById('job-server-time');
+            if (serverTimeElement) {
+                const now = new Date();
+                // Format time as HH:MM:SS (UTC)
+                const timeStr = now.toUTCString().split(' ')[4];
+                serverTimeElement.textContent = timeStr;
+                serverTimeElement.setAttribute(
+                    'data-tooltip',
+                    'This is the current server time (UTC). Used for scheduling reference.'
+                );
+            }
+        }
+
+        function sortJobs(column) {
+            // Add toggle parameter to control direction toggling
+            let toggle = true;
+            if (typeof arguments[1] === 'boolean') toggle = arguments[1];
+            // Toggle direction if clicking the same column, otherwise default to asc
+            if (currentSortColumn === column) {
+                if (toggle) {
+                    currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                }
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+
+            // Save sort preferences to localStorage
+            localStorage.setItem('jobs_sortColumn', currentSortColumn);
+            localStorage.setItem('jobs_sortDirection', currentSortDirection);
+
+            // Update sort icons
+            ['name', 'schedule', 'execution', 'status'].forEach(col => {
+                const icon = document.getElementById(`sort-icon-${col}`);
+                if (icon) {
+                    if (col === column) {
+                        icon.setAttribute('data-lucide', currentSortDirection === 'asc' ? 'chevron-up' : 'chevron-down');
+                    } else {
+                        icon.setAttribute('data-lucide', 'chevrons-up-down');
+                    }
+                }
+            });
+            lucide.createIcons();
+
+            // Sort the filtered jobs
+            filteredJobs.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(column) {
+                    case 'name':
+                        aVal = (a.name || '').toLowerCase();
+                        bVal = (b.name || '').toLowerCase();
+                        break;
+                    case 'schedule':
+                        // Sort by schedule type, then by name
+                        aVal = typeof a.scheduleType === 'string' ? parseInt(a.scheduleType) : (a.scheduleType || 0);
+                        bVal = typeof b.scheduleType === 'string' ? parseInt(b.scheduleType) : (b.scheduleType || 0);
+                        break;
+                    case 'execution':
+                        // Sort by last run time (null values last)
+                        aVal = a.lastRunTime ? new Date(a.lastRunTime).getTime() : 0;
+                        bVal = b.lastRunTime ? new Date(b.lastRunTime).getTime() : 0;
+                        break;
+                    case 'status':
+                        aVal = typeof a.status === 'string' ? statusEnumMap[a.status] : (a.status || 0);
+                        bVal = typeof b.status === 'string' ? statusEnumMap[b.status] : (b.status || 0);
+                        break;
+                    default:
+                        return 0;
+                }
+
+                let comparison = 0;
+                if (aVal < bVal) comparison = -1;
+                if (aVal > bVal) comparison = 1;
+
+                // Secondary sort by name if not already sorting by name
+                if (comparison === 0 && column !== 'name') {
+                    const aName = (a.name || '').toLowerCase();
+                    const bName = (b.name || '').toLowerCase();
+                    if (aName < bName) comparison = -1;
+                    if (aName > bName) comparison = 1;
+                }
+
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            });
+
+            renderJobs();
+        }
+
+        let queueMetricsInterval = null;
+
+        function toggleQueueMetrics() {
+            const panel = document.getElementById('queue-metrics-panel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                loadQueueMetrics();
+
+                // Start continuous refresh every 2 seconds while panel is visible
+                if (queueMetricsInterval) clearInterval(queueMetricsInterval);
+                queueMetricsInterval = setInterval(loadQueueMetrics, 2000);
+            } else {
+                panel.classList.add('hidden');
+
+                // Stop the interval when panel is hidden
+                if (queueMetricsInterval) {
+                    clearInterval(queueMetricsInterval);
+                    queueMetricsInterval = null;
+                }
+            }
+            lucide.createIcons();
+        }
+
+        async function loadQueueMetrics() {
+            try {
+                const response = await fetch('/api/jobs/queue/metrics', {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    console.error('Failed to load queue metrics:', response.status);
+                    return;
+                }
+                
+                const metrics = await response.json();
+                updateQueueMetrics(metrics);
+            } catch (error) {
+                console.error('Error loading queue metrics:', error);
+            }
+        }
+
+        function updateQueueMetrics(metrics) {
+            document.getElementById('queue-depth').textContent = metrics.queueDepth || 0;
+            document.getElementById('queue-active').textContent = metrics.activeJobs || 0;
+            document.getElementById('queue-available').textContent = metrics.availableSlots || 0;
+            document.getElementById('queue-max').textContent = metrics.maxConcurrentJobs || 10;
+            document.getElementById('queue-processed').textContent = metrics.totalDequeued || 0;
+            
+            const maxJobs = metrics.maxConcurrentJobs || 10;
+            const activeJobs = metrics.activeJobs || 0;
+            const usagePercent = Math.round((activeJobs / maxJobs) * 100);
+            
+            document.getElementById('queue-usage-percent').textContent = `${usagePercent}%`;
+            const usageBar = document.getElementById('queue-usage-bar');
+            usageBar.style.width = `${usagePercent}%`;
+            
+            usageBar.className = 'h-2 rounded-full transition-all duration-300';
+            if (usagePercent < 50) {
+                usageBar.classList.add('bg-green-600');
+            } else if (usagePercent < 80) {
+                usageBar.classList.add('bg-yellow-600');
+            } else {
+                usageBar.classList.add('bg-red-600');
+            }
+        }
+
+        async function refreshQueueMetrics() {
+            await loadQueueMetrics();
+            showToast('Queue metrics refreshed', 'success');
+        }
+
+        async function applyFilters() {
+            const healthFilter = document.getElementById('filter-health').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            const profileFilter = document.getElementById('filter-profile').value;
+            const connectionFilter = document.getElementById('filter-connection').value;
+            const groupFilter = document.getElementById('filter-group').value;
+            const searchTerm = (document.getElementById('search-input').value || '').toLowerCase().trim();
+
+            // Save filter preferences to localStorage
+            localStorage.setItem('jobs_filterHealth', healthFilter);
+            localStorage.setItem('jobs_filterStatus', statusFilter);
+            localStorage.setItem('jobs_filterProfile', profileFilter);
+            localStorage.setItem('jobs_filterConnection', connectionFilter);
+            localStorage.setItem('jobs_filterGroup', groupFilter);
+            localStorage.setItem('jobs_searchTerm', searchTerm);
+
+            filteredJobs = allJobs.filter(job => {
+                // Health filter
+                if (healthFilter) {
+                    const failures = job.consecutiveFailures || 0;
+                    const isAutoPaused = job.tags && job.tags.includes('circuit-breaker');
+
+                    switch (healthFilter) {
+                        case 'auto-paused':
+                            if (!isAutoPaused) return false;
+                            break;
+                        case 'failing':
+                            if (failures < 7 || isAutoPaused) return false;
+                            break;
+                        case 'warning':
+                            if (failures < 3 || failures >= 7 || isAutoPaused) return false;
+                            break;
+                        case 'healthy':
+                            if (failures >= 3 || isAutoPaused || !job.isEnabled) return false;
+                            break;
+                        case 'disabled':
+                            if (job.isEnabled) return false;
+                            break;
+                    }
+                }
+
+                if (statusFilter && job.status != statusFilter) return false;
+                if (profileFilter && job.profileId != profileFilter) return false;
+
+                // Connection filter - find profile's connection
+                if (connectionFilter) {
+                    const profile = profiles.find(p => p.id === job.profileId);
+                    if (!profile || profile.connectionId != connectionFilter) return false;
+                }
+
+                // Group filter - find profile's group
+                if (groupFilter) {
+                    const profile = profiles.find(p => p.id === job.profileId);
+                    if (!profile || profile.groupId != groupFilter) return false;
+                }
+
+                // Apply search filter across multiple fields
+                if (searchTerm) {
+                    const jobName = (job.name || '').toLowerCase();
+                    const profileName = profiles.find(p => p.id === job.profileId)?.name || '';
+                    const profileNameLower = profileName.toLowerCase();
+
+                    if (!jobName.includes(searchTerm) && !profileNameLower.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            // Show/hide clear button based on active filters
+            updateClearButtonVisibility();
+
+            sortJobs(currentSortColumn, false);
+        }
+
+        function updateClearButtonVisibility() {
+            const healthFilter = document.getElementById('filter-health').value;
+            const statusFilter = document.getElementById('filter-status').value;
+            const profileFilter = document.getElementById('filter-profile').value;
+            const connectionFilter = document.getElementById('filter-connection').value;
+            const groupFilter = document.getElementById('filter-group').value;
+            const searchTerm = document.getElementById('search-input').value;
+
+            const hasActiveFilters = healthFilter || statusFilter || profileFilter || connectionFilter || groupFilter || searchTerm;
+            const clearBtn = document.getElementById('clear-filters-btn');
+            if (clearBtn) {
+                clearBtn.style.display = hasActiveFilters ? 'block' : 'none';
+            }
+        }
+
+        function clearAllFilters() {
+            document.getElementById('filter-health').value = '';
+            document.getElementById('filter-status').value = '';
+            document.getElementById('filter-profile').value = '';
+            document.getElementById('filter-connection').value = '';
+            document.getElementById('filter-group').value = '';
+            document.getElementById('search-input').value = '';
+
+            localStorage.removeItem('jobs_filterHealth');
+            localStorage.removeItem('jobs_filterStatus');
+            localStorage.removeItem('jobs_filterProfile');
+            localStorage.removeItem('jobs_filterConnection');
+            localStorage.removeItem('jobs_filterGroup');
+            localStorage.removeItem('jobs_searchTerm');
+
+            filteredJobs = [...allJobs];
+            sortJobs(currentSortColumn, false);
+            updateClearButtonVisibility();
+        }
+
+        async function loadFilterData() {
+            try {
+                // Load profiles
+                const profilesResponse = await fetch('/api/profiles', {
+                    headers: getAuthHeaders()
+                });
+                if (profilesResponse.ok) {
+                    profiles = await profilesResponse.json();
+                    const profileSelect = document.getElementById('filter-profile');
+                    profileSelect.innerHTML = '<option value="">Show All</option>' +
+                        profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                }
+
+                // Load connections
+                const connectionsResponse = await fetch('/api/connections', {
+                    headers: getAuthHeaders()
+                });
+                if (connectionsResponse.ok) {
+                    connections = await connectionsResponse.json();
+                    const connectionSelect = document.getElementById('filter-connection');
+                    connectionSelect.innerHTML = '<option value="">Show All</option>' +
+                        connections.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+                }
+
+                // Load groups
+                const groupsResponse = await fetch('/api/groups', {
+                    headers: getAuthHeaders()
+                });
+                if (groupsResponse.ok) {
+                    groups = await groupsResponse.json();
+                    const groupSelect = document.getElementById('filter-group');
+                    groupSelect.innerHTML = '<option value="">Show All</option>' +
+                        groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+                }
+
+                // Restore saved filter values from localStorage
+                restoreFilterPreferences();
+            } catch (error) {
+                console.error('Failed to load filter data:', error);
+            }
+        }
+
+        function restoreFilterPreferences() {
+            const savedHealth = localStorage.getItem('jobs_filterHealth');
+            const savedStatus = localStorage.getItem('jobs_filterStatus');
+            const savedProfile = localStorage.getItem('jobs_filterProfile');
+            const savedConnection = localStorage.getItem('jobs_filterConnection');
+            const savedGroup = localStorage.getItem('jobs_filterGroup');
+            const savedSearch = localStorage.getItem('jobs_searchTerm');
+
+            if (savedHealth) {
+                const healthSelect = document.getElementById('filter-health');
+                if (healthSelect) healthSelect.value = savedHealth;
+            }
+
+            if (savedStatus) {
+                const statusSelect = document.getElementById('filter-status');
+                if (statusSelect) statusSelect.value = savedStatus;
+            }
+
+            if (savedProfile) {
+                const profileSelect = document.getElementById('filter-profile');
+                if (profileSelect) profileSelect.value = savedProfile;
+            }
+
+            if (savedConnection) {
+                const connectionSelect = document.getElementById('filter-connection');
+                if (connectionSelect) connectionSelect.value = savedConnection;
+            }
+
+            if (savedGroup) {
+                const groupSelect = document.getElementById('filter-group');
+                if (groupSelect) groupSelect.value = savedGroup;
+            }
+
+            if (savedSearch) {
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = savedSearch;
+            }
+
+            // Update clear button visibility based on restored filters
+            updateClearButtonVisibility();
+        }
+
+        let serverTimeInterval = null;
+
+        function openAddJobModal() {
+            document.getElementById('job-modal-title').textContent = 'Add New Job';
+            document.getElementById('add-job-modal').classList.remove('hidden');
+            document.getElementById('add-job-form').reset();
+            document.getElementById('add-job-form').removeAttribute('data-edit-id');
+            document.getElementById('job-enabled').checked = true;
+            updateScheduleFields();
+            loadProfilesAndDestinations();
+
+            // Reset destination field state for new job
+            updateDestinationFieldState();
+
+            showJobTab('jobGeneral');
+
+            const webhooksTabButton = document.getElementById('jobWebhooksTabButton');
+            webhooksTabButton.disabled = true;
+            webhooksTabButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+            document.getElementById('jobWebhooksList').innerHTML = '<p class="text-gray-500 text-center py-4">Save the job to enable webhooks.</p>';
+
+            // Start updating server time every second
+            clearInterval(serverTimeInterval);
+            serverTimeInterval = setInterval(updateServerTimeDisplay, 1000);
+
+            lucide.createIcons();
+        }
+
+        function closeAddJobModal() {
+            document.getElementById('add-job-modal').classList.add('hidden');
+            // Clear the server time interval when closing modal
+            clearInterval(serverTimeInterval);
+            serverTimeInterval = null;
+        }
+
+        // Store profiles and destinations for reference
+        let profilesCache = [];
+        let profileSelectListenerAttached = false;
+
+        async function loadProfilesAndDestinations() {
+            try {
+                const profilesResponse = await fetch('/api/profiles', {
+                    headers: getAuthHeaders()
+                });
+                if (profilesResponse.ok) {
+                    const profiles = await profilesResponse.json();
+                    profilesCache = profiles; // Store for later reference
+                    const profileSelect = document.getElementById('job-profileId');
+                    profileSelect.innerHTML = '<option value="">Select profile...</option>' +
+                        profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+
+                    // Attach change event listener only once
+                    if (!profileSelectListenerAttached) {
+                        profileSelect.addEventListener('change', updateDestinationFieldState);
+                        profileSelectListenerAttached = true;
+                    }
+                }
+
+                const destResponse = await fetch('/api/destinations', {
+                    headers: getAuthHeaders()
+                });
+                if (destResponse.ok) {
+                    const destinations = await destResponse.json();
+                    window.allDestinations = destinations; // Store all destinations globally for filtering
+                    const destSelect = document.getElementById('job-destinationId');
+                    destSelect.innerHTML = '<option value="">Select destination...</option>' +
+                        destinations
+                            .filter(d => d.type !== 'Email' && d.Type !== 'Email') // Filter out Email destinations
+                            .map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`)
+                            .join('');
+                }
+            } catch (error) {
+                console.error('Failed to load profiles/destinations:', error);
+            }
+        }
+
+        function updateDestinationFieldState() {
+            const profileId = document.getElementById('job-profileId').value;
+            const destSelect = document.getElementById('job-destinationId');
+            const destContainer = destSelect.closest('div');
+            const currentValue = destSelect.value;
+
+            if (profileId) {
+                const selectedProfile = profilesCache.find(p => p.id === parseInt(profileId));
+
+                // Check for isEmailExport property (handles both camelCase and PascalCase)
+                const isEmailProfile = selectedProfile && (selectedProfile.isEmailExport || selectedProfile.IsEmailExport);
+
+                if (isEmailProfile) {
+                    // Disable destination field for email profiles
+                    destSelect.disabled = true;
+                    destSelect.value = '';
+                    destContainer.style.opacity = '0.5';
+                    destContainer.style.pointerEvents = 'none';
+                } else {
+                    // Enable destination field for non-email profiles
+                    destSelect.disabled = false;
+                    destContainer.style.opacity = '1';
+                    destContainer.style.pointerEvents = 'auto';
+                }
+            } else {
+                // No profile selected - enable destination field
+                destSelect.disabled = false;
+                destContainer.style.opacity = '1';
+                destContainer.style.pointerEvents = 'auto';
+            }
+
+            // Always filter out Email-type destinations from the list
+            const allDestinations = window.allDestinations || [];
+            destSelect.innerHTML = '<option value="">Select destination...</option>' +
+                allDestinations
+                    .filter(d => d.type !== 'Email' && d.Type !== 'Email') // Filter out Email destinations
+                    .map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`)
+                    .join('');
+
+            // Restore previous selection if it still exists and field is enabled
+            if (!destSelect.disabled && currentValue && destSelect.querySelector(`option[value="${currentValue}"]`)) {
+                destSelect.value = currentValue;
+            }
+        }
+
+        function checkAuth() {
+            return requireAuth();
+        }
+
+        async function loadJobs() {
+            await checkAuth();
+            setUserSidebarInfo();
+
+            try {
+                const [jobsResponse, profilesResponse, destinationsResponse] = await Promise.all([
+                    fetch(API_BASE, { headers: getAuthHeaders() }),
+                    fetch('/api/profiles', { headers: getAuthHeaders() }),
+                    fetch('/api/destinations', { headers: getAuthHeaders() })
+                ]);
+
+                if (jobsResponse.ok) {
+                    allJobs = await jobsResponse.json();
+                }
+
+                if (profilesResponse.ok) {
+                    profiles = await profilesResponse.json();
+                }
+
+                if (destinationsResponse.ok) {
+                    destinations = await destinationsResponse.json();
+                }
+
+                // Enrich jobs with profile names
+                allJobs.forEach(job => {
+                    if (job.profileId) {
+                        const profile = profiles.find(p => p.id === job.profileId);
+                        if (profile) {
+                            job.profileName = profile.name;
+                        }
+                    }
+                });
+
+                // Normalize status to numbers
+                allJobs.forEach(j => {
+                    if (typeof j.status === 'string' && statusEnumMap.hasOwnProperty(j.status)) {
+                        j.status = statusEnumMap[j.status];
+                    }
+                });
+
+                // Apply filters
+                filteredJobs = [...allJobs];
+                applyFilters();
+
+                // Update stats
+                const stats = {
+                    total: allJobs.length,
+                    running: allJobs.filter(j => j.status === 2).length,
+                    queued: allJobs.filter(j => j.status === 1).length,
+                    idle: allJobs.filter(j => j.status === 0).length,
+                    failed: allJobs.filter(j => j.status === 4).length
+                };
+
+                document.getElementById('stat-total').textContent = stats.total;
+                document.getElementById('stat-running').textContent = stats.running;
+                document.getElementById('stat-queued').textContent = stats.queued;
+                document.getElementById('stat-idle').textContent = stats.idle;
+                document.getElementById('stat-failed').textContent = stats.failed;
+
+                // Check for auto-paused jobs and show banner
+                checkForPausedJobs();
+
+            } catch (error) {
+                console.error('Failed to load jobs:', error);
+            }
+        }
+
+        // Get user-friendly health status for a job
+        function getJobHealthStatus(job) {
+            if (job.tags && job.tags.includes('circuit-breaker')) {
+                return {
+                    label: 'Auto-Paused',
+                    icon: 'pause-circle',
+                    color: 'text-red-700',
+                    bg: 'bg-red-100',
+                    description: 'Paused after 10 consecutive failures'
+                };
+            }
+
+            const failures = job.consecutiveFailures || 0;
+
+            if (failures >= 7) {
+                return {
+                    label: 'Failing',
+                    icon: 'alert-triangle',
+                    color: 'text-orange-700',
+                    bg: 'bg-orange-100',
+                    description: `${failures} failures - may auto-pause soon`
+                };
+            }
+
+            if (failures >= 3) {
+                return {
+                    label: 'Warning',
+                    icon: 'alert-circle',
+                    color: 'text-yellow-700',
+                    bg: 'bg-yellow-100',
+                    description: `${failures} consecutive failures`
+                };
+            }
+
+            if (!job.isEnabled) {
+                return {
+                    label: 'Disabled',
+                    icon: 'x-circle',
+                    color: 'text-gray-700',
+                    bg: 'bg-gray-100',
+                    description: 'Manually disabled by user'
+                };
+            }
+
+            return {
+                label: 'Healthy',
+                icon: 'check-circle',
+                color: 'text-green-700',
+                bg: 'bg-green-100',
+                description: 'Running normally'
+            };
+        }
+
+        // Check for auto-paused jobs and show banner
+        function checkForPausedJobs() {
+            const pausedJobs = allJobs.filter(j => j.tags && j.tags.includes('circuit-breaker'));
+            const banner = document.getElementById('auto-paused-banner');
+
+            if (pausedJobs.length > 0) {
+                document.getElementById('paused-jobs-count').textContent = pausedJobs.length;
+                banner.classList.remove('hidden');
+                banner.style.display = '';
+            } else {
+                banner.classList.add('hidden');
+                banner.style.display = 'none';
+            }
+
+            lucide.createIcons();
+        }
+
+        // Filter to show only paused jobs
+        function filterPausedJobs() {
+            const healthFilter = document.getElementById('filter-health');
+            if (healthFilter) {
+                healthFilter.value = 'auto-paused';
+                applyFilters();
+            }
+        }
+
+        // Dismiss the banner
+        function dismissBanner() {
+            const banner = document.getElementById('auto-paused-banner');
+            banner.classList.add('hidden');
+            banner.style.display = 'none';
+            localStorage.setItem('jobs_bannerDismissed', Date.now());
+        }
+
+
+        // Show banner again after 7 days
+        document.addEventListener('DOMContentLoaded', () => {
+            const banner = document.getElementById('auto-paused-banner');
+            const dismissedAt = localStorage.getItem('jobs_bannerDismissed');
+            const sevenDays = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+            // Show banner again if never dismissed or it's been 7+ days
+            if (!dismissedAt || (Date.now() - dismissedAt) > sevenDays) {
+                banner.classList.remove('hidden');
+                localStorage.removeItem('jobs_bannerDismissed');
+            } else {
+                banner.classList.add('hidden');
+            }
+        });
+
+        // Resume an auto-paused job
+        async function resumeJob(jobId) {
+            if (!confirm('Resume this job? Make sure you\'ve fixed the underlying issue that caused failures.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/resume`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Job resumed successfully! It will run according to its schedule.', 'success');
+                    await loadJobs();
+                } else {
+                    const error = await response.text();
+                    showToast('Failed to resume job: ' + error, 'error');
+                }
+            } catch (error) {
+                showToast('error', 'Network error: ' + error.message);
+            }
+        }
+
+        // Reset failure counter
+        async function acknowledgeFailures(jobId) {
+            if (!confirm('Reset failure counter? This will give the job a fresh start.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/jobs/${jobId}/acknowledge-failures`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Failure counter reset', 'success');
+                    await loadJobs();
+                } else {
+                    showToast('Failed to reset counter', 'error');
+                }
+            } catch (error) {
+                showToast('Failed to reset counter', 'error');
+            }
+        }
+
+        function renderJobs() {
+            const jobsTbody = document.getElementById('jobs-tbody');
+
+            if (!filteredJobs || filteredJobs.length === 0) {
+                jobsTbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center">
+                            <i data-lucide="briefcase" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-700 mb-2">No jobs found</p>
+                            <p class="text-gray-500">Create your first job to get started.</p>
+                        </td>
+                    </tr>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            jobsTbody.innerHTML = filteredJobs.map(job => {
+                const statusInfo = getStatusInfo(job.status);
+                const typeInfo = getJobTypeInfo(job.type);
+                const scheduleInfo = getScheduleInfo(job.scheduleType);
+                const healthInfo = getJobHealthStatus(job);
+
+                const scheduleTypeValue = typeof job.scheduleType === 'string' ? parseInt(job.scheduleType) : job.scheduleType;
+                
+                let scheduleDetails = '';
+                if (scheduleTypeValue === 1 && job.cronExpression) {
+                    scheduleDetails = `<code class="text-xs bg-gray-100 px-2 py-1 rounded">${escapeHtml(job.cronExpression)}</code>`;
+                } else if (scheduleTypeValue === 2 && job.intervalMinutes) {
+                    scheduleDetails = `Every ${job.intervalMinutes} min`;
+                } else if (scheduleTypeValue === 3 && job.startTime) {
+                    scheduleDetails = `Daily at ${job.startTime}`;
+                } else if (scheduleTypeValue === 4 && job.startTime) {
+                    scheduleDetails = `Weekly at ${job.startTime}`;
+                } else if (scheduleTypeValue === 5 && job.startTime) {
+                    scheduleDetails = `Monthly at ${job.startTime}`;
+                }
+
+                const lastRun = formatDateTime(job.lastRunTime);
+                const lastRunRelative = formatRelativeTime(job.lastRunTime);
+                const nextRun = formatDateTime(job.nextRunTime);
+
+                return `
+                    <tr class="hover:bg-gray-50 transition-colors duration-150" id="job-row-${job.id}">
+                        <td class="px-6 py-4">
+                            <button onclick="toggleJobDetails(${job.id})" class="text-gray-400 hover:text-gray-600 focus:outline-none transition-transform duration-200" id="expand-btn-${job.id}">
+                                <i data-lucide="chevron-right" class="h-4 w-4"></i>
+                            </button>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-start space-x-3">
+                                <div class="flex-shrink-0 mt-1">
+                                    <div class="h-10 w-10 rounded-lg ${typeInfo.color.replace('text', 'bg').replace('600', '100')} flex items-center justify-center">
+                                        <i data-lucide="${typeInfo.icon}" class="h-5 w-5 ${typeInfo.color}"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center space-x-2">
+                                        <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(job.name)}</p>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${healthInfo.bg} ${healthInfo.color}">
+                                            <i data-lucide="${healthInfo.icon}" class="h-3 w-3 mr-1"></i>
+                                            ${healthInfo.label}
+                                        </span>
+                                    </div>
+                                    ${job.description ? `<p class="text-xs text-gray-500 mt-1">${escapeHtml(job.description)}</p>` : ''}
+                                    ${(job.tags && job.tags.includes('circuit-breaker')) ? `
+                                        <div class="mt-2 inline-flex items-center px-2 py-1 rounded bg-red-50 border border-red-200 text-red-800 text-xs">
+                                            <i data-lucide="pause-circle" class="h-3 w-3 mr-1"></i>
+                                            <span><strong>Auto-paused</strong> after 10 consecutive job failures. Requires manual resume to re-enable.</span>
+                                        </div>
+                                    ` : (job.consecutiveFailures >= 3) ? `
+                                        <div class="mt-2 inline-flex items-center px-2 py-1 rounded bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs">
+                                            <i data-lucide="alert-circle" class="h-3 w-3 mr-1"></i>
+                                            <span><strong>${job.consecutiveFailures} failures in a row</strong></span>
+                                        </div>
+                                    ` : ''}
+                                    <div class="flex items-center mt-2 space-x-4 text-xs text-gray-500">
+                                        <span class="flex items-center">
+                                            <i data-lucide="${typeInfo.icon}" class="h-3 w-3 mr-1"></i>
+                                            ${typeInfo.label}
+                                        </span>
+                                        ${job.tags && !job.tags.includes('circuit-breaker') ? `
+                                            <span class="flex items-center">
+                                                <i data-lucide="tag" class="h-3 w-3 mr-1"></i>
+                                                ${escapeHtml(job.tags).split(',').slice(0, 2).join(', ')}
+                                            </span>
+                                        ` : ''}
+                                        ${job.profileId && job.profileName ? `<span class="flex items-center"><i data-lucide="file-code" class="h-3 w-3 mr-1"></i>${escapeHtml(job.profileName)}</span>` : job.profileId ? `<span class="flex items-center"><i data-lucide="file-code" class="h-3 w-3 mr-1"></i>Profile #${job.profileId}</span>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="${scheduleInfo.icon}" class="h-4 w-4 ${scheduleInfo.color}"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">${scheduleInfo.label}</p>
+                                    ${scheduleDetails ? `<p class="text-xs text-gray-500 mt-1">${scheduleDetails}</p>` : ''}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1">Last Run</p>
+                                    <p class="text-sm font-medium text-gray-900">${lastRunRelative || lastRun}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-500 mb-1">Next Run</p>
+                                    <p class="text-sm font-medium ${scheduleTypeValue === 0 ? 'text-gray-400' : 'text-gray-900'}">${scheduleTypeValue === 0 ? 'Manual' : nextRun}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color}">
+                                <i data-lucide="${statusInfo.icon}" class="h-3 w-3 mr-1"></i>
+                                ${statusInfo.label}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right text-sm font-medium">
+                            <div class="relative inline-block text-left">
+                                <button onclick="toggleJobMenu(${job.id}, event)" id="job-menu-btn-${job.id}" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                    <i data-lucide="more-vertical" class="h-5 w-5"></i>
+                                </button>
+                                <div id="job-menu-${job.id}" class="hidden fixed mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                    <div class="py-1">
+                                        <button onclick="event.stopPropagation(); triggerJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i data-lucide="play" class="h-4 w-4 inline mr-2"></i>
+                                            Run Now
+                                        </button>
+                                        <button onclick="event.stopPropagation(); editJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i data-lucide="edit" class="h-4 w-4 inline mr-2"></i>
+                                            Edit
+                                        </button>
+                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); viewJobHistory(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                            <i data-lucide="history" class="h-4 w-4 inline mr-2"></i>
+                                            History
+                                        </button>
+                                        ${(job.tags && job.tags.includes('circuit-breaker')) ? `
+                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); resumeJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 border-t border-gray-200">
+                                                <i data-lucide="play" class="h-4 w-4 inline mr-2"></i>
+                                                Resume Job Now
+                                            </button>
+                                        ` : ''}
+                                        ${(job.consecutiveFailures >= 3 && job.consecutiveFailures < 10) ? `
+                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); acknowledgeFailures(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 border-t border-gray-200">
+                                                <i data-lucide="check-circle" class="h-4 w-4 inline mr-2"></i>
+                                                Reset Failures
+                                            </button>
+                                        ` : ''}
+                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); deleteJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-200">
+                                            <i data-lucide="trash-2" class="h-4 w-4 inline mr-2"></i>
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="job-details-${job.id}" class="hidden bg-gray-50">
+                        <td colspan="6" class="px-6 py-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Configuration</h4>
+                                    <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                        <div>
+                                            <dt class="text-gray-500">Priority:</dt>
+                                            <dd class="font-medium">${['Low', 'Normal', 'High', 'Critical'][job.priority] || 'Normal'}</dd>
+                                        </div>
+                                        <div>
+                                            <dt class="text-gray-500">Max Retries:</dt>
+                                            <dd class="font-medium">${job.maxRetries || 0}</dd>
+                                        </div>
+                                        <div>
+                                            <dt class="text-gray-500">Timeout:</dt>
+                                            <dd class="font-medium">${job.timeoutMinutes || 0} min</dd>
+                                        </div>
+                                        <div>
+                                            <dt class="text-gray-500">Concurrent:</dt>
+                                            <dd class="font-medium">${job.allowConcurrent ? 'Yes' : 'No'}</dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-3">Details</h4>
+                                    <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                        ${job.profileId ? `
+                                        <div>
+                                            <dt class="text-gray-500">Profile:</dt>
+                                            <dd class="font-medium text-blue-600">${escapeHtml(job.profileName || 'Unknown')}</dd>
+                                        </div>
+                                        ` : ''}
+                                        ${job.destinationId ? `
+                                        <div>
+                                            <dt class="text-gray-500">Destination:</dt>
+                                            <dd class="font-medium text-blue-600">${escapeHtml(destinations.find(d => d.id === job.destinationId)?.name || 'Unknown')}</dd>
+                                        </div>
+                                        ` : ''}
+                                        <div>
+                                            <dt class="text-gray-500">Created:</dt>
+                                            <dd class="font-medium text-xs">${formatDateTime(job.createdAt)}</dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button onclick="viewJobHistory(${job.id})" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                                    <i data-lucide="external-link" class="h-4 w-4 mr-1"></i>
+                                    View Full Execution History
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            lucide.createIcons();
+        }
+
+        function toggleJobMenu(jobId, event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            
+            const menu = document.getElementById(`job-menu-${jobId}`);
+            const button = document.getElementById(`job-menu-btn-${jobId}`);
+            const isCurrentlyHidden = menu.classList.contains('hidden');
+            
+            // Close all other menus
+            document.querySelectorAll('[id^="job-menu-"]:not([id*="-btn-"])').forEach(m => {
+                m.classList.add('hidden');
+            });
+            
+            // Toggle current menu
+            if (isCurrentlyHidden) {
+                // Position the menu relative to the button (using viewport coordinates)
+                const buttonRect = button.getBoundingClientRect();
+                
+                // Position below the button, aligned to the right
+                menu.style.top = `${buttonRect.bottom + 5}px`;
+                menu.style.right = `${window.innerWidth - buttonRect.right}px`;
+                menu.style.left = 'auto';
+                
+                menu.classList.remove('hidden');
+            }
+        }
+
+        function closeJobMenu(jobId) {
+            const menu = document.getElementById(`job-menu-${jobId}`);
+            if (menu) {
+                menu.classList.add('hidden');
+            }
+        }
+
+        function toggleJobDetails(jobId) {
+            const detailsRow = document.getElementById(`job-details-${jobId}`);
+            const expandBtn = document.getElementById(`expand-btn-${jobId}`);
+            
+            detailsRow.classList.toggle('hidden');
+            
+            const icon = expandBtn.querySelector('i');
+            if (detailsRow.classList.contains('hidden')) {
+                expandBtn.style.transform = 'rotate(0deg)';
+            } else {
+                expandBtn.style.transform = 'rotate(90deg)';
+            }
+            
+            lucide.createIcons();
+        }
+
+        async function triggerJob(id) {
+            try {
+                const response = await fetch(`${API_BASE}/${id}/trigger`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Job triggered successfully', 'success');
+                    await pollJobStatus(id);
+                } else {
+                    const error = await response.json();
+                    showToast(`Error: ${error.message || 'Failed to trigger job'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function pollJobStatus(jobId, maxAttempts = 30, intervalMs = 1000) {
+            let attempts = 0;
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`${API_BASE}/${jobId}`, {
+                        headers: getAuthHeaders()
+                    });
+                    if (response.ok) {
+                        const job = await response.json();
+                        if (job.status !== 2 && job.status !== 1) {
+                            await loadJobs();
+                            await loadQueueMetrics();
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore errors, try again
+                }
+                await new Promise(res => setTimeout(res, intervalMs));
+                attempts++;
+            }
+            await loadJobs();
+            await loadQueueMetrics();
+        }
+
+        async function editJob(id) {
+            document.querySelectorAll('[id^="job-menu-"]').forEach(menu => menu.classList.add('hidden'));
+            
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    showToast('Failed to load job', 'error');
+                    return;
+                }
+
+                const job = await response.json();
+                
+                // Load profiles and destinations first, so dropdown options are available
+                await loadProfilesAndDestinations();
+                
+                document.getElementById('job-name').value = job.name || '';
+                document.getElementById('job-description').value = job.description || '';
+                document.getElementById('job-type').value = job.type || '';
+                document.getElementById('job-profileId').value = job.profileId || '';
+                document.getElementById('job-destinationId').value = job.destinationId || '';
+
+                // Update destination field state based on selected profile type
+                updateDestinationFieldState();
+
+                // Convert schedule type string to number if needed
+                let scheduleTypeValue = job.scheduleType;
+                if (typeof scheduleTypeValue === 'string' && scheduleTypeEnumMap.hasOwnProperty(scheduleTypeValue)) {
+                    scheduleTypeValue = scheduleTypeEnumMap[scheduleTypeValue];
+                } else if (typeof scheduleTypeValue === 'string') {
+                    scheduleTypeValue = parseInt(scheduleTypeValue) || 0;
+                } else {
+                    scheduleTypeValue = scheduleTypeValue || 0;
+                }
+                document.getElementById('job-scheduleType').value = scheduleTypeValue;
+                
+                updateScheduleFields();
+
+                document.getElementById('job-priority').value = job.priority || 1;
+                document.getElementById('job-maxRetries').value = job.maxRetries || 3;
+                document.getElementById('job-timeoutMinutes').value = job.timeoutMinutes || 60;
+                document.getElementById('job-allowConcurrent').checked = job.allowConcurrent || false;
+                document.getElementById('job-tags').value = job.tags || '';
+                document.getElementById('job-enabled').checked = job.isEnabled;
+                document.getElementById('job-autoPauseEnabled').checked = job.autoPauseEnabled !== undefined ? job.autoPauseEnabled : true;
+
+                if (scheduleTypeValue === 1 && job.cronExpression) {
+                    const cronField = document.getElementById('job-cronExpression');
+                    if (cronField) cronField.value = job.cronExpression;
+                } else if (scheduleTypeValue === 2 && job.intervalMinutes !== undefined) {
+                    const intervalField = document.getElementById('job-intervalMinutes');
+                    if (intervalField) intervalField.value = job.intervalMinutes;
+                } else if (scheduleTypeValue === 3 && job.startTime) {
+                    const startTimeField = document.getElementById('job-startTime');
+                    if (startTimeField) startTimeField.value = job.startTime;
+                } else if (scheduleTypeValue === 4) {
+                    // Weekly: populate start time and weekdays
+                    const startTimeField = document.getElementById('job-startTime');
+                    if (startTimeField && job.startTime) {
+                        startTimeField.value = job.startTime;
+                    }
+
+                    // Check the appropriate weekday checkboxes
+                    if (job.weekDays) {
+                        const weekDayArray = job.weekDays.split(',').map(d => d.trim());
+                        weekDayArray.forEach(day => {
+                            const checkbox = document.getElementById(`job-weekday-${day}`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        });
+                    }
+                } else if (scheduleTypeValue === 5 && job.startTime) {
+                    // Monthly: populate start time and day of month
+                    const startTimeField = document.getElementById('job-startTime');
+                    if (startTimeField) startTimeField.value = job.startTime;
+
+                    const monthDayField = document.getElementById('job-monthday');
+                    if (monthDayField && job.monthDay) monthDayField.value = job.monthDay;
+                }
+
+                const form = document.getElementById('add-job-form');
+                form.setAttribute('data-edit-id', id);
+
+                document.getElementById('job-modal-title').textContent = 'Edit Job';
+                
+                showJobTab('jobGeneral');
+                
+                const webhooksTabButton = document.getElementById('jobWebhooksTabButton');
+                webhooksTabButton.disabled = false;
+                webhooksTabButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                await loadJobWebhooks(id);
+
+                document.getElementById('add-job-modal').classList.remove('hidden');
+                
+                lucide.createIcons();
+            } catch (error) {
+                showToast(`Error loading job: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteJob(id) {
+            if (!confirm('Are you sure you want to delete this job?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/${id}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Job deleted successfully', 'success');
+                    await loadJobs();
+                } else {
+                    const error = await response.json();
+                    showToast(`Error: ${error.message || 'Failed to delete job'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function viewJobHistory(jobId) {
+            window.location.href = `/executions?jobId=${jobId}`;
+        }
+
+        document.getElementById('add-job-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const form = e.target;
+            const editId = form.getAttribute('data-edit-id');
+            const isEdit = !!editId;
+
+            const scheduleType = parseInt(document.getElementById('job-scheduleType').value);
+            
+            let cronExpression = null;
+            let intervalMinutes = null;
+            let startTime = null;
+            let weekDays = null;
+            let monthDay = null;
+
+            if (scheduleType === 1) {
+                cronExpression = document.getElementById('job-cronExpression')?.value || null;
+            } else if (scheduleType === 2) {
+                intervalMinutes = parseInt(document.getElementById('job-intervalMinutes')?.value) || null;
+            } else if (scheduleType === 3) {
+                startTime = document.getElementById('job-startTime')?.value || null;
+            } else if (scheduleType === 4) {
+                // Weekly: collect selected weekdays
+                startTime = document.getElementById('job-startTime')?.value || null;
+                const selectedDays = Array.from(document.querySelectorAll('input[id^="job-weekday-"]:checked'))
+                    .map(cb => cb.value)
+                    .sort();
+
+                if (selectedDays.length === 0) {
+                    showToast('Please select at least one day for weekly schedule', 'error');
+                    return;
+                }
+
+                weekDays = selectedDays.join(',');
+            } else if (scheduleType === 5) {
+                // Monthly: collect day of month
+                startTime = document.getElementById('job-startTime')?.value || null;
+                monthDay = parseInt(document.getElementById('job-monthday')?.value) || null;
+            }
+
+            const jobName = document.getElementById('job-name').value;
+            const job = {
+                name: jobName,
+                description: document.getElementById('job-description').value,
+                type: document.getElementById('job-type').value,
+                profileId: parseInt(document.getElementById('job-profileId').value) || null,
+                destinationId: parseInt(document.getElementById('job-destinationId').value) || null,
+                scheduleType: scheduleType,
+                cronExpression: cronExpression,
+                intervalMinutes: intervalMinutes,
+                startTime: startTime,
+                weekDays: weekDays,
+                monthDay: monthDay,
+                priority: parseInt(document.getElementById('job-priority').value),
+                maxRetries: parseInt(document.getElementById('job-maxRetries').value),
+                timeoutMinutes: parseInt(document.getElementById('job-timeoutMinutes').value),
+                allowConcurrent: document.getElementById('job-allowConcurrent').checked,
+                tags: document.getElementById('job-tags').value,
+                isEnabled: document.getElementById('job-enabled').checked,
+                autoPauseEnabled: document.getElementById('job-autoPauseEnabled').checked
+            };
+
+            if (isEdit) {
+                job.id = parseInt(editId);
+            }
+
+            try {
+                // Check for duplicate name (only when creating new job)
+                if (!isEdit) {
+                    try {
+                        const existingJobs = await fetch(API_BASE, {
+                            headers: getAuthHeaders()
+                        });
+
+                        if (existingJobs.ok) {
+                            const jobs = await existingJobs.json();
+                            // Handle both array and paginated response
+                            const jobsList = Array.isArray(jobs) ? jobs : (jobs.data || []);
+                            const duplicate = jobsList.find(j => j.name.toLowerCase() === jobName.toLowerCase());
+
+                            if (duplicate) {
+                                showToast(`Job with name "${jobName}" already exists. Please use a different name.`, 'error');
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking for duplicate jobs:', error);
+                        // Continue anyway, let the server handle it
+                    }
+                }
+                const url = isEdit ? `${API_BASE}/${editId}` : API_BASE;
+                const method = isEdit ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(job)
+                });
+
+                if (response.ok) {
+                    showToast(`Job ${isEdit ? 'updated' : 'created'} successfully`, 'success');
+                    closeAddJobModal();
+                    await loadJobs();
+                } else {
+                    const error = await response.json();
+                    showToast(`Error: ${error.message || 'Failed to save job'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        async function loadJobWebhooks(jobId) {
+            try {
+                const response = await fetch(`/api/webhooks?jobId=${jobId}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to load webhooks');
+                    return;
+                }
+
+                const webhooks = await response.json();
+                const webhooksList = document.getElementById('jobWebhooksList');
+
+                if (!webhooks || webhooks.length === 0) {
+                    webhooksList.innerHTML = `
+                        <div class="text-center py-6 text-gray-500">
+                            <i data-lucide="link-2-off" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                            <p>No webhooks configured for this job</p>
+                            <p class="text-sm mt-1">Click "Create Webhook" to add one</p>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                    return;
+                }
+
+                webhooksList.innerHTML = webhooks.map(webhook => {
+                    const statusColor = webhook.isActive ? 'text-green-600' : 'text-gray-400';
+                    const statusBadge = webhook.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+                    const statusText = webhook.isActive ? 'Active' : 'Inactive';
+                    const lastTriggered = webhook.lastTriggeredAt
+                        ? `Last triggered: ${formatDateTime(webhook.lastTriggeredAt)}`
+                        : 'Never triggered';
+
+                    return `
+                        <div class="border rounded-lg p-4 ${webhook.isActive ? 'bg-white' : 'bg-gray-50'}">
+                            <div class="flex items-start justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge}">
+                                            ${statusText}
+                                        </span>
+                                        <span class="text-sm text-gray-500">Triggered ${webhook.triggerCount || 0} times</span>
+                                    </div>
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <code class="flex-1 px-3 py-2 bg-gray-100 rounded text-xs font-mono text-gray-700 overflow-x-auto">
+                                            ${window.location.origin}/webhooks/${webhook.token}
+                                        </code>
+                                        <button onclick="copyJobWebhookUrl('${webhook.token}')" class="p-2 text-gray-400 hover:text-gray-600" title="Copy URL">
+                                            <i data-lucide="copy" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                    <p class="text-xs text-gray-500">${lastTriggered}</p>
+                                </div>
+                                <div class="ml-4 flex flex-col space-y-1">
+                                    <button onclick="toggleJobWebhook(${webhook.id}, ${webhook.isActive}, ${jobId})"
+                                            class="p-2 text-gray-400 hover:text-gray-600"
+                                            title="${webhook.isActive ? 'Disable' : 'Enable'}">
+                                        <i data-lucide="${webhook.isActive ? 'pause-circle' : 'play-circle'}" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="regenerateJobWebhookToken(${webhook.id}, ${jobId})"
+                                            class="p-2 text-yellow-400 hover:text-yellow-600"
+                                            title="Regenerate Token">
+                                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="testJobWebhook('${webhook.token}')"
+                                            class="p-2 text-blue-400 hover:text-blue-600"
+                                            title="Test Webhook">
+                                        <i data-lucide="send" class="w-4 h-4"></i>
+                                    </button>
+                                    <button onclick="deleteJobWebhook(${webhook.id}, ${jobId})"
+                                            class="p-2 text-red-400 hover:text-red-600"
+                                            title="Delete">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading webhooks:', error);
+            }
+        }
+
+        async function createJobWebhook() {
+            const form = document.getElementById('add-job-form');
+            const jobId = form.getAttribute('data-edit-id');
+
+            if (!jobId) {
+                showToast('Please save the job first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/webhooks', {
+                    method: 'POST',
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ jobId: parseInt(jobId) })
+                });
+
+                if (response.ok) {
+                    const webhook = await response.json();
+                    showToast('Webhook created successfully', 'success');
+                    await loadJobWebhooks(jobId);
+                    showJobWebhookToken(webhook.token, jobId);
+                } else {
+                    const error = await response.json();
+                    showToast(`Error: ${error.message || 'Failed to create webhook'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteJobWebhook(webhookId, jobId) {
+            if (!confirm('Are you sure you want to delete this webhook?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast('Webhook deleted successfully', 'success');
+                    await loadJobWebhooks(jobId);
+                } else {
+                    const error = await response.json();
+                    showToast(`Error: ${error.message || 'Failed to delete webhook'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function copyJobWebhookUrl(token) {
+            const url = `${window.location.origin}/webhooks/${token}`;
+            const success = await copyToClipboard(url);
+            if (success) {
+                showToast('Webhook URL copied to clipboard', 'success');
+            } else {
+                showToast('Failed to copy URL', 'error');
+            }
+        }
+
+        async function toggleJobWebhook(webhookId, isActive, jobId) {
+            const action = isActive ? 'disable' : 'enable';
+
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}/${action}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    showToast(`Webhook ${action}d successfully`, 'success');
+                    await loadJobWebhooks(jobId);
+                } else {
+                    showToast(`Error ${action}ing webhook`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error ${action}ing webhook`, 'error');
+            }
+        }
+
+        async function regenerateJobWebhookToken(webhookId, jobId) {
+            if (!confirm('Are you sure you want to regenerate the token? The old token will stop working immediately.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/webhooks/${webhookId}/regenerate`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    showToast('Token regenerated successfully', 'success');
+                    await loadJobWebhooks(jobId);
+                    showJobWebhookToken(data.token, jobId);
+                } else {
+                    showToast('Error regenerating webhook token', 'error');
+                }
+            } catch (error) {
+                showToast('Error regenerating webhook token', 'error');
+            }
+        }
+
+        function testJobWebhook(token) {
+            const url = `${window.location.origin}/webhooks/${token}`;
+            const curlCommand = `curl -X POST "${url}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"parameters": {"key": "value"}}'`;
+
+            const modal = `
+                <div id="testJobWebhookModal" class="fixed z-[60] inset-0 overflow-y-auto">
+                    <div class="flex items-center justify-center min-h-screen px-4">
+                        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeTestJobWebhookModal()"></div>
+                        <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+                            <div class="flex items-start justify-between mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">Test Webhook</h3>
+                                <button onclick="closeTestJobWebhookModal()" class="text-gray-400 hover:text-gray-600">
+                                    <i data-lucide="x" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-2">Use this curl command to test the webhook:</p>
+                                    <div class="bg-gray-900 text-gray-100 rounded p-4 font-mono text-xs overflow-x-auto">
+                                        ${curlCommand}
+                                    </div>
+                                    <button onclick="copyToClipboard(\`${curlCommand.replace(/`/g, '\\`')}\`).then(ok => showToast(ok ? 'Command copied!' : 'Failed to copy', ok ? 'success' : 'error'));"
+                                            class="mt-2 text-sm text-blue-600 hover:text-blue-700">
+                                        <i data-lucide="copy" class="w-4 h-4 inline mr-1"></i>
+                                        Copy command
+                                    </button>
+                                </div>
+                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                                    <p class="text-sm text-blue-700">
+                                        <strong>Tip:</strong> You can add custom parameters in the JSON body to pass data to your job.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end">
+                                <button onclick="closeTestJobWebhookModal()"
+                                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modal);
+            lucide.createIcons();
+        }
+
+        function closeTestJobWebhookModal() {
+            const modal = document.getElementById('testJobWebhookModal');
+            if (modal) modal.remove();
+        }
+
+        function showJobWebhookToken(token, jobId) {
+            const webhookUrl = `${window.location.origin}/webhooks/${token}`;
+            
+            const modal = `
+                <div id="jobWebhookTokenModal" class="fixed z-50 inset-0 overflow-y-auto">
+                    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+                        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                                <div class="sm:flex sm:items-start">
+                                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <i data-lucide="link" class="h-6 w-6 text-blue-600"></i>
+                                    </div>
+                                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+                                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Webhook URL</h3>
+                                        <p class="text-sm text-gray-500 mb-3">Use this URL to trigger the job from external systems:</p>
+                                        <div class="bg-gray-50 rounded p-3 mb-3">
+                                            <code class="text-xs break-all">${webhookUrl}</code>
+                                        </div>
+                                        <button onclick="copyToClipboard('${webhookUrl}').then(ok => showToast(ok ? 'URL copied to clipboard' : 'Failed to copy', ok ? 'success' : 'error'));"
+                                                class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm mb-3">
+                                            <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+                                            Copy URL
+                                        </button>
+                                        <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                                            <p class="text-sm text-blue-700">
+                                                <strong>Example:</strong><br>
+                                                <code class="text-xs">curl -X POST ${webhookUrl}</code>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                                <button onclick="closeJobWebhookTokenModal()" 
+                                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                    <i data-lucide="check" class="w-4 h-4 mr-2"></i>
+                                    Done
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modal);
+            lucide.createIcons();
+        }
+
+        function closeJobWebhookTokenModal() {
+            const modal = document.getElementById('jobWebhookTokenModal');
+            if (modal) modal.remove();
+        }
+
+        let userMenuExpanded = false;
+
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
+        // Close menus when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('[id^="job-menu-btn-"]') && !e.target.closest('[id^="job-menu-"]:not([id*="-btn-"])')) {
+                document.querySelectorAll('[id^="job-menu-"]:not([id*="-btn-"])').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await requireAuth();
+            lucide.createIcons();
+            await loadFilterData();
+            await loadJobs();
+            setInterval(loadJobs, 10000);
+            
+            const createJobWebhookBtn = document.getElementById('createJobWebhookBtn');
+            if (createJobWebhookBtn) {
+                createJobWebhookBtn.addEventListener('click', createJobWebhook);
+            }
+        });
+    </script>
+</body>
+</html>

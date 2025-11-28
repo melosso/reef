@@ -1,0 +1,95 @@
+{{~ for row in rows ~}}
+<?xml version="1.0" encoding="UTF-8"?>
+<Order xmlns="urn:oasis:names:specification:ubl:schema:xsd:Order-2"
+       xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+       xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:Order-2 http://docs.oasis-open.org/ubl/os-ubl-2.1/xsd/maindoc/UBL-Order-2.1.xsd">
+
+    <cbc:UBLVersionID>{{~ row.ubl_version | html.escape ~}}</cbc:UBLVersionID>
+    <cbc:CustomizationID>{{~ row.customization_id | html.escape ~}}</cbc:CustomizationID>
+    <cbc:ID>{{~ row.order_id | html.escape ~}}</cbc:ID>
+    <cbc:IssueDate>{{~ row.issue_date | html.escape ~}}</cbc:IssueDate>
+    <cbc:Note>{{~ row.note | html.escape ~}}</cbc:Note>
+    <cbc:DocumentCurrencyCode listID="ISO 4217">{{~ row.currency | html.escape ~}}</cbc:DocumentCurrencyCode>
+
+    <!-- Buyer (Customer) -->
+    {{~ buyer = parse_json(row.buyer_party_json) ~}}
+    <cac:BuyerCustomerParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ buyer.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ buyer.name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ buyer.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ buyer.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ buyer.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ buyer.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+            <cac:Contact><cbc:ElectronicMail>{{~ buyer.contact_email | html.escape ~}}</cbc:ElectronicMail></cac:Contact>
+        </cac:Party>
+    </cac:BuyerCustomerParty>
+
+    <!-- Seller (Supplier) -->
+    {{~ seller = parse_json(row.seller_party_json) ~}}
+    <cac:SellerSupplierParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ seller.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ seller.name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ seller.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ seller.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ seller.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ seller.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+        </cac:Party>
+    </cac:SellerSupplierParty>
+
+    <!-- Delivery -->
+    {{~ delivery = parse_json(row.delivery_json) ~}}
+    <cac:Delivery>
+        <cac:DeliveryLocation>
+            <cac:Address>
+                <cbc:StreetName>{{~ delivery.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ delivery.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ delivery.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ delivery.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:Address>
+        </cac:DeliveryLocation>
+        <cac:RequestedDeliveryPeriod>
+            <cbc:EndDate>{{~ delivery.delivery_date | html.escape ~}}</cbc:EndDate>
+        </cac:RequestedDeliveryPeriod>
+    </cac:Delivery>
+
+    <!-- Tax Total -->
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{~ row.total_tax | html.escape ~}}</cbc:TaxAmount>
+    </cac:TaxTotal>
+
+    <!-- Anticipated Monetary Total -->
+    <cac:AnticipatedMonetaryTotal>
+        <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:LineExtensionAmount>
+        <cbc:TaxExclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:TaxExclusiveAmount>
+        <cbc:TaxInclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:PayableAmount>
+    </cac:AnticipatedMonetaryTotal>
+
+    <!-- Order Lines -->
+    {{~ line_items = parse_json(row.line_items_json) ~}}
+    {{~ for item in line_items ~}}
+    <cac:OrderLine>
+        <cac:LineItem>
+            <cbc:ID>{{~ item.id | html.escape ~}}</cbc:ID>
+            <cbc:Quantity unitCode="{{~ item.unit_code | html.escape ~}}">{{~ item.quantity | html.escape ~}}</cbc:Quantity>
+            <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ item.net_total | html.escape ~}}</cbc:LineExtensionAmount>
+            <cac:Price>
+                <cbc:PriceAmount currencyID="{{~ row.currency ~}}">{{~ item.unit_price | html.escape ~}}</cbc:PriceAmount>
+            </cac:Price>
+            <cac:Item>
+                <cbc:Name>{{~ item.description | html.escape ~}}</cbc:Name>
+            </cac:Item>
+        </cac:LineItem>
+    </cac:OrderLine>
+    {{~ end ~}}
+
+</Order>
+{{~ end ~}}

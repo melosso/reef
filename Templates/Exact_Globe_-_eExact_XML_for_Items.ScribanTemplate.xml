@@ -1,0 +1,227 @@
+<?xml version="1.0" ?>
+<eExact xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="eExact-Schema.xsd">
+  <Timestamp>{{ date.now | date.to_string '%Y-%m-%d.%H:%M' }}</Timestamp>
+  
+  <Items>
+{{~ for row in rows ~}}
+    <Item code="{{ row.ItemCode }}" type="{{ row.Type }}" searchcode="{{ row.SearchCode }}">
+      <Description>{{ row.Description }}</Description>
+      
+      <MultiDescriptions>
+        {{~ for i in 0..4 ~}}
+        {{~ desc_field = "Description_" + i }}
+        {{~ desc_value = row[desc_field] }}
+        {{~ if desc_value != "" && desc_value != null ~}}
+        <MultiDescription number="{{ i }}">{{ desc_value }}</MultiDescription>
+        {{~ end ~}}
+        {{~ end ~}}
+      </MultiDescriptions>
+      
+      {{~ if row.AssortmentNumber != null ~}}
+      <Assortment number="{{ row.AssortmentNumber }}" Code="{{ row.AssortmentCode }}">
+        <Description>{{ row.AssortmentDescription }}</Description>
+      </Assortment>
+      {{~ end ~}}
+      
+      {{~ if row.AvailableFrom != null && row.AvailableFrom != "" ~}}
+      <Availability>
+        <DateStart>{{ row.AvailableFrom }}</DateStart>
+      </Availability>
+      {{~ end ~}}
+      
+      {{~ if row.Condition != null ~}}
+      <Condition>{{ row.Condition }}</Condition>
+      {{~ end ~}}
+      
+      <IsSalesItem>{{ row.IsSalesItem }}</IsSalesItem>
+      <IsPurchaseItem>{{ row.IsPurchaseItem }}</IsPurchaseItem>
+      <IsSerialNumberItem>{{ row.IsSerialNumberItem }}</IsSerialNumberItem>
+      <IsBatchItem>{{ row.IsBatchItem }}</IsBatchItem>
+      <IsSubAssemblyItem>{{ row.IsSubAssemblyItem }}</IsSubAssemblyItem>
+      <IsAssembledItem>{{ row.IsAssembledItem }}</IsAssembledItem>
+      <IsStockItem>{{ row.IsStockItem }}</IsStockItem>
+      <IsBackOrderItem>{{ row.IsBackOrderItem }}</IsBackOrderItem>
+      <IsFractionAllowedItem>{{ row.IsFractionAllowedItem }}</IsFractionAllowedItem>
+      <IsPriceRegulationItem>{{ row.IsPriceRegulationItem }}</IsPriceRegulationItem>
+      <IsTextItem>{{ row.IsTextItem }}</IsTextItem>
+      <IsDiscountItem>{{ row.IsDiscountItem }}</IsDiscountItem>
+      <IsExplodeItem>{{ row.IsExplodeItem }}</IsExplodeItem>
+      <IsPrintItem>{{ row.IsPrintItem }}</IsPrintItem>
+      <IsOutsourcedItem>{{ row.IsOutsourcedItem }}</IsOutsourcedItem>
+      
+      <Sales>
+        <Price type="S">
+          <Currency code="{{ row.SalesCurrency }}" />
+                    <Value>{{ (row.SalesPrice | default 0) | math.format '0.000' }}</Value>
+          {{~ if row.SalesVatCode != null && row.SalesVatCode != "" ~}}
+          <VAT code="{{ row.SalesVatCode }}">
+            <Description>{{ row.SalesVatDescription }}</Description>
+            <Percentage>{{ row.SalesVatPercentage }}</Percentage>
+          </VAT>
+          {{~ end ~}}
+        </Price>
+        <Unit code="{{ row.SalesUnit }}" />
+      </Sales>
+      
+      <Costs>
+        <Price>
+          <Currency code="{{ row.CostCurrency }}" />
+                    <Value>{{ (row.CostPrice | default 0) | math.format '0.00000' }}</Value>
+        </Price>
+      </Costs>
+      
+      {{~ if row.NetWeight != null || row.GrossWeight != null ~}}
+      <Dimension>
+        {{~ if row.NetWeight != null ~}}
+        <WeightNet>{{ row.NetWeight | math.format '0.00000' }}</WeightNet>
+        {{~ end ~}}
+        {{~ if row.GrossWeight != null ~}}
+        <WeightGross>{{ row.GrossWeight | math.format '0.00000' }}</WeightGross>
+        {{~ end ~}}
+      </Dimension>
+      {{~ end ~}}
+      
+      <FreeFields>
+        <FreeTexts>
+          {{~ for i in 1..5 ~}}
+          {{~ field_name = "FreeText" + i }}
+          {{~ field_value = row[field_name] }}
+                    {{~ if field_value != "" && field_value != null ~}}
+          <FreeText number="{{ i }}">{{ field_value }}</FreeText>
+          {{~ end ~}}
+          {{~ end ~}}
+        </FreeTexts>
+        
+        <FreeDates>
+          {{~ for i in 1..5 ~}}
+          {{~ field_name = "FreeDate" + i }}
+          {{~ field_value = row[field_name] }}
+                    {{~ if field_value != "" && field_value != null ~}}
+          <FreeDate number="{{ i }}">{{ field_value }}</FreeDate>
+          {{~ end ~}}
+          {{~ end ~}}
+        </FreeDates>
+        
+        <FreeNumbers>
+          {{~ for i in 1..5 ~}}
+          {{~ field_name = "FreeNumber" + i }}
+          {{~ field_value = row[field_name] }}
+                    {{~ if field_value != "" && field_value != null ~}}
+          <FreeNumber number="{{ i }}">{{ field_value | math.format '0.00000' }}</FreeNumber>
+          {{~ end ~}}
+          {{~ end ~}}
+        </FreeNumbers>
+        
+        <FreeYesNos>
+          {{~ for i in 1..5 ~}}
+          {{~ field_name = "FreeYesNo" + i }}
+          {{~ field_value = row[field_name] }}
+                    {{~ if field_value != "" && field_value != null ~}}
+          <FreeYesNo number="{{ i }}">{{ field_value }}</FreeYesNo>
+          {{~ end ~}}
+          {{~ end ~}}
+        </FreeYesNos>
+      </FreeFields>
+      
+      {{~ if row.Class1_Code != null && row.Class1_Code != "" ~}}
+      <ItemCategory number="{{ row.Class1_Id }}" code="{{ row.Class1_Code }}">
+        <Description>{{ row.Class1_Description }}</Description>
+      </ItemCategory>
+      {{~ end ~}}
+      {{~ if row.Class2_Code != null && row.Class2_Code != "" ~}}
+      <ItemCategory number="{{ row.Class2_Id }}" code="{{ row.Class2_Code }}">
+        <Description>{{ row.Class2_Description }}</Description>
+      </ItemCategory>
+      {{~ end ~}}
+      {{~ if row.Class3_Code != null && row.Class3_Code != "" ~}}
+      <ItemCategory number="{{ row.Class3_Id }}" code="{{ row.Class3_Code }}">
+        <Description>{{ row.Class3_Description }}</Description>
+      </ItemCategory>
+      {{~ end ~}}
+      {{~ if row.Class4_Code != null && row.Class4_Code != "" ~}}
+      <ItemCategory number="{{ row.Class4_Id }}" code="{{ row.Class4_Code }}">
+        <Description>{{ row.Class4_Description }}</Description>
+      </ItemCategory>
+      {{~ end ~}}
+      {{~ if row.Class5_Code != null && row.Class5_Code != "" ~}}
+      <ItemCategory number="{{ row.Class5_Id }}" code="{{ row.Class5_Code }}">
+        <Description>{{ row.Class5_Description }}</Description>
+      </ItemCategory>
+      {{~ end ~}}
+      
+            {{~ if row.SuppliersJSON != null ~}}
+      {{~ suppliers = row.SuppliersJSON | parse_json }}
+      {{~ for supplier in suppliers ~}}
+      <ItemAccounts default="{{ supplier.IsDefault }}">
+        <ItemAccount>
+          <Account code="{{ supplier.AccountCode }}" type="{{ supplier.AccountType }}" status="{{ supplier.AccountStatus }}">
+            <Name>{{ supplier.AccountName }}</Name>
+            <Creditor number="{{ supplier.CreditorNumber }}" code="{{ supplier.CreditorCode }}" />
+            <ItemCode>{{ row.ItemCode }}</ItemCode>
+            <SupplierPreference>{{ supplier.SupplierPreference }}</SupplierPreference>
+            {{~ if supplier.EANCode != null && supplier.EANCode != "" ~}}
+            <EANCode>{{ supplier.EANCode }}</EANCode>
+            {{~ end ~}}
+            <Purchase>
+              <Price type="P">
+                <Currency code="{{ row.PurchaseCurrency }}" />
+                                <Value>{{ (row.PurchasePrice | default 0) | math.format '0.000' }}</Value>
+              </Price>
+            </Purchase>
+            <Delivery>
+              <TimeInDays>{{ supplier.DeliveryTimeInDays }}</TimeInDays>
+              <FromStock>{{ supplier.DeliverableFromStock }}</FromStock>
+              <DropShip>{{ supplier.DropShip }}</DropShip>
+            </Delivery>
+          </Account>
+        </ItemAccount>
+      </ItemAccounts>
+      {{~ end ~}}
+      {{~ end ~}}
+      
+      {{~ if row.WarehousesJSON != null ~}}
+      {{~ warehouses = row.WarehousesJSON | parse_json }}
+      <ItemWarehouses>
+        {{~ for warehouse in warehouses ~}}
+        <ItemWarehouse default="{{ warehouse.IsDefault }}">
+          <Warehouse code="{{ warehouse.Warehouse }}" blocked="{{ warehouse.Blocked }}">
+            <Description>{{ warehouse.Description }}</Description>
+          </Warehouse>
+        </ItemWarehouse>
+        {{~ end ~}}
+      </ItemWarehouses>
+      {{~ end ~}}
+      
+      {{~ if row.ShelfLife != null ~}}
+      <ShelfLife>{{ row.ShelfLife }}</ShelfLife>
+      {{~ end ~}}
+      {{~ if row.Warranty != null ~}}
+      <Warranty>{{ row.Warranty }}</Warranty>
+      {{~ end ~}}
+      <IsServiceItem>{{ row.IsServiceItem }}</IsServiceItem>
+      {{~ if row.IntrastatEnabled != null ~}}
+      <IntrastatEnabled>{{ row.IntrastatEnabled }}</IntrastatEnabled>
+      {{~ end ~}}
+      {{~ if row.AddExtraReceiptToOrder != null ~}}
+      <AddExtraReceiptToOrder>{{ row.AddExtraReceiptToOrder }}</AddExtraReceiptToOrder>
+      {{~ end ~}}
+      {{~ if row.IsCommissionable != null ~}}
+      <IsCommissionable>{{ row.IsCommissionable }}</IsCommissionable>
+      {{~ end ~}}
+      {{~ if row.CommissionMethod != null && row.CommissionMethod != "" ~}}
+      <CommissionMethod>{{ row.CommissionMethod }}</CommissionMethod>
+      {{~ end ~}}
+      {{~ if row.CommissionValue != null ~}}
+      <CommissionValue>{{ row.CommissionValue | math.format '0.00000' }}</CommissionValue>
+      {{~ end ~}}
+      {{~ if row.TaxItemClassification != null ~}}
+      <TaxItemClassification>{{ row.TaxItemClassification }}</TaxItemClassification>
+      {{~ end ~}}
+      
+      <Created>{{ row.CreatedDate }}</Created>
+      <Modified>{{ row.ModifiedDate }}</Modified>
+            <UUID>{{ row.UUID }}</UUID>
+    </Item>
+{{~ end ~}}
+  </Items>
+</eExact>

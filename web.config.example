@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <system.webServer>
+
+    <!-- Enable ARR proxy -->
+    <proxy enabled="true" preserveHostHeader="true" reverseRewriteHostInResponseHeaders="false" />
+
+    <rewrite>
+      <rules>
+
+        <!-- Optional: redirect /api to /api/ -->
+        <rule name="ForceAPITrailingSlash" stopProcessing="true">
+          <match url="^api$" />
+          <action type="Redirect" url="/api/" redirectType="Permanent" />
+        </rule>
+
+        <!-- Proxy /health -->
+        <rule name="ProxyHealth" stopProcessing="true">
+          <match url="^health$" />
+          <action type="Rewrite" url="http://localhost:8085/health" />
+          <serverVariables>
+            <set name="HTTP_X_ORIGINAL_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="http" />
+          </serverVariables>
+        </rule>
+
+        <!-- Proxy /api and /api/... -->
+        <rule name="ProxyAPI" stopProcessing="true">
+          <match url="^api(/.*)?$" />
+          <action type="Rewrite" url="http://localhost:8085/api{R:1}" />
+          <serverVariables>
+            <set name="HTTP_X_ORIGINAL_HOST" value="{HTTP_HOST}" />
+            <set name="HTTP_X_FORWARDED_FOR" value="{REMOTE_ADDR}" />
+            <set name="HTTP_X_FORWARDED_PROTO" value="http" />
+          </serverVariables>
+        </rule>
+
+        <!-- Block all other requests → serve JSON -->
+        <rule name="BlockOther" stopProcessing="true">
+          <match url=".*" />
+          <conditions>
+            <add input="{REQUEST_URI}" pattern="^/health" negate="true" />
+            <add input="{REQUEST_URI}" pattern="^/api" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/error401.json" />
+        </rule>
+
+      </rules>
+    </rewrite>
+
+    <!-- Security headers -->
+    <httpProtocol>
+      <customHeaders>
+        <remove name="X-Powered-By" />
+        <remove name="X-Content-Type-Options" />
+        <remove name="X-Frame-Options" />
+        <remove name="Strict-Transport-Security" />
+        <remove name="Referrer-Policy" />
+        <remove name="Permissions-Policy" />
+        <remove name="Content-Security-Policy" />
+
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-Frame-Options" value="DENY" />
+        <add name="Strict-Transport-Security" value="max-age=31536000; includeSubDomains; preload" />
+        <add name="Referrer-Policy" value="strict-origin-when-cross-origin" />
+        <add name="Permissions-Policy" value="geolocation=(), camera=(), microphone=(), payment=()" />
+        <add name="Content-Security-Policy" 
+             value="default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; img-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' http://localhost:8085; manifest-src 'self'; font-src 'self';" />
+      </customHeaders>
+    </httpProtocol>
+
+  </system.webServer>
+</configuration>

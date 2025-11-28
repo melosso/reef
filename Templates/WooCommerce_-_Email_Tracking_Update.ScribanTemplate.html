@@ -1,0 +1,214 @@
+{{~ for row in rows ~}}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>A shipment for your order {{~ row.order_number | html.escape ~}} is on its way</title>
+  <style>
+    body { margin:0; padding:0; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; background-color:#f4f6f8; font-family: Roboto, Arial, sans-serif; }
+    table { border-collapse:collapse; }
+    img { border:0; line-height:100%; outline:none; text-decoration:none; }
+    .email-wrapper { width:100%; background:#f4f6f8; padding:24px 12px; }
+    .email-content { max-width:680px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+
+    /* Header */
+    .header { padding:24px 28px; border-bottom:1px solid #e8eaed; background-color:#fafafa; display:flex; justify-content:space-between; align-items:center; }
+    .header-left { display:flex; align-items:center; gap:12px; }
+    .header-logo { height:32px; width:auto; }
+    .header-title { font-size:18px; font-weight:700; color:#202124; }
+    .header-right { text-align:right; }
+    .order-number { font-size:13px; color:#5f6368; }
+
+    /* Body Section */
+    .email-body { padding:24px 28px; font-family: Roboto, Arial, sans-serif; color:#202124; }
+    h1 { font-size:20px; margin:0 0 12px 0; font-weight:500; }
+    p { font-size:14px; margin:0 0 14px 0; line-height:1.45; color:#3c4043; }
+    .muted { color:#70757a; }
+
+    /* Summary Cards */
+    .summary-grid { padding:0; display:flex; gap:12px; }
+    .summary-card { flex:1; padding:12px; background:#f8f9fa; border:1px solid #e8eaed; border-radius:6px; text-align:center; }
+    .summary-label { font-size:11px; text-transform:uppercase; color:#5f6368; letter-spacing:0.5px; }
+    .summary-value { font-size:16px; font-weight:700; display:block; margin-top:4px; }
+
+    /* Customer Info Section */
+    .customer-section { margin:20px 0; padding:12px; background:#f8f9fa; border-radius:6px; }
+    .customer-info { flex:1; font-size:13px; }
+    .customer-label { font-weight:600; color:#202124; margin-bottom:4px; }
+    .customer-value { color:#3c4043; }
+
+    /* Products Table */
+    .products-section { margin:20px 0; }
+    .products-table { width:100%; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; font-size:13px; }
+    .products-table th { background:#f1f3f4; padding:10px 12px; text-align:left; font-weight:600; color:#5f6368; border-bottom:2px solid #e0e0e0; }
+    .products-table td { padding:10px 12px; border-bottom:1px solid #f1f3f4; color:#3c4043; }
+    .products-table tr:last-child td { border-bottom:none; }
+    .products-table tr:nth-child(even) { background-color:#fafafa; }
+    .product-name { font-weight:500; }
+    .product-sku { font-size:12px; color:#70757a; }
+    .text-right { text-align:right; }
+
+    /* Buttons */
+    .btn { display:inline-block; padding:12px 18px; border-radius:6px; text-decoration:none; font-weight:500; font-family: Roboto, Arial, sans-serif; margin-top:16px; }
+    .btn-primary { background:#1a73e8; color:#ffffff; }
+    .btn-secondary { background:#dadce0; color:#202124; }
+
+    /* Footer */
+    .email-footer { padding:24px 28px; font-size:13px; font-family: Roboto, Arial, sans-serif; color:#5f6368; border-top:1px solid #e8eaed; }
+    .footer-main { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+    .footer-address { flex: 1; }
+    .footer-copyright { white-space: nowrap; }
+    .footer-secondary { font-size:12px; text-align:center; padding-top:16px; border-top:1px solid #f1f3f4; }
+    .footer-secondary a { color:#5f6368; text-decoration:underline; }
+
+    @media (max-width:600px) {
+      .header { flex-direction:column; align-items:flex-start; gap:12px; }
+      .header-right { text-align:left; }
+      .email-body { padding:18px; }
+      .email-footer { padding:20px; }
+      .tracking-info-grid { flex-direction:column; }
+      .footer-main { flex-direction:column; align-items:flex-start; gap:8px; }
+      .footer-copyright { align-self:flex-start; }
+      .items-table th, .items-table td { padding:8px; font-size:12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <table role="presentation" width="100%">
+      <tr>
+        <td align="center">
+          <table role="presentation" class="email-content" width="100%">
+
+            <!-- Header -->
+            <tr>
+              <td class="header">
+                <div class="header-left">
+                  {{~ if row.company_logo_url ~}}
+                    <img src="{{~ row.company_logo_url | html.escape ~}}" alt="{{~ row.company | html.escape ~}}" class="header-logo">
+                  {{~ end ~}}
+                  <div class="header-title">{{~ row.company | default "Tracking Update" | html.escape ~}}</div>
+                </div>
+                <div class="header-right">
+                  <div class="order-number">Order #{{~ row.order_number | html.escape ~}}</div>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td class="email-body">
+                <h1>Your order is on the way!</h1>
+                <p>{{~ row.greeting | default "Hi " + row.customer_name | html.escape ~}},</p>
+                <p>Great news! Your order has been shipped and is on its way to you.</p>
+
+                <!-- Tracking Summary Cards -->
+                <div class="summary-grid">
+                  {{~ if row.tracking_number ~}}
+                  <div class="summary-card">
+                    <div class="summary-label">Tracking Number</div>
+                    <div class="summary-value">{{~ row.tracking_number | html.escape ~}}</div>
+                  </div>
+                  {{~ end ~}}
+
+                  {{~ if row.carrier ~}}
+                  <div class="summary-card">
+                    <div class="summary-label">Carrier</div>
+                    <div class="summary-value">{{~ row.carrier | html.escape ~}}</div>
+                  </div>
+                  {{~ end ~}}
+
+                  {{~ if row.estimated_delivery_date ~}}
+                  <div class="summary-card">
+                    <div class="summary-label">Est. Delivery</div>
+                    <div class="summary-value">{{~ row.estimated_delivery_date | html.escape ~}}</div>
+                  </div>
+                  {{~ end ~}}
+                </div>
+
+                <!-- Shipping Address -->
+                {{~ if row.shipping_address_json ~}}
+                {{~ shipping = parse_json(row.shipping_address_json) ~}}
+                <div class="customer-section">
+                  <div class="customer-info">
+                    <div class="customer-label">Shipping To</div>
+                    <div class="customer-value">
+                      {{~ shipping.name | default "" | html.escape ~}}<br>
+                      {{~ shipping.street | default "" | html.escape ~}}<br>
+                      {{~ shipping.city | default "" ~}}{{~ if shipping.state ~}}, {{~ shipping.state | html.escape ~}}{{~ end ~}} {{~ shipping.postal | default "" | html.escape ~}}<br>
+                      {{~ shipping.country | default "" | html.escape ~}}
+                    </div>
+                  </div>
+                </div>
+                {{~ end ~}}
+
+                <!-- Products -->
+                {{~ if row.items_json ~}}
+                {{~ items = parse_json(row.items_json) ~}}
+                <div class="products-section">
+                  <table role="presentation" class="products-table" cellspacing="0" cellpadding="0" width="100%">
+                    <thead>
+                      <tr>
+                        <th width="70%">Product</th>
+                        <th width="30%" class="text-right">Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {{~ for item in items ~}}
+                      <tr>
+                        <td>
+                          <div class="product-name">{{~ item.product_name | html.escape ~}}</div>
+                          {{~ if item.sku ~}}<div class="product-sku">SKU: {{~ item.sku | html.escape ~}}</div>{{~ end ~}}
+                        </td>
+                        <td class="text-right">{{~ item.quantity | html.escape ~}}</td>
+                      </tr>
+                      {{~ end ~}}
+                    </tbody>
+                  </table>
+                </div>
+                {{~ end ~}}
+
+                <!-- CTA -->
+                {{~ if row.tracking_url ~}}
+                <div style="text-align:center;">
+                  <a href="{{~ row.tracking_url | html.escape ~}}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Track Your Package</a>
+                </div>
+                {{~ end ~}}
+
+                <!-- Closing -->
+                <p style="margin-top:20px;">
+                    Questions? 
+                    {{~ if row.support_email ~}}Contact us at <a href="mailto:{{~ row.support_email | html.escape ~}}" style="color:#1a73e8; text-decoration:underline;">{{~ row.support_email | html.escape ~}}</a>{{~ else ~}}Contact our support team{{~ end ~}}.
+                </p>
+                <p>Thanks,<br>{{~ row.sender_name | default ("The " + row.company + " team") | html.escape ~}}</p>
+
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td class="email-footer">
+                <div class="footer-main">
+                  <div class="footer-address muted">{{~ row.company | html.escape ~}} &nbsp;&middot;&nbsp; {{~ row.company_address | default "Your Company Address" | html.escape ~}}</div>
+                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 ~}}</div>
+                </div>
+
+                <div class="footer-secondary">
+                  {{~ if row.unsubscribe_url ~}}
+                    <a href="{{~ row.unsubscribe_url | html.escape ~}}">Unsubscribe from notifications</a>
+                  {{~ else ~}}
+                    <span class="muted">You are receiving this email because you made a purchase from {{~ row.company | html.escape ~}}.</span>
+                  {{~ end ~}}
+                </div>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>
+{{~ end ~}}

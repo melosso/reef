@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login &middot; Reef</title>
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* --- Animated Blob Background --- */
+        .background-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background-color: #111827; 
+        }
+
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(250px); 
+            opacity: 0.25;
+            will-change: transform;
+        }
+
+        .blob.color-1 {
+            background: #1e3a8a;
+            width: 450px;
+            height: 450px;
+            top: -100px;
+            left: -150px;
+            /* Slowed down animation */
+            animation: move-blob-1 35s infinite alternate ease-in-out;
+        }
+
+        .blob.color-2 {
+            background: #4c1d95;
+            width: 350px;
+            height: 350px;
+            bottom: -50px;
+            right: -100px;
+            /* Slowed down animation */
+            animation: move-blob-2 40s infinite alternate ease-in-out;
+        }
+        
+        .blob.color-3 {
+            background: #312e81;
+            width: 300px;
+            height: 300px;
+            top: 50%;
+            left: 50%;
+            /* Slowed down animation */
+            animation: move-blob-3 30s infinite alternate ease-in-out;
+        }
+
+        /* Keyframes are unchanged, just the duration */
+        @keyframes move-blob-1 {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(150px, 200px) scale(1.2); }
+        }
+
+        @keyframes move-blob-2 {
+            from { transform: translate(0, 0) scale(1); }
+            to { transform: translate(-200px, -100px) scale(0.9); }
+        }
+        
+        @keyframes move-blob-3 {
+            from { transform: translate(-50%, -50%) scale(1.1); }
+            to { transform: translate(-20px, -200px) scale(1); }
+        }
+
+
+        /* --- Fade-in animation for elements --- */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+
+        /* --- Slide-down animation for error messages --- */
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .error-slide-in {
+            animation: slideDown 0.3s ease-out forwards;
+        }
+
+        /* --- Spinner transitions --- */
+        #login-spinner {
+            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+        }
+
+        #login-spinner.hidden {
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        #login-text {
+            transition: opacity 0.3s ease-in;
+        }
+
+        /* --- Hive Overlay --- */
+        .hive-overlay {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            transition: transform 1.0s ease-out;
+            will-change: transform;
+        }
+
+        /* --- Subtle wave icon animation --- */
+        [data-lucide="waves"] {
+            animation: gentle-float 3s ease-in-out infinite;
+        }
+
+        @keyframes gentle-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-4px) rotate(2deg); }
+        }
+
+        .disable-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="text-gray-200 antialiased">
+
+    <div class="background-container">
+       <div class="blob color-1"></div>
+       <div class="blob color-2"></div>
+       <div class="blob color-3"></div>
+    </div>
+
+    <svg class="hive-overlay" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="hexPattern" x="0" y="0" width="100" height="86" patternUnits="userSpaceOnUse">
+            <polygon points="50,0 100,25 100,61 50,86 0,61 0,25"
+                     fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
+            </pattern>
+        </defs>
+
+        <g>
+            <rect width="200%" height="200%" fill="url(#hexPattern)"/>
+        </g>
+    </svg>
+    
+    <div id="login-page" class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">     
+        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/30 backdrop-blur-xl border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+            
+            <div class="flex flex-col items-center">
+                <div class="p-3 bg-blue-500/10 rounded-full">
+                    <i data-lucide="waves" class="h-10 w-10 text-blue-400"></i>
+                </div>
+                <h2 id="greeting-header" class="mt-4 text-3xl font-bold text-center text-white disable-select">
+                    Welcome to Reef
+                </h2>
+                <p class="mt-2 text-center text-sm text-gray-400 disable-select">
+                    A Lightweight Data Export Service
+                </p>
+            </div>
+            
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-300 disable-select">Username</label>
+                    <div class="mt-1">
+                        <input id="username" name="username" type="text" autocomplete="username" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="admin" value="">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-300 disable-select">Password</label>
+                    <div class="mt-1">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="••••••••" value="">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                    <label for="remember-me" class="text-sm font-medium text-gray-300">Remember me</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="remember-me" name="remember-me" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div>
+                    <button id="login-button" type="submit"
+                            class="flex w-full justify-center items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-md
+                                   /* --- Animations --- */
+                                   transition-all duration-200 ease-in-out
+                                   hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/50 hover:-translate-y-0.5
+                                   active:bg-blue-800 active:scale-[0.9 9]
+                                   /* --- Focus States --- */
+                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500
+                                   /* --- Disabled State --- */
+                                   disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md">
+                        
+                        <i id="login-spinner" data-lucide="loader-2" class="h-5 w-5 animate-spin hidden mr-2"></i>
+                        
+                        <span id="login-text">Sign In</span>
+                    </button>
+                </div>
+
+                <div id="error-container"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        // --- Dynamic Mouse-based Parallax for Hive ---
+        const hiveOverlay = document.querySelector('.hive-overlay');
+        if (hiveOverlay) {
+            const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+            if (!isTouchDevice()) {
+                window.addEventListener('mousemove', (e) => {
+                    const { clientX, clientY } = e;
+                    const { innerWidth, innerHeight } = window;
+                    
+                    const x = (clientX / innerWidth - 0.5) * 2; 
+                    const y = (clientY / innerHeight - 0.5) * 2;
+
+                    const moveX = x * -15;
+                    const moveY = y * -15;
+
+                    hiveOverlay.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                });
+            }
+        }
+        
+        // --- All your other JavaScript ---
+
+        // Greeting message logic
+        (function setGreeting() {
+            const greetings = [
+                "Welcome back to Reef", "Hello from Reef", "Good to see you again on Reef",
+                "Ready to dive into Reef?", "Let's get started with Reef", "This is Reef",
+                "Sign in to Reef", "Login to Reef", "Reef is Ready",
+                "Start your session on Reef", "Enter your Reef credentials"
+            ];
+            const GREETING_KEY = 'reef_greeting';
+            const TIMESTAMP_KEY = 'reef_greeting_timestamp';
+            const VISIT_KEY = 'reef_visit_count';
+            const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; 
+
+            try {
+                const greetingHeader = document.getElementById('greeting-header');
+                if (!greetingHeader) return;
+                const cachedTimestamp = localStorage.getItem(TIMESTAMP_KEY);
+                const now = Date.now();
+                let visitCount = parseInt(localStorage.getItem(VISIT_KEY) || '0', 10);
+                if (visitCount === 0) {
+                    localStorage.setItem(VISIT_KEY, '1');
+                }
+                if (visitCount === 0 && !cachedTimestamp) {
+                    return;
+                }
+                const cachedGreeting = localStorage.getItem(GREETING_KEY);
+                if (cachedGreeting && cachedTimestamp && (now - parseInt(cachedTimestamp, 10) < CACHE_DURATION_MS)) {
+                    greetingHeader.textContent = cachedGreeting;
+                } else {
+                    const newGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+                    localStorage.setItem(GREETING_KEY, newGreeting);
+                    localStorage.setItem(TIMESTAMP_KEY, now.toString());
+                    greetingHeader.textContent = newGreeting;
+                }
+            } catch (e) {
+                console.warn('Could not use localStorage for greeting.', e);
+            }
+        })();
+
+
+        // Centralized login logic
+        const loginForm = document.getElementById('login-form');
+        const errorContainer = document.getElementById('error-container');
+
+        // Enhanced error display function
+        function showError(message, type = 'error') {
+            const bgColor = type === 'error' ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400';
+            const icon = type === 'error' ? 'alert-circle' : 'alert-triangle';
+            
+            errorContainer.innerHTML = `
+                <div class="${bgColor} border-l-4 p-4 rounded-md error-slide-in" role="alert">
+                    <div class="flex items-center">
+                        <i data-lucide="${icon}" class="h-5 w-5 mr-3 flex-shrink-0"></i>
+                        <p class="text-sm font-medium">${message}</p>
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                const firstChild = errorContainer.firstChild;
+                if (firstChild && firstChild.style) {
+                    firstChild.style.opacity = '0';
+                    firstChild.style.transform = 'translateY(-10px)';
+                    firstChild.style.transition = 'all 0.3s ease-out';
+                    setTimeout(() => {
+                        if (errorContainer.contains(firstChild)) {
+                            errorContainer.innerHTML = '';
+                        }
+                    }, 100);
+                }
+            }, 6000);
+        }
+
+        const loginButton = document.getElementById('login-button');
+        const loginText = document.getElementById('login-text');
+
+        function resetLoginButton() {
+            const spinner = document.getElementById('login-spinner');
+            if (spinner) {
+                spinner.classList.add('hidden');
+            }
+            setTimeout(() => {
+                loginButton.disabled = false;
+                loginText.textContent = 'Sign In';
+            }, 300);
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorContainer.innerHTML = ''; 
+
+            const spinner = document.getElementById('login-spinner');
+            if (spinner) {
+                spinner.classList.remove('hidden');
+            }
+            
+            setTimeout(() => {
+                loginButton.disabled = true;
+                loginText.textContent = 'Sign in';
+            }, 10);
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.token && data.token !== 'undefined') {
+                        localStorage.setItem('reef_token', data.token);
+                        localStorage.setItem('reef_username', data.username);
+                        localStorage.setItem('reef_role', data.role);
+                        window.location.href = '/dashboard';
+                        return; 
+                    } else {
+                        console.log('No token received');
+                        showError('Login failed: No token received.');
+                        resetLoginButton();
+                    }
+                } else {
+                    let errorMsg = 'Invalid username or password';
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMsg = error.message || errorMsg;
+                        }
+                    } catch (parseError) {
+                        console.error('Failed to parse error response:', parseError);                        
+                    }
+                    showError(errorMsg);
+                    resetLoginButton();
+                }
+            } catch (error) {
+                console.error('Network error:', error);
+                showError('Connection error. Please check your network and try again.', 'error');
+                resetLoginButton();           
+            }
+        });
+
+        redirectIfAuthenticated();
+    </script>
+</body>
+</html>

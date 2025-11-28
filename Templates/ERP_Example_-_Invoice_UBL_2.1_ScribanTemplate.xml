@@ -1,0 +1,125 @@
+{{~ for row in rows ~}}
+<?xml version="1.0" encoding="UTF-8"?>
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2 http://docs.oasis-open.org/ubl/os-ubl-2.1/xsd/maindoc/UBL-Invoice-2.1.xsd">
+
+    <!-- UBL Version and Customization -->
+    <cbc:UBLVersionID>{{~ row.ubl_version | html.escape ~}}</cbc:UBLVersionID>
+    <cbc:CustomizationID>{{~ row.customization_id | html.escape ~}}</cbc:CustomizationID>
+    
+    <!-- Invoice Details -->
+    <cbc:ID>{{~ row.invoice_id | html.escape ~}}</cbc:ID>
+    <cbc:IssueDate>{{~ row.issue_date | html.escape ~}}</cbc:IssueDate>
+    <cbc:InvoiceTypeCode listID="UN/ECE 1001">{{~ row.invoice_type_code | html.escape ~}}</cbc:InvoiceTypeCode>
+    <cbc:DocumentCurrencyCode listID="ISO 4217">{{~ row.currency | html.escape ~}}</cbc:DocumentCurrencyCode>
+    
+    <!-- Payment Terms -->
+    <cac:PaymentMeans>
+        <cbc:ID>{{~ row.payment_means_code | html.escape ~}}</cbc:ID>
+        <cbc:PaymentMeansCode listID="UN/ECE 4461">{{~ row.payment_means_code | html.escape ~}}</cbc:PaymentMeansCode>
+        <cbc:PaymentDueDate>{{~ row.due_date | html.escape ~}}</cbc:PaymentDueDate>
+        <cac:PayeeFinancialAccount>
+            <cbc:ID>{{~ row.payee_iban | html.escape ~}}</cbc:ID>
+        </cac:PayeeFinancialAccount>
+    </cac:PaymentMeans>
+    
+    <!-- Supplier (Seller) Party -->
+    {{~ supplier = parse_json(row.supplier_party_json) ~}}
+    <cac:AccountingSupplierParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ supplier.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ row.supplier_name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ supplier.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ supplier.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ supplier.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ supplier.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>{{~ supplier.vat_id | html.escape ~}}</cbc:CompanyID>
+                <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:Contact><cbc:ElectronicMail>{{~ supplier.contact_email | html.escape ~}}</cbc:ElectronicMail></cac:Contact>
+        </cac:Party>
+    </cac:AccountingSupplierParty>
+    
+    <!-- Buyer Party -->
+    {{~ customer = parse_json(row.customer_party_json) ~}}
+    <cac:AccountingCustomerParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ customer.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ row.customer_name | html.escape ~}}</cbc:Name></cac:PartyName>
+            <cac:PostalAddress>
+                <cbc:StreetName>{{~ customer.street | html.escape ~}}</cbc:StreetName>
+                <cbc:CityName>{{~ customer.city | html.escape ~}}</cbc:CityName>
+                <cbc:PostalZone>{{~ customer.postal | html.escape ~}}</cbc:PostalZone>
+                <cac:Country><cbc:IdentificationCode>{{~ customer.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+            </cac:PostalAddress>
+            <cac:PartyTaxScheme>
+                <cbc:CompanyID>{{~ customer.vat_id | html.escape ~}}</cbc:CompanyID>
+                <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
+            </cac:PartyTaxScheme>
+            <cac:Contact><cbc:ElectronicMail>{{~ customer.contact_email | html.escape ~}}</cbc:ElectronicMail></cac:Contact>
+        </cac:Party>
+    </cac:AccountingCustomerParty>
+
+    <!-- Tax Total Calculation -->
+    {{~ tax_summary = parse_json(row.tax_summary_json) ~}}
+    <cac:TaxTotal>
+        <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{~ row.total_tax | html.escape ~}}</cbc:TaxAmount>
+        
+        {{~ for tax in tax_summary ~}}
+        <cac:TaxSubtotal>
+            <cbc:TaxableAmount currencyID="{{~ row.currency ~}}">{{~ tax.taxable_amount | html.escape ~}}</cbc:TaxableAmount>
+            <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{~ tax.tax_amount | html.escape ~}}</cbc:TaxAmount>
+            <cac:TaxCategory>
+                <cbc:ID schemeID="UN/ECE 5305">{{~ tax.category_code | html.escape ~}}</cbc:ID>
+                <cbc:Percent>{{~ tax.tax_rate | html.escape ~}}</cbc:Percent>
+                <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
+            </cac:TaxCategory>
+        </cac:TaxSubtotal>
+        {{~ end ~}}
+    </cac:TaxTotal>
+    
+    <!-- Legal Monetary Total -->
+    <cac:LegalMonetaryTotal>
+        <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:LineExtensionAmount>
+        <cbc:TaxExclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:TaxExclusiveAmount>
+        <cbc:TaxInclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:PayableAmount>
+    </cac:LegalMonetaryTotal>
+    
+    <!-- Invoice Lines -->
+    {{~ line_items = parse_json(row.line_items_json) ~}}
+    {{~ for item in line_items ~}}
+    <cac:InvoiceLine>
+        <cbc:ID>{{~ item.id | html.escape ~}}</cbc:ID>
+        <cbc:InvoicedQuantity unitCode="{{~ item.unit_code | html.escape ~}}">{{~ item.quantity | html.escape ~}}</cbc:InvoicedQuantity>
+        <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ item.net_total | html.escape ~}}</cbc:LineExtensionAmount>
+        <cac:Item>
+            <cbc:Description>{{~ item.description | html.escape ~}}</cbc:Description>
+            <cbc:Name>{{~ item.description | html.escape ~}}</cbc:Name>
+        </cac:Item>
+        <cac:Price>
+            <cbc:PriceAmount currencyID="{{~ row.currency ~}}">{{~ item.unit_price | html.escape ~}}</cbc:PriceAmount>
+        </cac:Price>
+        <cac:TaxTotal>
+             <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{ item.net_total | html.escape }}</cbc:TaxAmount>
+             <cac:TaxSubtotal>
+                 <cbc:TaxableAmount currencyID="{{~ row.currency ~}}">{{ item.net_total | html.escape }}</cbc:TaxableAmount>
+                 <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{ item.tax_rate | html.escape }}</cbc:TaxAmount>
+                 <cac:TaxCategory>
+                     <cbc:ID schemeID="UN/ECE 5305">S</cbc:ID>
+                     <cbc:Percent>{{~ item.tax_rate | html.escape ~}}</cbc:Percent>
+                     <cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme>
+                 </cac:TaxCategory>
+             </cac:TaxSubtotal>
+         </cac:TaxTotal>
+    </cac:InvoiceLine>
+    {{~ end ~}}
+
+</Invoice>
+{{~ end ~}}

@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connections &middot; Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/connections.js"></script>
+    <script src="/assets/js/filter.js"></script>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i> 
+                
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                    </div>
+                </div>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="book-open" class="h-5 w-5"></i>
+                            <span class="ml-3">Documentation</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-slate-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-slate-700/50 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-slate-100 font-semibold">&nbsp;</div>
+                            <div class="text-xs text-slate-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-slate-400 transition-transform"></i>
+                </button>
+                
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="github" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between px-6 py-3">
+                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Connections</h1>
+                    <div class="flex space-x-3 items-center">
+                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out" aria-label="Help">
+                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                        </button>
+                        <button onclick="openAddConnectionModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                            Add Connection
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto bg-gray-100 p-6">
+                <!-- Filter Bar - with placeholder to prevent layout shift -->
+                <div id="filter-container" class="mb-6">
+                    <div class="bg-white rounded-lg shadow p-4 animate-pulse">
+                        <div class="h-10 bg-gray-200 rounded mb-3"></div>
+                        <div class="flex gap-2 mb-3">
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                            <div class="h-8 bg-gray-200 rounded-full w-16"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connections List -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-6">
+                        <div id="connections-list" class="space-y-4">
+                            <p class="text-sm text-gray-500">Loading connections...</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add Connection Modal -->
+    <div id="add-connection-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="connection-modal-title" class="text-lg font-semibold text-gray-900">Add New Connection</h3>
+                <div class="flex items-center space-x-2">
+                    <!-- More Options Menu (only visible when editing) -->
+                    <div id="connection-more-options" class="relative hidden">
+                        <button type="button" onclick="toggleConnectionOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1">
+                            <i data-lucide="more-vertical" class="h-6 w-6"></i>
+                        </button>
+                        <div id="connection-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                            <div class="py-1">
+                                <button type="button" onclick="toggleConnectionActiveStatus()" 
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                    <i data-lucide="power" class="h-4 w-4 mr-2"></i>
+                                    <span id="connection-toggle-text">Deactivate Connection</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeAddConnectionModal()" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="add-connection-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="connection-name" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Production SQL Server">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select id="connection-type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="SqlServer">SQL Server</option>
+                        <option value="MySQL">MySQL</option>
+                        <option value="PostgreSQL">PostgreSQL</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                        Connection String
+                        <a href="https://www.connectionstrings.com/" target="_blank" class="ml-1 text-gray-400 cursor-help" data-tooltip="If you don't know how to build the connection string, click here!" data-tooltip-position="bottom">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        </a>
+                    </label>
+                    <textarea id="connection-string" required rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Server=myserver;Database=mydb;User Id=sa;Password=***;"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Connection string will be encrypted automatically</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags (optional)</label>
+                    <input type="text" id="connection-tags"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="production, crm, financial">
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                                        <button type="button" id="test-connection-btn" onclick="testConnection()" 
+                                                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center">
+                                                <svg id="test-connection-spinner" class="animate-spin h-4 w-4 mr-2 text-gray-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                                </svg>
+                                                <span id="test-connection-btn-text">Test Connection</span>
+                                        </button>
+                    <button type="button" onclick="closeAddConnectionModal()" 
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Save Connection
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+            <div id="help-modal-content-area">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
+                        <i data-lucide="lightbulb" class="h-6 w-6 mr-2 text-yellow-500"></i>
+                        How to use Destinations
+                    </h3>
+                    <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-500 p-1" aria-label="Close help guide">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </div>
+                    <div class="space-y-4 text-gray-700">
+                        <p>The <b>Connections</b> page lets you manage and configure your database and data source connections. These connections are used by profiles and jobs to access data for processing and export.</p>
+
+                        <h4 class="text-l font-semibold text-gray-800"><b>Things to know:</b></h4>
+                        <ul class="list-disc list-inside space-y-2 ml-4">
+                            <li><b>Add Connection:</b> Click the <b>"Add Connection"</b> button to create a new connection by specifying its name, type (such as SQL Server, MySQL, or PostgreSQL), and connection string.</li>
+                            <li><b>Edit/Delete:</b> Use the <i data-lucide="edit" class="h-4 w-4 inline text-blue-600"></i> (Edit) and <i data-lucide="trash-2" class="h-4 w-4 inline text-red-600"></i> (Delete) icons to modify or remove existing connections.</li>
+                            <li><b>Status:</b> Each connection displays whether it is <span class="bg-green-100 text-green-800 px-1 rounded text-xs">Active</span> or <span class="bg-gray-200 text-gray-500 px-1 rounded text-xs">Inactive</span>, and shows the last time it was tested.</li>
+                            <li><b>Test Connection:</b> Use the <b>Test Connection</b> button in the add/edit form to verify your connection details before saving.</li>
+                            <li><b>Tags:</b> Optionally, add comma-separated tags to help organize and filter your connections.</li>
+                            <li><b>Security:</b> Connection strings are encrypted automatically for your security.</li>
+                        </ul>
+
+                        <blockquote class="border-l-4 border-blue-500 pl-4 py-2 italic text-gray-600 bg-blue-50 rounded-r-md pr-2">
+                            <p><strong>Tip:</strong> Reef supports multiple connection types. Make sure your connection string is correct and has the necessary permissions for data access.</p>
+                        </blockquote>
+                    </div>  
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        function checkAuth() {
+            return requireAuth();
+        }
+
+        let userMenuExpanded = false;
+
+        // Toggle user menu
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            // Re-render icons after DOM update
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
+        function openAddConnectionModal() {
+            document.getElementById('add-connection-modal').classList.remove('hidden');
+            document.getElementById('connection-modal-title').textContent = 'Add New Connection';
+            document.getElementById('connection-more-options').classList.add('hidden');
+            lucide.createIcons();
+        }
+
+        function closeAddConnectionModal() {
+            document.getElementById('add-connection-modal').classList.add('hidden');
+            document.getElementById('add-connection-form').reset();
+            document.getElementById('add-connection-form').removeAttribute('data-edit-id');
+            document.getElementById('add-connection-form').removeAttribute('data-is-active');
+            document.getElementById('connection-options-menu').classList.add('hidden');
+        }
+
+        function toggleConnectionOptionsMenu() {
+            const menu = document.getElementById('connection-options-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('connection-options-menu');
+            const button = event.target.closest('[onclick="toggleConnectionOptionsMenu()"]');
+            if (!button && !menu?.contains(event.target)) {
+                menu?.classList.add('hidden');
+            }
+        });
+
+        async function toggleConnectionActiveStatus() {
+            const form = document.getElementById('add-connection-form');
+            const connectionId = form.getAttribute('data-edit-id');
+            const isActive = form.getAttribute('data-is-active') === 'true';
+            const connectionName = document.getElementById('connection-name').value;
+            
+            const action = isActive ? 'deactivate' : 'activate';
+            const confirmMessage = isActive 
+                ? `Are you sure you want to deactivate "${connectionName}"?\n\nNote: Any profiles, jobs, and webhooks using this connection will fail to execute until you reactivate it.`
+                : `Are you sure you want to activate "${connectionName}"?`;
+            
+            if (!confirm(confirmMessage)) {
+                document.getElementById('connection-options-menu').classList.add('hidden');
+                return;
+            }
+
+            try {
+                await checkAuth();
+                
+                // Get current connection data
+                const response = await fetch(`/api/connections/${connectionId}`, {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    showToast('Failed to load connection details', 'error');
+                    return;
+                }
+                
+                const connection = await response.json();
+                
+                // Update the isActive status
+                connection.isActive = !isActive;
+                
+                // Send PUT request with updated connection
+                const updateResponse = await fetch(`/api/connections/${connectionId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(connection)
+                });
+                
+                if (updateResponse.ok) {
+                    showToast(`Connection ${action}d successfully`, 'success');
+                    closeAddConnectionModal();
+                    await loadConnections();
+                } else {
+                    showToast(`Failed to ${action} connection`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error ${action}ing connection: ${error.message}`, 'error');
+            }
+            
+            document.getElementById('connection-options-menu').classList.add('hidden');
+        }
+
+        async function testConnection() {
+            const btn = document.getElementById('test-connection-btn');
+            const spinner = document.getElementById('test-connection-spinner');
+            const btnText = document.getElementById('test-connection-btn-text');
+            if (btn && spinner && btnText) {
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+                btnText.textContent = 'Testing...';
+            }
+            const type = document.getElementById('connection-type').value;
+            const connectionString = document.getElementById('connection-string').value;
+            const form = document.getElementById('add-connection-form');
+            const connectionId = form && form.hasAttribute('data-edit-id') ? parseInt(form.getAttribute('data-edit-id')) : null;
+
+            if (!connectionString) {
+                showToast('Please enter a connection string', 'error');
+                if (btn && spinner && btnText) {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Test Connection';
+                }
+                return;
+            }
+
+            // Create AbortController for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+            try {
+                await checkAuth();
+                const body = { type, connectionString };
+                if (connectionId) body.connectionId = connectionId;
+                const response = await fetch('/api/connections/test', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(body),
+                    signal: controller.signal
+                });
+
+                // Clear timeout on successful response
+                clearTimeout(timeoutId);
+
+                let result;
+                try {
+                    result = await response.json();
+                } catch (jsonError) {
+                    showToast('Connection test error: Invalid or empty server response.', 'error');
+                    if (btn && spinner && btnText) {
+                        btn.disabled = false;
+                        spinner.classList.add('hidden');
+                        btnText.textContent = 'Test Connection';
+                    }
+                    return;
+                }
+                if (result && result.success) {
+                    showToast(`Connection successful! (${result.responseTimeMs}ms)`, 'success');
+                } else {
+                    showToast(`Connection failed: ${result && result.message ? result.message : 'Unknown error'}`, 'error');
+                }
+                // Reload connections to update last tested date
+                if (typeof loadConnections === 'function') {
+                    await loadConnections();
+                }
+                if (btn && spinner && btnText) {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Test Connection';
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                if (error.name === 'AbortError') {
+                    showToast('Connection test timed out after 30 seconds', 'error');
+                } else {
+                    showToast(`Connection test error: ${error.message}`, 'error');
+                }
+                if (btn && spinner && btnText) {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Test Connection';
+                }
+            }
+        }
+
+        // Initialize filter for connections
+        let connectionFilter = null;
+
+        async function loadConnections() {
+            await checkAuth();
+            setUserSidebarInfo();
+            const connectionsList = document.getElementById('connections-list');
+            try {
+                const response = await fetch('/api/connections', {
+                    method: 'GET',
+                    headers: getAuthHeaders()
+                });
+                let connections = [];
+                if (response.ok) {
+                    connections = await response.json();
+                }
+
+                // Initialize filter if not already done
+                if (!connectionFilter) {
+                    connectionFilter = new ReefFilter({ pageKey: 'reef_filter_connections' });
+                    window.reefFilter = connectionFilter;
+
+                    // Listen for filter changes
+                    window.addEventListener('filterChange', () => {
+                        renderFilteredConnections();
+                    });
+                }
+
+                // Set items and render filter bar
+                connectionFilter.setItems(connections);
+                renderFilterBar(connectionFilter, { containerId: 'filter-container' });
+                renderFilteredConnections();
+
+            } catch (error) {
+                connectionsList.innerHTML = `<p class="text-sm text-red-600">Failed to load connections.</p>`;
+                console.error('Failed to load connections:', error);
+            }
+        }
+
+        /**
+         * Humanize connection type names
+         * SqlServer → SQL Server, MySQL → MySQL, PostgreSQL → PostgreSQL
+         */
+        function humanizeConnectionType(type) {
+            if (!type) return '';
+            const typeMap = {
+                'SqlServer': 'SQL Server',
+                'MySQL': 'MySQL',
+                'PostgreSQL': 'PostgreSQL'
+            };
+            return typeMap[type] || type;
+        }
+
+        function renderFilteredConnections() {
+            const connectionsList = document.getElementById('connections-list');
+            const filtered = connectionFilter.filteredItems;
+
+            if (!filtered || filtered.length === 0) {
+                connectionsList.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <i data-lucide="plug" class="h-12 w-12 text-gray-300 mb-4"></i>
+                        <p class="text-lg font-semibold text-gray-700 mb-2">No connections found</p>
+                        <p class="text-gray-500 mb-4">${connectionFilter.allItems.length === 0 ? 'Create your first connection to get started.' : 'Try adjusting your filters.'}</p>
+                    </div>
+                `;
+            } else {
+                connectionsList.innerHTML = filtered.map(conn => `
+                    <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+                        <div class="flex items-center space-x-4">
+                            <i data-lucide="database" class="h-8 w-8 text-blue-500"></i>
+                            <div>
+                                <p class="font-medium text-gray-900">${escapeHtml(conn.name)}</p>
+                                <p class="text-sm text-gray-500 disable-select">${humanizeConnectionType(conn.type)}${conn.lastTestedAt && conn.lastTestResult ? (conn.lastTestResult.startsWith('Success') ? ` • Last tested successfully ${formatRelativeTime(conn.lastTestedAt)}` : ` • <span class="text-red-600">Last test failed ${formatRelativeTime(conn.lastTestedAt)}</span>`) : ''}</p>
+                                ${conn.tags ? `<div class="mt-2 flex flex-wrap gap-1">
+                                    ${conn.tags.split(',').map(tag => `
+                                        <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-tag-filter="${escapeHtml(tag.trim())}">
+                                            ${escapeHtml(tag.trim())}
+                                        </span>
+                                    `).join('')}
+                                </div>` : ''}
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 text-xs ${conn.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">${conn.isActive ? 'Active' : 'Inactive'}</span>
+                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editConnection(${conn.id})" data-tooltip="Edit" data-tooltip-position="bottom">
+                                <i data-lucide="edit" class="h-4 w-4"></i>
+                            </button>
+                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteConnection(${conn.id}, '${escapeHtml(conn.name)}')" data-tooltip="Delete" data-tooltip-position="bottom">
+                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Setup tag click handlers
+                connectionFilter.setupTagClickHandlers('[data-tag-filter]');
+            }
+            lucide.createIcons();
+        }
+
+
+        document.getElementById('add-connection-form').addEventListener('submit', async (e) => {
+
+            e.preventDefault();
+            await checkAuth();
+            const form = document.getElementById('add-connection-form');
+            const name = document.getElementById('connection-name').value;
+            const type = document.getElementById('connection-type').value;
+            const connectionString = document.getElementById('connection-string').value;
+            const tags = document.getElementById('connection-tags').value;
+            const isEdit = form && form.hasAttribute('data-edit-id');
+            const editId = isEdit ? form.getAttribute('data-edit-id') : null;
+
+            // Preserve isActive status when editing
+            const isActive = isEdit ? (form.getAttribute('data-is-active') === 'true') : true;
+
+            try {
+                // Check for duplicate name (only when creating new connection)
+                if (!isEdit) {
+                    const existingConnections = await fetch('/api/connections', {
+                        headers: getAuthHeaders()
+                    });
+
+                    if (existingConnections.ok) {
+                        const connections = await existingConnections.json();
+                        const duplicate = connections.find(c => c.name.toLowerCase() === name.toLowerCase());
+
+                        if (duplicate) {
+                            showToast(`Connection with name "${name}" already exists. Please use a different name.`, 'warning');
+                            return;
+                        }
+                    }
+                }
+
+                // For NEW connections only, test the connection first (non-intrusive)
+                if (!isEdit) {
+                    try {
+                        const testResponse = await fetch('/api/connections/test', {
+                            method: 'POST',
+                            headers: getAuthHeaders(),
+                            body: JSON.stringify({ type, connectionString })
+                        });
+
+                        let testResult;
+                        try {
+                            testResult = await testResponse.json();
+                        } catch (jsonError) {
+                            showToast('Connection warning: Unable to verify connection', 'warning');
+                        }
+
+                        if (testResult && testResult.success) {
+                            showToast(`Connection verified successfully! (${testResult.responseTimeMs}ms)`, 'success');
+                        } else {
+                            showToast(`We couldn't verify the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
+                        }
+                    } catch (error) {
+                        showToast(`We couldn't test the connection, but it'll be saved anyway. Reason: ${testResult && testResult.message ? testResult.message : 'Unknown error'}`, 'warning');
+                    }
+                }
+
+                // Combine fields for hash (can adjust as needed)
+                const hashInput = `${name}|${type}|${connectionString}|${tags}`;
+                const hash = await sha256(hashInput);
+                let url = '/api/connections';
+                let method = 'POST';
+                if (isEdit && editId) {
+                    url = `/api/connections/${editId}`;
+                    method = 'PUT';
+                }
+                const response = await fetch(url, {
+                    method,
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name, type, connectionString, tags, hash, isActive })
+                });
+                if (response.ok) {
+                    const savedConnection = await response.json();
+                    closeAddConnectionModal();
+                    showToast('Connection saved successfully!', 'success');
+
+                    // Auto-test connection in background (non-intrusive)
+                    if (!isEdit) {
+                        testConnectionInBackground(savedConnection.id, name, type, connectionString);
+                    }
+
+                    // Reload connections list
+                    await loadConnections();
+                } else {
+                    let error;
+                    try {
+                        error = await response.json();
+                    } catch (jsonError) {
+                        showToast('Error: Invalid or empty server response.', 'error');
+                        return;
+                    }
+                    showToast(`Error: ${error && error.message ? error.message : 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        /**
+         * Test connection in background after creation
+         * Non-intrusive: runs silently, only shows result when done
+         */
+        async function testConnectionInBackground(connectionId, name, type, connectionString) {
+            try {
+                const testResponse = await fetch('/api/connections/test', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ type, connectionString })
+                });
+
+                let testResult;
+                try {
+                    testResult = await testResponse.json();
+                } catch (jsonError) {
+                    console.warn('Unable to parse test response');
+                    return;
+                }
+
+                if (testResult && testResult.success) {
+                    showToast(`Connection "${name}" tested successfully! (${testResult.responseTimeMs}ms)`, 'success');
+                } else {
+                    const errorMsg = testResult && testResult.message ? testResult.message : 'Unknown error';
+                    showToast(`Connection test failed: ${errorMsg}`, 'warning');
+                }
+
+                // Refresh the connection list to show test results
+                await loadConnections();
+            } catch (error) {
+                console.warn('Background connection test error:', error);
+                // Silently fail - don't interrupt user experience
+            }
+        }
+
+        // Ensure ReefFilter is loaded before calling loadConnections
+        function initializeConnections() {
+            if (typeof ReefFilter !== 'undefined') {
+                loadConnections();
+            } else {
+                setTimeout(initializeConnections, 50);
+            }
+        }
+        initializeConnections();
+    </script>
+</body>
+</html>

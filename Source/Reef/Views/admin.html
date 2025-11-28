@@ -1,0 +1,2867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin &middot; Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+    <script src="/assets/js/github.js"></script>
+    <script src="/assets/js/admin-users.js"></script>
+    <script src="/assets/js/admin-notifications.js"></script>
+    <script src="/assets/js/admin-email-templates.js"></script>
+    <style>
+        /* Console appearance */
+        .log-row {
+            display: grid;
+            grid-template-columns: 120px 80px 1fr; /* Time, Level, Message */
+            gap: 1rem;
+            padding: 0.5rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .log-row:last-child {
+            border-bottom: none;
+        }
+        .log-time {
+            color: #9ca3af;
+        }
+        .log-message {
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i> 
+                
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                    </div>
+                </div>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="book-open" class="h-5 w-5"></i>
+                            <span class="ml-3">Documentation</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-gray-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-white font-semibold">&nbsp;</div>
+                            <div class="text-xs text-gray-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                </button>
+                
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="github" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Application Settings</h1>
+                </div>
+            </header>
+
+            <main class="flex-1 overflow-y-auto bg-gray-100">
+                <div id="version-notification" class="hidden bg-blue-100 border-b border-blue-300">
+                    <div class="max-w-7xl mx-auto px-6 py-3">
+                        <div class="flex items-center justify-between flex-wrap">
+                            <div class="w-0 flex-1 flex items-center">
+                                <span class="flex p-2 rounded-lg bg-blue-600">
+                                    <i data-lucide="gift" class="h-5 w-5 text-white"></i>
+                                </span>
+                                <p class="ml-3 font-medium text-blue-800">
+                                    A new version of Reef is available! 
+                                    <strong id="new-version-tag" class="font-bold">vX.Y.Z</strong>
+                                    <a id="new-version-link" href="#" target="_blank" rel="noopener" class="ml-2 font-bold underline hover:text-blue-700">
+                                        View release notes &rarr;
+                                    </a>
+                                </p>
+                            </div>
+                            <div class="order-2 flex-shrink-0 sm:order-3 sm:ml-3">
+                                <button type="button" onclick="dismissVersionCheck()" class="-mr-1 flex p-2 rounded-md hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400" aria-label="Dismiss">
+                                    <i data-lucide="x" class="h-5 w-5 text-blue-700"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-6">
+                    <!-- Tabs -->
+                    <div class="mb-6">
+                        <nav class="flex space-x-4 border-b border-gray-200">
+                            <button onclick="showTab('system')" id="tab-system" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                System Info
+                            </button>
+                            <button onclick="showTab('metrics')" id="tab-metrics" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
+                                Statistics
+                            </button>
+                            <button onclick="showTab('logs')" id="tab-logs" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Logging
+                            </button>
+                            <button onclick="showTab('audit')" id="tab-audit" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Audit
+                            </button>
+                            <button onclick="showTab('users')" id="tab-users" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Users
+                            </button>
+                            <button onclick="showTab('apikeys')" id="tab-apikeys" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Integrations
+                            </button>
+                            <button onclick="showTab('notifications')" id="tab-notifications" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Notifications
+                            </button>
+                            <button onclick="showTab('email-templates')" id="tab-email-templates" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
+                                Templates
+                            </button>
+                            <button onclick="showTab('danger')" id="tab-danger" class="px-4 py-2 font-medium text-gray-600 hover:text-red-600">
+                                Danger Zone
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- System Info Tab -->
+                    <div id="content-system" class="tab-content hidden relative">
+                        <!-- Key Metrics Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <!-- Version Card -->
+                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-600">Version</div>
+                                    <i data-lucide="package" class="h-4 w-4 text-blue-500"></i>
+                                </div>
+                                <div class="text-lg font-semibold text-gray-900" id="system-version">--</div>
+                                <div class="text-xs text-gray-500 mt-1" id="system-environment">--</div>
+                            </div>
+
+                            <!-- Uptime Card -->
+                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-600">Uptime</div>
+                                    <i data-lucide="clock" class="h-4 w-4 text-green-500"></i>
+                                </div>
+                                <div class="text-lg font-semibold text-gray-900" id="system-uptime">--</div>
+                                <div class="text-xs text-gray-500 mt-1">Last restart</div>
+                            </div>
+
+                            <!-- Server Time Card -->
+                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-600 flex items-center">
+                                        <span class="cursor-help" data-tooltip="Time is shown in UTC (default for system integration)." data-tooltip-position="top">Server Time</span>
+                                    </div>
+                                    <i data-lucide="server" class="h-4 w-4 text-purple-500"></i>
+                                </div>
+                                <div class="text-lg font-semibold text-gray-900" id="system-time">--:--:--</div>
+                                <div class="text-xs text-gray-500 mt-1" id="system-date">--</div>
+                            </div>
+
+                            <!-- License Card -->
+                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-gray-600">License</div>
+                                    <i data-lucide="shield" class="h-4 w-4 text-orange-500"></i>
+                                </div>
+                                <div class="text-lg font-semibold text-gray-900">AGPL 3.0</div>
+                                <div class="text-xs text-gray-500 mt-1">Open Source</div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Information -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- System Details -->
+                            <div class="bg-white rounded-lg border border-gray-200">
+                                <div class="px-4 py-3 border-b border-gray-200">
+                                    <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                                        <i data-lucide="cpu" class="h-4 w-4 mr-2 text-blue-500"></i>
+                                        System Information
+                                    </h3>
+                                </div>
+                                <div class="p-4 space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Version</span>
+                                        <span class="text-sm font-medium" id="system-version-detail">--</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Environment</span>
+                                        <span class="text-sm font-medium" id="system-environment-detail">--</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Last Updated</span>
+                                        <span class="text-sm font-medium" id="system-timestamp">--</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Repository</span>
+                                        <a href="https://github.com/melosso/reef" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                            GitHub
+                                            <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- License Details -->
+                            <div class="bg-white rounded-lg border border-gray-200">
+                                <div class="px-4 py-3 border-b border-gray-200">
+                                    <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                                        <i data-lucide="file-text" class="h-4 w-4 mr-2 text-green-500"></i>
+                                        License Information
+                                    </h3>
+                                </div>
+                                <div class="p-4 space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Type</span>
+                                        <span class="text-sm font-medium">AGPL 3.0</span>
+                                    </div>
+                                    <div class="flex justify-between items-start">
+                                        <span class="text-sm text-gray-600">Description</span>
+                                        <span class="text-sm text-gray-900 text-right max-w-xs">Open source with copyleft provisions</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Source Code</span>
+                                        <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Required</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Full License</span>
+                                        <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                            View
+                                            <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="mt-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                            <div class="flex items-center justify-between disable-select">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-gray-900 mb-1">Need help?</h4>
+                                    <p class="text-sm text-gray-600">Check our documentation or get support</p>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <a href="https://github.com/melosso/reef/wiki" target="_blank" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center">
+                                        <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
+                                        Documentation
+                                    </a>
+                                    <a href="https://github.com/melosso/reef/issues" target="_blank" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                        <i data-lucide="life-buoy" class="h-4 w-4 mr-2"></i>
+                                        Get Support
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Metrics Tab -->
+                    <div id="content-metrics" class="tab-content relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="metrics-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="text-gray-600 text-sm font-medium">Total Profiles</div>
+                                    <i data-lucide="file-code" class="h-5 w-5 text-blue-500"></i>
+                                </div>
+                                <div class="text-3xl font-bold text-gray-900" id="metric-total-profiles">--</div>
+                                <div class="text-sm text-gray-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="text-gray-600 text-sm font-medium">Total Executions</div>
+                                    <i data-lucide="activity" class="h-5 w-5 text-green-500"></i>
+                                </div>
+                                <div class="text-3xl font-bold text-gray-900" id="metric-total-executions">--</div>
+                                <div class="text-sm text-gray-500 mt-1"><span id="metric-success-rate">--</span>% success rate</div>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="text-gray-600 text-sm font-medium">Failed (24h)</div>
+                                    <i data-lucide="alert-circle" class="h-5 w-5 text-red-500"></i>
+                                </div>
+                                <div class="text-3xl font-bold text-gray-900" id="metric-failed-24h">--</div>
+                                <div class="text-sm text-gray-500 mt-1">Last 24 hours</div>
+                            </div>
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="text-gray-600 text-sm font-medium">System Uptime</div>
+                                    <i data-lucide="server" class="h-5 w-5 text-purple-500"></i>
+                                </div>
+                                <div class="text-3xl font-bold text-gray-900" id="metric-uptime">--</div>
+                                <div class="text-sm text-gray-500 mt-1">days</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-lg shadow">
+                                <div class="p-6 border-b border-gray-200">
+                                    <h3 class="text-lg font-semibold text-gray-900">Recent Statistics (7 Days)</h3>
+                                </div>
+                                <div class="p-6">
+                                    <div class="space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Total Executions</span>
+                                            <span class="font-semibold" id="stats-7d-total">--</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Successful</span>
+                                            <span class="font-semibold text-green-600" id="stats-7d-success">--</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Failed</span>
+                                            <span class="font-semibold text-red-600" id="stats-7d-failed">--</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Average Duration</span>
+                                            <span class="font-semibold" id="stats-7d-duration">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow">
+                                <div class="p-6 border-b border-gray-200">
+                                    <h3 class="text-lg font-semibold text-gray-900">Storage Usage</h3>
+                                </div>
+                                <div class="p-6">
+                                    <div class="space-y-4">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Database Size</span>
+                                            <span class="font-semibold" id="storage-db-size">--</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-gray-600">Exports Size</span>
+                                            <span class="font-semibold" id="storage-exports-size">--</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Logs Tab -->
+                    <div id="content-audit" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="audit-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow mb-6">
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex items-center justify-between disable-select">
+                                    <h3 class="text-lg font-semibold text-gray-900">Audit</h3>
+                                    <div class="flex space-x-2">
+                                        <select id="filter-entity-type" onchange="applyAuditFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            <option value="">All Entity Types</option>
+                                            <option value="Connection">Connection</option>
+                                            <option value="Profile">Profile</option>
+                                            <option value="User">User</option>
+                                            <option value="ApiKey">API Key</option>
+                                        </select>
+                                        <select id="filter-action" onchange="applyAuditFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            <option value="">All Actions</option>
+                                            <option value="Created">Created</option>
+                                            <option value="Updated">Updated</option>
+                                            <option value="Deleted">Deleted</option>
+                                            <option value="Executed">Executed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Performed By</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Changes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="audit-logs-table">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination -->
+                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                                <div class="flex-1 flex justify-between sm:hidden">
+                                    <button onclick="previousAuditPage()" id="audit-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        Previous
+                                    </button>
+                                    <button onclick="nextAuditPage()" id="audit-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        Next
+                                    </button>
+                                </div>
+                                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <p class="text-sm text-gray-700">
+                                            Showing <span id="audit-showing-from" class="font-medium">1</span> to <span id="audit-showing-to" class="font-medium">50</span> of <span id="audit-total-count" class="font-medium">0</span> results
+                                        </p>
+                                        <div class="flex items-center space-x-2">
+                                            <label for="audit-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                            <select id="audit-page-size-select" onchange="changeAuditPageSize()" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                                <option value="25">25</option>
+                                                <option value="50" selected>50</option>
+                                                <option value="100">100</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="audit-pagination-controls">
+                                            <!-- Pagination buttons will be rendered here -->
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Serilog Console Tab -->
+                    <div id="content-logs" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="logs-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow mb-6">
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-lg font-semibold text-gray-900 disable-select">Console Log</h3>
+                                    <div class="flex space-x-2">
+                                        <select id="filter-log-level" onchange="applyLogFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                            <option value="">All Levels</option>
+                                            <option value="Debug">Debug</option>
+                                            <option value="Information">Information</option>
+                                            <option value="Warning">Warning</option>
+                                            <option value="Error">Error</option>
+                                            <option value="Fatal">Fatal</option>
+                                        </select>
+                                        <label class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
+                                            <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                            <span class="text-sm text-gray-700">Auto-refresh</span>
+                                        </label>
+                                        <button onclick="loadLogs()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center">
+                                            <i data-lucide="rotate-cw" class="h-4 w-4 mr-2"></i>
+                                            Refresh
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                    <span id="log-info-text">Showing latest logs (newest first)</span>
+                                    <span id="log-last-update" class="text-xs text-gray-500"></span>
+                                </div>
+                            </div>
+                            <!-- Log Output Area -->
+                            <div class="bg-gray-900 text-gray-50 p-4 overflow-y-scroll max-h-[60vh]">
+                                <div id="log-console-output" class="font-mono text-xs">
+                                    <div class="text-center text-gray-400 py-4">Loading application logs...</div>
+                                </div>
+                            </div>
+                            <!-- Pagination -->
+                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                                <div class="flex-1 flex justify-between sm:hidden">
+                                    <button onclick="previousLogPage()" id="log-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        Previous
+                                    </button>
+                                    <button onclick="nextLogPage()" id="log-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                        Next
+                                    </button>
+                                </div>
+                                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                    <div class="flex items-center space-x-4">
+                                        <p class="text-sm text-gray-700">
+                                            Showing <span id="log-showing-from" class="font-medium">1</span> to <span id="log-showing-to" class="font-medium">100</span> of <span id="log-total-count" class="font-medium">0</span> results
+                                        </p>
+                                        <div class="flex items-center space-x-2">
+                                            <label for="log-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                            <select id="log-page-size-select" onchange="changeLogPageSize()" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                                <option value="50">50</option>
+                                                <option value="100" selected>100</option>
+                                                <option value="200">200</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="log-pagination-controls">
+                                            <!-- Pagination buttons will be rendered here -->
+                                        </nav>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Users Tab -->
+                    <div id="content-users" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="users-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex items-center justify-between disable-select">
+                                    <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                                    <div class="flex gap-2">
+                                        <button onclick="openUserHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out active:scale-95" aria-label="Help">
+                                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                                        </button>
+                                        <button onclick="openAddUserModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                                            Add User
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="users-table">
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- API Keys Tab -->
+                    <div id="content-apikeys" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="apikeys-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex items-center justify-between disable-select">
+                                    <h3 class="text-lg font-semibold text-gray-900">API Key Management</h3>
+                                    <div class="flex gap-2">
+                                        <button onclick="openApiKeyHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out active:scale-95" aria-label="Help">
+                                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                                        </button>
+                                        <button onclick="openAddApiKeyModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                                            Add API Key
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Used</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200" id="apikeys-table">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notifications Tab -->
+                    <div id="content-notifications" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="notifications-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    Notification settings can only be configured by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="notifications-content" class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900">System Notifications</h3>
+                                <p class="text-sm text-gray-600 mt-1">Configure email notifications for system events</p>
+                            </div>
+                            <div class="p-6 space-y-6">
+                                <!-- Master Toggle -->
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="text-base font-semibold text-gray-900">Enable System Notifications</h4>
+                                        <p class="text-sm text-gray-600 mt-1">Turn on/off all system notifications</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="notify-enabled" onchange="handleNotificationChange()" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+
+                                <hr class="my-6">
+
+                                <!-- Destination Selection -->
+                                <div>
+                                    <label for="notification-destination" class="block text-sm font-semibold text-gray-900 mb-2">Email Destination</label>
+                                    <select id="notification-destination" onchange="handleDestinationChange()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <option value="">Select a destination...</option>
+                                    </select>
+                                    <p class="text-sm text-gray-600 mt-1">Choose an Email destination to send notifications through</p>
+                                </div>
+
+                                <!-- Recipient Emails -->
+                                <div>
+                                    <label for="notification-recipients" class="block text-sm font-semibold text-gray-900 mb-2">Recipients</label>
+                                    <input type="text" id="notification-recipients" placeholder="admin@example.com; ops@example.com" onchange="handleNotificationChange()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <p class="text-sm text-gray-600 mt-1">Specify email recipients for system notifications (semicolon-separated).</p>
+                                </div>
+
+                                <hr class="my-6">
+
+                                <!-- Notification Triggers - Categorized -->
+                                <div class="space-y-6">
+                                    <!-- Profile Execution Notifications -->
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                                <i data-lucide="play-circle" class="h-5 w-5 text-blue-600"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-base font-semibold text-gray-900">Profile Execution</h4>
+                                                <p class="text-xs text-gray-600">Notifications for profile export execution</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                                            <!-- Profile Execution Failures -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">Failures</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a profile execution fails</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+
+                                            <!-- Profile Execution Success -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">Success</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a profile execution completes successfully</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Job Execution Notifications -->
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                                <i data-lucide="cog" class="h-5 w-5 text-purple-600"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-base font-semibold text-gray-900">Job Execution</h4>
+                                                <p class="text-xs text-gray-600">Notifications for scheduled job execution</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                                            <!-- Job Failures -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">Failures</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a job execution fails</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-job-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+
+                                            <!-- Job Success -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">Success</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a job execution completes successfully</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-job-success" onchange="handleNotificationChange()" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- System Events Notifications -->
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                                                <i data-lucide="bell" class="h-5 w-5 text-amber-600"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-base font-semibold text-gray-900">System Events</h4>
+                                                <p class="text-xs text-gray-600">Notifications for system changes and events</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                                            <!-- Database Size Threshold -->
+                                            <div>
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <div>
+                                                        <h5 class="font-semibold text-gray-900">Database Size Threshold</h5>
+                                                        <p class="text-sm text-gray-600">Notify when database exceeds limit</p>
+                                                    </div>
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" id="notify-db-size" onchange="handleNotificationChange()" class="sr-only peer" checked>
+                                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
+                                                <!-- Threshold Size Input -->
+                                                <div class="ml-4 flex items-center gap-2">
+                                                    <input type="number" id="db-threshold-mb" min="100" max="10240" class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent" onchange="handleNotificationChange()">
+                                                    <span class="text-sm text-gray-600">MB</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- New API Key -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">New API Key Created</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a new API key is created</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-api-key" onchange="handleNotificationChange()" class="sr-only peer" checked>
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+
+                                            <!-- New User -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">New User Created</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a new user is created</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-user" onchange="handleNotificationChange()" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+
+                                            <!-- New Webhook -->
+                                            <div class="flex items-center justify-between">
+                                                <div>
+                                                    <h5 class="font-semibold text-gray-900">New Webhook Created</h5>
+                                                    <p class="text-sm text-gray-600">Notify when a new webhook trigger is created</p>
+                                                </div>
+                                                <label class="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" id="notify-webhook" onchange="handleNotificationChange()" class="sr-only peer">
+                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-6">
+
+                                <!-- Action Buttons -->
+                                <div class="flex justify-end gap-3">
+                                    <button id="test-notification-btn" onclick="sendTestNotification()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center transition duration-200 ease-in-out active:scale-95">
+                                        <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
+                                        Test Notification
+                                    </button>
+                                    <button onclick="saveNotificationSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center">
+                                        <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                        Save Settings
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Templates Tab -->
+                    <div id="content-email-templates" class="tab-content hidden relative">
+                        <!-- Permission Blur Overlay -->
+                        <div id="email-templates-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-gray-200">
+                                <h3 class="text-lg font-semibold text-gray-900">Email Templates</h3>
+                                <p class="text-sm text-gray-600 mt-1">Customize email templates for system notifications</p>
+                            </div>
+
+                            <div class="p-6">
+                                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                    <!-- Template List -->
+                                    <div class="lg:col-span-1">
+                                        <label class="block text-sm font-semibold text-gray-900 mb-3">Select Template</label>
+                                        <select id="template-type" onchange="loadTemplate()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                            <option value="">Choose a template...</option>
+                                            <option value="ProfileSuccess">Profile Success</option>
+                                            <option value="ProfileFailure">Profile Failure</option>
+                                            <option value="JobSuccess">Job Success</option>
+                                            <option value="JobFailure">Job Failure</option>
+                                            <option value="NewUser">New User</option>
+                                            <option value="NewApiKey">New API Key</option>
+                                            <option value="NewWebhook">New Webhook</option>
+                                            <option value="DatabaseSizeThreshold">Database Size Alert</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Template Editor -->
+                                    <div class="lg:col-span-3">
+                                        <div id="template-editor" class="hidden">
+                                            <!-- Subject Editor -->
+                                            <div class="mb-6">
+                                                <label class="block text-sm font-semibold text-gray-900 mb-2">Email Subject</label>
+                                                <input type="text" id="template-subject" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm" placeholder="Email subject with optional placeholders">
+                                            </div>
+
+                                            <!-- HTML Body Editor -->
+                                            <div class="mb-6">
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <label class="block text-sm font-semibold text-gray-900">HTML Body</label>
+                                                    <button onclick="showTemplatePreview()" class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+                                                        <i data-lucide="external-link" class="h-3 w-3"></i>Preview
+                                                    </button>
+                                                </div>
+                                                <textarea id="template-body" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm h-80" placeholder="HTML body of the email template"></textarea>
+                                            </div>
+
+                                            <!-- Action Buttons -->
+                                            <div class="flex gap-3 justify-end">
+                                                <button onclick="resetTemplateToDefault()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700">
+                                                    Reset to Default
+                                                </button>
+                                                <button onclick="saveTemplate()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center">
+                                                    <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                                    Save Template
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- No Template Selected Message -->
+                                        <div id="template-empty" class="text-center py-12">
+                                            <i data-lucide="mail" class="h-12 w-12 text-gray-400 mx-auto mb-3"></i>
+                                            <p class="text-gray-500 font-medium">Select a template to begin editing</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Placeholder Variables Reference -->
+                        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-blue-900 mb-2">Available Placeholders</h4>
+                            <p class="text-sm text-blue-800 mb-3">Use these placeholders in your templates (they will be replaced with actual values):</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="text-sm text-blue-800">
+                                    <p><strong>Profile Notifications:</strong></p>
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
+                                        <li>{ProfileName} - Profile name</li>
+                                        <li>{ExecutionId} - Execution ID</li>
+                                        <li>{StartedAt} - Execution start time</li>
+                                        <li>{CompletedAt} - Execution end time</li>
+                                        <li>{ExecutionTime} - How long it took</li>
+                                        <li>{RowCount} - Rows processed</li>
+                                        <li>{FileSize} - Output file size</li>
+                                        <li>{OutputPath} - File location</li>
+                                        <li>{ErrorMessage} - Error details (failures only)</li>
+                                    </ul>
+                                </div>
+                                <div class="text-sm text-blue-800">
+                                    <p><strong>Other Notifications:</strong></p>
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
+                                        <li>{JobName} - Job name</li>
+                                        <li>{Username} - User name</li>
+                                        <li>{Email} - User email</li>
+                                        <li>{KeyName} - API key name</li>
+                                        <li>{WebhookName} - Webhook name</li>
+                                        <li>{ThresholdMb} - Size threshold</li>
+                                        <li>{CurrentMb} - Current size</li>
+                                        <li>{ExcessMb} - Over threshold</li>
+                                        <li>{CheckedAt} - Check timestamp</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone Tab -->
+                    <div id="content-danger" class="tab-content hidden relative">
+                        <!-- Admin Only Permission Blur Overlay -->
+                        <div id="danger-zone-admin-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-20 flex items-center justify-center rounded-lg">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-gray-600 mb-6">
+                                    This section can only be accessed by administrators.
+                                    Contact your system administrator for assistance.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Confirmation Blur Overlay -->
+                        <div id="danger-zone-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center">
+                            <div class="text-center max-w-md mx-auto p-8">
+                                <div class="mb-6">
+                                    <i data-lucide="shield-alert" class="h-16 w-16 text-red-600 mx-auto mb-4"></i>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">This isn't a playground</h2>
+                                <p class="text-gray-600 mb-6">
+                                    Actions here can permanently destroy data.
+                                    Only proceed if you're ready to own the consequences.
+                                </p>
+                                <button
+                                    onclick="unlockDangerZone()"
+                                    class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center mx-auto"
+                                >
+                                    <i data-lucide="unlock" class="h-5 w-5 mr-2"></i>
+                                    I understand the risks
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Actual Content (blurred until unlocked) -->
+                        <div id="danger-zone-content">
+                            <!-- Audit Log Cleanup Section -->
+                            <div class="bg-white rounded-lg shadow mb-6">
+                                <div class="p-6 border-b border-gray-200">
+                                    <div class="flex items-center justify-between disable-select">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                                <i data-lucide="file-clock" class="h-5 w-5 mr-2 text-blue-600"></i>
+                                                Audit Log Cleanup
+                                            </h3>
+                                            <p class="text-sm text-gray-500 mt-1">Remove old audit logs to free up space</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-6">
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-blue-800">
+                                            Clear audit logs older than a specified number of days. Minimum retention period is 90 days for compliance.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-end space-x-4">
+                                        <div class="flex-1">
+                                            <label for="audit-retention-days" class="block text-sm font-medium text-gray-700 mb-2">
+                                                Retention Period (days)
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                id="audit-retention-days" 
+                                                min="90" 
+                                                value="90" 
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <button onclick="clearOldAudits()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center" data-tooltip="You'll permanently remove old audit logs">
+                                            <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
+                                            Purge
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Execution Log Cleanup Section -->
+                            <div class="bg-white rounded-lg shadow mb-6">
+                                <div class="p-6 border-b border-gray-200">
+                                    <div class="flex items-center justify-between disable-select">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                                <i data-lucide="activity" class="h-5 w-5 mr-2 text-green-600"></i>
+                                                Execution Log Cleanup
+                                            </h3>
+                                            <p class="text-sm text-gray-500 mt-1">Manage execution history and logs</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-6">
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-green-800">
+                                            Clear execution logs older than a specified number of days to maintain database performance.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-end space-x-4 mb-4">
+                                        <div class="flex-1">
+                                            <label for="execution-retention-days" class="block text-sm font-medium text-gray-700 mb-2">
+                                                Retention Period (days)
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                id="execution-retention-days" 
+                                                min="1" 
+                                                value="30" 
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <button onclick="clearOldExecutions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center" data-tooltip="You'll permanently remove execution logs">
+                                            <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
+                                            Purge
+                                        </button>
+                                    </div>
+
+                                    <!-- Advanced Options Accordion -->
+                                    <div class="border border-gray-200 rounded-lg">
+                                        <button 
+                                            onclick="toggleExecutionAdvanced()" 
+                                            type="button"
+                                            class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                                        >
+                                            <div class="flex items-center">
+                                                <i data-lucide="settings" class="h-4 w-4 mr-2 text-gray-600"></i>
+                                                <span class="text-sm font-medium text-gray-700">Advanced Options</span>
+                                            </div>
+                                            <i data-lucide="chevron-down" id="executionAdvancedChevron" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                                        </button>
+                                        
+                                        <div id="executionAdvanced" class="hidden border-t border-gray-200 p-4 bg-gray-50">
+                                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                                <div class="flex">
+                                                    <div class="flex-shrink-0">
+                                                        <i data-lucide="alert-triangle" class="h-5 w-5 text-red-400"></i>
+                                                    </div>
+                                                    <div class="ml-3">
+                                                        <h4 class="text-sm font-medium text-red-800">Danger: Clear All Execution Logs</h4>
+                                                        <p class="text-sm text-red-700 mt-1">
+                                                            This will delete ALL execution logs regardless of age. This action cannot be undone and will result in permanent data loss.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button onclick="initiateClearAllExecutions()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center" data-tooltip="You'll permanently remove execution every single logs">
+                                                <i data-lucide="trash-2" class="h-4 w-4 mr-2"></i>
+                                                Reset Execution Logs
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Database Reset Section -->
+                            <div class="bg-white rounded-lg shadow mb-6">
+                                <div class="p-6 border-b border-gray-200">
+                                    <div class="flex items-center justify-between disable-select">
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                                <i data-lucide="trash-2" class="h-5 w-5 mr-2 text-red-600"></i>
+                                                Reset Database
+                                            </h3>
+                                            <p class="text-sm text-gray-500 mt-1">Completely wipe and reinitialize the database</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-6">
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-red-800">
+                                            This will delete the entire database and reseed it with default data. 
+                                            All profiles, executions, connections, and users will be permanently lost.
+                                        </p>
+                                    </div>
+                                    <button onclick="initiateReset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center" data-tooltip="Are you sure you want to do this?">
+                                        <i data-lucide="trash-2" class="h-4 w-4 mr-2"></i>
+                                        Reset Database
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Database Reset Confirmation Modal -->
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-red-900 flex items-center">
+                    <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
+                    Confirm
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">
+                    You're about to reset Reef. This action cannot be undone. To proceed, please type the following text:
+                </p>
+                <div class="bg-gray-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="reset-confirmation-string">
+                    --
+                </div>
+                <input 
+                    type="text" 
+                    id="reset-confirmation-input" 
+                    placeholder="Type the text here"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                />
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeResetModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmReset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disable">Reset Database</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear All Executions Confirmation Modal -->
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-red-900 flex items-center">
+                    <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
+                    Confim
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">
+                    This will delete ALL execution logs. To proceed, please type the following text:
+                </p>
+                <div class="bg-gray-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="clear-all-confirmation-string">
+                    --
+                </div>
+                <input 
+                    type="text" 
+                    id="clear-all-confirmation-input" 
+                    placeholder="Type the text here"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                />
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeClearAllModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmClearAll()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Clear All Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Old Audits Confirmation Modal -->
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-blue-600"></i>
+                    Confirm
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">
+                    You are about to delete audit logs older than <strong id="audit-confirm-days">--</strong> days. 
+                    This action cannot be undone.
+                </p>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p class="text-sm text-blue-800">
+                        <strong>Note:</strong> Minimum retention period is 90 days for compliance purposes.
+                    </p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeClearOldAuditsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmClearOldAudits()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Clear Old Audits</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Old Executions Confirmation Modal -->
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-green-600"></i>
+                    Confirm
+                </h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">
+                    You are about to delete execution logs older than <strong id="execution-confirm-days">--</strong> days. 
+                    This action cannot be undone.
+                </p>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p class="text-sm text-green-800">
+                        <strong>Note:</strong> This will help maintain database performance by removing old execution history.
+                    </p>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeClearOldExecutionsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmClearOldExecutions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Clear Old Executions</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div id="addUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="new-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <select id="new-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="createUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="edit-user-id">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <input type="text" id="edit-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="edit-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Leave blank to keep current password">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                        <input type="password" id="edit-password-confirm" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="eave blank to keep current password">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <select id="edit-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="User">User</option>
+                            <option value="Admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="edit-is-active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <label for="edit-is-active" class="ml-2 block text-sm text-gray-900">Active</label>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeEditUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="updateUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add API Key Modal -->
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Add API Key</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                        <input type="text" id="new-apikey-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Your API Key Name">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
+                        <select id="new-apikey-permissions" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value='{"read":true,"write":false}'>Read Only</option>
+                            <option value='{"read":true,"write":true}'>Read & Write</option>
+                            <option value='{"read":true,"write":true,"admin":true}'>Full Access</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Expires At (Optional)</label>
+                        <input type="date" id="new-apikey-expires" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeAddApiKeyModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="createApiKey()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Display Modal -->
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">API Key Generated</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Save this API key securely. You won't be able to see it again!</p>
+                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                    <code class="text-sm font-mono break-all" id="generated-api-key"></code>
+                </div>
+                <button onclick="copyApiKey()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                    <i data-lucide="copy" class="h-4 w-4 mr-2"></i>
+                    Copy to Clipboard
+                </button>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end">
+                <button onclick="closeApiKeyDisplayModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Roles Help Modal -->
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">About Users</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-6">
+                    <!-- Admin Section -->
+                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="shield" class="h-5 w-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Administrator</h4>
+                                <p class="text-sm text-gray-600">Full system access and control</p>
+                            </div>
+                        </div>
+                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Access all admin settings (metrics, logs, audit, users, API keys, notifications, email templates)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Create, edit, and delete users</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Configure system notifications and email templates</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Manage connections, destinations, and jobs</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Access the Danger Zone for sensitive operations</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- User Section -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="h-8 w-8 rounded-lg bg-gray-400 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="user" class="h-5 w-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Standard User</h4>
+                                <p class="text-sm text-gray-600">Limited access to core features</p>
+                            </div>
+                        </div>
+                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Create and run data export profiles</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>View execution history and results</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>View system dashboard</span>
+                            </li>
+                            <li class="flex items-start text-gray-500">
+                                <i data-lucide="x" class="h-4 w-4 text-red-400 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>No access to admin settings or configurations</span>
+                            </li>
+                            <li class="flex items-start text-gray-500">
+                                <i data-lucide="x" class="h-4 w-4 text-red-400 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Cannot manage users or system settings</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end">
+                <button onclick="closeUserHelpModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key Help Modal -->
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">About API Keys</h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-6">
+                    <!-- API Keys Overview -->
+                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="key" class="h-5 w-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">What are API Keys?</h4>
+                                <p class="text-sm text-gray-600">Secure tokens for programmatic access</p>
+                            </div>
+                        </div>
+                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>API Keys allow programmatic access to the system without exposing passwords</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Each key can have read/write permissions configured for scope control</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Keys can be set to expire on a specific date for enhanced security</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Track when each key was last used for security monitoring</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Key Management Practices -->
+                    <div class="border border-amber-200 rounded-lg p-4 bg-amber-50">
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="h-8 w-8 rounded-lg bg-amber-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="shield-alert" class="h-5 w-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Best Practices</h4>
+                                <p class="text-sm text-gray-600">Keep your keys secure</p>
+                            </div>
+                        </div>
+                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                            <li class="flex items-start">
+                                <i data-lucide="alert-circle" class="h-4 w-4 text-amber-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Make sure to only share API keys with trusted parties</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="alert-circle" class="h-4 w-4 text-amber-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Set appropriate expiration dates and rotate keys regularly</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="alert-circle" class="h-4 w-4 text-amber-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Grant only the minimum permissions required for each key</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i data-lucide="alert-circle" class="h-4 w-4 text-amber-600 mr-2 flex-shrink-0 mt-0.5"></i>
+                                <span>Delete keys that are no longer in use</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Webhooks Tip -->
+                    <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                        <div class="flex items-start gap-3">
+                            <div class="h-8 w-8 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+                                <i data-lucide="lightbulb" class="h-5 w-5 text-white"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold text-gray-900">Did you know?</h4>
+                                <p class="text-sm text-gray-700">Webhooks are a separate way to trigger profiles and jobs. Find them in the Profiles or Jobs pages.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end">
+                <button onclick="closeApiKeyHelpModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        const API_BASE = window.location.origin;
+        let currentTab = 'metrics';
+        let logRefreshInterval = null;
+        let userMenuExpanded = false;
+
+        // Audit logs pagination variables
+        let auditCurrentPage = 1;
+        let auditPageSize = 50;
+        let auditTotalCount = 0;
+        let auditTotalPages = 0;
+
+        // Console logs pagination variables
+        let logCurrentPage = 1;
+        let logPageSize = 100;
+        let logTotalCount = 0;
+        let logTotalPages = 0;
+
+        // Handle tab parameter from URL query string
+        window.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            if (tabParam) {
+                // Valid tabs: metrics, logs, audit, users, apikeys, notifications, email-templates, system, danger
+                const validTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates', 'system', 'danger'];
+                if (validTabs.includes(tabParam)) {
+                    showTab(tabParam);
+                }
+            } else {
+                // Load default tab
+                showTab('system');
+            }
+            setUserSidebarInfo();
+            // Only call lucide.createIcons() if not on danger tab (danger tab calls it in showTab)
+            if (currentTab !== 'danger') {
+                lucide.createIcons();
+            }
+        });
+
+        // Toggle user menu
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            // Re-render icons after DOM update
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
+        function getLogLevelColor(level) {
+            switch (level.toUpperCase()) {
+                case 'FATAL': return 'text-white bg-red-800 px-2 py-0.5 rounded';
+                case 'ERROR': return 'text-red-500';
+                case 'WARNING': return 'text-yellow-500';
+                case 'INFORMATION': return 'text-green-500';
+                case 'DEBUG': return 'text-blue-400';
+                case 'VERBOSE': return 'text-gray-400';
+                default: return 'text-gray-300';
+            }
+        }
+
+        function showTab(tab) {
+            currentTab = tab;
+
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('[id^="tab-"]').forEach(el => {
+                el.classList.remove('text-blue-600', 'border-blue-600', 'border-b-2');
+                el.classList.add('text-gray-600');
+            });
+
+            const tabBtn = document.getElementById(`tab-${tab}`);
+            const contentDiv = document.getElementById(`content-${tab}`);
+
+            // Check if the element was found to prevent the TypeError
+            if (tabBtn) {
+                tabBtn.classList.remove('text-gray-600');
+                tabBtn.classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+            } else {
+                 console.error(`Tab button with ID 'tab-${tab}' not found.`);
+            }
+
+            if (contentDiv) {
+                contentDiv.classList.remove('hidden');
+            } else {
+                console.error(`Tab content with ID 'content-${tab}' not found.`);
+            }
+
+            // Check permissions for admin-only tabs
+            const adminOnlyTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates'];
+            if (adminOnlyTabs.includes(tab)) {
+                checkTabPermissions(tab);
+            }
+
+            // Lock danger zone AFTER showing the tab (so the blur overlay is in the DOM)
+            if (tab === 'danger') {
+                lockDangerZone();
+                lucide.createIcons();
+            }
+
+            if (tab === 'metrics') loadMetrics();
+            else if (tab === 'audit') loadAuditLogs();
+            else if (tab === 'logs') loadLogs();
+            else if (tab === 'users') loadUsers();
+            else if (tab === 'apikeys') loadApiKeys();
+            else if (tab === 'system') loadSystemInfo();
+        }
+
+        /**
+         * Check and enforce admin permissions for tabs
+         */
+        function checkTabPermissions(tab) {
+            const userRole = localStorage.getItem('reef_role');
+            const isAdmin = userRole === 'Admin' || userRole === 'Administrator';
+
+            const blurOverlay = document.getElementById(`${tab}-permission-blur`);
+            if (!blurOverlay) return; // No permission check for this tab
+
+            if (!isAdmin) {
+                blurOverlay.classList.remove('hidden');
+            } else {
+                blurOverlay.classList.add('hidden');
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/metrics`, {
+                    headers: getAuthHeaders()
+                });
+                if (!response.ok) throw new Error('Failed to load metrics');
+                
+                const data = await response.json();
+                
+                // Safely access nested properties, defaulting to empty objects/arrays
+                const profiles = data.profiles || {};
+                const executions = data.executions || {};
+                const system = data.system || {};
+                const recentStats = data.recentStats || {};
+                const last7Days = recentStats.last7Days || {};
+                
+                // FIX: Use 0 or '--' for metric display based on what is available
+                document.getElementById('metric-total-profiles').textContent = profiles.total !== undefined ? profiles.total : '0';
+                document.getElementById('metric-active-profiles').textContent = profiles.active !== undefined ? profiles.active : '0';
+                document.getElementById('metric-total-executions').textContent = executions.total !== undefined ? executions.total : '0';
+                
+                // Round success rate or default to 0
+                const successRate = executions.successRate !== undefined ? Math.round(executions.successRate * 10) / 10 : '0';
+                document.getElementById('metric-success-rate').textContent = successRate;
+                
+                document.getElementById('metric-failed-24h').textContent = executions.failedLast24h !== undefined ? executions.failedLast24h : '0';
+                document.getElementById('metric-uptime').textContent = system.uptimeDays !== undefined ? system.uptimeDays : '--';
+                
+                document.getElementById('stats-7d-total').textContent = last7Days.total !== undefined ? last7Days.total : '0';
+                document.getElementById('stats-7d-success').textContent = last7Days.success !== undefined ? last7Days.success : '0';
+                document.getElementById('stats-7d-failed').textContent = last7Days.failed !== undefined ? last7Days.failed : '0';
+                document.getElementById('stats-7d-duration').textContent = last7Days.avgDurationMs !== undefined ? last7Days.avgDurationMs + 'ms' : '--';
+                
+                document.getElementById('storage-db-size').textContent = system.databaseSizeMb !== undefined ? system.databaseSizeMb + ' MB' : '--';
+                document.getElementById('storage-exports-size').textContent = system.exportsSizeMb !== undefined ? system.exportsSizeMb + ' MB' : '--';
+
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadAuditLogs() {
+            try {
+                const entityType = document.getElementById('filter-entity-type').value;
+                const action = document.getElementById('filter-action').value;
+                
+                let url = `${API_BASE}/api/admin/audit-logs?page=${auditCurrentPage}&pageSize=${auditPageSize}`;
+                if (entityType) url += `&entityType=${entityType}`;
+                if (action) url += `&action=${action}`;
+                
+                const response = await fetch(url, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed to load audit logs. Do you have enough permissions?');
+                
+                const result = await response.json();
+                const logs = result.data || [];
+                auditTotalCount = result.totalCount || 0;
+                auditCurrentPage = result.page || 1;
+                auditPageSize = result.pageSize || 50;
+                auditTotalPages = result.totalPages || 0;
+                
+                const tbody = document.getElementById('audit-logs-table');
+                
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No audit logs found</td></tr>';
+                    renderAuditPagination();
+                    return;
+                }
+                
+                tbody.innerHTML = logs.map(log => `
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-900">${new Date(log.Timestamp).toLocaleString()}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">${log.EntityType} #${log.EntityId}</td>
+                        <td class="px-6 py-4 text-sm"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">${log.Action}</span></td>
+                        <td class="px-6 py-4 text-sm text-gray-900">${log.PerformedBy}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${log.Changes || '-'}</td>
+                    </tr>
+                `).join('');
+                
+                renderAuditPagination();
+            } catch (error) {
+                console.error('Error loading audit logs:', error);
+                const tbody = document.getElementById('audit-logs-table');
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error: ${error.message}</td></tr>`;
+            }
+        }
+
+        function applyAuditFilters() {
+            auditCurrentPage = 1; // Reset to first page when filters change
+            loadAuditLogs();
+        }
+
+        function renderAuditPagination() {
+            const showingFrom = auditTotalCount > 0 ? (auditCurrentPage - 1) * auditPageSize + 1 : 0;
+            const showingTo = Math.min(auditCurrentPage * auditPageSize, auditTotalCount);
+            
+            document.getElementById('audit-showing-from').textContent = showingFrom;
+            document.getElementById('audit-showing-to').textContent = showingTo;
+            document.getElementById('audit-total-count').textContent = auditTotalCount;
+
+            const paginationControls = document.getElementById('audit-pagination-controls');
+            let html = '';
+
+            // Previous button
+            html += `
+                <button onclick="previousAuditPage()" ${auditCurrentPage === 1 ? 'disabled' : ''} 
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${auditCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            // Page numbers
+            const maxVisible = 5;
+            let startPage = Math.max(1, auditCurrentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(auditTotalPages, startPage + maxVisible - 1);
+            
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const active = i === auditCurrentPage;
+                html += `
+                    <button onclick="goToAuditPage(${i})" 
+                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            active 
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            // Next button
+            html += `
+                <button onclick="nextAuditPage()" ${auditCurrentPage === auditTotalPages ? 'disabled' : ''} 
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${auditCurrentPage === auditTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            paginationControls.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function previousAuditPage() {
+            if (auditCurrentPage > 1) {
+                auditCurrentPage--;
+                loadAuditLogs();
+            }
+        }
+
+        function nextAuditPage() {
+            if (auditCurrentPage < auditTotalPages) {
+                auditCurrentPage++;
+                loadAuditLogs();
+            }
+        }
+
+        function goToAuditPage(page) {
+            if (page >= 1 && page <= auditTotalPages) {
+                auditCurrentPage = page;
+                loadAuditLogs();
+            }
+        }
+
+        function changeAuditPageSize() {
+            const newPageSize = parseInt(document.getElementById('audit-page-size-select').value);
+            if (newPageSize !== auditPageSize) {
+                auditPageSize = newPageSize;
+                auditCurrentPage = 1; // Reset to first page when changing page size
+                loadAuditLogs();
+            }
+        }
+
+        // Updated function to load Serilog logs with pagination
+        async function loadLogs() {
+            const consoleOutput = document.getElementById('log-console-output');
+            consoleOutput.innerHTML = '<div class="text-center text-gray-400 py-4">Fetching logs...</div>';
+            
+            try {
+                const logLevel = document.getElementById('filter-log-level').value;
+                let url = `${API_BASE}/api/admin/logs?page=${logCurrentPage}&pageSize=${logPageSize}`;
+                if (logLevel) url += `&minimumLevel=${logLevel}`;
+                
+                const response = await fetch(url, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed to load application logs. Do you have enough permissions?');
+                
+                const result = await response.json();
+                const logs = result.data || [];
+                logTotalCount = result.totalCount || 0;
+                logCurrentPage = result.page || 1;
+                logPageSize = result.pageSize || 100;
+                logTotalPages = result.totalPages || 0;
+                
+                console.log('Logs loaded:', logs.length, 'of', logTotalCount);
+                
+                if (logs.length === 0) {
+                    consoleOutput.innerHTML = '<div class="text-center text-gray-400 py-4">No application log entries found.</div>';
+                    renderLogPagination();
+                    updateLogInfo(0);
+                    return;
+                }
+
+                // Render logs in the console style
+                consoleOutput.innerHTML = logs.map(log => {
+                    // Normalize property names (handle both lowercase and capitalized)
+                    const timestamp = log.timestamp || log.Timestamp;
+                    const level = log.level || log.Level;
+                    const message = log.message || log.Message;
+                    
+                    // Check for required properties to prevent errors in rendering
+                    if (!timestamp || !level || !message) {
+                        console.warn('Skipping malformed log entry:', log);
+                        return ''; // Skip malformed log entry
+                    }
+                    const time = new Date(timestamp).toLocaleTimeString('nl-NL', { hour12: false });
+                    const levelClass = getLogLevelColor(level);
+
+                    return `
+                        <div class="log-row">
+                            <span class="log-time">${time}</span>
+                            <span class="${levelClass} font-bold text-xs">${level.toUpperCase().substring(0,4)}</span>
+                            <span class="log-message text-gray-300">${escapeHtml(message)}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                console.log('Rendered HTML length:', consoleOutput.innerHTML.length);
+                renderLogPagination();
+                updateLogInfo();
+                lucide.createIcons(); // Refresh icons if needed
+
+            } catch (error) {
+                consoleOutput.innerHTML = `<div class="p-4 text-red-400">Error loading logs: ${error.message}</div>`;
+                console.error('Error loading application logs:', error);
+                renderLogPagination();
+                updateLogInfo();
+            }
+        }
+
+        function applyLogFilters() {
+            logCurrentPage = 1; // Reset to first page when filters change
+            loadLogs();
+        }
+
+        function renderLogPagination() {
+            const showingFrom = logTotalCount > 0 ? (logCurrentPage - 1) * logPageSize + 1 : 0;
+            const showingTo = Math.min(logCurrentPage * logPageSize, logTotalCount);
+            
+            document.getElementById('log-showing-from').textContent = showingFrom;
+            document.getElementById('log-showing-to').textContent = showingTo;
+            document.getElementById('log-total-count').textContent = logTotalCount;
+
+            const paginationControls = document.getElementById('log-pagination-controls');
+            if (!paginationControls) return;
+            
+            let html = '';
+
+            // Previous button
+            html += `
+                <button onclick="previousLogPage()" ${logCurrentPage === 1 ? 'disabled' : ''} 
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${logCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            // Page numbers
+            const maxVisible = 5;
+            let startPage = Math.max(1, logCurrentPage - Math.floor(maxVisible / 2));
+            let endPage = Math.min(logTotalPages, startPage + maxVisible - 1);
+            
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const active = i === logCurrentPage;
+                html += `
+                    <button onclick="goToLogPage(${i})" 
+                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            active 
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            // Next button
+            html += `
+                <button onclick="nextLogPage()" ${logCurrentPage === logTotalPages ? 'disabled' : ''} 
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${logCurrentPage === logTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            paginationControls.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function previousLogPage() {
+            if (logCurrentPage > 1) {
+                logCurrentPage--;
+                loadLogs();
+            }
+        }
+
+        function nextLogPage() {
+            if (logCurrentPage < logTotalPages) {
+                logCurrentPage++;
+                loadLogs();
+            }
+        }
+
+        function goToLogPage(page) {
+            if (page >= 1 && page <= logTotalPages) {
+                logCurrentPage = page;
+                loadLogs();
+            }
+        }
+
+        function changeLogPageSize() {
+            const newPageSize = parseInt(document.getElementById('log-page-size-select').value);
+            if (newPageSize !== logPageSize) {
+                logPageSize = newPageSize;
+                logCurrentPage = 1; // Reset to first page when changing page size
+                loadLogs();
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function updateLogInfo() {
+            const infoText = document.getElementById('log-info-text');
+            const lastUpdate = document.getElementById('log-last-update');
+            
+            if (infoText) {
+                infoText.textContent = `Showing ${logPageSize} entries per page`;
+            }
+            if (lastUpdate) {
+                lastUpdate.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('log-auto-refresh');
+            
+            if (checkbox.checked) {
+                // Start auto-refresh every 5 seconds
+                logRefreshInterval = setInterval(() => {
+                    if (currentTab === 'logs') {
+                        loadLogs();
+                    }
+                }, 5000);
+                showToast('Auto-refresh enabled (every 5 seconds)', 'success');
+            } else {
+                // Stop auto-refresh
+                if (logRefreshInterval) {
+                    clearInterval(logRefreshInterval);
+                    logRefreshInterval = null;
+                }
+                showToast('Auto-refresh disabled', 'info');
+            }
+        }
+
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('hidden');
+        }
+
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.add('hidden');
+            document.getElementById('new-username').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('new-role').value = 'User';
+        }
+
+        function openUserHelpModal() {
+            document.getElementById('userHelpModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeUserHelpModal() {
+            document.getElementById('userHelpModal').classList.add('hidden');
+        }
+
+        function openApiKeyHelpModal() {
+            document.getElementById('apiKeyHelpModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeApiKeyHelpModal() {
+            document.getElementById('apiKeyHelpModal').classList.add('hidden');
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').classList.add('hidden');
+            document.getElementById('edit-user-id').value = '';
+            document.getElementById('edit-username').value = '';
+            document.getElementById('edit-password').value = '';
+            document.getElementById('edit-password-confirm').value = '';
+            document.getElementById('edit-role').value = 'User';
+            document.getElementById('edit-is-active').checked = true;
+        }
+
+        async function createUser() {
+            const username = document.getElementById('new-username').value.trim();
+            const password = document.getElementById('new-password').value;
+            const role = document.getElementById('new-role').value;
+            
+            // NOTE: Using a custom modal/toast instead of alert in a final application is recommended
+            if (!username || !password) {
+                showToast('Please fill in all fields', 'danger');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ username, password, role })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to create user');
+                }
+                
+                closeAddUserModal();
+                loadUsers();
+                showToast('User created successfully', 'success');
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteUser(userId, username) {
+            // Prevent deletion of first user
+            if (userId === 1) {
+                showToast('Cannot delete the first user', 'danger');
+                return;
+            }
+
+            // Check if attempting to delete another admin
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users`, {
+                    headers: getAuthHeaders()
+                });
+                if (response.ok) {
+                    const users = await response.json();
+                    const userToDelete = users.find(u => u.id === userId);
+                    const currentUserRole = localStorage.getItem('reef_role');
+
+                    if (userToDelete && (userToDelete.role === 'Admin' || userToDelete.role === 'Administrator') && currentUserRole === 'Admin') {
+                        showToast('Cannot delete another admin account', 'danger');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Error checking user role:', e);
+                return;
+            }
+
+            // NOTE: Using a custom modal/toast instead of confirm in a final application is recommended
+            if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to delete user');
+
+                loadUsers();
+                showToast('User deleted successfully', 'success');
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        function openAddApiKeyModal() {
+            document.getElementById('addApiKeyModal').classList.remove('hidden');
+        }
+
+        function closeAddApiKeyModal() {
+            document.getElementById('addApiKeyModal').classList.add('hidden');
+            document.getElementById('new-apikey-name').value = '';
+            document.getElementById('new-apikey-permissions').value = '{"read":true,"write":false}';
+            document.getElementById('new-apikey-expires').value = '';
+        }
+
+        async function loadApiKeys() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/api-keys`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load API keys');
+
+                const apiKeys = await response.json();
+                const tbody = document.getElementById('apikeys-table');
+
+                if (!apiKeys || apiKeys.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No API keys created</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = apiKeys.map(key => {
+                    const createdDate = new Date(key.createdAt).toLocaleString();
+                    const expiresDate = key.expiresAt ? new Date(key.expiresAt).toLocaleString() : 'Never';
+                    const lastUsedDate = key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString() : 'Never';
+
+                    return `
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${escapeHtml(key.name)}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${createdDate}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${expiresDate}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600">${lastUsedDate}</td>
+                            <td class="px-6 py-4 text-sm">
+                                <button onclick="deleteApiKey(${key.id}, '${key.name.replace(/'/g, "\\'")}');" class="text-red-600 hover:text-red-800" title="Delete API Key">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Re-render Lucide icons for dynamically added elements
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading API keys:', error);
+                const tbody = document.getElementById('apikeys-table');
+                tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Error loading API keys</td></tr>';
+            }
+        }
+
+        async function createApiKey() {
+            const name = document.getElementById('new-apikey-name').value.trim();
+            const permissions = document.getElementById('new-apikey-permissions').value;
+            const expiresAt = document.getElementById('new-apikey-expires').value || null;
+            
+            if (!name) {
+                showToast('Please enter a name for the API key', 'danger');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/api-keys`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ name, permissions, expiresAt })
+                });
+                
+                if (!response.ok) throw new Error('Failed to create API key');
+                
+                const result = await response.json();
+                
+                document.getElementById('generated-api-key').textContent = result.apiKey;
+                closeAddApiKeyModal();
+                document.getElementById('apiKeyDisplayModal').classList.remove('hidden');
+                loadApiKeys();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        function closeApiKeyDisplayModal() {
+            document.getElementById('apiKeyDisplayModal').classList.add('hidden');
+        }
+
+        function copyApiKey() {
+            const apiKey = document.getElementById('generated-api-key').textContent;
+            // Use execCommand for broader compatibility in iFrame environments
+            const tempInput = document.createElement('textarea');
+            tempInput.value = apiKey;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('API key copied to clipboard', 'success');
+        }
+
+        async function deleteApiKey(keyId, name) {
+            if (!confirm(`Are you sure you want to delete API key "${name}"?`)) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/api-keys/${keyId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed to delete API key');
+                
+                loadApiKeys();
+                showToast('API key deleted successfully', 'success');
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadSystemInfo() {
+            try {
+                // Fetch public system info (accessible to all authenticated users)
+                const response = await fetch(`${API_BASE}/api/system/info`, {
+                    headers: getAuthHeaders()
+                });
+                if (!response.ok) {
+                    console.error('Failed to fetch system info');
+                    return;
+                }
+
+                const data = await response.json();
+                let displayVersion = data.version;
+                const envText = data.environment || 'Production';
+
+                // Shorten version for development or production display
+                let shortVersion = displayVersion.split('+')[0];
+                if (envText.toLowerCase().includes('development') || envText.toLowerCase().includes('dev')) {
+                    displayVersion = shortVersion + '+dev';
+                } else {
+                    displayVersion = shortVersion; // Ensure commit hash is never shown in production
+                }
+
+                // Update version information
+                document.getElementById('system-version').textContent = displayVersion;
+                document.getElementById('system-version-detail').textContent = displayVersion;
+
+                // Update environment
+                document.getElementById('system-environment').textContent = envText;
+                document.getElementById('system-environment-detail').textContent = envText;
+
+                // Update timestamp
+                const timestamp = new Date(data.timestamp);
+                document.getElementById('system-timestamp').textContent = timestamp.toLocaleString();
+
+                // Update uptime
+                if (data.uptime?.days !== undefined) {
+                    document.getElementById('system-uptime').textContent = data.uptime.days + ' days';
+                }
+
+                // Start real-time clock
+                updateServerTime();
+                setInterval(updateServerTime, 1000);
+
+            } catch (error) {
+                console.error('Error loading system info:', error);
+            }
+        }
+
+        function updateServerTime() {
+            const now = new Date();
+            
+            // Format time as HH:MM:SS
+            const timeStr = now.toUTCString().split(' ')[4];
+            document.getElementById('system-time').textContent = timeStr;
+            
+            // Format date more compactly
+            const dateStr = now.toLocaleDateString('nl-NL', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('system-date').textContent = dateStr;
+        }
+        window.onload = async function() {
+            await requireAuth();
+            setUserSidebarInfo();
+            // Note: Tab initialization is handled by DOMContentLoaded event listener above
+
+            // Fetch current version from the API and then check for updates
+            await fetchAndCheckVersion();
+        };
+
+        /**
+         * Fetches the current version from the API and initiates the GitHub version check
+         */
+        async function fetchAndCheckVersion() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/version`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) {
+                    console.error('Failed to fetch version from API');
+                    return;
+                }
+                
+                const data = await response.json();
+                const currentVersion = data.version;
+                
+                console.log('Current Reef version:', currentVersion);
+                
+                // Define CURRENT_VERSION globally for github.js
+                window.CURRENT_VERSION = currentVersion;
+                
+                // Now check for updates on GitHub
+                checkLatestVersion();
+            } catch (error) {
+                console.error('Error fetching current version:', error);
+            }
+        }
+
+        // ========================================
+        // Danger Zone Functions
+        // ========================================
+
+        let currentConfirmationString = null;
+
+        /**
+         * Lock the danger zone (show blur overlay)
+         */
+        function lockDangerZone() {
+            const userRole = localStorage.getItem('reef_role');
+            const isAdmin = userRole === 'Admin' || userRole === 'Administrator';
+
+            const adminBlurOverlay = document.getElementById('danger-zone-admin-blur');
+            const confirmationBlurOverlay = document.getElementById('danger-zone-blur');
+
+            if (!isAdmin) {
+                // Non-admin users see the admin-only overlay
+                if (adminBlurOverlay) {
+                    adminBlurOverlay.classList.remove('hidden');
+                    adminBlurOverlay.classList.add('flex');
+                }
+            } else {
+                // Admin users see the confirmation overlay
+                if (confirmationBlurOverlay) {
+                    confirmationBlurOverlay.classList.remove('hidden');
+                    confirmationBlurOverlay.classList.add('flex');
+                }
+            }
+        }
+
+        /**
+         * Unlock the danger zone (hide blur overlay)
+         */
+        function unlockDangerZone() {
+            const button = event.target.closest('button');
+            const blurOverlay = document.getElementById('danger-zone-blur');
+
+            // Disable the button to prevent rapid clicks
+            button.disabled = true;
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+            const originalText = button.innerHTML;
+
+            // Show countdown - display immediately, then update every second
+            let secondsRemaining = 4;
+
+            // Display countdown immediately
+            const updateCountdown = () => {
+                button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clock" class="lucide lucide-clock h-5 w-5 mr-2 inline"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    Wait ${secondsRemaining}s`;
+            };
+
+            updateCountdown(); // Show immediately
+            const countdownInterval = setInterval(() => {
+                secondsRemaining--;
+
+                if (secondsRemaining < 0) {
+                    clearInterval(countdownInterval);
+                    button.disabled = false;
+                    button.classList.remove('opacity-50', 'cursor-not-allowed');
+                    button.innerHTML = originalText;
+                    lucide.createIcons(); // Re-render icons
+
+                    // Hide the blur overlay AFTER countdown completes
+                    if (blurOverlay) {
+                        blurOverlay.classList.remove('flex');
+                        blurOverlay.classList.add('hidden');
+                    }
+                    lucide.createIcons(); // Re-render icons for the now-visible content
+                } else {
+                    updateCountdown();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Initiate database reset flow
+         */
+        async function initiateReset() {
+            try {
+                // Get confirmation string from server
+                const response = await fetch(`${API_BASE}/api/admin/danger/confirmation-string`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed to get confirmation string');
+                
+                const data = await response.json();
+                currentConfirmationString = data.confirmationString;
+                
+                // Show modal with confirmation string
+                document.getElementById('reset-confirmation-string').textContent = currentConfirmationString;
+                document.getElementById('reset-confirmation-input').value = '';
+                document.getElementById('resetConfirmModal').classList.remove('hidden');
+                
+                // Re-render icons
+                setTimeout(() => lucide.createIcons(), 50);
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        /**
+         * Close reset modal
+         */
+        function closeResetModal() {
+            document.getElementById('resetConfirmModal').classList.add('hidden');
+            currentConfirmationString = null;
+        }
+
+        /**
+         * Confirm database reset
+         */
+        async function confirmReset() {
+            const input = document.getElementById('reset-confirmation-input').value;
+            
+            if (input !== currentConfirmationString) {
+                showToast('Confirmation text does not match', 'danger');
+                return;
+            }
+
+            // Add extra browser confirmation dialog
+            const confirmed = window.confirm('Are you absolutely sure you want to reset the database? This action cannot be undone.');
+            if (!confirmed) {
+                showToast('Database reset cancelled', 'info');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/danger/reset-database`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ confirmationString: input })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to reset database');
+                }
+                
+                showToast('Database reset successfully. Redirecting to login...', 'success');
+                closeResetModal();
+                
+                // Redirect to login after a short delay
+                setTimeout(() => {
+                    clearAuth();
+                    redirectToLogin();
+                }, 2000);
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        /**
+         * Clear old audit logs - show modal
+         */
+        function clearOldAudits() {
+            const retentionDays = parseInt(document.getElementById('audit-retention-days').value);
+            
+            if (retentionDays < 90) {
+                showToast('Minimum retention period is 90 days', 'danger');
+                return;
+            }
+            
+            // Show modal with retention days
+            document.getElementById('audit-confirm-days').textContent = retentionDays;
+            document.getElementById('clearOldAuditsModal').classList.remove('hidden');
+            
+            // Re-render icons
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        /**
+         * Close clear old audits modal
+         */
+        function closeClearOldAuditsModal() {
+            document.getElementById('clearOldAuditsModal').classList.add('hidden');
+        }
+
+        /**
+         * Confirm clear old audit logs
+         */
+        async function confirmClearOldAudits() {
+            const retentionDays = parseInt(document.getElementById('audit-retention-days').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/danger/clear-old-audits`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ retentionDays })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to clear audit logs');
+                }
+                
+                const data = await response.json();
+                showToast(`${data.message}`, 'success');
+                closeClearOldAuditsModal();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        /**
+         * Clear old execution logs - show modal
+         */
+        function clearOldExecutions() {
+            const retentionDays = parseInt(document.getElementById('execution-retention-days').value);
+            
+            if (retentionDays < 1) {
+                showToast('Retention period must be at least 1 day', 'danger');
+                return;
+            }
+            
+            // Show modal with retention days
+            document.getElementById('execution-confirm-days').textContent = retentionDays;
+            document.getElementById('clearOldExecutionsModal').classList.remove('hidden');
+            
+            // Re-render icons
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        /**
+         * Close clear old executions modal
+         */
+        function closeClearOldExecutionsModal() {
+            document.getElementById('clearOldExecutionsModal').classList.add('hidden');
+        }
+
+        /**
+         * Toggle execution advanced options accordion
+         */
+        function toggleExecutionAdvanced() {
+            const panel = document.getElementById('executionAdvanced');
+            const chevron = document.getElementById('executionAdvancedChevron');
+            
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                panel.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            // Re-render icons
+            setTimeout(() => lucide.createIcons(), 50);
+        }
+
+        /**
+         * Confirm clear old execution logs
+         */
+        async function confirmClearOldExecutions() {
+            const retentionDays = parseInt(document.getElementById('execution-retention-days').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/danger/clear-old-executions`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ retentionDays })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to clear execution logs');
+                }
+                
+                const data = await response.json();
+                showToast(`${data.message}`, 'success');
+                closeClearOldExecutionsModal();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        /**
+         * Initiate clear all executions flow
+         */
+        async function initiateClearAllExecutions() {
+            try {
+                // Get confirmation string from server
+                const response = await fetch(`${API_BASE}/api/admin/danger/confirmation-string`, {
+                    headers: getAuthHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed to get confirmation string');
+                
+                const data = await response.json();
+                currentConfirmationString = data.confirmationString;
+                
+                // Show modal with confirmation string
+                document.getElementById('clear-all-confirmation-string').textContent = currentConfirmationString;
+                document.getElementById('clear-all-confirmation-input').value = '';
+                document.getElementById('clearAllExecutionsModal').classList.remove('hidden');
+                
+                // Re-render icons
+                setTimeout(() => lucide.createIcons(), 50);
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+
+        /**
+         * Close clear all executions modal
+         */
+        function closeClearAllModal() {
+            document.getElementById('clearAllExecutionsModal').classList.add('hidden');
+            currentConfirmationString = null;
+        }
+
+        /**
+         * Confirm clear all executions
+         */
+        async function confirmClearAll() {
+            const input = document.getElementById('clear-all-confirmation-input').value;
+            
+            if (input !== currentConfirmationString) {
+                showToast('Confirmation string does not match', 'danger');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/danger/clear-all-executions`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ confirmationString: input })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to clear execution logs');
+                }
+                
+                const data = await response.json();
+                showToast(`${data.message}`, 'success');
+                closeClearAllModal();
+            } catch (error) {
+                showToast('Error: ' + error.message, 'danger');
+            }
+        }
+    </script>
+</body>
+</html>

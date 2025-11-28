@@ -1,0 +1,51 @@
+{{~ for row in rows ~}}
+<?xml version="1.0" encoding="UTF-8"?>
+<GeneralLedgerExport>
+    <ExportMetadata>
+        <Company>{{ row.company_name | html.escape }}</Company>
+        <ExportDate>{{ row.export_date | html.escape }}</ExportDate>
+        <ExportPeriod>{{ row.export_period | html.escape }}</ExportPeriod>
+        <Currency>{{ row.currency | html.escape }}</Currency>
+        <FiscalYear>{{ row.fiscal_year }}</FiscalYear>
+        <ValidationStatus>{{ row.validation_status | html.escape }}</ValidationStatus>
+        <Notes>{{ row.notes | html.escape }}</Notes>
+    </ExportMetadata>
+
+    <Accounts>
+        {{~ accounts = parse_json(row.accounts_json) ~}}
+        {{~ for account in accounts ~}}
+        <Account>
+            <AccountNumber>{{ account.account_number | html.escape }}</AccountNumber>
+            <AccountName>{{ account.account_name | html.escape }}</AccountName>
+            <AccountType>{{ account.account_type | html.escape }}</AccountType>
+            <OpeningBalance>{{ account.opening_balance }}</OpeningBalance>
+            <ClosingBalance>{{ account.closing_balance }}</ClosingBalance>
+            <DebitTotal>{{ account.debit_total }}</DebitTotal>
+            <CreditTotal>{{ account.credit_total }}</CreditTotal>
+
+            <Transactions>
+                {{~ transactions = parse_json(account.transactions_json) ~}}
+                {{~ for txn in transactions ~}}
+                <Transaction>
+                    <TransactionID>{{ txn.id | html.escape }}</TransactionID>
+                    <Date>{{ txn.date | html.escape }}</Date>
+                    <Description>{{ txn.description | html.escape }}</Description>
+                    <Reference>{{ txn.reference | html.escape }}</Reference>
+                    <Debit>{{ txn.debit }}</Debit>
+                    <Credit>{{ txn.credit }}</Credit>
+                    <CostCenter>{{ txn.cost_center | html.escape }}</CostCenter>
+                </Transaction>
+                {{~ end ~}}
+            </Transactions>
+        </Account>
+        {{~ end ~}}
+    </Accounts>
+
+    <Summary>
+        <TotalAccounts>{{ row.total_accounts }}</TotalAccounts>
+        <TotalDebit>{{ row.total_debit }}</TotalDebit>
+        <TotalCredit>{{ row.total_credit }}</TotalCredit>
+        <TrialBalance>{{ row.trial_balance | html.escape }}</TrialBalance>
+    </Summary>
+</GeneralLedgerExport>
+{{~ end ~}}

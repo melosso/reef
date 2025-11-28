@@ -1,0 +1,64 @@
+{{~ for row in rows ~}}
+<?xml version="1.0" encoding="UTF-8"?>
+<InventoryReport xmlns="urn:oasis:names:specification:ubl:schema:xsd:InventoryReport-2"
+                 xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+                 xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                 xsi:schemaLocation="urn:oasis:names:specification:ubl:schema:xsd:InventoryReport-2 http://docs.oasis-open.org/ubl/os-ubl-2.1/xsd/maindoc/UBL-InventoryReport-2.1.xsd">
+
+    <cbc:UBLVersionID>{{~ row.ubl_version | html.escape ~}}</cbc:UBLVersionID>
+    <cbc:CustomizationID>{{~ row.customization_id | html.escape ~}}</cbc:CustomizationID>
+    <cbc:ID>{{~ row.report_id | html.escape ~}}</cbc:ID>
+    <cbc:IssueDate>{{~ row.issue_date | html.escape ~}}</cbc:IssueDate>
+    <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
+
+    <!-- Reporting Period -->
+    <cac:InventoryPeriod>
+        <cbc:StartDate>{{~ row.period_start_date | html.escape ~}}</cbc:StartDate>
+        <cbc:EndDate>{{~ row.period_end_date | html.escape ~}}</cbc:EndDate>
+    </cac:InventoryPeriod>
+
+    <!-- Retailer (Inventory Owner) -->
+    {{~ retailer = parse_json(row.retailer_party_json) ~}}
+    <cac:RetailerCustomerParty>
+        <cac:Party>
+            <cbc:EndpointID schemeID="0192">{{~ retailer.endpoint_id | html.escape ~}}</cbc:EndpointID>
+            <cac:PartyName><cbc:Name>{{~ retailer.name | html.escape ~}}</cbc:Name></cac:PartyName>
+        </cac:Party>
+    </cac:RetailerCustomerParty>
+
+    <!-- Inventory Location -->
+    {{~ loc = parse_json(row.location_json) ~}}
+    <cac:InventoryLocation>
+        <cbc:ID>{{~ loc.id | html.escape ~}}</cbc:ID>
+        <cbc:Name>{{~ loc.name | html.escape ~}}</cbc:Name>
+        <cac:Address>
+            <cbc:StreetName>{{~ loc.street | html.escape ~}}</cbc:StreetName>
+            <cbc:CityName>{{~ loc.city | html.escape ~}}</cbc:CityName>
+            <cbc:PostalZone>{{~ loc.postal | html.escape ~}}</cbc:PostalZone>
+            <cac:Country><cbc:IdentificationCode>{{~ loc.country_code | html.escape ~}}</cbc:IdentificationCode></cac:Country>
+        </cac:Address>
+    </cac:InventoryLocation>
+
+    <!-- Inventory Lines -->
+    {{~ lines = parse_json(row.inventory_lines_json) ~}}
+    {{~ for item in lines ~}}
+    <cac:InventoryReportLine>
+        <cbc:ID>{{~ item.id | html.escape ~}}</cbc:ID>
+        <cbc:Quantity unitCode="{{~ item.unit_code | html.escape ~}}">{{~ item.quantity | html.escape ~}}</cbc:Quantity>
+        <cbc:InventoryValueAmount currencyID="EUR">0.00</cbc:InventoryValueAmount>
+        <cac:Item>
+            <cbc:Description>{{~ item.item_name | html.escape ~}}</cbc:Description>
+            <cbc:Name>{{~ item.item_name | html.escape ~}}</cbc:Name>
+            <cac:SellersItemIdentification>
+                <cbc:ID>{{~ item.item_id | html.escape ~}}</cbc:ID>
+            </cac:SellersItemIdentification>
+        </cac:Item>
+        <cac:InventoryLocation>
+            <cbc:ID>{{~ item.location_zone | html.escape ~}}</cbc:ID>
+        </cac:InventoryLocation>
+    </cac:InventoryReportLine>
+    {{~ end ~}}
+
+</InventoryReport>
+{{~ end ~}}

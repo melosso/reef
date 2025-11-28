@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard · Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i> 
+                
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                    </div>
+                </div>
+            
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="book-open" class="h-5 w-5"></i>
+                            <span class="ml-3">Documentation</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-slate-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-slate-700/50 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-slate-100 font-semibold">&nbsp;</div>
+                            <div class="text-xs text-slate-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-slate-400 transition-transform"></i>
+                </button>
+                
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="github" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Dashboard</h1>
+                </div>
+            </header>
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                    <!-- Users Card -->
+                    <button onclick="window.location.href='/admin?tab=users'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-blue-50 rounded-lg">
+                                    <i data-lucide="users" class="h-4 w-4 text-blue-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Users</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-users">-</div>
+                    </button>
+
+                    <!-- Connections Card -->
+                    <button onclick="window.location.href='/connections'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-green-50 rounded-lg">
+                                    <i data-lucide="plug" class="h-4 w-4 text-green-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Connections</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-connections">-</div>
+                    </button>
+
+                    <!-- Profiles Card -->
+                    <button onclick="window.location.href='/profiles'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-purple-50 rounded-lg">
+                                    <i data-lucide="file-code" class="h-4 w-4 text-purple-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Profiles</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-profiles">-</div>
+                    </button>
+
+                    <!-- API Keys Card -->
+                    <button onclick="window.location.href='/admin?tab=apikeys'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-yellow-50 rounded-lg">
+                                    <i data-lucide="key" class="h-4 w-4 text-yellow-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">API Keys</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-apikeys">-</div>
+                    </button>
+
+                    <!-- Storage Card -->
+                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-indigo-50 rounded-lg">
+                                    <i data-lucide="database" class="h-4 w-4 text-indigo-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Storage</span>
+                            </div>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-storage">-</div>
+                    </button>
+                </div>
+
+                <!-- Status & Activity Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <!-- Database Health -->
+                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-gray-50 rounded-lg">
+                                    <i data-lucide="hard-drive" class="h-4 w-4 text-gray-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Database</span>
+                            </div>
+                        </div>
+                        <div class="text-sm font-bold text-gray-900 mb-2" id="dashboard-db-size">-</div>
+                        <div class="text-xs text-gray-500 mb-2" id="dashboard-db-threshold">Threshold: -</div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5" id="db-usage-bar">
+                            <div class="bg-gray-400 h-1.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </button>
+
+                    <!-- Notifications Status -->
+                    <button onclick="window.location.href='/admin?tab=notifications'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-indigo-50 rounded-lg">
+                                    <i data-lucide="bell" class="h-4 w-4 text-indigo-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600">Notifications</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div id="notifications-badge" class="h-2 w-2 rounded-full bg-gray-300"></div>
+                            <span class="text-sm font-semibold text-gray-900" id="dashboard-notifications">-</span>
+                        </div>
+                    </button>
+
+                    <!-- Executions Today/Week -->
+                    <div id="executions-metric-card" class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors" onclick="toggleExecutionsMetric()">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <div class="p-2 bg-orange-50 rounded-lg">
+                                    <i data-lucide="activity" class="h-4 w-4 text-orange-600"></i>
+                                </div>
+                                <span class="text-xs font-medium text-gray-600" id="executions-metric-label">Executions</span>
+                            </div>
+                            <span class="text-xs text-blue-600 font-medium">Switch</span>
+                        </div>
+                        <div class="text-2xl font-bold text-gray-900" id="dashboard-executions">-</div>
+                    </div>
+                </div>
+                <div class="mt-10">
+                    <h2 class="text-xl font-semibold mb-4 disable-select">Connections</h2>
+                    <div class="bg-white rounded-lg shadow overflow-x-auto mb-8">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Tested</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-connections-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <h2 class="text-xl font-semibold mb-4 disable-select">Recent Executions</h2>
+                    <div class="bg-white rounded-lg shadow overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-executions-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <script>
+        queueLucideRender();
+
+        let userMenuExpanded = false;
+        let executionMetricStats = { last7d: 0, today: 0 };
+        let executionMetricPeriod = 'last7d';
+
+        // Toggle executions metric between last 7 days and today
+        function toggleExecutionsMetric() {
+            executionMetricPeriod = executionMetricPeriod === 'last7d' ? 'today' : 'last7d';
+            updateExecutionsMetric();
+        }
+
+        // Update executions metric display
+        function updateExecutionsMetric() {
+            const count = executionMetricPeriod === 'last7d' ? executionMetricStats.last7d : executionMetricStats.today;
+            const label = executionMetricPeriod === 'last7d' ? 'Executions Past Week' : 'Executions Today';
+            document.getElementById('dashboard-executions').textContent = count;
+            document.getElementById('executions-metric-label').textContent = label;
+        }
+
+        // Toggle user menu
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            // Queue icon render (batched to prevent layout thrashing)
+            queueLucideRender();
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info', persistent = true) {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `flex items-center px-4 py-3 mb-2 rounded shadow text-white ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800'}`;
+            toast.innerHTML = `<span class="flex-1">${message}</span><button class="ml-4 text-white opacity-70 hover:opacity-100" onclick="this.parentElement.remove()">&times;</button>`;
+            toastContainer.appendChild(toast);
+            if (!persistent) setTimeout(() => toast.remove(), 6000);
+        }
+
+        // Helper to format relative time (copied from connections.js)
+        function formatRelativeTime(dateString) {
+            if (!dateString) return 'never tested';
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            if (diff < 60) return `${diff} seconds ago`;
+            if (diff < 3600) return `${Math.floor(diff/60)} minutes ago`;
+            if (diff < 86400) return `${Math.floor(diff/3600)} hours ago`;
+            return date.toLocaleDateString();
+        }
+
+        /**
+         * Humanize connection type names
+         * SqlServer → SQL Server, MySQL → MySQL, PostgreSQL → PostgreSQL
+         */
+        function humanizeConnectionType(type) {
+            if (!type) return '';
+            const typeMap = {
+                'SqlServer': 'SQL Server',
+                'MySQL': 'MySQL',
+                'PostgreSQL': 'PostgreSQL'
+            };
+            return typeMap[type] || type;
+        }
+
+        // Fetch dashboard stats and connections
+        async function loadDashboard() {
+            const token = localStorage.getItem('reef_token');
+            if (!token) return;
+            try {
+                const [statsRes, executionsRes, connectionsRes] = await Promise.all([
+                    cachedFetch('/api/admin/metrics', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 3 * 60 * 1000 }),
+                    cachedFetch('/api/executions?pageSize=5', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 }),
+                    cachedFetch('/api/connections', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 })
+                ]);
+                const stats = statsRes.ok ? await statsRes.json() : {};
+                const executionsResult = executionsRes.ok ? await executionsRes.json() : { data: [] };
+                const executions = executionsResult.data || executionsResult || [];
+                const connections = connectionsRes.ok ? await connectionsRes.json() : [];
+                document.getElementById('dashboard-users').textContent = stats.users ?? '-';
+                document.getElementById('dashboard-connections').textContent = stats.connections ?? '-';
+                document.getElementById('dashboard-profiles').textContent = stats.profiles && stats.profiles.total !== undefined ? stats.profiles.total : '-';
+
+                // Calculate execution stats for metric card toggle
+                executionMetricStats.last7d = stats.recentStats && stats.recentStats.last7Days && stats.recentStats.last7Days.total ? stats.recentStats.last7Days.total : 0;
+                const now = new Date();
+                const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                executionMetricStats.today = executions.filter(exec => {
+                    const execDate = new Date(exec.startedAt + 'Z');
+                    return execDate >= todayStart;
+                }).length;
+                updateExecutionsMetric();
+
+                document.getElementById('dashboard-apikeys').textContent = stats.apikeys ?? '-';
+                document.getElementById('dashboard-storage').textContent = stats.system && stats.system.exportsSizeMb !== undefined ? stats.system.exportsSizeMb + ' MB' : '-';
+
+                // Notifications status
+                if (stats.notifications) {
+                    const notifBadge = document.getElementById('notifications-badge');
+                    const notifStatus = stats.notifications.isEnabled ? 'Enabled' : 'Disabled';
+                    document.getElementById('dashboard-notifications').textContent = notifStatus;
+
+                    // Change badge color based on status
+                    if (notifBadge) {
+                        notifBadge.className = stats.notifications.isEnabled ? 'h-2 w-2 rounded-full bg-green-500' : 'h-2 w-2 rounded-full bg-gray-300';
+                    }
+                } else {
+                    document.getElementById('dashboard-notifications').textContent = 'Disabled';
+                }
+
+                // Database size with threshold
+                if (stats.system && stats.system.databaseSizeMb !== undefined) {
+                    const dbSizeMb = stats.system.databaseSizeMb;
+                    const thresholdMb = stats.system.databaseSizeThresholdMb || 1024; // 1 GB default
+                    const percentage = Math.round((dbSizeMb / thresholdMb) * 100);
+                    const displayPercentage = Math.min(percentage, 100); // Cap at 100 for display
+
+                    document.getElementById('dashboard-db-size').textContent = `${dbSizeMb} MB`;
+                    document.getElementById('dashboard-db-threshold').textContent = `Threshold: ${thresholdMb} MB (${percentage}%)`;
+
+                    // Update progress bar
+                    const progressBar = document.getElementById('db-usage-bar');
+                    if (progressBar) {
+                        const progressFill = progressBar.querySelector('div');
+                        progressFill.style.width = displayPercentage + '%';
+
+                        // Change color based on usage
+                        if (percentage >= 100) {
+                            progressFill.className = 'bg-red-500 h-1.5 rounded-full';
+                        } else if (percentage >= 80) {
+                            progressFill.className = 'bg-orange-500 h-1.5 rounded-full';
+                        } else if (percentage >= 60) {
+                            progressFill.className = 'bg-yellow-500 h-1.5 rounded-full';
+                        } else {
+                            progressFill.className = 'bg-green-500 h-1.5 rounded-full';
+                        }
+                    }
+
+                    // Change text color based on usage
+                    const dbSizeElement = document.getElementById('dashboard-db-size');
+                    if (dbSizeElement) {
+                        if (percentage >= 100) {
+                            dbSizeElement.className = 'text-sm font-bold text-red-600 mb-2';
+                        } else if (percentage >= 80) {
+                            dbSizeElement.className = 'text-sm font-bold text-orange-600 mb-2';
+                        } else if (percentage >= 60) {
+                            dbSizeElement.className = 'text-sm font-bold text-yellow-600 mb-2';
+                        } else {
+                            dbSizeElement.className = 'text-sm font-bold text-gray-900 mb-2';
+                        }
+                    }
+                }
+                // Connections table - only show enabled connections
+                const connTbody = document.getElementById('dashboard-connections-tbody');
+                const activeConnections = connections.filter(conn => conn.isActive);
+                if (activeConnections.length === 0) {
+                    connTbody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-center text-gray-400">No active connections</td></tr>';
+                } else {
+                    connTbody.innerHTML = activeConnections.map(conn => `
+                        <tr
+                            onclick="window.location.href='/connections?id=${conn.id}'"
+                            class="group hover:bg-slate-50 hover:z-10 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500"
+                        >
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${conn.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${humanizeConnectionType(conn.type)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatRelativeTime(conn.lastTestedAt)}</td>
+                        </tr>
+                    `).join('');
+                }
+                // Executions table
+                const tbody = document.getElementById('dashboard-executions-tbody');
+                if (executions.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">No recent executions</td></tr>';
+                } else {
+                    tbody.innerHTML = executions.map(exec => `
+                        <tr
+                            onclick="window.location.href='/executions?id=${exec.id}'"
+                            class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500"
+                        >
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors" title="Profile ID: ${exec.profileId}">${exec.profileName || 'Unknown'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exec.status)}">${exec.status}</span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDate(exec.startedAt + 'Z')}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDuration(exec.executionTimeMs)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <a href="/executions?id=${exec.id}" onclick="event.stopPropagation()" class="text-blue-600 hover:text-blue-900 inline-flex items-center justify-center transition-transform hover:scale-110">
+                                    <i data-lucide="eye" class="h-4 w-4"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `).join('');
+                    queueLucideRender();
+                }
+            } catch (e) {
+                showToast('Failed to load dashboard data', 'error');
+            }
+            // Set user info
+            setUserSidebarInfo();
+        }
+        function getStatusColor(status) {
+            switch (status) {
+                case 'Success': return 'bg-green-100 text-green-800';
+                case 'Failed': return 'bg-red-100 text-red-800';
+                case 'Running': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleString();
+        }
+        function formatDuration(ms) {
+            if (!ms) return '-';
+            const s = Math.floor(ms / 1000);
+            if (s < 60) return s + 's';
+            const m = Math.floor(s / 60);
+            return m + 'm ' + (s % 60) + 's';
+        }
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
+        // Check if password change is required
+        async function checkPasswordChangeRequired() {
+            try {
+                const token = localStorage.getItem('reef_token');
+                if (!token) return;
+
+                const response = await fetch('/api/auth/validate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ token })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.valid && data.passwordChangeRequired) {
+                        showPasswordChangeModal();
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking password change requirement:', error);
+            }
+        }
+
+        // Show password change modal
+        function showPasswordChangeModal() {
+            document.getElementById('passwordChangeModal').classList.remove('hidden');
+        }
+
+        // Close password change modal
+        function closePasswordChangeModal() {
+            // Only allow closing if password was changed
+            showToast('You must change your password to continue', 'warning');
+        }
+
+        // Change password
+        async function changePassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showToast('New passwords do not match', 'error');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showToast('Password must be at least 6 characters long', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        currentPassword,
+                        newPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showToast('Password changed successfully', 'success');
+
+                    // If requiresLogoff is true, redirect to logoff page after a short delay
+                    if (data.requiresLogoff) {
+                        setTimeout(() => {
+                            window.location.href = '/logoff';
+                        }, 1500); // Give time to see the success message
+                    } else {
+                        document.getElementById('passwordChangeModal').classList.add('hidden');
+                        // Clear form
+                        document.getElementById('currentPassword').value = '';
+                        document.getElementById('newPassword').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                    }
+                } else {
+                    showToast(data.message || 'Failed to change password', 'error');
+                }
+            } catch (error) {
+                showToast('Error changing password', 'error');
+                console.error('Error changing password:', error);
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDashboard();
+            checkPasswordChangeRequired();
+        });
+    </script>
+
+    <!-- Password Change Required Modal -->
+    <div id="passwordChangeModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex items-center mb-4">
+                <div class="bg-yellow-400 rounded-full p-2 mr-3">
+                    <i data-lucide="alert-triangle" class="h-6 w-6 text-yellow-600"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900">Password Change Required</h3>
+            </div>
+
+            <p class="text-gray-600 mb-6">
+                Reef uses a default password for the <strong>admin</strong> user. For obvious reasons, you must change your password before continuing.
+            </p>
+
+            <div class="space-y-4">
+                <div>
+                    <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                    <input type="password" id="currentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <div>
+                    <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                    <input type="password" id="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-xs text-gray-500 mt-1">Must be at least 6 characters long</p>
+                </div>
+
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end mt-6 space-x-3">
+                <button onclick="changePassword()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                    Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2"></div>
+</body>
+</html>

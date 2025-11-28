@@ -1,0 +1,40 @@
+{{~ for row in rows ~}}
+# General Ledger Export
+company: "{{ row.company_name | html.escape }}"
+export_date: "{{ row.export_date | html.escape }}"
+export_period: "{{ row.period_name | html.escape }}"
+currency: "{{ row.currency | html.escape }}"
+fiscal_year: {{ row.fiscal_year }}
+
+accounts:
+{{~ accounts = parse_json(row.accounts_json) ~}}
+{{~ for account in accounts ~}}
+  - account_number: "{{ account.account_number | html.escape }}"
+    account_name: "{{ account.account_name | html.escape }}"
+    account_type: "{{ account.account_type | html.escape }}"
+    opening_balance: {{ account.opening_balance }}
+    debit_total: {{ account.debit_total }}
+    credit_total: {{ account.credit_total }}
+    closing_balance: {{ account.closing_balance }}
+    transactions:
+{{~ transactions = parse_json(account.transactions_json) ~}}
+{{~ for txn in transactions ~}}
+      - transaction_id: "{{ txn.id | html.escape }}"
+        date: "{{ txn.date | html.escape }}"
+        description: "{{ txn.description | html.escape }}"
+        reference: "{{ txn.reference | html.escape }}"
+        debit: {{ txn.debit }}
+        credit: {{ txn.credit }}
+        cost_center: "{{ txn.cost_center | html.escape }}"
+{{~ end ~}}
+{{~ end ~}}
+
+summary:
+  total_accounts: {{ row.total_accounts }}
+  total_debit: {{ row.total_debit }}
+  total_credit: {{ row.total_credit }}
+  trial_balance: {{ row.trial_balance }}
+  validation_status: "{{ row.validation_status | html.escape }}"
+  notes: "{{ row.notes | html.escape }}"
+---
+{{~ end ~}}

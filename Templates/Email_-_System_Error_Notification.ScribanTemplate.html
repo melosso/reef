@@ -1,0 +1,125 @@
+WITH CalculatedValues AS (
+    -- This CTE generates random numbers to make the data look dynamic/daily
+    SELECT 
+        -- Scenario 1: DB Randoms
+        ABS(CHECKSUM(NEWID()) % 9) + 1 AS DbNodeId, -- Random Node 1-9
+        ABS(CHECKSUM(NEWID()) % 50) + 10 AS DbDuration, -- Random 10-60 mins
+        
+        -- Scenario 2: Latency Randoms
+        ABS(CHECKSUM(NEWID()) % 1500) + 1800 AS LatencyMs, -- Random 1800ms - 3300ms
+        ABS(CHECKSUM(NEWID()) % 500) + 800 AS ActiveUsers,
+        
+        -- Scenario 3: Import Randoms
+        (ABS(CHECKSUM(NEWID()) % 1000) + 45000) AS TotalRows,
+        (ABS(CHECKSUM(NEWID()) % 150) + 20) AS SkippedRows
+),
+Scenarios AS (
+    /* -------------------------------------------------------------------------
+       Scenario 1: Critical Database Failure 
+       ------------------------------------------------------------------------- */
+    SELECT
+        'jane@company.com' AS email,
+        'doe@company.com' AS email_cc,
+        CONCAT('[CRITICAL] Production Database Backup Failed (Node-', cv.DbNodeId, ')') AS subject,
+        CONCAT('ERR-', FORMAT(GETDATE(), 'yyyyMMdd'), '-001') AS primaryKey,
+        'Action Required: Nightly backup job terminated unexpectedly.' AS preheader,
+        'Acme Operations' AS company,
+        'https://cdn-icons-png.flaticon.com/512/564/564619.png' AS logo_url,
+        'Production' AS environment,
+        'CRITICAL ERROR' AS severity_level,
+        '#d93025' AS status_color, -- Red
+        '#fce8e6' AS status_bg,    -- Light Red
+        'Backup Job Failed' AS title,
+        CONCAT('The nightly SQL backup job for "User_Records_DB" on Node-', cv.DbNodeId, ' failed. The transaction log is growing rapidly.') AS [body],
+        'System.Data.SqlClient.SqlException (0x80131904): Timeout expired. The timeout period elapsed prior to completion of the operation.' AS error_log,
+        
+        -- Dynamic JSON construction
+        JSON_QUERY(CONCAT('[
+            { "label": "Server Node", "value": "DB-PROD-0', cv.DbNodeId, '" },
+            { "label": "Error Code", "value": "0x80131904" },
+            { "label": "Duration", "value": "', cv.DbDuration, 'm 12s" },
+            { "label": "Retry Count", "value": "3 (Max Reached)" }
+        ]')) AS details_json,
+        
+        'Investigate Incident' AS action_text,
+        'https://monitoring.example.com/incidents/101' AS action_url,
+        'Automated alerts are generated based on severity level 1 events.' AS note,
+        'https://example.com/alerts/settings' AS unsubscribe_url,
+        YEAR(GETDATE()) AS year
+    FROM CalculatedValues cv
+
+    UNION ALL
+
+    /* -------------------------------------------------------------------------
+       Scenario 2: API High Latency Warning
+       ------------------------------------------------------------------------- */
+    SELECT
+        'jane@company.com' AS email,
+        'doe@company.com' AS email_cc,
+        CONCAT('[WARN] High Latency (', cv.LatencyMs, 'ms) Detected on Payment Gateway') AS subject,
+        CONCAT('WRN-', FORMAT(GETDATE(), 'yyyyMMdd'), '-002') AS primaryKey,
+        'Response times are exceeding defined thresholds.' AS preheader,
+        'Acme Operations' AS company,
+        'https://cdn-icons-png.flaticon.com/512/564/564619.png' AS logo_url,
+        'Production' AS environment,
+        'PERFORMANCE WARNING' AS severity_level,
+        '#e37400' AS status_color, -- Orange
+        '#fef7e0' AS status_bg,    -- Light Orange
+        'Latency Threshold Breached' AS title,
+        CONCAT('The "PaymentProcess" endpoint is averaging ', cv.LatencyMs, 'ms response times (Threshold: 1500ms). Auto-scaling triggered.') AS [body],
+        NULL AS error_log,
+        
+        -- Dynamic JSON construction
+        JSON_QUERY(CONCAT('[
+            { "label": "Endpoint", "value": "/api/v2/checkout" },
+            { "label": "Current Avg", "value": "', cv.LatencyMs, 'ms" },
+            { "label": "Threshold", "value": "1500ms" },
+            { "label": "Active Users", "value": "', FORMAT(cv.ActiveUsers, 'N0'), '" }
+        ]')) AS details_json,
+        
+        'View Grafana Dashboard' AS action_text,
+        'https://grafana.example.com/d/payments' AS action_url,
+        'This warning will auto-resolve if latency drops below 1500ms for 5 minutes.' AS note,
+        'https://example.com/alerts/settings' AS unsubscribe_url,
+        YEAR(GETDATE()) AS year
+    FROM CalculatedValues cv
+
+    UNION ALL
+
+    /* -------------------------------------------------------------------------
+       Scenario 3: Scheduled Job Success (with issues)
+       ------------------------------------------------------------------------- */
+    SELECT
+        'jane@company.com' AS email,
+        'doe@company.com' AS email_cc,
+        CONCAT('[INFO] Daily Import: ', cv.SkippedRows, ' rows skipped') AS subject,
+        CONCAT('INF-', FORMAT(GETDATE(), 'yyyyMMdd'), '-003') AS primaryKey,
+        'Import job finished, but some rows were invalid.' AS preheader,
+        'Acme Operations' AS company,
+        'https://cdn-icons-png.flaticon.com/512/564/564619.png' AS logo_url,
+        'Staging' AS environment,
+        'JOB COMPLETE' AS severity_level,
+        '#007b83' AS status_color, -- Teal
+        '#e0f2f1' AS status_bg,    -- Light Teal
+        'Import Job Finished' AS title,
+        CONCAT('The "Partner_Catalog_Import" finished processing ', FORMAT(cv.TotalRows, 'N0'), ' rows. However, ', cv.SkippedRows, ' rows were skipped due to formatting errors.') AS [body],
+        'Row 412: Invalid Currency Format (USD$ instead of USD)
+Row 415: Missing SKU
+Row 899: Image URL 404 Not Found' AS error_log,
+        
+        -- Dynamic JSON construction
+        JSON_QUERY(CONCAT('[
+            { "label": "Total Rows", "value": "', FORMAT(cv.TotalRows, 'N0'), '" },
+            { "label": "Success", "value": "', FORMAT(cv.TotalRows - cv.SkippedRows, 'N0'), '" },
+            { "label": "Skipped", "value": "', cv.SkippedRows, '" },
+            { "label": "Processing Time", "value": "12m 30s" }
+        ]')) AS details_json,
+        
+        'Download Skipped Rows CSV' AS action_text,
+        'https://storage.example.com/logs/skipped_rows_2025.csv' AS action_url,
+        'Please correct the source file and re-upload if these rows are critical.' AS note,
+        'https://example.com/alerts/settings' AS unsubscribe_url,
+        YEAR(GETDATE()) AS year
+    FROM CalculatedValues cv
+)
+SELECT * FROM Scenarios;
