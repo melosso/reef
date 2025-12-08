@@ -74,6 +74,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -358,7 +362,7 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = window.location.origin;
@@ -416,7 +420,7 @@
         async function init() {
             await requireAuth();
             setUserSidebarInfo();
-            lucide.createIcons();
+            queueLucideRender();
             await Promise.all([loadProfiles(), loadJobs()]);
 
             // Check for URL parameters and set filters
@@ -549,7 +553,7 @@
                         </td>
                     </tr>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
 
@@ -588,7 +592,7 @@
                 `;
             }).join('');
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function getStatusBadge(status) {
@@ -702,7 +706,7 @@
             `;
 
             paginationControls.innerHTML = html;
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function previousPage() {
@@ -744,7 +748,7 @@
                 </div>
             `;
             document.getElementById('details-modal').classList.remove('hidden');
-            lucide.createIcons();
+            queueLucideRender();
 
             try {
                 // Fetch full execution details from API
@@ -993,7 +997,7 @@
                 }
 
                 document.getElementById('execution-details').innerHTML = detailsHtml;
-                lucide.createIcons();
+                queueLucideRender();
 
                 // Load split details asynchronously if needed
                 if (execution.wasSplit) {
@@ -1007,7 +1011,7 @@
                         <p class="mt-2 text-sm text-red-600">Failed to load execution details</p>
                     </div>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
             }
         }
 
@@ -1071,7 +1075,7 @@
                     `;
                 }).join('');
                 
-                lucide.createIcons();
+                queueLucideRender();
             } catch (error) {
                 console.error('Error loading split details:', error);
                 const container = document.getElementById('splitDetailsList');
@@ -1191,7 +1195,7 @@
                     </div>
                 </div>
             `;
-            lucide.createIcons();
+            queueLucideRender();
 
             setTimeout(() => container.innerHTML = '', 5000);
         }
@@ -1209,10 +1213,10 @@
             if (success) {
                 const originalHTML = button.innerHTML;
                 button.innerHTML = '<i data-lucide="check" class="h-3 w-3 mr-1"></i>Copied!';
-                lucide.createIcons();
+                queueLucideRender();
                 setTimeout(() => {
                     button.innerHTML = originalHTML;
-                    lucide.createIcons();
+                    queueLucideRender();
                 }, 2000);
             } else {
                 console.error('Failed to copy');
@@ -1239,7 +1243,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {

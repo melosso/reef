@@ -943,6 +943,91 @@ public class EmailExportService
     }
 
     /// <summary>
+    /// Render email details for approval workflow without actually sending
+    /// Returns recipients, subject, HTML body, and attachment config
+    /// </summary>
+    public async Task<(List<(string Recipients, string Subject, string HtmlBody, string? CcAddresses, string? AttachmentConfigJson)> RenderedEmails, List<string> Errors)> RenderEmailsForApprovalAsync(
+        Profile profile,
+        QueryTemplate emailTemplate,
+        List<Dictionary<string, object>> queryResults,
+        AttachmentConfig? attachmentConfig = null)
+    {
+        var renderedEmails = new List<(string, string, string, string?, string?)>();
+        var errors = new List<string>();
+
+        try
+        {
+            if (queryResults == null || queryResults.Count == 0)
+            {
+                Log.Information("No query results to render for email approval from profile {ProfileId}", profile.Id);
+                return (renderedEmails, errors);
+            }
+
+            if (string.IsNullOrEmpty(emailTemplate?.Template))
+            {
+                errors.Add("Email template not found or empty");
+                return (renderedEmails, errors);
+            }
+
+            // Render each row as an email
+            foreach (var row in queryResults)
+            {
+                try
+                {
+                    // Extract recipients
+                    var recipients = profile.UseHardcodedRecipients
+                        ? profile.EmailRecipientsHardcoded
+                        : (string.IsNullOrEmpty(profile.EmailRecipientsColumn) ? null : SafeGetValue(row, profile.EmailRecipientsColumn)?.ToString());
+
+                    if (string.IsNullOrEmpty(recipients))
+                    {
+                        Log.Warning("No recipients found for row in profile {ProfileId}", profile.Id);
+                        continue;
+                    }
+
+                    // Extract CC addresses
+                    var ccAddresses = profile.UseHardcodedCc
+                        ? profile.EmailCcHardcoded
+                        : (string.IsNullOrEmpty(profile.EmailCcColumn) ? null : SafeGetValue(row, profile.EmailCcColumn)?.ToString());
+
+                    // Extract subject
+                    var subject = (profile.UseHardcodedSubject
+                        ? profile.EmailSubjectHardcoded
+                        : (string.IsNullOrEmpty(profile.EmailSubjectColumn) ? "[No Subject]" : SafeGetValue(row, profile.EmailSubjectColumn)?.ToString() ?? "[No Subject]")) ?? "[No Subject]";
+
+                    // Render HTML body using Scriban template
+                    var htmlBody = await _templateEngine.TransformAsync(
+                        new List<Dictionary<string, object>> { row },
+                        emailTemplate.Template);
+
+                    // Serialize attachment config
+                    var attachmentConfigJson = attachmentConfig != null
+                        ? JsonSerializer.Serialize(attachmentConfig)
+                        : null;
+
+                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson));
+
+                    Log.Debug("Rendered email for approval with subject: {Subject}", subject);
+                }
+                catch (Exception ex)
+                {
+                    var errorMsg = $"Failed to render email: {ex.Message}";
+                    errors.Add(errorMsg);
+                    Log.Warning(ex, errorMsg);
+                }
+            }
+
+            return (renderedEmails, errors);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to render emails for approval from profile {ProfileId}", profile.Id);
+            errors.Add(ex.Message);
+            return (renderedEmails, errors);
+        }
+    }
+
+    /// <summary>
     /// Safely get a value from a row dictionary, handling case-insensitive column names
     /// </summary>
     private static object? SafeGetValue(Dictionary<string, object> row, string columnName)

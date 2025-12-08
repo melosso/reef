@@ -54,6 +54,9 @@ public class DatabaseInitializer
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
 
+        // Email Approval Workflow Table
+        await CreatePendingEmailApprovalsTableAsync(connection);
+
         // Application Startup Tracking
         await CreateApplicationStartupTableAsync(connection);
 
@@ -240,6 +243,10 @@ public class DatabaseInitializer
                 EmailSuccessThresholdPercent INTEGER NOT NULL DEFAULT 60,
                 EmailAttachmentConfig TEXT NULL,
 
+                -- Email Approval Workflow Configuration
+                EmailApprovalRequired INTEGER NOT NULL DEFAULT 0,
+                EmailApprovalRoles TEXT NULL,
+
                 -- Status
                 IsEnabled INTEGER NOT NULL DEFAULT 1,
 
@@ -324,6 +331,11 @@ public class DatabaseInitializer
                 PostProcessStatus TEXT NULL,
                 PostProcessError TEXT NULL,
                 PostProcessTimeMs INTEGER NULL,
+
+                -- Email Approval Workflow Tracking
+                ApprovalStatus TEXT NULL,
+                PendingEmailApprovalId INTEGER NULL,
+                ApprovedAt TEXT NULL,
 
                 -- Delta Sync Metrics
                 DeltaSyncNewRows INTEGER NULL,
@@ -823,6 +835,42 @@ public class DatabaseInitializer
         await connection.ExecuteAsync(sql);
     }
 
+    private async Task CreatePendingEmailApprovalsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS PendingEmailApprovals (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ProfileId INTEGER NOT NULL,
+                ProfileExecutionId INTEGER NOT NULL,
+                Recipients TEXT NOT NULL,
+                CcAddresses TEXT NULL,
+                Subject TEXT NOT NULL,
+                HtmlBody TEXT NOT NULL,
+                AttachmentConfig TEXT NULL,
+                Status TEXT NOT NULL DEFAULT 'Pending',
+                ApprovedByUserId INTEGER NULL,
+                ApprovedAt TEXT NULL,
+                ApprovalNotes TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                ExpiresAt TEXT NULL,
+                ErrorMessage TEXT NULL,
+                SentAt TEXT NULL,
+                Hash TEXT NOT NULL,
+                FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ProfileExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Status ON PendingEmailApprovals(Status);
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ProfileId ON PendingEmailApprovals(ProfileId);
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_CreatedAt ON PendingEmailApprovals(CreatedAt DESC);
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_StatusCreatedAt ON PendingEmailApprovals(Status, CreatedAt DESC);
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ExpiresAt ON PendingEmailApprovals(ExpiresAt) WHERE ExpiresAt IS NOT NULL;
+            CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ApprovedByUserId ON PendingEmailApprovals(ApprovedByUserId) WHERE ApprovedByUserId IS NOT NULL;
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
     private async Task CreateApplicationStartupTableAsync(SqliteConnection connection)
     {
         // Check if table exists
@@ -1211,6 +1259,9 @@ public class DatabaseInitializer
         // Create ProfileExecutionSplits table (new table for split tracking)
         await CreateProfileExecutionSplitsTableAsync(connection);
 
+        // Email Approval Workflow migrations
+        await AddEmailApprovalColumnsAsync(connection);
+
         // Legacy migrations removed: All columns are now defined in base table schemas
         // since there are no production customers yet. All new installations start with the complete schema.
         //
@@ -1218,6 +1269,107 @@ public class DatabaseInitializer
         // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
 
         Log.Debug("Database schema migrations completed");
+    }
+
+    /// <summary>
+    /// Add email approval workflow columns and table
+    /// </summary>
+    private async Task AddEmailApprovalColumnsAsync(SqliteConnection connection)
+    {
+        Log.Debug("Applying email approval migrations...");
+
+        // Add columns to Profiles table
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailApprovalRequired", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailApprovalRoles", "TEXT NULL");
+
+        // Add columns to ProfileExecutions table
+        await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "ApprovalStatus", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "PendingEmailApprovalId", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "ProfileExecutions", "ApprovedAt", "TEXT NULL");
+
+        // Create PendingEmailApprovals table if it doesn't exist
+        var tableExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='PendingEmailApprovals'");
+
+        if (tableExists == 0)
+        {
+            const string createTableSql = @"
+                CREATE TABLE PendingEmailApprovals (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Guid TEXT NOT NULL UNIQUE,
+                    ProfileId INTEGER NOT NULL,
+                    ProfileExecutionId INTEGER NOT NULL,
+                    Recipients TEXT NOT NULL,
+                    CcAddresses TEXT NULL,
+                    Subject TEXT NOT NULL,
+                    HtmlBody TEXT NOT NULL,
+                    AttachmentConfig TEXT NULL,
+                    Status TEXT DEFAULT 'Pending',
+                    ApprovedByUserId INTEGER NULL,
+                    ApprovedAt TEXT NULL,
+                    ApprovalNotes TEXT NULL,
+                    CreatedAt TEXT NOT NULL,
+                    ExpiresAt TEXT NULL,
+                    ErrorMessage TEXT NULL,
+                    SentAt TEXT NULL,
+                    Hash TEXT NOT NULL,
+                    FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ProfileExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+                )
+            ";
+
+            await connection.ExecuteAsync(createTableSql);
+            Log.Debug("✓ Created PendingEmailApprovals table");
+        }
+
+        // Add indexes for performance
+        var indexes = new[]
+        {
+            "CREATE INDEX IF NOT EXISTS IX_Profiles_EmailApprovalRequired ON Profiles(EmailApprovalRequired) WHERE EmailApprovalRequired = 1",
+            "CREATE INDEX IF NOT EXISTS IX_ProfileExecutions_ApprovalStatus ON ProfileExecutions(ApprovalStatus) WHERE ApprovalStatus IS NOT NULL",
+            "CREATE INDEX IF NOT EXISTS IX_ProfileExecutions_PendingEmailApprovalId ON ProfileExecutions(PendingEmailApprovalId) WHERE PendingEmailApprovalId IS NOT NULL",
+            "CREATE UNIQUE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Guid ON PendingEmailApprovals(Guid)",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Status ON PendingEmailApprovals(Status)",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ProfileId ON PendingEmailApprovals(ProfileId)",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_CreatedAt ON PendingEmailApprovals(CreatedAt DESC)",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_StatusCreatedAt ON PendingEmailApprovals(Status, CreatedAt DESC)",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ExpiresAt ON PendingEmailApprovals(ExpiresAt) WHERE ExpiresAt IS NOT NULL",
+            "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ApprovedByUserId ON PendingEmailApprovals(ApprovedByUserId) WHERE ApprovedByUserId IS NOT NULL"
+        };
+
+        foreach (var indexSql in indexes)
+        {
+            try
+            {
+                await connection.ExecuteAsync(indexSql);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to create index, continuing");
+            }
+        }
+
+        // Migration: Add Guid column to existing PendingEmailApprovals table
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "Guid", "TEXT NULL");
+        
+        // Populate GUIDs for existing records that don't have one
+        const string populateGuids = @"
+            UPDATE PendingEmailApprovals 
+            SET Guid = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))
+            WHERE Guid IS NULL OR Guid = ''
+        ";
+        await connection.ExecuteAsync(populateGuids);
+        
+        // Make Guid column NOT NULL after populating
+        // Note: SQLite doesn't support ALTER COLUMN, so we check if any NULL values exist
+        var nullGuidCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM PendingEmailApprovals WHERE Guid IS NULL OR Guid = ''");
+        if (nullGuidCount == 0)
+        {
+            Log.Debug("✓ All PendingEmailApprovals have GUIDs");
+        }
+
+        Log.Debug("✓ Email approval migrations completed");
     }
 
     /// <summary>

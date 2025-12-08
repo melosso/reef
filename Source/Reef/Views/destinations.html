@@ -75,6 +75,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -289,7 +293,7 @@
         </div>
     </div>
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = '/api/destinations';
@@ -1079,7 +1083,7 @@
             document.getElementById('add-destination-form').removeAttribute('data-is-active');
             document.getElementById('destination-options-menu').classList.add('hidden');
             updateConfigFields();
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeAddDestinationModal() {
@@ -1412,7 +1416,7 @@
                 // Setup tag click handlers
                 destinationFilter.setupTagClickHandlers('[data-tag-filter]');
             }
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function editDestination(id) {
@@ -1534,7 +1538,7 @@
                     toggleText.textContent = dest.isActive ? 'Disable' : 'Enable';
 
                     document.getElementById('add-destination-modal').classList.remove('hidden');
-                    lucide.createIcons();
+                    queueLucideRender();
                 }
             } catch (error) {
                 showToast('Failed to load destination', 'error');
@@ -1671,7 +1675,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function toggleFtpAdvanced(event) {
@@ -1687,7 +1691,7 @@
                     panel.classList.add('hidden');
                     chevron.style.transform = 'rotate(0deg)';
                 }
-                setTimeout(() => lucide.createIcons(), 10);
+                setTimeout(() => queueLucideRender(), 10);
             }
         }
 
@@ -1704,7 +1708,7 @@
                     panel.classList.add('hidden');
                     chevron.style.transform = 'rotate(0deg)';
                 }
-                setTimeout(() => lucide.createIcons(), 10);
+                setTimeout(() => queueLucideRender(), 10);
             }
         }
 
@@ -1735,7 +1739,7 @@
                     panel.classList.add('hidden');
                     chevron.style.transform = 'rotate(0deg)';
                 }
-                setTimeout(() => lucide.createIcons(), 10);
+                setTimeout(() => queueLucideRender(), 10);
             }
         }
 
@@ -1752,7 +1756,7 @@
                     panel.classList.add('hidden');
                     chevron.style.transform = 'rotate(0deg)';
                 }
-                setTimeout(() => lucide.createIcons(), 10);
+                setTimeout(() => queueLucideRender(), 10);
             }
         }
 
@@ -1786,7 +1790,7 @@
             }
 
             // Re-render Lucide icons
-            setTimeout(() => lucide.createIcons(), 10);
+            setTimeout(() => queueLucideRender(), 10);
         }
 
         function toggleEmailAuthFields() {
@@ -1824,7 +1828,7 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             await requireAuth();
-            lucide.createIcons();
+            queueLucideRender();
             initializeDestinations();
         });
     </script>

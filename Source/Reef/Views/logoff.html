@@ -6,6 +6,7 @@
     <title>Logging Out &middot; Reef</title>
     <script src="/assets/js/_tailwind.3.4.17.js"></script>
     <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/main.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -168,7 +169,7 @@
 
     <script>
         // 1. Initialize the Lucide icon so it renders
-        lucide.createIcons();
+        queueLucideRender();
 
         // 2. Perform the actual client-side logout by clearing session data
         localStorage.removeItem('reef_token');

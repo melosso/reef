@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Approvals &middot; Reef</title>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+</head>
+<body class="bg-slate-50">
+    <script>
+        requireAuth();
+    </script>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
+            <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
+                <i data-lucide="waves" class="h-6 w-6 stroke-blue-400/80"></i>
+
+                <div class="flex items-center ml-3 select-none mt-0.5">
+                    <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                    Reef
+                    </span>
+                    <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
+                    beta
+                    </span>
+                </div>
+            </div>
+
+            <nav class="flex-1 px-4 py-4">
+                <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
+                    <span class="ml-3">Dashboard</span>
+                </a>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/connections" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="plug" class="h-5 w-5"></i>
+                            <span class="ml-3">Connections</span>
+                        </a>
+                        <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                            <span class="ml-3">Destinations</span>
+                        </a>
+                        <a href="/templates" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-text" class="h-5 w-5"></i>
+                            <span class="ml-3">Templates</span>
+                        </a>
+                        <a href="/groups" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="folder" class="h-5 w-5"></i>
+                            <span class="ml-3">Groups</span>
+                        </a>
+                        <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="file-code" class="h-5 w-5"></i>
+                            <span class="ml-3">Profiles</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="briefcase" class="h-5 w-5"></i>
+                            <span class="ml-3">Jobs</span>
+                        </a>
+                        <a href="/executions" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            <span class="ml-3">Executions</span>
+                        </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg bg-slate-900 text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
+                    <div class="mt-2 space-y-2">
+                        <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="book-open" class="h-5 w-5"></i>
+                            <span class="ml-3">Documentation</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+            <!-- User Section with Expandable Menu -->
+            <div class="border-t border-gray-700">
+                <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-gray-800 transition-colors">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                            <span id="user-initial" class="text-white font-bold text-lg">&nbsp;</span>
+                        </div>
+                        <div class="text-left">
+                            <div id="username-display" class="text-white font-semibold">&nbsp;</div>
+                            <div class="text-xs text-gray-400">View menu</div>
+                        </div>
+                    </div>
+                    <i id="chevron-icon" data-lucide="chevron-up" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                </button>
+
+                <!-- Expandable Menu -->
+                <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+                    <div class="px-2 pb-2 space-y-1">
+                        <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="settings" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Settings</span>
+                        </a>
+                        <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="github" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">GitHub</span>
+                            <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+                        </a>
+                        <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition-colors">
+                            <i data-lucide="log-out" class="h-4 w-4"></i>
+                            <span class="ml-3 text-sm">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between px-6 py-4">
+                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Approvals</h1>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+                        <p class="text-gray-500 text-sm mb-2">Pending</p>
+                        <p class="text-3xl font-bold text-gray-900" id="stat-pending">0</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
+                        <p class="text-gray-500 text-sm mb-2">Approved</p>
+                        <p class="text-3xl font-bold text-gray-900" id="stat-approved">0</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
+                        <p class="text-gray-500 text-sm mb-2">Sent This Week</p>
+                        <p class="text-3xl font-bold text-gray-900" id="stat-sent-week">0</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
+                        <p class="text-gray-500 text-sm mb-2">Rejected</p>
+                        <p class="text-3xl font-bold text-gray-900" id="stat-rejected">0</p>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-lg shadow mb-6">
+                    <div class="border-b border-gray-200">
+                        <div class="flex">
+                            <button onclick="switchTab('pending')" id="tab-pending" class="px-6 py-3 text-gray-900 border-b-2 border-blue-500 font-medium text-sm hover:text-gray-700">
+                                Pending
+                            </button>
+                            <button onclick="switchTab('approved')" id="tab-approved" class="px-6 py-3 text-gray-500 border-b-2 border-transparent hover:text-gray-700 font-medium text-sm">
+                                Approved
+                            </button>
+                            <button onclick="switchTab('history')" id="tab-history" class="px-6 py-3 text-gray-500 border-b-2 border-transparent hover:text-gray-700 font-medium text-sm">
+                                History
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pending Tab -->
+                    <div id="content-pending" class="block">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Subject</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pending-table-body" class="divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50">
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                                            <p>No pending approvals</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Approved Tab -->
+                    <div id="content-approved" class="hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Subject</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Approved By</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Approved At</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="approved-table-body" class="divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50">
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <i data-lucide="check-circle" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                                            <p>No approved emails</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- History Tab -->
+                    <div id="content-history" class="hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
+                                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Completed</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body" class="divide-y divide-gray-200">
+                                    <tr class="hover:bg-gray-50">
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <i data-lucide="history" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                                            <p>No history available</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Preview Modal -->
+    <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900">Email Preview</h2>
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">Subject</label>
+                    <p id="preview-subject" class="text-gray-900 mt-1 p-3 bg-gray-50 rounded border border-gray-200"></p>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">Recipients</label>
+                    <p id="preview-recipients" class="text-gray-900 mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm break-all"></p>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">CC</label>
+                    <p id="preview-cc" class="text-gray-900 mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm break-all"></p>
+                </div>
+
+                <div>
+                    <label class="text-sm font-semibold text-gray-700">Email Body</label>
+                    <div id="preview-body" class="mt-1 p-3 bg-gray-50 rounded border border-gray-200 h-64 overflow-y-auto">
+                        <iframe id="preview-iframe" style="width:100%;height:100%;border:none;"></iframe>
+                    </div>
+                </div>
+
+                <div id="preview-actions" class="flex gap-3 pt-4 border-t border-gray-200">
+                    <button onclick="approveCurrentPreview()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="check" class="h-4 w-4"></i>
+                        Approve
+                    </button>
+                    <button onclick="rejectCurrentPreview()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                        Reject
+                    </button>
+                    <button onclick="closePreviewModal()" class="flex-1 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-md transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Approval Notes Modal -->
+    <div id="approvalNotesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-md mx-auto my-20">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Approve Email</h2>
+                    <button onclick="closeApprovalNotesModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label for="approval-notes-input" class="block text-sm font-medium text-gray-700 mb-2">
+                            Add approval notes (optional):
+                        </label>
+                        <textarea id="approval-notes-input"
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Add any notes about this approval..."
+                                  autocomplete="off"></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
+                    <button type="button" onclick="closeApprovalNotesModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirm-approve-btn" onclick="confirmApproval()"
+                            class="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 flex items-center">
+                        <i data-lucide="check" class="h-4 w-4 mr-2"></i>
+                        Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Reason Modal -->
+    <div id="rejectionReasonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-md mx-auto my-20">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Reject Email</h2>
+                    <button onclick="closeRejectionReasonModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label for="rejection-reason-input" class="block text-sm font-medium text-gray-700 mb-2">
+                            Rejection reason (optional):
+                        </label>
+                        <textarea id="rejection-reason-input"
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Explain why this email is being rejected..."
+                                  autocomplete="off"></textarea>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
+                    <button type="button" onclick="closeRejectionReasonModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirm-reject-btn" onclick="confirmRejection()"
+                            class="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 flex items-center">
+                        <i data-lucide="x" class="h-4 w-4 mr-2"></i>
+                        Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let token = localStorage.getItem('reef_token');
+        let currentPreviewId = null;
+        let currentApprovalId = null;
+        let currentRejectionId = null;
+        let allApprovals = [];
+        let userMenuExpanded = false;
+
+        async function init() {
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Set user info in sidebar
+            setUserSidebarInfo();
+
+            // Initialize Lucide icons
+            queueLucideRender();
+
+            await loadApprovals();
+            await loadStatistics();
+
+            // Refresh every 10 seconds
+            setInterval(async () => {
+                await loadApprovals();
+                await loadStatistics();
+            }, 10000);
+        }
+
+        async function loadApprovals() {
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals?pageSize=100`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) {
+                    showToast('Failed to load approvals', 'error');
+                    throw new Error('Failed to load approvals');
+                }
+
+                const data = await response.json();
+                allApprovals = data.data || [];
+
+                renderTables();
+            } catch (error) {
+                console.error('Error loading approvals:', error);
+                showToast('Failed to load approvals', 'error');
+            }
+        }
+
+        async function loadStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals/statistics`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load statistics');
+
+                const stats = await response.json();
+                document.getElementById('stat-pending').textContent = stats.pendingCount || 0;
+                document.getElementById('stat-approved').textContent = stats.approvedCount || 0;
+                document.getElementById('stat-sent-week').textContent = stats.sentThisWeek || 0;
+                document.getElementById('stat-rejected').textContent = stats.rejectedCount || 0;
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        function renderTables() {
+            const pending = allApprovals.filter(a => a.status === 'Pending');
+            const approved = allApprovals.filter(a => a.status === 'Approved');
+            const history = allApprovals.filter(a => ['Sent', 'Failed', 'Rejected'].includes(a.status));
+
+            renderPendingTable(pending);
+            renderApprovedTable(approved);
+            renderHistoryTable(history);
+        }
+
+        function renderPendingTable(pending) {
+            const tbody = document.getElementById('pending-table-body');
+
+            if (pending.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="hover:bg-gray-50">
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                            <p>No pending approvals</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = pending.map(approval => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs" title="${approval.recipients}">
+                        ${truncate(approval.recipients, 30)}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs" title="${approval.subject}">
+                        ${truncate(approval.subject, 30)}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        ${new Date(approval.createdAt).toLocaleString()}
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="previewApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" data-tooltip="Preview Email" data-tooltip-position="bottom">
+                                <i data-lucide="eye" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="approveApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-green-600 transition-colors" data-tooltip="Approve" data-tooltip-position="bottom">
+                                <i data-lucide="check" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="rejectApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" data-tooltip="Reject" data-tooltip-position="bottom">
+                                <i data-lucide="x" class="h-4 w-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            queueLucideRender();
+        }
+
+        function renderApprovedTable(approved) {
+            const tbody = document.getElementById('approved-table-body');
+
+            if (approved.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="hover:bg-gray-50">
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            <i data-lucide="check-circle" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                            <p>No approved emails</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = approved.map(approval => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.recipients, 30)}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.subject, 30)}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${approval.approvedByUserId || 'N/A'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        ${approval.approvedAt ? new Date(approval.approvedAt).toLocaleString() : 'N/A'}
+                    </td>
+                </tr>
+            `).join('');
+
+            queueLucideRender();
+        }
+
+        function renderHistoryTable(history) {
+            const tbody = document.getElementById('history-table-body');
+
+            if (history.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="hover:bg-gray-50">
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                            <i data-lucide="history" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
+                            <p>No history available</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = history.map(approval => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-2 py-1 rounded text-xs font-medium ${getStatusBadge(approval.status)}">
+                            ${approval.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.recipients, 30)}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        ${new Date(approval.createdAt).toLocaleString()}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        ${approval.sentAt ? new Date(approval.sentAt).toLocaleString() : 'Pending'}
+                    </td>
+                </tr>
+            `).join('');
+
+            queueLucideRender();
+        }
+
+        function getStatusBadge(status) {
+            switch (status) {
+                case 'Sent': return 'bg-green-100 text-green-800';
+                case 'Failed': return 'bg-red-100 text-red-800';
+                case 'Rejected': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        async function previewApproval(guid) {
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals/${guid}/preview`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!response.ok) throw new Error('Failed to load preview');
+
+                const approval = await response.json();
+                currentPreviewId = guid;
+
+                document.getElementById('preview-subject').textContent = approval.subject;
+                document.getElementById('preview-recipients').textContent = approval.recipients;
+                document.getElementById('preview-cc').textContent = approval.ccAddresses || '(none)';
+
+                // Set iframe content
+                const iframe = document.getElementById('preview-iframe');
+                iframe.srcdoc = approval.htmlBody;
+
+                document.getElementById('previewModal').classList.remove('hidden');
+            } catch (error) {
+                console.error('Error loading preview:', error);
+                showToast('Failed to load preview', 'error');
+            }
+        }
+
+        function closePreviewModal() {
+            document.getElementById('previewModal').classList.add('hidden');
+            currentPreviewId = null;
+        }
+
+        async function approveApproval(guid) {
+            currentApprovalId = guid;
+            document.getElementById('approval-notes-input').value = '';
+            document.getElementById('approvalNotesModal').classList.remove('hidden');
+            queueLucideRender();
+        }
+
+        function closeApprovalNotesModal() {
+            document.getElementById('approvalNotesModal').classList.add('hidden');
+            currentApprovalId = null;
+        }
+
+        async function confirmApproval() {
+            if (!currentApprovalId) return;
+
+            const notes = document.getElementById('approval-notes-input').value.trim() || null;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals/${currentApprovalId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ notes: notes })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to approve');
+                }
+
+                showToast('Email approved successfully', 'success');
+                closeApprovalNotesModal();
+                await loadApprovals();
+                await loadStatistics();
+            } catch (error) {
+                console.error('Error approving:', error);
+                showToast('Failed to approve email: ' + error.message, 'error');
+            }
+        }
+
+        async function approveCurrentPreview() {
+            if (!currentPreviewId) return;
+            await approveApproval(currentPreviewId);
+            closePreviewModal();
+        }
+
+        async function rejectApproval(guid) {
+            currentRejectionId = guid;
+            document.getElementById('rejection-reason-input').value = '';
+            document.getElementById('rejectionReasonModal').classList.remove('hidden');
+            queueLucideRender();
+        }
+
+        function closeRejectionReasonModal() {
+            document.getElementById('rejectionReasonModal').classList.add('hidden');
+            currentRejectionId = null;
+        }
+
+        async function confirmRejection() {
+            if (!currentRejectionId) return;
+
+            const reason = document.getElementById('rejection-reason-input').value.trim() || null;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals/${currentRejectionId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ reason: reason })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to reject');
+                }
+
+                showToast('Email rejected', 'success');
+                closeRejectionReasonModal();
+                await loadApprovals();
+                await loadStatistics();
+            } catch (error) {
+                console.error('Error rejecting:', error);
+                showToast('Failed to reject email: ' + error.message, 'error');
+            }
+        }
+
+        async function rejectCurrentPreview() {
+            if (!currentPreviewId) return;
+            await rejectApproval(currentPreviewId);
+            closePreviewModal();
+        }
+
+        function switchTab(tab) {
+            // Hide all content
+            document.getElementById('content-pending').classList.add('hidden');
+            document.getElementById('content-approved').classList.add('hidden');
+            document.getElementById('content-history').classList.add('hidden');
+
+            // Remove active border from all tabs
+            document.getElementById('tab-pending').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-pending').classList.add('border-transparent', 'text-gray-500');
+            document.getElementById('tab-approved').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-approved').classList.add('border-transparent', 'text-gray-500');
+            document.getElementById('tab-history').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-history').classList.add('border-transparent', 'text-gray-500');
+
+            // Show selected content and tab
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('border-blue-500', 'text-gray-900');
+            document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
+        }
+
+        function truncate(text, length) {
+            return text && text.length > length ? text.substring(0, length) + '...' : text;
+        }
+
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            setTimeout(() => queueLucideRender(), 50);
+        }
+
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

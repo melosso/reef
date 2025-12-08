@@ -320,6 +320,10 @@ public static class ProfilesEndpoints
             existingProfile.UseHardcodedSubject = profile.UseHardcodedSubject;
             existingProfile.EmailSuccessThresholdPercent = profile.EmailSuccessThresholdPercent;
 
+            // Email Approval Workflow Configuration
+            existingProfile.EmailApprovalRequired = profile.EmailApprovalRequired;
+            existingProfile.EmailApprovalRoles = profile.EmailApprovalRoles;
+
             var success = await service.UpdateAsync(existingProfile);
             
             if (success)

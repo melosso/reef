@@ -73,6 +73,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
 
@@ -636,7 +640,7 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = '/api/jobs';
@@ -794,7 +798,7 @@
             activeBtn.classList.add('job-tab-active', 'border-blue-500', 'text-blue-600');
             activeBtn.classList.remove('border-transparent', 'text-gray-500');
             
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function updateScheduleFields() {
@@ -950,7 +954,7 @@
                     }
                 }
             });
-            lucide.createIcons();
+            queueLucideRender();
 
             // Sort the filtered jobs
             filteredJobs.sort((a, b) => {
@@ -1017,7 +1021,7 @@
                     queueMetricsInterval = null;
                 }
             }
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function loadQueueMetrics() {
@@ -1289,7 +1293,7 @@
             clearInterval(serverTimeInterval);
             serverTimeInterval = setInterval(updateServerTimeDisplay, 1000);
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeAddJobModal() {
@@ -1523,7 +1527,7 @@
                 banner.style.display = 'none';
             }
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         // Filter to show only paused jobs
@@ -1619,7 +1623,7 @@
                         </td>
                     </tr>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
 
@@ -1822,7 +1826,7 @@
                 `;
             }).join('');
             
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function toggleJobMenu(jobId, event) {
@@ -1873,7 +1877,7 @@
                 expandBtn.style.transform = 'rotate(90deg)';
             }
             
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function triggerJob(id) {
@@ -2018,7 +2022,7 @@
 
                 document.getElementById('add-job-modal').classList.remove('hidden');
                 
-                lucide.createIcons();
+                queueLucideRender();
             } catch (error) {
                 showToast(`Error loading job: ${error.message}`, 'error');
             }
@@ -2188,7 +2192,7 @@
                             <p class="text-sm mt-1">Click "Create Webhook" to add one</p>
                         </div>
                     `;
-                    lucide.createIcons();
+                    queueLucideRender();
                     return;
                 }
 
@@ -2247,7 +2251,7 @@
                     `;
                 }).join('');
 
-                lucide.createIcons();
+                queueLucideRender();
             } catch (error) {
                 console.error('Error loading webhooks:', error);
             }
@@ -2410,7 +2414,7 @@
             `;
 
             document.body.insertAdjacentHTML('beforeend', modal);
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeTestJobWebhookModal() {
@@ -2464,7 +2468,7 @@
             `;
             
             document.body.insertAdjacentHTML('beforeend', modal);
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeJobWebhookTokenModal() {
@@ -2489,7 +2493,7 @@
                 chevron.style.transform = 'rotate(0deg)';
             }
             
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {
@@ -2508,7 +2512,7 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             await requireAuth();
-            lucide.createIcons();
+            queueLucideRender();
             await loadFilterData();
             await loadJobs();
             setInterval(loadJobs, 10000);

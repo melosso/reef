@@ -74,6 +74,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -553,7 +557,7 @@
                 <option value="Text">Text</option>
             `;
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeAddTemplateModal() {
@@ -688,7 +692,7 @@
                 // Setup tag click handlers
                 templateFilter.setupTagClickHandlers('[data-tag-filter]');
             }
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function editTemplate(id) {
@@ -757,7 +761,7 @@
                     const form = document.getElementById('add-template-form');
                     form.setAttribute('data-edit-id', id);
                     
-                    lucide.createIcons();
+                    queueLucideRender();
                 } else {
                     showToast('Failed to load template', 'error');
                 }
@@ -988,7 +992,7 @@
             modalDiv.setAttribute('data-template-name', templateName);
             document.body.appendChild(modalDiv);
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeEmailGuidanceModal() {
@@ -1179,7 +1183,7 @@
                 isValidated = true; // Non-Scriban templates don't need validation
             }
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function onTemplateContentChange() {
@@ -1214,7 +1218,7 @@
                     break;
             }
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function validateScribanTemplate() {
@@ -1302,7 +1306,7 @@
                 // Show preview modal
                 document.getElementById('preview-output').textContent = result.preview || result.output || 'No preview available';
                 document.getElementById('preview-modal').classList.remove('hidden');
-                lucide.createIcons();
+                queueLucideRender();
             } catch (error) {
                 console.error('Preview error:', error);
                 showToast(`Preview error: ${error.message}`, 'error');
@@ -1689,7 +1693,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {
@@ -1707,7 +1711,7 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             await requireAuth();
-            lucide.createIcons();
+            queueLucideRender();
             initializeTemplates();
         });
 
@@ -1715,7 +1719,7 @@
         function openImportModal() {
             document.getElementById('import-modal').classList.remove('hidden');
             showImportStep1();
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeImportModal() {
@@ -1729,21 +1733,21 @@
             document.getElementById('import-step-2').classList.add('hidden');
             document.getElementById('import-step-3').classList.add('hidden');
             document.getElementById('import-search').value = '';
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function showImportStep2() {
             document.getElementById('import-step-1').classList.add('hidden');
             document.getElementById('import-step-2').classList.remove('hidden');
             document.getElementById('import-step-3').classList.add('hidden');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function showImportStep3() {
             document.getElementById('import-step-1').classList.add('hidden');
             document.getElementById('import-step-2').classList.add('hidden');
             document.getElementById('import-step-3').classList.remove('hidden');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function filterImportTemplates() {
@@ -1767,7 +1771,7 @@
                         <p class="text-sm text-gray-500">No templates match your search.</p>
                     </div>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
 
@@ -1791,7 +1795,7 @@
                 </div>
             `).join('');
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         async function fetchGitHubTemplates() {
@@ -1834,7 +1838,7 @@
                             </button>
                         </div>
                     `;
-                    lucide.createIcons();
+                    queueLucideRender();
                     return;
                 }
 
@@ -1865,7 +1869,7 @@
                 `).join('');
 
                 showImportStep2();
-                lucide.createIcons();
+                queueLucideRender();
 
             } catch (error) {
                 console.error('Error fetching GitHub templates:', error);
@@ -1879,7 +1883,7 @@
                         </button>
                     </div>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
             }
         }
 

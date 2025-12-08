@@ -114,6 +114,10 @@ public class Profile
     public int EmailSuccessThresholdPercent { get; set; } = 60; // Mark as succeeded if this % or more of emails succeed (prevents retries on partial failures)
     public string? EmailAttachmentConfig { get; set; } // JSON configuration for email attachments (opt-in)
 
+    // Email Approval Workflow Configuration
+    public bool EmailApprovalRequired { get; set; } = false; // Enable/disable manual approval for emails
+    public string? EmailApprovalRoles { get; set; } // JSON array of roles allowed to approve (e.g., ["Admin", "User"])
+
     public string? DependsOnProfileIds { get; set; } // Comma-separated profile IDs for dependencies
     public bool IsEnabled { get; set; } = true;
     public required string Hash { get; set; } // SHA256 for tamper detection
@@ -184,7 +188,12 @@ public class ProfileExecution
     public string? PostProcessStatus { get; set; } // null, Success, Failed, Skipped
     public string? PostProcessError { get; set; }
     public long? PostProcessTimeMs { get; set; }
-    
+
+    // Email Approval Workflow Tracking
+    public string? ApprovalStatus { get; set; } // null, Pending, Approved, Rejected, Sent (tracks approval status separately)
+    public int? PendingEmailApprovalId { get; set; } // FK to PendingEmailApprovals table (if email approval is required)
+    public DateTime? ApprovedAt { get; set; } // When email was approved
+
     // Delta Sync Metrics
     public int? DeltaSyncNewRows { get; set; }
     public int? DeltaSyncChangedRows { get; set; }
@@ -441,6 +450,34 @@ public class ProcessingContext
     /// Available as: {splitkey}
     /// </summary>
     public string? SplitKey { get; set; }
+}
+
+// ===== Email Approval Workflow Models =====
+
+/// <summary>
+/// Pending email approval entity for manual approval workflow
+/// Emails requiring approval are stored here before sending
+/// </summary>
+public class PendingEmailApproval
+{
+    public int Id { get; set; }
+    public string Guid { get; set; } = System.Guid.NewGuid().ToString(); // Public GUID for API access (prevents enumeration)
+    public int ProfileId { get; set; } // FK to Profiles table
+    public int ProfileExecutionId { get; set; } // FK to ProfileExecutions table
+    public required string Recipients { get; set; } // CSV or JSON serialized recipient emails
+    public string? CcAddresses { get; set; } // Optional CC addresses
+    public required string Subject { get; set; } // Email subject
+    public required string HtmlBody { get; set; } // Email body (rendered HTML)
+    public string? AttachmentConfig { get; set; } // JSON serialized attachment metadata/paths
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Sent, Failed
+    public int? ApprovedByUserId { get; set; } // FK to Users table - who approved/rejected
+    public DateTime? ApprovedAt { get; set; } // When email was approved/rejected
+    public string? ApprovalNotes { get; set; } // Notes/reason for approval or rejection
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ExpiresAt { get; set; } // Auto-cleanup after N days
+    public string? ErrorMessage { get; set; } // Error message if sending failed
+    public DateTime? SentAt { get; set; } // When email was actually sent
+    public required string Hash { get; set; } // SHA256 for integrity checking
 }
 
 // ===== API Request/Response Models =====

@@ -45,7 +45,7 @@ public class JwtTokenService
     /// <summary>
     /// Generate JWT token for a user
     /// </summary>
-    public string GenerateToken(string username, string role, int? customExpirationMinutes = null)
+    public string GenerateToken(string username, string role, int userId, int? customExpirationMinutes = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
@@ -54,6 +54,9 @@ public class JwtTokenService
         {
             new Claim(ClaimTypes.Name, username),
             new Claim(ClaimTypes.Role, role),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()), // Standard claim for user ID
+            new Claim("userId", userId.ToString()), // Additional custom claim for backwards compatibility
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()), // JWT standard subject claim
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };

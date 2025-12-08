@@ -13,15 +13,15 @@ namespace Reef.Core.Services;
 /// </summary>
 public class DatabaseSizeMonitorService : BackgroundService
 {
-    private readonly NotificationService _notificationService;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly string _databasePath;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<DatabaseSizeMonitorService>();
 
     public DatabaseSizeMonitorService(
-        NotificationService notificationService,
+        IServiceScopeFactory serviceScopeFactory,
         DatabaseConfig databaseConfig)
     {
-        _notificationService = notificationService;
+        _serviceScopeFactory = serviceScopeFactory;
 
         // Extract database path from connection string
         var connString = databaseConfig.ConnectionString;
@@ -38,7 +38,16 @@ public class DatabaseSizeMonitorService : BackgroundService
         try
         {
             // Wait a bit before first check (let app startup complete)
-            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // App is shutting down before first check
+                Log.Debug("DatabaseSizeMonitorService cancelled before first check");
+                return;
+            }
 
             // Check every 30 minutes
             while (!stoppingToken.IsCancellationRequested)
@@ -54,7 +63,10 @@ public class DatabaseSizeMonitorService : BackgroundService
                         Log.Debug("Database size check: {SizeMB} MB ({SizeBytes} bytes)", sizeMb, sizeBytes);
 
                         // Send notification if over threshold (throttler will prevent excessive notifications)
-                        await _notificationService.NotifyDatabaseSizeAsync(sizeBytes);
+                        // Create scope to resolve scoped NotificationService
+                        using var scope = _serviceScopeFactory.CreateScope();
+                        var notificationService = scope.ServiceProvider.GetRequiredService<NotificationService>();
+                        await notificationService.NotifyDatabaseSizeAsync(sizeBytes);
                     }
                     else
                     {
@@ -74,21 +86,29 @@ public class DatabaseSizeMonitorService : BackgroundService
                 catch (OperationCanceledException)
                 {
                     // App is shutting down
-                    Log.Information("DatabaseSizeMonitorService is shutting down");
+                    Log.Debug("DatabaseSizeMonitorService is shutting down");
                     break;
                 }
             }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal cancellation during shutdown - don't log as error
+            Log.Debug("DatabaseSizeMonitorService cancelled during operation");
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Unhandled exception in DatabaseSizeMonitorService");
             throw;
         }
+        finally
+        {
+            Log.Debug("DatabaseSizeMonitorService stopped");
+        }
     }
 
     public override Task StopAsync(CancellationToken cancellationToken)
     {
-        Log.Information("DatabaseSizeMonitorService stopped");
         return base.StopAsync(cancellationToken);
     }
 }

@@ -63,8 +63,8 @@ public static class AuthEndpoints
                 return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
             }
 
-            // Generate JWT token
-            var token = jwtService.GenerateToken(user.Username, user.Role);
+            // Generate JWT token with userId
+            var token = jwtService.GenerateToken(user.Username, user.Role, user.Id);
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
             // Update last login timestamp
@@ -114,13 +114,14 @@ public static class AuthEndpoints
             {
                 var username = httpContext.User.Identity?.Name;
                 var role = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+                var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "userId" || c.Type == "sub")?.Value;
 
-                if (username == null || role == null)
+                if (username == null || role == null || !int.TryParse(userIdClaim, out var userId))
                 {
                     return Results.Unauthorized();
                 }
 
-                var newToken = jwtService.GenerateToken(username, role);
+                var newToken = jwtService.GenerateToken(username, role, userId);
                 var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
                 return Results.Ok(new

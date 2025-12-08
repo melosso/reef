@@ -25,6 +25,7 @@ public class ExecutionService
     private readonly ITemplateEngine _templateEngine;
     private readonly DeltaSyncService _deltaSyncService;
     private readonly EmailExportService _emailExportService;
+    private readonly EmailApprovalService _emailApprovalService;
     private readonly NotificationService _notificationService;
 
     private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
@@ -39,6 +40,7 @@ public class ExecutionService
         QueryTemplateService templateService,
         DeltaSyncService deltaSyncService,
         EmailExportService emailExportService,
+        EmailApprovalService emailApprovalService,
         NotificationService notificationService,
         Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
@@ -53,6 +55,7 @@ public class ExecutionService
         _templateEngine = new ScribanTemplateEngine(_configuration);
         _deltaSyncService = deltaSyncService;
         _emailExportService = emailExportService;
+        _emailApprovalService = emailApprovalService;
         _notificationService = notificationService;
     }
 
@@ -372,7 +375,78 @@ public class ExecutionService
                         return (executionId, false, null, errorMsg);
                     }
 
-                    // Send emails
+                    // Check if email approval is required
+                    if (profile.EmailApprovalRequired)
+                    {
+                        Log.Information("Email approval required for profile {ProfileId}, storing {RowCount} emails for approval", profile.Id, rows.Count);
+
+                        try
+                        {
+                            // Parse attachment configuration if present
+                            AttachmentConfig? attachmentConfig = null;
+                            if (!string.IsNullOrEmpty(profile.EmailAttachmentConfig))
+                            {
+                                try
+                                {
+                                    attachmentConfig = System.Text.Json.JsonSerializer.Deserialize<AttachmentConfig>(profile.EmailAttachmentConfig);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Log.Warning(ex, "Failed to parse attachment configuration for profile {ProfileId}", profile.Id);
+                                }
+                            }
+
+                            // Render emails without sending
+                            var (renderedEmails, renderErrors) = await _emailExportService.RenderEmailsForApprovalAsync(
+                                profile,
+                                emailTemplate,
+                                rows,
+                                attachmentConfig);
+
+                            if (renderErrors.Count > 0)
+                            {
+                                Log.Warning("Errors during email rendering for profile {ProfileId}: {Errors}",
+                                    profile.Id, string.Join("; ", renderErrors));
+                            }
+
+                            // Store rendered emails as pending approvals
+                            int approvalCount = 0;
+                            foreach (var (recipients, subject, htmlBody, ccAddresses, attachmentConfigJson) in renderedEmails)
+                            {
+                                var approvalId = await _emailApprovalService.CreatePendingApprovalAsync(
+                                    profileId,
+                                    executionId,
+                                    recipients,
+                                    subject,
+                                    htmlBody,
+                                    ccAddresses,
+                                    attachmentConfigJson);
+
+                                approvalCount++;
+                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}", approvalId, executionId);
+                            }
+
+                            stopwatch.Stop();
+
+                            // Mark execution as successful (query succeeded, awaiting approval)
+                            await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
+                                $"{approvalCount} emails pending approval");
+
+                            Log.Information("Profile {ProfileId} execution completed: {ApprovalCount} emails stored for approval", profile.Id, approvalCount);
+
+                            return (executionId, true, null, null);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error(ex, "Failed to create pending email approvals for profile {ProfileId}", profile.Id);
+                            stopwatch.Stop();
+                            await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
+                                $"Failed to store emails for approval: {ex.Message}");
+                            return (executionId, false, null, ex.Message);
+                        }
+                    }
+
+                    // Send emails directly (approval not required)
                     var (emailSuccess, emailMessage, successCount, failureCount, splits) = await _emailExportService.ExportToEmailAsync(
                         profile,
                         emailDestination,

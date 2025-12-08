@@ -75,6 +75,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -284,7 +288,7 @@
         </div>
     </div>
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         function checkAuth() {
@@ -310,7 +314,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {
@@ -322,7 +326,7 @@
             document.getElementById('add-connection-modal').classList.remove('hidden');
             document.getElementById('connection-modal-title').textContent = 'Add New Connection';
             document.getElementById('connection-more-options').classList.add('hidden');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeAddConnectionModal() {
@@ -583,7 +587,7 @@
                 // Setup tag click handlers
                 connectionFilter.setupTagClickHandlers('[data-tag-filter]');
             }
-            lucide.createIcons();
+            queueLucideRender();
         }
 
 

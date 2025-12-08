@@ -97,6 +97,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
 
@@ -1665,7 +1669,7 @@
     </div>
 
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = window.location.origin;
@@ -1700,9 +1704,9 @@
                 showTab('system');
             }
             setUserSidebarInfo();
-            // Only call lucide.createIcons() if not on danger tab (danger tab calls it in showTab)
+            // Only call queueLucideRender() if not on danger tab (danger tab calls it in showTab)
             if (currentTab !== 'danger') {
-                lucide.createIcons();
+                queueLucideRender();
             }
         });
 
@@ -1723,7 +1727,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {
@@ -1778,7 +1782,7 @@
             // Lock danger zone AFTER showing the tab (so the blur overlay is in the DOM)
             if (tab === 'danger') {
                 lockDangerZone();
-                lucide.createIcons();
+                queueLucideRender();
             }
 
             if (tab === 'metrics') loadMetrics();
@@ -1951,7 +1955,7 @@
             `;
 
             paginationControls.innerHTML = html;
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function previousAuditPage() {
@@ -2043,7 +2047,7 @@
                 console.log('Rendered HTML length:', consoleOutput.innerHTML.length);
                 renderLogPagination();
                 updateLogInfo();
-                lucide.createIcons(); // Refresh icons if needed
+                queueLucideRender(); // Refresh icons if needed
 
             } catch (error) {
                 consoleOutput.innerHTML = `<div class="p-4 text-red-400">Error loading logs: ${error.message}</div>`;
@@ -2111,7 +2115,7 @@
             `;
 
             paginationControls.innerHTML = html;
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function previousLogPage() {
@@ -2196,7 +2200,7 @@
 
         function openUserHelpModal() {
             document.getElementById('userHelpModal').classList.remove('hidden');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeUserHelpModal() {
@@ -2205,7 +2209,7 @@
 
         function openApiKeyHelpModal() {
             document.getElementById('apiKeyHelpModal').classList.remove('hidden');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeApiKeyHelpModal() {
@@ -2346,7 +2350,7 @@
                 }).join('');
 
                 // Re-render Lucide icons for dynamically added elements
-                lucide.createIcons();
+                queueLucideRender();
             } catch (error) {
                 console.error('Error loading API keys:', error);
                 const tbody = document.getElementById('apikeys-table');
@@ -2582,14 +2586,14 @@
                     button.disabled = false;
                     button.classList.remove('opacity-50', 'cursor-not-allowed');
                     button.innerHTML = originalText;
-                    lucide.createIcons(); // Re-render icons
+                    queueLucideRender(); // Re-render icons
 
                     // Hide the blur overlay AFTER countdown completes
                     if (blurOverlay) {
                         blurOverlay.classList.remove('flex');
                         blurOverlay.classList.add('hidden');
                     }
-                    lucide.createIcons(); // Re-render icons for the now-visible content
+                    queueLucideRender(); // Re-render icons for the now-visible content
                 } else {
                     updateCountdown();
                 }
@@ -2617,7 +2621,7 @@
                 document.getElementById('resetConfirmModal').classList.remove('hidden');
                 
                 // Re-render icons
-                setTimeout(() => lucide.createIcons(), 50);
+                setTimeout(() => queueLucideRender(), 50);
             } catch (error) {
                 showToast('Error: ' + error.message, 'danger');
             }
@@ -2690,7 +2694,7 @@
             document.getElementById('clearOldAuditsModal').classList.remove('hidden');
             
             // Re-render icons
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         /**
@@ -2742,7 +2746,7 @@
             document.getElementById('clearOldExecutionsModal').classList.remove('hidden');
             
             // Re-render icons
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         /**
@@ -2768,7 +2772,7 @@
             }
             
             // Re-render icons
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         /**
@@ -2818,7 +2822,7 @@
                 document.getElementById('clearAllExecutionsModal').classList.remove('hidden');
                 
                 // Re-render icons
-                setTimeout(() => lucide.createIcons(), 50);
+                setTimeout(() => queueLucideRender(), 50);
             } catch (error) {
                 showToast('Error: ' + error.message, 'danger');
             }

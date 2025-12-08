@@ -73,6 +73,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
                 <div class="mt-6">
@@ -252,7 +256,7 @@
             </div>
     </div>
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = window.location.origin;
@@ -263,7 +267,7 @@
         async function init() {
             await requireAuth();
             token = localStorage.getItem('reef_token');
-            lucide.createIcons();
+            queueLucideRender();
             await loadGroups();
         }
         
@@ -306,7 +310,7 @@
                         </td>
                     </tr>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
             tbody.innerHTML = groups.map(group => {
@@ -332,7 +336,7 @@
                     </tr>
                 `;
             }).join('');
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function openAddGroupModal() {
@@ -433,7 +437,7 @@
                     </div>
                 </div>
             `;
-            lucide.createIcons();
+            queueLucideRender();
             setTimeout(() => container.innerHTML = '', 5000);
         }
 
@@ -465,7 +469,7 @@
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {

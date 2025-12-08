@@ -74,6 +74,10 @@
                             <i data-lucide="activity" class="h-5 w-5"></i>
                             <span class="ml-3">Executions</span>
                         </a>
+                        <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-slate-100">
+                            <i data-lucide="check-square" class="h-5 w-5"></i>
+                            <span class="ml-3">Approvals</span>
+                        </a>
                     </div>
                 </div>
 
@@ -560,6 +564,60 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <p class="mt-1 text-xs text-gray-500">
                                 Set to less than 100 to prevent retries when some recipients fail (e.g., 90 for 90% success)
                             </p>
+                        </div>
+                    </div>
+
+                    <!-- Email Approval Workflow Section (Email Export Only) -->
+                    <div id="emailApprovalSection" class="hidden border-t border-gray-200 pt-4 mt-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                            <i data-lucide="check-square" class="w-4 h-4 mr-2 text-amber-600"></i>
+                            Requires Approval (Optional)
+                            <span class="ml-2 text-xs font-normal text-gray-500">Emails held for approval before sending</span>
+                        </h4>
+
+                        <!-- Enable/Disable Toggle -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4">
+                            <div class="flex items-center space-x-3">
+                                <i data-lucide="shield-check" class="w-5 h-5 text-gray-400"></i>
+                                <div>
+                                    <label for="emailApprovalRequired" class="text-sm font-medium text-gray-900">Require Manual Approval</label>
+                                    <p class="text-xs text-gray-500">Emails held in queue until approved by authorized user</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="emailApprovalRequired" class="sr-only peer" onchange="toggleEmailApprovalConfig()">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <div id="emailApprovalConfigSection" class="hidden space-y-3 opacity-50 pointer-events-none">
+                            <div>
+                                <label for="emailApprovalRoles" class="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                                    Roles Allowed to Approve
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Select which user roles are allowed to approve emails for this profile. Leave empty to allow all roles." data-tooltip-position="top">
+                                        <i data-lucide="info" class="w-4 h-4"></i>
+                                    </span>
+                                </label>
+                                <div id="emailApprovalRolesCheckboxes" class="space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" value="Admin" data-role-checkbox class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-sm text-gray-700 disable-select">Admin</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" value="User" data-role-checkbox class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-sm text-gray-700 disable-select">User</span>
+                                    </label>
+                                </div>
+                                <p class="mt-2 text-xs text-gray-500">
+                                    Leave all unchecked to allow all users to approve
+                                </p>
+                            </div>
+
+                            <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                                <p class="text-xs text-blue-700">
+                                    <strong>Workflow:</strong> Emails will be held in "Pending" status until approved by an authorized user. A background service will send approved emails within 30 seconds.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -1391,11 +1449,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <script>
-        lucide.createIcons();
+        queueLucideRender();
     </script>
     <script>
         const API_BASE = window.location.origin;
-        let token = localStorage.getItem('reef_token'); // Will be validated before use
+        let token = localStorage.getItem('reef_token');
         let profiles = [];
         let filteredProfiles = [];
         let connections = [];
@@ -1403,7 +1461,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         let destinations = [];
         let templates = [];
 
-        // Sorting state - Load from localStorage or use defaults
+        // Sorting state
         let currentSortColumn = localStorage.getItem('profiles_sortColumn') || 'name';
         let currentSortDirection = localStorage.getItem('profiles_sortDirection') || 'asc';
 
@@ -1421,7 +1479,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 currentSortDirection = 'asc';
             }
 
-            // Save sort preferences to localStorage
+            // Save sort preferences
             localStorage.setItem('profiles_sortColumn', currentSortColumn);
             localStorage.setItem('profiles_sortDirection', currentSortDirection);
 
@@ -1436,7 +1494,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     }
                 }
             });
-            lucide.createIcons();
+            queueLucideRender();
 
             // Sort the filtered profiles
             filteredProfiles.sort((a, b) => {
@@ -1514,6 +1572,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
         }
 
+        function toggleEmailApprovalConfig() {
+            const checkbox = document.getElementById('emailApprovalRequired');
+            const section = document.getElementById('emailApprovalConfigSection');
+            if (checkbox.checked) {
+                section.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
+            } else {
+                section.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
         function loadProfileFilters() {
             const savedStatus = localStorage.getItem('profiles_filterStatus');
             const savedConnection = localStorage.getItem('profiles_filterConnection');
@@ -1530,7 +1598,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             await requireAuth();
             setUserSidebarInfo();
             token = localStorage.getItem('reef_token');
-            lucide.createIcons();
+            queueLucideRender();
             // Load all data in parallel
             await Promise.all([loadProfiles(), loadConnections(), loadGroups(), loadTemplates(), loadDestinations()]);
             // Load saved filters after data is loaded and apply them
@@ -1826,7 +1894,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </td>
                     </tr>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
 
@@ -1900,7 +1968,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 `;
             }).join('');
 
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function showTab(tabName) {
@@ -1933,7 +2001,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             activeButton.classList.remove('text-gray-700', 'border-transparent', 'hover:border-gray-300');
 
             // Re-render icons after tab switch
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function toggleNewProfileMenu() {
@@ -1956,6 +2024,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         function openAddProfileModal(profileType = 'standard') {
             // Hide email config section for standard profiles
             const emailConfigSection = document.getElementById('emailConfigSection');
+            const emailApprovalSection = document.getElementById('emailApprovalSection');
             const emailPreviewButton = document.getElementById('emailPreviewButton');
             const nonEmailFields = document.getElementById('nonEmailFields');
             const fileExportFields = document.getElementById('fileExportFields');
@@ -1969,6 +2038,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     emailConfigSection.classList.remove('hidden');
                 } else {
                     emailConfigSection.classList.add('hidden');
+                }
+            }
+
+            if (emailApprovalSection) {
+                if (isEmailExport) {
+                    emailApprovalSection.classList.remove('hidden');
+                } else {
+                    emailApprovalSection.classList.add('hidden');
                 }
             }
             if (emailPreviewButton) {
@@ -2330,8 +2407,19 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             if (window.updateCcModeDisplay) window.updateCcModeDisplay();
             if (window.updateSubjectModeDisplay) window.updateSubjectModeDisplay();
 
+            // Load Email Approval Workflow settings
+            document.getElementById('emailApprovalRequired').checked = profile.emailApprovalRequired || false;
+
+            // Load approval roles
+            const roleCheckboxes = document.querySelectorAll('[data-role-checkbox]');
+            const approvalRoles = profile.emailApprovalRoles ? JSON.parse(profile.emailApprovalRoles) : [];
+            roleCheckboxes.forEach(checkbox => {
+                checkbox.checked = approvalRoles.includes(checkbox.value);
+            });
+
             // Show/hide email config section based on profile type
             const emailConfigSection = document.getElementById('emailConfigSection');
+            const emailApprovalSection = document.getElementById('emailApprovalSection');
             const emailPreviewButton = document.getElementById('emailPreviewButton');
             const nonEmailFields = document.getElementById('nonEmailFields');
             const fileExportFields = document.getElementById('fileExportFields');
@@ -2339,6 +2427,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const emailOptionsTabButton = document.getElementById('emailOptionsTabButton');
             if (profile.isEmailExport) {
                 emailConfigSection.classList.remove('hidden');
+                emailApprovalSection.classList.remove('hidden');
                 if (emailPreviewButton) {
                     emailPreviewButton.classList.remove('hidden');
                 }
@@ -2356,6 +2445,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
             } else {
                 emailConfigSection.classList.add('hidden');
+                emailApprovalSection.classList.add('hidden');
                 if (emailPreviewButton) {
                     emailPreviewButton.classList.add('hidden');
                 }
@@ -2371,6 +2461,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 if (emailOptionsTabButton) {
                     emailOptionsTabButton.style.display = 'none';
                 }
+            }
+
+            // Restore approval config visibility
+            if (document.getElementById('emailApprovalRequired').checked) {
+                document.getElementById('emailApprovalConfigSection').classList.remove('hidden');
             }
 
             // Update modal title to reflect email export status
@@ -2515,6 +2610,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const emailSuccessThresholdPercent = isEmailExportProfile ?
                 parseInt(document.getElementById('emailSuccessThresholdPercent').value) || 60 : 60;
 
+            // Email Approval Workflow fields
+            const emailApprovalRequired = isEmailExportProfile ? document.getElementById('emailApprovalRequired').checked : false;
+            const emailApprovalRolesCheckboxes = document.querySelectorAll('[data-role-checkbox]:checked');
+            const emailApprovalRoles = Array.from(emailApprovalRolesCheckboxes).map(cb => cb.value);
+            const emailApprovalRolesJson = emailApprovalRequired ? JSON.stringify(emailApprovalRoles) : null;
+
             // Validate email export configuration
             if (isEmailExportProfile) {
                 if (!emailTemplateId) {
@@ -2580,7 +2681,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             // Combine fields for hash (including pre/post-processing, delta sync, splitting, and email config)
-            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
+            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}|${emailApprovalRequired}|${emailApprovalRolesJson || ''}`;
             const hash = await window.sha256(hashInput);
 
             const profile = {
@@ -2631,6 +2732,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 emailSubjectHardcoded: emailSubjectHardcoded,
                 useHardcodedSubject: useHardcodedSubject,
                 emailSuccessThresholdPercent: emailSuccessThresholdPercent,
+                emailApprovalRequired: emailApprovalRequired,
+                emailApprovalRoles: emailApprovalRolesJson,
                 hash
             };
 
@@ -3507,7 +3610,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <p class="text-sm mt-1">Click "Create Webhook" to add one</p>
                     </div>
                 `;
-                lucide.createIcons();
+                queueLucideRender();
                 return;
             }
             
@@ -3571,7 +3674,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 container.appendChild(webhookCard);
             });
             
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         // Create webhook
@@ -3727,7 +3830,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             `;
             
             document.body.insertAdjacentHTML('beforeend', modal);
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeTestWebhookModal() {
@@ -3792,7 +3895,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             `;
             
             document.body.insertAdjacentHTML('beforeend', modal);
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeWebhookTokenModal() {
@@ -3825,7 +3928,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 icon.classList.add('text-gray-400');
             }
             
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function toggleSplitFields() {
@@ -4061,7 +4164,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             `;
             
             document.body.insertAdjacentHTML('beforeend', modal);
-            lucide.createIcons();
+            queueLucideRender();
         }
 
         function closeResetRowsModal() {
@@ -4153,7 +4256,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 </div>
             `;
-            lucide.createIcons();
+            queueLucideRender();
 
             setTimeout(() => container.innerHTML = '', 5000);
         }
@@ -4190,7 +4293,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
             
             // Re-render icons after DOM update
-            setTimeout(() => lucide.createIcons(), 50);
+            setTimeout(() => queueLucideRender(), 50);
         }
 
         function logout() {
@@ -4544,7 +4647,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     if (icon) {
                         icon.style.transform = subjectVariablesPanel.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
                     }
-                    lucide.createIcons();
+                    queueLucideRender();
                 });
             }
 

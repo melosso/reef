@@ -210,7 +210,7 @@ public class Program
             // Map API endpoints
             MapEndpoints(app);
 
-            var accessNote = localhostOnly ? "(localhost only)" : "(all interfaces)";
+            var accessNote = localhostOnly ? "(localhost only)" : "(reachable from other devices)";
             Log.Information("Reef is spinning up on http://localhost:{Port} {AccessNote}", port, accessNote);
             Log.Information("Endpoints online: /api and /health");
             Log.Information("");
@@ -294,6 +294,7 @@ public class Program
         services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
+        services.AddScoped<EmailApprovalService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
 
@@ -341,6 +342,9 @@ public class Program
         // Jobs scheduler (for Job-based scheduled tasks) - NEW
         services.AddSingleton<JobScheduler>();
         services.AddHostedService(sp => sp.GetRequiredService<JobScheduler>());
+
+        // Email approval background service - polls for approved emails and sends them
+        services.AddHostedService<ApprovedEmailSenderService>();
 
         Log.Debug("Services registered");
     }
@@ -464,6 +468,7 @@ public class Program
                 "dashboard.html",
                 "connections.html",
                 "documentation.html",
+                "email-approvals.html",
                 "jobs.html",
                 "admin.html",
                 "destinations.html",
@@ -524,10 +529,11 @@ public class Program
         ProfilesEndpoints.Map(app);
         GroupsEndpoints.Map(app);
         ExecutionsEndpoints.Map(app);
+        EmailApprovalsEndpoints.Map(app);
         WebhooksEndpoints.Map(app);
         SystemInfoEndpoints.Map(app);
         AdminEndpoints.Map(app);
-        
+
         // New endpoints for Jobs, Destinations, and Query Templates (extension methods)
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
