@@ -1,4 +1,4 @@
-# Reef
+# 🌟 Reef
 
 [![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
@@ -8,7 +8,7 @@ This is **Reef**. It's a web-based integration platform that orchestrates your d
 
 ![Screenshot of Reef](https://github.com/melosso/reef/blob/main/.github/images/screenshot.webp?raw=true)
 
-## 🌟 What is Reef?
+## What is Reef?
 
 Reef automates data exports for **reporting workflows**, **integration pipelines**, and **data synchronization** with customizable data structures. Keep it low-code, set-up your own custom templates if necessary, and export data effortlessly. 
 
@@ -26,7 +26,7 @@ In other words, Reef can assist you in quickly getting data synchronisation goin
 
 ---
 
-## 🚀 Quick Start
+## Getting Started
 
 We've prepared two methods to deploy Reef. It's up to you to choose your preferred method:
 
@@ -47,7 +47,7 @@ volumes:
   reef_data:
 ```
 ```bash
-docker compose up -d
+mkdir -p exports && docker compose up -d
 ```
 
 Access at **http://localhost:8085**
@@ -80,7 +80,7 @@ As mentioned hereabove, upon starting the first time, you can login with the def
 
 ---
 
-## 🧩 Core Features
+## How It Works
 
 You can centralize your database credentials easily; create one connection for many profiles. You can tag these profiles by assigning a `Group` to them. Then, create an export definition by creating a `Profile` that'll be assigned a destination:
 
@@ -114,33 +114,22 @@ After creating a job, you can schedule it using various methods such as:
 - **Interval:** Every 15 minutes
 - **Webhooks:** Trigger via HTTP POST
 
-## 🔐 Security
+## Security
 
 We've made sure to keep your data safe. Here's a glimpse on how we do this:
 
 - **JWT authentication**: Token-based API access
 - **Encrypted credentials**: Stored using RSA+AES hybrid encryption
-- **Transient execution**: Data exists only in memory while being processed, nothing persists
+- **Transient execution**: Data exists only in memory while being processed, nothing persists*
 - **Hash validation**: Detect configuration tampering
 - **Audit logging**: Every change is tracked for accountability
+
+*Outgoing mail credentials temporarily persist until approved by the email approval module.
 
 > [!IMPORTANT] 
 > Since this application is built for local data orchistration, make sure to **never expose** Reef outside of your network. If you need to reach it from outside, expose only the `/api` routes and run them through Nginx or whatever reverse proxy you use. There's an IIS example in [web.config.md](web.config.md) if you need a starting point, though you'l likely have to tweak it for your setup.
 
-## 📈 Monitoring
-
-To keep changes and events in the application traceable:
-
-- You can browse detailed execution history, including things like status, duration, and row counts.
-- The app logs are easy to get to, either from the UI or directly in the `/logs` folder.
-- The admin panel includes audit logs that track most user actions.
-- There's a simple health check at `/health` that works with Azure Monitor, Prometheus, and Grafana.
-
-## 🤝 Credits
-
-Built with [ASP.NET Core](https://github.com/dotnet/aspnetcore), [Dapper](https://github.com/DapperLib/Dapper), [Scriban](https://github.com/scriban/scriban), [Serilog](https://github.com/serilog/serilog), and more packages.
-
-## 🔮 Lore
+## Lore
 
 > Reef comes from the idea of a coral reef, something that grows slowly from countless small bits until it becomes its own world. Database exports feel the same way. Each customer, each dump, each migration, another layer added to the structure. It's alive in its own way, even if it's just data.
 

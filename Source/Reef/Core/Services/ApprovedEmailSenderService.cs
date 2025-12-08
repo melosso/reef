@@ -189,6 +189,29 @@ public class ApprovedEmailSenderService : BackgroundService
                     SentAt = DateTime.UtcNow.ToString("o")
                 });
 
+                // Update ProfileExecution ApprovalStatus to reflect successful email send
+                const string updateExecutionSql = @"
+                    UPDATE ProfileExecutions
+                    SET ApprovalStatus = 'Sent'
+                    WHERE PendingEmailApprovalId = @ApprovalId
+                ";
+
+                await connection.ExecuteAsync(updateExecutionSql, new
+                {
+                    ApprovalId = approval.Id
+                });
+
+                // Redact sensitive email content per security policy - keep only metadata
+                const string redactSql = @"
+                    UPDATE PendingEmailApprovals
+                    SET Recipients = '[REDACTED]',
+                        CcAddresses = CASE WHEN CcAddresses IS NOT NULL THEN '[REDACTED]' ELSE NULL END,
+                        HtmlBody = '[REDACTED]',
+                        AttachmentConfig = NULL
+                    WHERE Id = @Id
+                ";
+                await connection.ExecuteAsync(redactSql, new { Id = approval.Id });
+
                 Log.Information("Successfully sent approved email {ApprovalId} to {Recipients}", approval.Id, MaskEmailForLog(approval.Recipients));
 
                 try
@@ -226,8 +249,32 @@ public class ApprovedEmailSenderService : BackgroundService
             ErrorMessage = $"Failed after {_maxRetries} attempts: {lastException?.Message}"
         });
 
+        // Update ProfileExecution ApprovalStatus to reflect email send failure
+        // Keep Status as 'Success' since the data extraction succeeded - only the email delivery failed
+        const string updateExecutionSql = @"
+            UPDATE ProfileExecutions
+            SET ApprovalStatus = 'Failed'
+            WHERE PendingEmailApprovalId = @ApprovalId
+        ";
+
+        await connection.ExecuteAsync(updateExecutionSql, new
+        {
+            ApprovalId = approval.Id
+        });
+
         Log.Error("Failed to send approved email {ApprovalId} after {Retries} attempts: {Error}",
             approval.Id, _maxRetries, lastException?.Message);
+
+        // Redact sensitive email content per security policy - keep only metadata
+        const string redactFailedSql = @"
+            UPDATE PendingEmailApprovals
+            SET Recipients = '[REDACTED]',
+                CcAddresses = CASE WHEN CcAddresses IS NOT NULL THEN '[REDACTED]' ELSE NULL END,
+                HtmlBody = '[REDACTED]',
+                AttachmentConfig = NULL
+            WHERE Id = @Id
+        ";
+        await connection.ExecuteAsync(redactFailedSql, new { Id = approval.Id });
 
         try
         {

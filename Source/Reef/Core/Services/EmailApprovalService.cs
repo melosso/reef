@@ -162,6 +162,9 @@ public class EmailApprovalService
                     ApprovedAt = DateTime.UtcNow.ToString("o")
                 });
 
+                // Note: Sensitive data redaction happens in ApprovedEmailSenderService
+                // after the email is successfully sent or fails, not here during approval
+
                 Log.Information("Approved email approval {ApprovalId} by user {UserId}", approvalId, userId);
 
                 try
@@ -221,6 +224,17 @@ public class EmailApprovalService
                 ";
 
                 await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
+
+                // Redact sensitive email content per security policy - keep only metadata
+                const string redactSql = @"
+                    UPDATE PendingEmailApprovals
+                    SET Recipients = '[REDACTED]',
+                        CcAddresses = CASE WHEN CcAddresses IS NOT NULL THEN '[REDACTED]' ELSE NULL END,
+                        HtmlBody = '[REDACTED]',
+                        AttachmentConfig = NULL
+                    WHERE Id = @Id
+                ";
+                await connection.ExecuteAsync(redactSql, new { Id = approvalId });
 
                 Log.Information("Rejected email approval {ApprovalId} by user {UserId}", approvalId, userId);
 

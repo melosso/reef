@@ -172,10 +172,35 @@
 
                     <!-- Pending Tab -->
                     <div id="content-pending" class="block">
+                        <!-- Bulk Actions Toolbar -->
+                        <div id="bulk-actions-toolbar" class="hidden bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-sm font-medium text-blue-900">
+                                    <span id="selected-count">0</span> selected
+                                </span>
+                                <button onclick="clearSelection()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                    Clear selection
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="bulkApprove()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md flex items-center transition-colors">
+                                    <i data-lucide="check" class="h-4 w-4 mr-2"></i>
+                                    Approve Selected
+                                </button>
+                                <button onclick="bulkReject()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-md flex items-center transition-colors">
+                                    <i data-lucide="x" class="h-4 w-4 mr-2"></i>
+                                    Reject Selected
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="w-full">
                                 <thead class="bg-gray-50 border-b border-gray-200">
                                     <tr>
+                                        <th class="px-6 py-3 text-left">
+                                            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAll()" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        </th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Subject</th>
@@ -192,6 +217,38 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination for Pending Tab -->
+                        <div id="pending-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button onclick="previousPage('pending')" id="pending-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Previous
+                                </button>
+                                <button onclick="nextPage('pending')" id="pending-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <p class="text-sm text-gray-700">
+                                        Showing <span id="pending-showing-from" class="font-medium">0</span> to <span id="pending-showing-to" class="font-medium">0</span> of <span id="pending-total-count" class="font-medium">0</span> results
+                                    </p>
+                                    <div class="flex items-center space-x-2">
+                                        <label for="pending-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                        <select id="pending-page-size-select" onchange="changePageSize('pending')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                            <option value="25" selected>25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="pending-pagination-controls">
+                                        <!-- Pagination buttons will be rendered here -->
+                                    </nav>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -218,6 +275,38 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        <!-- Pagination for Approved Tab -->
+                        <div id="approved-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button onclick="previousPage('approved')" id="approved-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Previous
+                                </button>
+                                <button onclick="nextPage('approved')" id="approved-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <p class="text-sm text-gray-700">
+                                        Showing <span id="approved-showing-from" class="font-medium">0</span> to <span id="approved-showing-to" class="font-medium">0</span> of <span id="approved-total-count" class="font-medium">0</span> results
+                                    </p>
+                                    <div class="flex items-center space-x-2">
+                                        <label for="approved-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                        <select id="approved-page-size-select" onchange="changePageSize('approved')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                            <option value="25" selected>25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="approved-pagination-controls">
+                                        <!-- Pagination buttons will be rendered here -->
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- History Tab -->
@@ -242,6 +331,38 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination for History Tab -->
+                        <div id="history-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button onclick="previousPage('history')" id="history-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Previous
+                                </button>
+                                <button onclick="nextPage('history')" id="history-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Next
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <p class="text-sm text-gray-700">
+                                        Showing <span id="history-showing-from" class="font-medium">0</span> to <span id="history-showing-to" class="font-medium">0</span> of <span id="history-total-count" class="font-medium">0</span> results
+                                    </p>
+                                    <div class="flex items-center space-x-2">
+                                        <label for="history-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                        <select id="history-page-size-select" onchange="changePageSize('history')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                            <option value="25" selected>25</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination" id="history-pagination-controls">
+                                        <!-- Pagination buttons will be rendered here -->
+                                    </nav>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -392,6 +513,16 @@
         let allApprovals = [];
         let userMenuExpanded = false;
 
+        // Pagination state for each tab
+        let pagination = {
+            pending: { page: 1, pageSize: 25, totalCount: 0, totalPages: 0, data: [] },
+            approved: { page: 1, pageSize: 25, totalCount: 0, totalPages: 0, data: [] },
+            history: { page: 1, pageSize: 25, totalCount: 0, totalPages: 0, data: [] }
+        };
+
+        // Bulk selection state
+        let selectedApprovals = new Set();
+
         async function init() {
             if (!token) {
                 window.location.href = '/';
@@ -416,7 +547,7 @@
 
         async function loadApprovals() {
             try {
-                const response = await fetch(`${API_BASE}/api/email-approvals?pageSize=100`, {
+                const response = await fetch(`${API_BASE}/api/email-approvals?pageSize=1000`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -458,28 +589,58 @@
             const approved = allApprovals.filter(a => a.status === 'Approved');
             const history = allApprovals.filter(a => ['Sent', 'Failed', 'Rejected'].includes(a.status));
 
-            renderPendingTable(pending);
-            renderApprovedTable(approved);
-            renderHistoryTable(history);
+            // Update pagination data for each tab
+            pagination.pending.data = pending;
+            pagination.pending.totalCount = pending.length;
+            pagination.pending.totalPages = Math.ceil(pending.length / pagination.pending.pageSize);
+
+            pagination.approved.data = approved;
+            pagination.approved.totalCount = approved.length;
+            pagination.approved.totalPages = Math.ceil(approved.length / pagination.approved.pageSize);
+
+            pagination.history.data = history;
+            pagination.history.totalCount = history.length;
+            pagination.history.totalPages = Math.ceil(history.length / pagination.history.pageSize);
+
+            // Render each table with pagination
+            renderPendingTable();
+            renderApprovedTable();
+            renderHistoryTable();
         }
 
-        function renderPendingTable(pending) {
+        function renderPendingTable() {
             const tbody = document.getElementById('pending-table-body');
+            const { page, pageSize, data, totalCount } = pagination.pending;
 
-            if (pending.length === 0) {
+            if (totalCount === 0) {
                 tbody.innerHTML = `
                     <tr class="hover:bg-gray-50">
-                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                             <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
                             <p>No pending approvals</p>
                         </td>
                     </tr>
                 `;
+                queueLucideRender();
+                updateBulkActionsToolbar();
+                renderPaginationControls('pending');
                 return;
             }
 
-            tbody.innerHTML = pending.map(approval => `
+            // Calculate pagination slice
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalCount);
+            const paginatedData = data.slice(startIndex, endIndex);
+
+            tbody.innerHTML = paginatedData.map(approval => `
                 <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-6 py-4">
+                        <input type="checkbox"
+                               class="approval-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                               data-approval-id="${approval.guid}"
+                               onchange="toggleApprovalSelection('${approval.guid}')"
+                               ${selectedApprovals.has(approval.guid) ? 'checked' : ''}>
+                    </td>
                     <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs" title="${approval.recipients}">
                         ${truncate(approval.recipients, 30)}
@@ -507,12 +668,199 @@
             `).join('');
 
             queueLucideRender();
+            renderPaginationControls('pending');
+            updateBulkActionsToolbar();
         }
 
-        function renderApprovedTable(approved) {
-            const tbody = document.getElementById('approved-table-body');
+        function toggleApprovalSelection(guid) {
+            if (selectedApprovals.has(guid)) {
+                selectedApprovals.delete(guid);
+            } else {
+                selectedApprovals.add(guid);
+            }
+            updateBulkActionsToolbar();
+            updateSelectAllCheckbox();
+        }
 
-            if (approved.length === 0) {
+        function toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('select-all-pending');
+            const { data } = pagination.pending;
+
+            if (selectAllCheckbox.checked) {
+                // Select all visible items on current page
+                const startIndex = (pagination.pending.page - 1) * pagination.pending.pageSize;
+                const endIndex = Math.min(startIndex + pagination.pending.pageSize, pagination.pending.totalCount);
+                const paginatedData = data.slice(startIndex, endIndex);
+
+                paginatedData.forEach(approval => {
+                    selectedApprovals.add(approval.guid);
+                });
+            } else {
+                // Deselect all visible items on current page
+                const startIndex = (pagination.pending.page - 1) * pagination.pending.pageSize;
+                const endIndex = Math.min(startIndex + pagination.pending.pageSize, pagination.pending.totalCount);
+                const paginatedData = data.slice(startIndex, endIndex);
+
+                paginatedData.forEach(approval => {
+                    selectedApprovals.delete(approval.guid);
+                });
+            }
+
+            renderPendingTable();
+        }
+
+        function updateSelectAllCheckbox() {
+            const selectAllCheckbox = document.getElementById('select-all-pending');
+            const { data } = pagination.pending;
+
+            if (pagination.pending.totalCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+                return;
+            }
+
+            const startIndex = (pagination.pending.page - 1) * pagination.pending.pageSize;
+            const endIndex = Math.min(startIndex + pagination.pending.pageSize, pagination.pending.totalCount);
+            const paginatedData = data.slice(startIndex, endIndex);
+
+            const selectedOnPage = paginatedData.filter(a => selectedApprovals.has(a.guid)).length;
+
+            if (selectedOnPage === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (selectedOnPage === paginatedData.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+
+        function updateBulkActionsToolbar() {
+            const toolbar = document.getElementById('bulk-actions-toolbar');
+            const selectedCountSpan = document.getElementById('selected-count');
+            const count = selectedApprovals.size;
+
+            selectedCountSpan.textContent = count;
+
+            if (count > 0) {
+                toolbar.classList.remove('hidden');
+            } else {
+                toolbar.classList.add('hidden');
+            }
+
+            updateSelectAllCheckbox();
+            queueLucideRender();
+        }
+
+        function clearSelection() {
+            selectedApprovals.clear();
+            renderPendingTable();
+        }
+
+        async function bulkApprove() {
+            if (selectedApprovals.size === 0) {
+                showToast('No approvals selected', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to approve ${selectedApprovals.size} email(s)?`)) {
+                return;
+            }
+
+            const guids = Array.from(selectedApprovals);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const guid of guids) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/email-approvals/${guid}/approve`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ notes: 'Bulk approval' })
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                        selectedApprovals.delete(guid);
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error approving ${guid}:`, error);
+                    failCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`Successfully approved ${successCount} email(s)`, 'success');
+            }
+            if (failCount > 0) {
+                showToast(`Failed to approve ${failCount} email(s)`, 'error');
+            }
+
+            await loadApprovals();
+            await loadStatistics();
+        }
+
+        async function bulkReject() {
+            if (selectedApprovals.size === 0) {
+                showToast('No approvals selected', 'error');
+                return;
+            }
+
+            const reason = prompt(`Enter rejection reason (optional) for ${selectedApprovals.size} email(s):`);
+            if (reason === null) {
+                return; // User cancelled
+            }
+
+            const guids = Array.from(selectedApprovals);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const guid of guids) {
+                try {
+                    const response = await fetch(`${API_BASE}/api/email-approvals/${guid}/reject`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ reason: reason || 'Bulk rejection' })
+                    });
+
+                    if (response.ok) {
+                        successCount++;
+                        selectedApprovals.delete(guid);
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error rejecting ${guid}:`, error);
+                    failCount++;
+                }
+            }
+
+            if (successCount > 0) {
+                showToast(`Successfully rejected ${successCount} email(s)`, 'success');
+            }
+            if (failCount > 0) {
+                showToast(`Failed to reject ${failCount} email(s)`, 'error');
+            }
+
+            await loadApprovals();
+            await loadStatistics();
+        }
+
+        function renderApprovedTable() {
+            const tbody = document.getElementById('approved-table-body');
+            const { page, pageSize, data, totalCount } = pagination.approved;
+
+            if (totalCount === 0) {
                 tbody.innerHTML = `
                     <tr class="hover:bg-gray-50">
                         <td colspan="5" class="px-6 py-8 text-center text-gray-500">
@@ -521,10 +869,17 @@
                         </td>
                     </tr>
                 `;
+                queueLucideRender();
+                renderPaginationControls('approved');
                 return;
             }
 
-            tbody.innerHTML = approved.map(approval => `
+            // Calculate pagination slice
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalCount);
+            const paginatedData = data.slice(startIndex, endIndex);
+
+            tbody.innerHTML = paginatedData.map(approval => `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.recipients, 30)}</td>
@@ -537,12 +892,14 @@
             `).join('');
 
             queueLucideRender();
+            renderPaginationControls('approved');
         }
 
-        function renderHistoryTable(history) {
+        function renderHistoryTable() {
             const tbody = document.getElementById('history-table-body');
+            const { page, pageSize, data, totalCount } = pagination.history;
 
-            if (history.length === 0) {
+            if (totalCount === 0) {
                 tbody.innerHTML = `
                     <tr class="hover:bg-gray-50">
                         <td colspan="5" class="px-6 py-8 text-center text-gray-500">
@@ -551,10 +908,17 @@
                         </td>
                     </tr>
                 `;
+                queueLucideRender();
+                renderPaginationControls('history');
                 return;
             }
 
-            tbody.innerHTML = history.map(approval => `
+            // Calculate pagination slice
+            const startIndex = (page - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, totalCount);
+            const paginatedData = data.slice(startIndex, endIndex);
+
+            tbody.innerHTML = paginatedData.map(approval => `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
                     <td class="px-6 py-4 text-sm">
@@ -573,6 +937,103 @@
             `).join('');
 
             queueLucideRender();
+            renderPaginationControls('history');
+        }
+
+        function renderPaginationControls(tab) {
+            const { page, pageSize, totalCount, totalPages } = pagination[tab];
+
+            // Update showing text
+            const showingFrom = totalCount > 0 ? (page - 1) * pageSize + 1 : 0;
+            const showingTo = Math.min(page * pageSize, totalCount);
+
+            document.getElementById(`${tab}-showing-from`).textContent = showingFrom;
+            document.getElementById(`${tab}-showing-to`).textContent = showingTo;
+            document.getElementById(`${tab}-total-count`).textContent = totalCount;
+
+            const paginationControls = document.getElementById(`${tab}-pagination-controls`);
+            let html = '';
+
+            // Previous button
+            html += `
+                <button onclick="previousPage('${tab}')" ${page === 1 ? 'disabled' : ''}
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-left" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            // Page numbers
+            const maxVisible = 5;
+            let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+            if (endPage - startPage + 1 < maxVisible) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const active = i === page;
+                html += `
+                    <button onclick="goToPage('${tab}', ${i})"
+                        class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                            active
+                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        }">
+                        ${i}
+                    </button>
+                `;
+            }
+
+            // Next button
+            html += `
+                <button onclick="nextPage('${tab}')" ${page === totalPages || totalPages === 0 ? 'disabled' : ''}
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${page === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i data-lucide="chevron-right" class="h-5 w-5"></i>
+                </button>
+            `;
+
+            paginationControls.innerHTML = html;
+            queueLucideRender();
+        }
+
+        function previousPage(tab) {
+            if (pagination[tab].page > 1) {
+                pagination[tab].page--;
+                if (tab === 'pending') renderPendingTable();
+                else if (tab === 'approved') renderApprovedTable();
+                else if (tab === 'history') renderHistoryTable();
+            }
+        }
+
+        function nextPage(tab) {
+            if (pagination[tab].page < pagination[tab].totalPages) {
+                pagination[tab].page++;
+                if (tab === 'pending') renderPendingTable();
+                else if (tab === 'approved') renderApprovedTable();
+                else if (tab === 'history') renderHistoryTable();
+            }
+        }
+
+        function goToPage(tab, page) {
+            if (page >= 1 && page <= pagination[tab].totalPages) {
+                pagination[tab].page = page;
+                if (tab === 'pending') renderPendingTable();
+                else if (tab === 'approved') renderApprovedTable();
+                else if (tab === 'history') renderHistoryTable();
+            }
+        }
+
+        function changePageSize(tab) {
+            const newPageSize = parseInt(document.getElementById(`${tab}-page-size-select`).value);
+            if (newPageSize !== pagination[tab].pageSize) {
+                pagination[tab].pageSize = newPageSize;
+                pagination[tab].page = 1; // Reset to first page when changing page size
+                pagination[tab].totalPages = Math.ceil(pagination[tab].totalCount / newPageSize);
+                if (tab === 'pending') renderPendingTable();
+                else if (tab === 'approved') renderApprovedTable();
+                else if (tab === 'history') renderHistoryTable();
+            }
         }
 
         function getStatusBadge(status) {
@@ -649,6 +1110,7 @@
 
                 showToast('Email approved successfully', 'success');
                 closeApprovalNotesModal();
+                selectedApprovals.delete(currentApprovalId);
                 await loadApprovals();
                 await loadStatistics();
             } catch (error) {
@@ -697,6 +1159,7 @@
 
                 showToast('Email rejected', 'success');
                 closeRejectionReasonModal();
+                selectedApprovals.delete(currentRejectionId);
                 await loadApprovals();
                 await loadStatistics();
             } catch (error) {
@@ -712,6 +1175,12 @@
         }
 
         function switchTab(tab) {
+            // Clear selection when switching tabs
+            if (tab !== 'pending') {
+                selectedApprovals.clear();
+                updateBulkActionsToolbar();
+            }
+
             // Hide all content
             document.getElementById('content-pending').classList.add('hidden');
             document.getElementById('content-approved').classList.add('hidden');
