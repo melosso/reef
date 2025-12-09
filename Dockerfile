@@ -18,10 +18,8 @@ COPY Source/ .
 # Publish the Reef project
 WORKDIR /src/Reef
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false
-
-# Copy views folder explicitly (not included in publish by default)
-COPY Source/Reef/views /app/publish/views
+    dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false && \
+    cp -r views /app/publish/views
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim AS runtime
