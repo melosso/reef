@@ -41,10 +41,6 @@ ENV REEF_ENCRYPTION_KEY=""
 # Copy published output
 COPY --from=build /app/publish .
 
-# Copy views and wwwroot folders from Deployment directory
-COPY Deployment/views ./views
-COPY Deployment/wwwroot ./wwwroot
-
 # Ensure permissions
 RUN chmod -R 755 /app
 
