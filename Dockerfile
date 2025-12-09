@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /app/exports /app/log /app/.core
 
 # Set environment variables
-ENV ASPNETCORE_URLS=http://+:8085
+ENV ASPNETCORE_HTTP_PORTS=8085
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV REEF_ENCRYPTION_KEY=""
 

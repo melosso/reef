@@ -34,17 +34,20 @@ We've prepared two methods to deploy Reef. It's up to you to choose your preferr
 ```yaml
 services:
   reef:
+    container_name: reef
     image: ghcr.io/melosso/reef:latest
     ports:
       - "8085:8085"
     volumes:
-      - reef_data:/app
+      - reef_core:/app/.core
+      - reef_logs:/app/log
       - ./exports:/app/exports
     environment:
       - REEF_ENCRYPTION_KEY=YourKeyHere
 
 volumes:
-  reef_data:
+  reef_core:
+  reef_logs:
 ```
 ```bash
 mkdir -p exports && docker compose up -d
