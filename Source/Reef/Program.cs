@@ -549,8 +549,12 @@ public class Program
             var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
             if (!Directory.Exists(viewsFolder))
             {
-                var projectRoot = Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.FullName;
-                viewsFolder = Path.Combine(projectRoot, "views");
+                var parentDir = Directory.GetParent(AppContext.BaseDirectory);
+                var projectRoot = parentDir?.Parent?.Parent?.FullName;
+                if (projectRoot != null)
+                {
+                    viewsFolder = Path.Combine(projectRoot, "views");
+                }
             }
 
             var notFoundPath = Path.Combine(viewsFolder, "404.html");
