@@ -41,6 +41,9 @@ public static class ProfilesEndpoints
         group.MapGet("/{id:int}/validate-email-config", ValidateEmailExportConfig);
         group.MapPost("/{id:int}/preview-email-html", PreviewEmailHtml);
         group.MapPost("/{id:int}/validate-attachment-config", ValidateAttachmentConfig);
+
+        // Query Testing endpoint
+        group.MapPost("/{id:int}/test-query", TestQuery);
     }
 
     /// <summary>
@@ -1062,6 +1065,103 @@ public static class ProfilesEndpoints
         {
             Log.Error(ex, "Error validating attachment config for profile {Id}", id);
             return Results.Problem("Error validating attachment configuration");
+        }
+    }
+
+    /// <summary>
+    /// POST /api/profiles/{id}/test-query - Test a profile's query and return first 25 rows
+    /// </summary>
+    private static async Task<IResult> TestQuery(
+        int id,
+        ProfileService profileService,
+        ConnectionService connectionService,
+        QueryExecutor queryExecutor)
+    {
+        try
+        {
+            // Get profile
+            var profile = await profileService.GetByIdAsync(id);
+            if (profile == null)
+            {
+                return Results.NotFound(new { error = "Profile not found" });
+            }
+
+            // Get connection
+            var connection = await connectionService.GetByIdAsync(profile.ConnectionId);
+            if (connection == null)
+            {
+                return Results.NotFound(new { error = "Connection not found" });
+            }
+
+            // Add LIMIT 25 to the query (SQL Server uses TOP, MySQL/PostgreSQL use LIMIT)
+            var testQuery = profile.Query?.Trim() ?? "";
+
+            // Check if query already has LIMIT/TOP
+            var hasLimit = testQuery.Contains("LIMIT", StringComparison.OrdinalIgnoreCase) ||
+                          testQuery.Contains("TOP", StringComparison.OrdinalIgnoreCase) ||
+                          testQuery.Contains("FETCH", StringComparison.OrdinalIgnoreCase);
+
+            if (!hasLimit)
+            {
+                // Determine database type and add appropriate limit clause
+                if (connection.Type == "SqlServer")
+                {
+                    // For SQL Server, we need to add TOP after SELECT
+                    var selectIndex = testQuery.IndexOf("SELECT", StringComparison.OrdinalIgnoreCase);
+                    if (selectIndex >= 0)
+                    {
+                        var insertPosition = selectIndex + "SELECT".Length;
+                        testQuery = testQuery.Insert(insertPosition, " TOP 25");
+                    }
+                }
+                else
+                {
+                    // For MySQL and PostgreSQL, add LIMIT at the end
+                    testQuery += " LIMIT 25";
+                }
+            }
+
+            Log.Information("Testing query for profile {ProfileId}: {Query}", id, testQuery);
+
+            // Execute query
+            var startTime = DateTime.UtcNow;
+            var (success, rows, error, executionTime) = await queryExecutor.ExecuteQueryAsync(
+                connection,
+                testQuery,
+                null,
+                commandTimeout: 30 // 30 second timeout for testing
+            );
+
+            if (!success)
+            {
+                Log.Warning("Query test failed for profile {ProfileId}: {Error}", id, error);
+                return Results.Ok(new
+                {
+                    success = false,
+                    error = error,
+                    executionTimeMs = executionTime
+                });
+            }
+
+            // Take only first 25 rows (in case query already had a larger limit)
+            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+
+            Log.Information("Query test successful for profile {ProfileId}. Returned {Count} rows in {Time}ms",
+                id, limitedRows.Count, executionTime);
+
+            return Results.Ok(new
+            {
+                success = true,
+                rowCount = limitedRows.Count,
+                totalExecutionTimeMs = executionTime,
+                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>(),
+                rows = limitedRows
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error testing query for profile {Id}", id);
+            return Results.Problem("Error testing query: " + ex.Message);
         }
     }
 }

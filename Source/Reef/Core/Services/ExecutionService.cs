@@ -190,14 +190,20 @@ public class ExecutionService
                 {
                     Log.Debug("Delta sync enabled for profile {ProfileId}, processing deltas...", profileId);
                     
-                    // Validate ReefId column exists
-                    if (!rows.Any() || !rows[0].ContainsKey(profile.DeltaSyncReefIdColumn!))
+                    // Validate ReefId column exists (only if we have rows to check)
+                    if (rows.Any() && !rows[0].ContainsKey(profile.DeltaSyncReefIdColumn!))
                     {
                         var error = $"Delta sync failed: ReefId column '{profile.DeltaSyncReefIdColumn}' not found in query results";
                         Log.Error(error);
                         await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, 
                             stopwatch.ElapsedMilliseconds, error);
                         return (executionId, false, null, error);
+                    }
+                    
+                    // If no rows returned, log and continue with empty delta sync
+                    if (!rows.Any())
+                    {
+                        Log.Debug("Query returned 0 rows. Delta sync will process empty result set.");
                     }
                     
                     // Process deltas

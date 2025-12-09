@@ -764,26 +764,50 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                     
                     <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
-                        <div id="emailPreviewButton" class="">
-                            <button type="button" id="preview-email-btn" onclick="previewEmailHtml()"
-                                    class="px-4 py-2 border border-purple-300 bg-purple-50 rounded-md text-purple-700 hover:bg-purple-100 flex items-center font-medium">
-                                <svg id="preview-email-spinner" class="animate-spin h-4 w-4 mr-2 text-purple-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                                </svg>
-                                <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
-                                <span id="preview-email-btn-text">Preview HTML</span>
+                        <div class="relative inline-block text-left">
+                            <button type="button" id="test-actions-btn" onclick="toggleTestActionsMenu()"
+                                    class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium"
+                                    title="Test Profile">
+                                <i data-lucide="play" class="h-4 w-4 mr-2"></i>
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
                             </button>
+                            <div id="test-actions-menu" class="hidden absolute left-0 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div class="py-1" role="menu">
+                                    <button type="button" onclick="testQueryInModal(); closeTestActionsMenu();"
+                                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                            title="Show first 25 rows from database">
+                                        <svg id="test-query-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                        </svg>
+                                        <i data-lucide="database" class="h-4 w-4 mr-2"></i>
+                                        <span id="test-query-btn-text">Test Query (25 rows)</span>
+                                    </button>
+                                    <button type="button" onclick="testProfileInModal(); closeTestActionsMenu();"
+                                            class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                            title="Run full export with template and destination">
+                                        <svg id="test-profile-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                        </svg>
+                                        <i data-lucide="play-circle" class="h-4 w-4 mr-2"></i>
+                                        <span id="test-profile-btn-text">Test Profile</span>
+                                    </button>
+                                    <div id="preview-email-menu-item" class="hidden">
+                                        <button type="button" onclick="previewEmailHtml(); closeTestActionsMenu();"
+                                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                                title="Preview email HTML output">
+                                            <svg id="preview-email-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                            </svg>
+                                            <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
+                                            <span id="preview-email-btn-text">Preview HTML</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button type="button" id="test-profile-btn" onclick="testProfileInModal()" 
-                                class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium">
-                            <svg id="test-profile-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                            </svg>
-                            <i data-lucide="play-circle" class="h-4 w-4 mr-2"></i>
-                            <span id="test-profile-btn-text">Test Profile</span>
-                        </button>
                         <button type="button" onclick="closeProfileModal()"
                                 class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
                             Cancel
@@ -1384,6 +1408,56 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium">
                         <i data-lucide="download" class="h-4 w-4 mr-2"></i>
                         Download HTML
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Query Results Preview Modal -->
+    <div id="query-results-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-6xl mx-auto my-8">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Query Results Preview</h2>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Showing <span id="query-results-count">0</span> rows
+                            <span id="query-results-time" class="text-gray-400"></span>
+                        </p>
+                    </div>
+                    <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4 max-h-96 overflow-auto bg-gray-50 border-b border-gray-200">
+                    <div id="query-results-content">
+                        <div class="flex items-center justify-center py-8">
+                            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            <span class="ml-3 text-gray-600">Executing query...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info -->
+                <div class="px-6 py-3 bg-green-50 border-b border-green-200">
+                    <p class="text-xs text-green-700 pb-0 mb-0">
+                        <strong>Note:</strong> This preview shows the first 25 rows from your query.
+                        The full profile execution will run the complete query.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4">
+                    <button type="button" onclick="closeQueryResultsModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Close
                     </button>
                 </div>
             </div>
@@ -2025,7 +2099,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Hide email config section for standard profiles
             const emailConfigSection = document.getElementById('emailConfigSection');
             const emailApprovalSection = document.getElementById('emailApprovalSection');
-            const emailPreviewButton = document.getElementById('emailPreviewButton');
+            const previewEmailMenuItem = document.getElementById('preview-email-menu-item');
             const nonEmailFields = document.getElementById('nonEmailFields');
             const fileExportFields = document.getElementById('fileExportFields');
             const fileExportSplitFields = document.getElementById('fileExportSplitFields');
@@ -2048,11 +2122,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     emailApprovalSection.classList.add('hidden');
                 }
             }
-            if (emailPreviewButton) {
+            if (previewEmailMenuItem) {
                 if (isEmailExport) {
-                    emailPreviewButton.classList.remove('hidden');
+                    previewEmailMenuItem.classList.remove('hidden');
                 } else {
-                    emailPreviewButton.classList.add('hidden');
+                    previewEmailMenuItem.classList.add('hidden');
                 }
             }
             if (nonEmailFields) {
@@ -2240,7 +2314,29 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.add('hidden');
+            closeTestActionsMenu();
         }
+
+        function toggleTestActionsMenu() {
+            const menu = document.getElementById('test-actions-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function closeTestActionsMenu() {
+            const menu = document.getElementById('test-actions-menu');
+            if (menu) {
+                menu.classList.add('hidden');
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('test-actions-menu');
+            const btn = document.getElementById('test-actions-btn');
+            if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
 
         async function editProfile(id) {
             const profile = profiles.find(p => p.id === id);
@@ -2420,7 +2516,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Show/hide email config section based on profile type
             const emailConfigSection = document.getElementById('emailConfigSection');
             const emailApprovalSection = document.getElementById('emailApprovalSection');
-            const emailPreviewButton = document.getElementById('emailPreviewButton');
+            const previewEmailMenuItem = document.getElementById('preview-email-menu-item');
             const nonEmailFields = document.getElementById('nonEmailFields');
             const fileExportFields = document.getElementById('fileExportFields');
             const fileExportSplitFields = document.getElementById('fileExportSplitFields');
@@ -2428,8 +2524,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             if (profile.isEmailExport) {
                 emailConfigSection.classList.remove('hidden');
                 emailApprovalSection.classList.remove('hidden');
-                if (emailPreviewButton) {
-                    emailPreviewButton.classList.remove('hidden');
+                if (previewEmailMenuItem) {
+                    previewEmailMenuItem.classList.remove('hidden');
                 }
                 if (nonEmailFields) {
                     nonEmailFields.classList.add('hidden');
@@ -2446,8 +2542,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             } else {
                 emailConfigSection.classList.add('hidden');
                 emailApprovalSection.classList.add('hidden');
-                if (emailPreviewButton) {
-                    emailPreviewButton.classList.add('hidden');
+                if (previewEmailMenuItem) {
+                    previewEmailMenuItem.classList.add('hidden');
                 }
                 if (nonEmailFields) {
                     nonEmailFields.classList.remove('hidden');
@@ -4317,6 +4413,164 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+        }
+
+        // Query Results Preview Functions
+        function closeQueryResultsModal() {
+            document.getElementById('query-results-modal').classList.add('hidden');
+        }
+
+        async function testQueryInModal() {
+            const btn = document.getElementById('test-query-btn');
+            const spinner = document.getElementById('test-query-spinner');
+            const btnText = document.getElementById('test-query-btn-text');
+
+            if (btn && spinner && btnText) {
+                btn.disabled = true;
+                spinner.classList.remove('hidden');
+                btnText.textContent = 'Testing...';
+            }
+
+            try {
+                const profileId = document.getElementById('profile-id').value;
+
+                // Profile must be saved first
+                if (!profileId) {
+                    showToast('Please save the profile before testing the query', 'error');
+                    return;
+                }
+
+                // Open results modal
+                document.getElementById('query-results-modal').classList.remove('hidden');
+
+                // Reset content to loading state
+                document.getElementById('query-results-content').innerHTML = `
+                    <div class="flex items-center justify-center py-8">
+                        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <span class="ml-3 text-gray-600">Executing query...</span>
+                    </div>
+                `;
+
+                // Call test-query endpoint
+                const response = await fetch(`${API_BASE}/api/profiles/${profileId}/test-query`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    // Show error
+                    document.getElementById('query-results-content').innerHTML = `
+                        <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                            <div class="flex">
+                                <i data-lucide="alert-circle" class="h-5 w-5 text-red-400"></i>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">Query Error</h3>
+                                    <div class="mt-2 text-sm text-red-700">
+                                        <pre class="whitespace-pre-wrap">${escapeHtml(result.error || 'Unknown error')}</pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    queueLucideRender();
+                    showToast('Query test failed: ' + result.error, 'error');
+                    return;
+                }
+
+                // Update header info
+                document.getElementById('query-results-count').textContent = result.rowCount || 0;
+                document.getElementById('query-results-time').textContent = `(${result.totalExecutionTimeMs}ms)`;
+
+                // Display results in table
+                if (result.rowCount === 0) {
+                    document.getElementById('query-results-content').innerHTML = `
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+                            <div class="flex">
+                                <i data-lucide="info" class="h-5 w-5 text-yellow-400"></i>
+                                <div class="ml-3">
+                                    <p class="text-sm text-yellow-700">Query executed successfully but returned no rows.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    queueLucideRender();
+                } else {
+                    // Build table
+                    const columns = result.columns || [];
+                    const rows = result.rows || [];
+
+                    let tableHtml = `
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        ${columns.map(col => `<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">${escapeHtml(col)}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                    `;
+
+                    rows.forEach((row, idx) => {
+                        tableHtml += '<tr class="' + (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') + '">';
+                        columns.forEach(col => {
+                            const value = row[col];
+                            const displayValue = value === null || value === undefined ? '<span class="text-gray-400 italic">null</span>' : escapeHtml(String(value));
+                            tableHtml += `<td class="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">${displayValue}</td>`;
+                        });
+                        tableHtml += '</tr>';
+                    });
+
+                    tableHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+
+                    document.getElementById('query-results-content').innerHTML = tableHtml;
+                }
+
+                showToast(`Query test successful: ${result.rowCount} rows in ${result.totalExecutionTimeMs}ms`, 'success');
+
+            } catch (error) {
+                console.error('Error testing query:', error);
+                showToast('Error testing query: ' + error.message, 'error');
+
+                document.getElementById('query-results-content').innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-md p-4">
+                        <div class="flex">
+                            <i data-lucide="alert-circle" class="h-5 w-5 text-red-400"></i>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Error</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    <pre class="whitespace-pre-wrap">${escapeHtml(error.message)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                queueLucideRender();
+            } finally {
+                if (btn && spinner && btnText) {
+                    btn.disabled = false;
+                    spinner.classList.add('hidden');
+                    btnText.textContent = 'Test Query (25 rows)';
+                }
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         async function previewEmailHtml() {
