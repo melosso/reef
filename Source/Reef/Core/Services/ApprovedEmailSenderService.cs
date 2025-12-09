@@ -2,8 +2,6 @@ using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using MimeKit;
-using MailKit.Net.Smtp;
-using MailKit.Security;
 using Reef.Core.Models;
 using Reef.Core.Destinations;
 using Serilog;
@@ -285,7 +283,7 @@ public class ApprovedEmailSenderService : BackgroundService
     }
 
     /// <summary>
-    /// Send email via configured SMTP server
+    /// Send email via configured email provider (SMTP, Resend, or SendGrid)
     /// </summary>
     private async Task SendEmailAsync(PendingEmailApproval approval, EmailDestinationConfiguration emailConfig, CancellationToken cancellationToken)
     {
@@ -342,52 +340,31 @@ public class ApprovedEmailSenderService : BackgroundService
         var bodyBuilder = new BodyBuilder { HtmlBody = approval.HtmlBody };
         message.Body = bodyBuilder.ToMessageBody();
 
-        // Connect to SMTP and send
-        var smtpHost = emailConfig.SmtpServer ?? "localhost";
-        var smtpPort = emailConfig.SmtpPort > 0 ? emailConfig.SmtpPort : 587;
-
-        using var client = new SmtpClient();
+        // Route to appropriate email provider
+        var provider = emailConfig.EmailProvider?.ToLower() ?? "smtp";
+        IEmailProvider emailProvider = provider switch
+        {
+            "resend" => new ResendEmailProvider(),
+            "sendgrid" => new SendGridEmailProvider(),
+            _ => new SmtpEmailProvider() // Default to SMTP
+        };
 
         try
         {
-            // Set timeout
-            client.Timeout = 10000; // 10 seconds
+            var (success, _, errorMessage) = await emailProvider.SendEmailAsync(message, emailConfig);
 
-            // Connect to SMTP
-            var secureSocketOptions = GetSecureSocketOptions(emailConfig.SecurityMode);
-            await client.ConnectAsync(smtpHost, smtpPort, secureSocketOptions, cancellationToken);
-
-            // Authenticate if needed
-            if (!string.IsNullOrEmpty(emailConfig.Username) && !string.IsNullOrEmpty(emailConfig.Password))
+            if (!success)
             {
-                await client.AuthenticateAsync(emailConfig.Username, emailConfig.Password, cancellationToken);
+                throw new InvalidOperationException(errorMessage ?? "Failed to send email");
             }
 
-            // Send
-            await client.SendAsync(message, cancellationToken);
-            await client.DisconnectAsync(true, cancellationToken);
-
-            Log.Information("Email sent successfully to {Recipients}", MaskEmailForLog(approval.Recipients));
+            Log.Information("Email sent successfully to {Recipients} via {Provider}", MaskEmailForLog(approval.Recipients), provider);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to send email via SMTP");
+            Log.Error(ex, "Failed to send email via {Provider}", provider);
             throw;
         }
-    }
-
-    /// <summary>
-    /// Convert security mode string to SecureSocketOptions
-    /// </summary>
-    private static SecureSocketOptions GetSecureSocketOptions(string? securityMode)
-    {
-        return (securityMode?.ToLower()) switch
-        {
-            "none" => SecureSocketOptions.None,
-            "auto" => SecureSocketOptions.Auto,
-            "starttls" => SecureSocketOptions.StartTls,
-            _ => SecureSocketOptions.StartTls // Default
-        };
     }
 
     /// <summary>
