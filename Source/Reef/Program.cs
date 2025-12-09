@@ -108,8 +108,9 @@ public class Program
             }
 
             // Get connection string - SINGLE SOURCE OF TRUTH
+            var dbPath = builder.Configuration["Reef:DatabasePath"] ?? "Reef.db";
             var connectionString = builder.Configuration.GetConnectionString("Reef")
-                ?? "Data Source=Reef.db";
+                ?? $"Data Source={dbPath}";
 
             // Get configured port for logging
             var port = builder.Configuration.GetValue<int>("Reef:ListenPort", 8085);

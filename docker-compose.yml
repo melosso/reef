@@ -1,7 +1,8 @@
 services:
   reef:
     container_name: reef
-    image: ghcr.io/melosso/reef:latest
+    #image: ghcr.io/melosso/reef:latest
+    image: reef:local
     ports:
       - "8085:8085"
     volumes:
