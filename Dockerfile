@@ -18,8 +18,16 @@ COPY Source/ .
 # Publish the Reef project
 WORKDIR /src/Reef
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false && \
-    cp -r views /app/publish/views
+    dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false
+    
+# Copy views folder explicitly (check if it exists first)
+RUN ls -la /src/Reef/ && \
+    if [ -d /src/Reef/Views ]; then \
+        cp -r /src/Reef/Views /app/publish/views; \
+        echo "Views folder copied successfully"; \
+    else \
+        echo "Warning: Views folder not found at /src/Reef/Views"; \
+    fi
 
 # Stage 2: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:9.0-bookworm-slim AS runtime
