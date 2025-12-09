@@ -7,13 +7,13 @@ This Scriban template generates a Dutch (NL) HTML email notifying customers abou
 
 ```sql
 SELECT
-    CONCAT('Update over je bestelling #', posts.ID) AS subject,
-    posts.ID AS order_number,
-    DATE_FORMAT(posts.post_date, '%e %M %Y') AS order_date,
+    CONCAT('Update over je bestelling #', orders.id) AS subject,
+    orders.id AS order_number,
+    DATE_FORMAT(orders.date_created_gmt, '%e %M %Y') AS order_date,
     -- Customer Information
-    MAX(CASE WHEN meta_billing.meta_key = '_billing_first_name' THEN meta_billing.meta_value END) AS customer_name,
-    MAX(CASE WHEN meta_billing.meta_key = '_billing_email' THEN meta_billing.meta_value END) AS customer_email,
-    -- Company/Store Information from WooCommerce settings
+    orders.billing_first_name AS customer_name,
+    orders.billing_email AS customer_email,
+    -- Company/Store Information
     (SELECT option_value FROM wp_options WHERE option_name = 'blogname' LIMIT 1) AS company,
     (SELECT option_value FROM wp_options WHERE option_name = 'woocommerce_default_country' LIMIT 1) AS company_country,
     (SELECT option_value FROM wp_options WHERE option_name = 'woocommerce_email_from_address' LIMIT 1) AS support_email,
@@ -54,17 +54,13 @@ SELECT
             FROM wp_woocommerce_order_itemmeta
             GROUP BY order_item_id
         ) AS item_data ON order_items.order_item_id = item_data.order_item_id
-        WHERE order_items.order_id = posts.ID
+        WHERE order_items.order_id = orders.id
         AND order_items.order_item_type = 'line_item'
     ) AS items_json
-FROM wp_posts AS posts
-LEFT JOIN wp_postmeta AS meta_billing
-    ON posts.ID = meta_billing.post_id
-    AND meta_billing.meta_key IN ('_billing_first_name', '_billing_email')
-WHERE posts.post_type = 'shop_order'
-AND posts.post_status = 'wc-on-hold'
-GROUP BY posts.ID, posts.post_date
-ORDER BY posts.post_date DESC;
+FROM wp_wc_orders AS orders
+WHERE orders.status = 'wc-on-hold'
+AND orders.type = 'shop_order'
+ORDER BY orders.date_created_gmt DESC;
 ```
 
 ## Sample Test Query
