@@ -3,9 +3,9 @@ This Scriban template generates a Dutch (NL) HTML email notifying customers abou
 
 # WooCommerce Order Update Email (NL)
 
-## MySQL Query for WooCommerce Orders with Status 'Waiting'
+## Example SQL Query for WooCommerce Orders with Status 'Waiting'
 
-```mysql
+```sql
 SELECT
     CONCAT('Update over je bestelling #', posts.ID) AS subject,
     posts.ID AS order_number,

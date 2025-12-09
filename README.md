@@ -41,6 +41,7 @@ services:
     volumes:
       - reef_core:/app/.core
       - reef_logs:/app/log
+      - reef_db:/app/reef.db
       - ./exports:/app/exports
     environment:
       - REEF_ENCRYPTION_KEY=YourKeyHere
@@ -48,6 +49,7 @@ services:
 volumes:
   reef_core:
   reef_logs:
+  reef_db:
 ```
 ```bash
 mkdir -p exports && docker compose up -d
