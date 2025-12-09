@@ -97,7 +97,7 @@ public class NotificationTemplateService
                 template.UpdatedAt
             });
 
-            Log.Information("Created email template: {TemplateType} (ID: {Id})", template.TemplateType, id);
+            Log.Debug("Created email template: {TemplateType} (ID: {Id})", template.TemplateType, id);
             return id;
         }
         catch (Exception ex)
@@ -239,7 +239,7 @@ public class NotificationTemplateService
                 }
             }
 
-            Log.Information("Seeded {TemplateCount} default email templates", templateTypes.Length);
+            Log.Debug("Seeded {TemplateCount} default email templates", templateTypes.Length);
         }
         catch (Exception ex)
         {

@@ -840,6 +840,7 @@ public class DatabaseInitializer
         var sql = @"
             CREATE TABLE IF NOT EXISTS PendingEmailApprovals (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Guid TEXT NOT NULL UNIQUE,
                 ProfileId INTEGER NOT NULL,
                 ProfileExecutionId INTEGER NOT NULL,
                 Recipients TEXT NOT NULL,
@@ -861,6 +862,7 @@ public class DatabaseInitializer
                 FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
             );
 
+            CREATE UNIQUE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Guid ON PendingEmailApprovals(Guid);
             CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Status ON PendingEmailApprovals(Status);
             CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ProfileId ON PendingEmailApprovals(ProfileId);
             CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_CreatedAt ON PendingEmailApprovals(CreatedAt DESC);
@@ -1013,7 +1015,7 @@ public class DatabaseInitializer
                 Type = 6, // ForXmlPath
                 Template = "FOR XML PATH, ROOT('data')",
                 OutputFormat = "XML",
-                Tags = "xml,sql-server,native,recommended"
+                Tags = "xml,sql-server,native,example"
             },
             new
             {
@@ -1022,7 +1024,7 @@ public class DatabaseInitializer
                 Type = 9, // ForJsonPath
                 Template = "FOR JSON PATH, ROOT('data'), INCLUDE_NULL_VALUES",
                 OutputFormat = "JSON",
-                Tags = "json,sql-server,native,recommended"
+                Tags = "json,sql-server,native,example"
             },
             new
             {
@@ -1031,7 +1033,7 @@ public class DatabaseInitializer
                 Type = 8, // ForJson
                 Template = "FOR JSON AUTO, INCLUDE_NULL_VALUES",
                 OutputFormat = "JSON",
-                Tags = "json,sql-server,native,auto"
+                Tags = "json,sql-server,native,auto,example"
             },
             new
             {
@@ -1040,7 +1042,7 @@ public class DatabaseInitializer
                 Type = 5, // ForXmlAuto
                 Template = "FOR XML AUTO, ROOT('data'), ELEMENTS",
                 OutputFormat = "XML",
-                Tags = "xml,sql-server,native,auto"
+                Tags = "xml,sql-server,native,auto,example"
             },
             
             // ========== CUSTOM SCRIBAN TEMPLATES ==========
@@ -1056,7 +1058,7 @@ public class DatabaseInitializer
 {{ row.ItemCode | safe_string | csv_escape }}|{{ row.Description | safe_string | csv_escape }}|{{ row.SalesPackagePrice | safe_string | csv_escape }}
 {{~ end ~}}",
                 OutputFormat = "CSV",
-                Tags = "csv,custom,pipe-delimited,legacy,scriban"
+                Tags = "csv,pipe-delimited,scriban,example"
             },
             new
             {
@@ -1068,7 +1070,7 @@ public class DatabaseInitializer
 {{ row.ItemCode | safe_string | csv_escape }}	{{ row.Description | safe_string | csv_escape }}	{{ row.SalesPackagePrice | safe_string | csv_escape }}
 {{~ end ~}}",
                 OutputFormat = "CSV",
-                Tags = "csv,custom,tab-delimited,tsv,excel,scriban"
+                Tags = "csv,tab-delimited,tsv,excel,scriban,example"
             },
             new
             {
@@ -1090,7 +1092,7 @@ public class DatabaseInitializer
 <Items />
 {{~ end ~}}",
                 OutputFormat = "XML",
-                Tags = "xml,custom,b2b,catalog,scriban"
+                Tags = "xml,b2b,catalog,scriban,example"
             },
             new
             {
@@ -1114,7 +1116,7 @@ public class DatabaseInitializer
   </soap:Body>
 </soap:Envelope>",
                 OutputFormat = "XML",
-                Tags = "xml,custom,soap,web-service,legacy,scriban"
+                Tags = "xml,soap,web-service,scriban,example"
             },
             new
             {
@@ -1139,7 +1141,7 @@ public class DatabaseInitializer
   }
 }",
                 OutputFormat = "JSON",
-                Tags = "json,custom,nested,api,modern,scriban"
+                Tags = "json,nested,api,modern,scriban,example"
             },
             new
             {
@@ -1156,7 +1158,7 @@ public class DatabaseInitializer
 {{~ end ~}}
 ]",
                 OutputFormat = "JSON",
-                Tags = "json,custom,simple,rest,api,scriban"
+                Tags = "json,rest,api,scriban,example"
             },
             new
             {
@@ -1167,7 +1169,7 @@ public class DatabaseInitializer
 {{ row.ItemCode | string.pad_right 20 }}{{ row.Description | string.pad_right 50 }}{{ row.SalesPackagePrice ?? 0 | math.format ""F2"" | string.pad_left 10 }}
 {{~ end ~}}",
                 OutputFormat = "TXT",
-                Tags = "txt,custom,fixed-width,mainframe,legacy,scriban"
+                Tags = "txt,fixed-width,mainframe,scriban,example"
             },
             new
             {
@@ -1209,7 +1211,7 @@ public class DatabaseInitializer
 </body>
 </html>",
                 OutputFormat = "HTML",
-                Tags = "html,custom,report,table,viewing,scriban"
+                Tags = "html,report,table,viewing,scriban,example"
             }
         };
 
@@ -1323,13 +1325,12 @@ public class DatabaseInitializer
             Log.Debug("✓ Created PendingEmailApprovals table");
         }
 
-        // Add indexes for performance
+        // Add indexes for performance (except Guid index which requires the column to exist first)
         var indexes = new[]
         {
             "CREATE INDEX IF NOT EXISTS IX_Profiles_EmailApprovalRequired ON Profiles(EmailApprovalRequired) WHERE EmailApprovalRequired = 1",
             "CREATE INDEX IF NOT EXISTS IX_ProfileExecutions_ApprovalStatus ON ProfileExecutions(ApprovalStatus) WHERE ApprovalStatus IS NOT NULL",
             "CREATE INDEX IF NOT EXISTS IX_ProfileExecutions_PendingEmailApprovalId ON ProfileExecutions(PendingEmailApprovalId) WHERE PendingEmailApprovalId IS NOT NULL",
-            "CREATE UNIQUE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Guid ON PendingEmailApprovals(Guid)",
             "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Status ON PendingEmailApprovals(Status)",
             "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_ProfileId ON PendingEmailApprovals(ProfileId)",
             "CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_CreatedAt ON PendingEmailApprovals(CreatedAt DESC)",
@@ -1350,23 +1351,33 @@ public class DatabaseInitializer
             }
         }
 
-        // Migration: Add Guid column to existing PendingEmailApprovals table
-        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "Guid", "TEXT NULL");
+        // Migration: Add Guid column to existing PendingEmailApprovals tables (for databases created before Guid was added)
+        var columns = await connection.QueryAsync<dynamic>("PRAGMA table_info(PendingEmailApprovals)");
+        var guidColumnExists = columns.Any(c => ((string)c.name).Equals("Guid", StringComparison.OrdinalIgnoreCase));
         
-        // Populate GUIDs for existing records that don't have one
-        const string populateGuids = @"
-            UPDATE PendingEmailApprovals 
-            SET Guid = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))
-            WHERE Guid IS NULL OR Guid = ''
-        ";
-        await connection.ExecuteAsync(populateGuids);
-        
-        // Make Guid column NOT NULL after populating
-        // Note: SQLite doesn't support ALTER COLUMN, so we check if any NULL values exist
-        var nullGuidCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM PendingEmailApprovals WHERE Guid IS NULL OR Guid = ''");
-        if (nullGuidCount == 0)
+        if (!guidColumnExists)
         {
-            Log.Debug("✓ All PendingEmailApprovals have GUIDs");
+            // Column doesn't exist, add it and populate GUIDs
+            await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "Guid", "TEXT NULL");
+            
+            // Populate GUIDs for existing records that don't have one
+            const string populateGuids = @"
+                UPDATE PendingEmailApprovals 
+                SET Guid = lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab',abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6)))
+                WHERE Guid IS NULL OR Guid = ''
+            ";
+            await connection.ExecuteAsync(populateGuids);
+            Log.Debug("✓ Migrated existing records to include GUIDs");
+        }
+        
+        // Create the Guid index (for both new and migrated tables)
+        try
+        {
+            await connection.ExecuteAsync("CREATE UNIQUE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Guid ON PendingEmailApprovals(Guid)");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to create Guid index, continuing");
         }
 
         Log.Debug("✓ Email approval migrations completed");

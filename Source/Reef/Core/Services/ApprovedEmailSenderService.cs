@@ -251,13 +251,13 @@ public class ApprovedEmailSenderService : BackgroundService
 
         // Update ProfileExecution ApprovalStatus to reflect email send failure
         // Keep Status as 'Success' since the data extraction succeeded - only the email delivery failed
-        const string updateExecutionSql = @"
+        const string updateExecutionFailedSql = @"
             UPDATE ProfileExecutions
             SET ApprovalStatus = 'Failed'
             WHERE PendingEmailApprovalId = @ApprovalId
         ";
 
-        await connection.ExecuteAsync(updateExecutionSql, new
+        await connection.ExecuteAsync(updateExecutionFailedSql, new
         {
             ApprovalId = approval.Id
         });

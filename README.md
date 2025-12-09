@@ -118,13 +118,12 @@ After creating a job, you can schedule it using various methods such as:
 
 We've made sure to keep your data safe. Here's a glimpse on how we do this:
 
-- **JWT authentication**: Token-based API access
-- **Encrypted credentials**: Stored using RSA+AES hybrid encryption
-- **Transient execution**: Data exists only in memory while being processed, nothing persists*
+- **Encrypted credentials**: Sensitive data is stored using RSA+AES hybrid encryption
+- **Transient execution**: Exchanged data exists only in memory while being processed, nothing persists *
 - **Hash validation**: Detect configuration tampering
 - **Audit logging**: Every change is tracked for accountability
 
-*Outgoing mail credentials temporarily persist until approved by the email approval module.
+* Outgoing mail temporarily persist recipient information, until approved by the (when using the email approval option).
 
 > [!IMPORTANT] 
 > Since this application is built for local data orchistration, make sure to **never expose** Reef outside of your network. If you need to reach it from outside, expose only the `/api` routes and run them through Nginx or whatever reverse proxy you use. There's an IIS example in [web.config.md](web.config.md) if you need a starting point, though you'l likely have to tweak it for your setup.

@@ -306,6 +306,31 @@
     </div>
 
     <script>
+        let userMenuExpanded = false;
+
+        function toggleUserMenu() {
+            const menu = document.getElementById('user-menu');
+            const chevron = document.getElementById('chevron-icon');
+            userMenuExpanded = !userMenuExpanded;
+            
+            if (userMenuExpanded) {
+                menu.classList.remove('user-menu-collapsed');
+                menu.classList.add('user-menu-expanded');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                menu.classList.remove('user-menu-expanded');
+                menu.classList.add('user-menu-collapsed');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+            
+            setTimeout(() => queueLucideRender(), 50);
+        }
+
+        function logout() {
+            clearAuth();
+            redirectToLogin();
+        }
+
         queueLucideRender();
     </script>
     <script src="/assets/js/documentation.js"></script>
