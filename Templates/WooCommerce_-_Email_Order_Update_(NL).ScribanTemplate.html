@@ -1,0 +1,141 @@
+{{~ for row in rows ~}}
+<html lang="nl-NL"><head><title>Je bestelling bij {{~ row.company | default "Company Name" | html.escape ~}} is ontvangen!</title><meta charset="utf-8">
+        <style>
+          body { font-size: 16px; word-break: break-word; white-space: pre-wrap; }
+        </style>
+        </head><body bgcolor="#fff" style="background-color: #fff; padding: 0; text-align: center;" offset="0" marginheight="0" topmargin="0" marginwidth="0" leftmargin="0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <meta content="width=device-width, initial-scale=1.0" name="viewport">
+        <title>{{~ row.company | default "Company Name" | html.escape ~}}</title>
+    <style type="text/css">@media screen and (max-width: 600px){#template_header_image,#header_wrapper{padding: 16px 10px 0 !important;}#header_wrapper h1{font-size: 24px !important;}#body_content_inner_cell{padding: 10px !important;}#body_content_inner,.email-order-item-meta{font-size: 12px !important;}#body_content .email-order-details .order-totals-total td{font-size: 14px !important;}.email-order-detail-heading{font-size: 16px !important; line-height: 130% !important;}.email-additional-content{padding-top: 16px !important;}}</style>
+
+        <table width="100%" id="outer_wrapper" style="background-color: #fff;" bgcolor="#fff">
+            <tbody><tr>
+                <td><!-- Deliberately empty to support consistent sizing and layout across multiple email clients. --></td>
+                <td width="600">
+                    <div id="wrapper" dir="ltr" style="margin: 0 auto; padding: 24px 0; width: 100%; max-width: 600px; -webkit-text-size-adjust: none;" width="100%">
+                        <table border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="inner_wrapper" style="background-color: #fff; border-radius: 8px;" bgcolor="#fff">
+                            <tbody><tr>
+                                <td align="center" valign="top">
+                                                                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tbody><tr>
+                                                <td id="template_header_image" style="padding: 32px 32px 0;">
+                                                    <p class="email-logo-text" style="color: #bc6672; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 18px; margin-bottom: 0; text-align: left;" align="left">{{~ row.company | default "Company Name" | html.escape ~}}</p>                                                </td>
+                                            </tr>
+                                        </tbody></table>
+                                                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_container" style="box-shadow: none; background-color: #fff; border: 0; border-radius: 3px;" bgcolor="#fff">
+                                        <tbody><tr>
+                                            <td align="center" valign="top">
+                                                <!-- Header -->
+                                                <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_header" style="background-color: #fff; color: #1e1e1e; border-bottom: 0; font-weight: bold; line-height: 100%; vertical-align: middle; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; border-radius: 3px 3px 0 0;" bgcolor="#fff">
+                                                    <tbody><tr>
+                                                        <td id="header_wrapper" style="padding: 20px 32px 0; display: block;">
+                                                            <h1 style="font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 120%; margin: 0; color: #1e1e1e; background-color: inherit; text-align: left;" bgcolor="inherit">Een update over jouw bestelling</h1>
+                                                        </td>
+                                                    </tr>
+                                                </tbody></table>
+                                                <!-- End Header -->
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td align="center" valign="top">
+                                                <!-- Body -->
+                                                <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_body">
+                                                    <tbody><tr>
+                                                        <td valign="top" id="body_content" style="background-color: #fff;" bgcolor="#fff">
+                                                            <!-- Content -->
+                                                            <table border="0" cellpadding="20" cellspacing="0" width="100%">
+                                                                <tbody><tr>
+                                                                    <td valign="top" id="body_content_inner_cell" style="padding: 20px 32px 32px;">
+                                                                        <div id="body_content_inner" style="color: #4b4b4b; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 16px; line-height: 150%; text-align: left;" align="left">
+
+<div class="email-introduction" style="padding-bottom: 24px;"><p style="margin: 0 0 16px;">
+Hallo {{~ row.customer_name | default "daar" | html.escape ~}},</p>
+    <p style="margin: 0 0 16px;">Goed nieuws  jouw bestelling ligt klaar om op te halen. Binnenkort krijg je daar meer over te weten.</p>
+    <p style="margin: 0 0 16px;">Hier is een herinnering van wat je hebt besteld:</p>
+</div>
+
+
+
+<h2 class="email-order-detail-heading" style="color: #1e1e1e; display: block; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 20px; font-weight: bold; line-height: 160%; margin: 0 0 18px; text-align: left;">
+    Besteloverzicht<br><span style="color: #787c82; display: block; font-size: 14px; font-weight: normal;">Bestelling #{{~ row.order_number | html.escape ~}} ({{~ row.order_date | html.escape ~}})</span></h2>
+
+<div style="margin-bottom: 24px;">
+    <table class="td font-family email-order-details" cellspacing="0" cellpadding="6" border="0" style="color: #4b4b4b; border: 0; vertical-align: middle; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; width: 100%;" width="100%">
+                <tbody>
+                {{~ if row.items_json ~}}
+                {{~ items = parse_json(row.items_json) ~}}
+                {{~ for item in items ~}}
+                <tr class="order_item">
+        <td class="td font-family text-align-left" style="color: #4b4b4b; border: 0; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; text-align: left; padding: 8px 12px; padding-left: 0; vertical-align: middle; word-wrap: break-word;" align="left">
+                            <table class="order-item-data" style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif;">
+                    <tbody><tr>
+                        {{~ if item.product_image ~}}<td style="vertical-align: middle; padding-left: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; border: 0; padding: 0;"><img width="48" height="48" src="{{~ item.product_image | html.escape ~}}" class="attachment-48x48 size-48x48 skip-lazy no-lazyload lazyload-disabled no-lazy skip-lazyload" alt="{{~ item.product_name | html.escape ~}}" data-skip-lazy="true" style="border: none; display: inline-block; font-size: 14px; font-weight: bold; height: auto; outline: none; text-decoration: none; text-transform: capitalize; vertical-align: middle; margin-right: 24px; max-width: 100%;" border="0"></td>{{~ end ~}}                        <td style="vertical-align: middle; padding-right: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; border: 0; padding: 0;">
+                            {{~ item.product_name | html.escape ~}}<div class="email-order-item-meta" style="color: #787c82; font-size: 14px; line-height: 140%;">{{~ if item.attributes ~}}{{~ item.attributes | html.escape ~}}{{~ end ~}}</div>                        </td>
+                    </tr>
+                </tbody></table>
+                        </td>
+        <td class="td font-family text-align-right" style="color: #4b4b4b; border: 0; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; text-align: right; padding: 8px 12px; vertical-align: middle;" align="right">
+            �{{~ item.quantity | html.escape ~}}        </td>
+        <td class="td font-family text-align-right" style="color: #4b4b4b; border: 0; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; text-align: right; padding: 8px 12px; padding-right: 0; vertical-align: middle;" align="right">
+            <span class="woocommerce-Price-amount amount"><span class="woocommerce-Price-currencySymbol">{{~ row.currency_symbol | default "�" ~}}</span>&nbsp;{{~ item.line_total | html.escape ~}}</span>        </td>
+    </tr>
+            {{~ if item.product_note ~}}
+            <tr>
+            <td colspan="3" class="font-family text-align-left" style="font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; text-align: left; padding: 8px 12px; padding-left: 0; padding-right: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; vertical-align: middle;" align="left">
+                <p style="margin: 0 0 16px;">{{~ item.product_note | html.escape ~}}</p>
+            </td>
+        </tr>
+            {{~ end ~}}
+        {{~ end ~}}
+        {{~ end ~}}
+        </tbody>
+
+    </table>
+</div>
+
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%"><tbody><tr><td class="email-additional-content" style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; padding: 32px 0 0;"><p style="text-align: center; margin: 0 0 16px;" align="center">Nogmaals bedankt! Neem contact met ons op via {{~ row.support_email | default "support@company.com" | html.escape ~}} als je vragen of hulp nodig hebt.</p>
+</td></tr></tbody></table>                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody></table>
+                                                            <!-- End Content -->
+                                                        </td>
+                                                    </tr>
+                                                </tbody></table>
+                                                <!-- End Body -->
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="center" valign="top">
+                                    <!-- Footer -->
+                                    <table border="0" cellpadding="10" cellspacing="0" width="100%" id="template_footer">
+                                        <tbody><tr>
+                                            <td valign="top" style="padding: 0; border-radius: 0;">
+                                                <table border="0" cellpadding="10" cellspacing="0" width="100%">
+                                                    <tbody><tr>
+                                                        <td colspan="2" valign="middle" id="credit" style="border-radius: 0; border: 0; border-top: 1px solid rgba(0,0,0,.2); font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 12px; line-height: 140%; text-align: center; padding: 32px; color: #787c82;" align="center">
+                                                            <p style="margin: 0;">{{~ row.company | default "Company Name" | html.escape ~}}<br>{{~ row.company_country | default "Nederland" | html.escape ~}}</p>
+                                                        </td>
+                                                    </tr>
+                                                </tbody></table>
+                                            </td>
+                                        </tr>
+                                    </tbody></table>
+                                    <!-- End Footer -->
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </div>
+                </td>
+                <td><!-- Deliberately empty to support consistent sizing and layout across multiple email clients. --></td>
+            </tr>
+        </tbody></table>
+
+
+</body></html>
+{{~ end ~}}
