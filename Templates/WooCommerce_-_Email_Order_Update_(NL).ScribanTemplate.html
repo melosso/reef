@@ -1,15 +1,18 @@
 {{~ for row in rows ~}}
-<html lang="nl-NL"><head><title>Je bestelling bij {{~ row.company | default "Company Name" | html.escape ~}} is ontvangen!</title><meta charset="utf-8">
-        <style>
-          body { font-size: 16px; word-break: break-word; white-space: pre-wrap; }
-        </style>
-        </head><body bgcolor="#fff" style="background-color: #fff; padding: 0; text-align: center;" offset="0" marginheight="0" topmargin="0" marginwidth="0" leftmargin="0">
+<!doctype html>
+<html lang="nl-NL">
+<head>
+<meta charset="utf-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <meta content="width=device-width, initial-scale=1.0" name="viewport">
-        <title>{{~ row.company | default "Company Name" | html.escape ~}}</title>
-    <style type="text/css">@media screen and (max-width: 600px){#template_header_image,#header_wrapper{padding: 16px 10px 0 !important;}#header_wrapper h1{font-size: 24px !important;}#body_content_inner_cell{padding: 10px !important;}#body_content_inner,.email-order-item-meta{font-size: 12px !important;}#body_content .email-order-details .order-totals-total td{font-size: 14px !important;}.email-order-detail-heading{font-size: 16px !important; line-height: 130% !important;}.email-additional-content{padding-top: 16px !important;}}</style>
-
-        <table width="100%" id="outer_wrapper" style="background-color: #fff;" bgcolor="#fff">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Een update over jouw bestelling bij {{~ row.company | default "Company Name" | html.escape ~}}</title>
+<style>
+body { font-size: 16px; word-break: break-word; white-space: pre-wrap; }
+</style>
+<style type="text/css">@media screen and (max-width: 600px){#template_header_image,#header_wrapper{padding: 16px 10px 0 !important;}#header_wrapper h1{font-size: 24px !important;}#body_content_inner_cell{padding: 10px !important;}#body_content_inner,.email-order-item-meta{font-size: 12px !important;}#body_content .email-order-details .order-totals-total td{font-size: 14px !important;}.email-order-detail-heading{font-size: 16px !important; line-height: 130% !important;}.email-additional-content{padding-top: 16px !important;}}</style>
+</head>
+<body bgcolor="#fff" style="background-color: #fff; padding: 0; text-align: center;" offset="0" marginheight="0" topmargin="0" marginwidth="0" leftmargin="0">
+<table width="100%" id="outer_wrapper" style="background-color: #fff;" bgcolor="#fff">
             <tbody><tr>
                 <td><!-- Deliberately empty to support consistent sizing and layout across multiple email clients. --></td>
                 <td width="600">
