@@ -848,6 +848,8 @@ public class DatabaseInitializer
                 Subject TEXT NOT NULL,
                 HtmlBody TEXT NOT NULL,
                 AttachmentConfig TEXT NULL,
+                ReefId TEXT NULL,
+                DeltaSyncHash TEXT NULL,
                 Status TEXT NOT NULL DEFAULT 'Pending',
                 ApprovedByUserId INTEGER NULL,
                 ApprovedAt TEXT NULL,
@@ -1263,6 +1265,10 @@ public class DatabaseInitializer
 
         // Email Approval Workflow migrations
         await AddEmailApprovalColumnsAsync(connection);
+        
+        // Add ReefId and DeltaSyncHash columns to PendingEmailApprovals for delta sync support
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "ReefId", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncHash", "TEXT NULL");
 
         // Legacy migrations removed: All columns are now defined in base table schemas
         // since there are no production customers yet. All new installations start with the complete schema.

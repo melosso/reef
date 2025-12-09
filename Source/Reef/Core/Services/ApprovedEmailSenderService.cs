@@ -87,6 +87,7 @@ public class ApprovedEmailSenderService : BackgroundService
         using var scope = _serviceScopeFactory.CreateScope();
         var destinationService = scope.ServiceProvider.GetRequiredService<DestinationService>();
         var auditService = scope.ServiceProvider.GetRequiredService<AuditService>();
+        var deltaSyncService = scope.ServiceProvider.GetRequiredService<DeltaSyncService>();
 
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -117,7 +118,7 @@ public class ApprovedEmailSenderService : BackgroundService
                 if (cancellationToken.IsCancellationRequested)
                     break;
 
-                await SendApprovedEmailAsync(approval, connection, destinationService, auditService, cancellationToken);
+                await SendApprovedEmailAsync(approval, connection, destinationService, auditService, deltaSyncService, cancellationToken);
             }
         }
         catch (Exception ex)
@@ -134,6 +135,7 @@ public class ApprovedEmailSenderService : BackgroundService
         SqliteConnection connection,
         DestinationService destinationService,
         AuditService auditService,
+        DeltaSyncService deltaSyncService,
         CancellationToken cancellationToken)
     {
         int attemptCount = 0;
@@ -198,6 +200,9 @@ public class ApprovedEmailSenderService : BackgroundService
                 {
                     ApprovalId = approval.Id
                 });
+
+                // Commit delta sync for this successfully sent email
+                await CommitDeltaSyncForApprovedEmailAsync(approval, connection, deltaSyncService);
 
                 // Redact sensitive email content per security policy - keep only metadata
                 const string redactSql = @"
@@ -387,5 +392,67 @@ public class ApprovedEmailSenderService : BackgroundService
 
         var maskedLocal = localPart[0].ToString() + new string('*', localPart.Length - 2) + localPart[^1];
         return $"{maskedLocal}@{domain}";
+    }
+
+    /// <summary>
+    /// Commit delta sync for a successfully sent approved email
+    /// This marks the email's reef_id as synced so it won't be re-sent
+    /// </summary>
+    private async Task CommitDeltaSyncForApprovedEmailAsync(
+        PendingEmailApproval approval,
+        SqliteConnection connection,
+        DeltaSyncService deltaSyncService)
+    {
+        try
+        {
+            // Only commit delta sync if ReefId and DeltaSyncHash are present
+            if (string.IsNullOrEmpty(approval.ReefId) || string.IsNullOrEmpty(approval.DeltaSyncHash))
+            {
+                Log.Debug("No ReefId or DeltaSyncHash for approval {ApprovalId}, skipping delta sync commit", approval.Id);
+                return;
+            }
+
+            // Get profile to check if delta sync is enabled
+            var profile = await connection.QueryFirstOrDefaultAsync<Profile>(
+                "SELECT * FROM Profiles WHERE Id = @Id",
+                new { Id = approval.ProfileId });
+
+            if (profile == null || !profile.DeltaSyncEnabled)
+            {
+                Log.Debug("Delta sync not enabled for profile {ProfileId}, skipping commit", approval.ProfileId);
+                return;
+            }
+
+            // Create a minimal DeltaSyncResult with just this one reef_id
+            // The hash was calculated during execution and stored with the approval
+            var deltaSyncResult = new DeltaSyncResult
+            {
+                NewRows = new List<Dictionary<string, object>>(),
+                ChangedRows = new List<Dictionary<string, object>>(),
+                UnchangedRows = new List<Dictionary<string, object>>(),
+                DeletedReefIds = new List<string>(),
+                TotalRowsProcessed = 1,
+                NewHashState = new Dictionary<string, string>
+                {
+                    [approval.ReefId] = approval.DeltaSyncHash
+                }
+            };
+
+            // Commit the delta sync using the execution ID from the approval
+            await deltaSyncService.CommitDeltaSyncAsync(
+                approval.ProfileId,
+                approval.ProfileExecutionId,
+                deltaSyncResult);
+
+            Log.Information("Delta sync committed for approved email {ApprovalId}, ReefId: {ReefId}",
+                approval.Id, approval.ReefId);
+        }
+        catch (Exception ex)
+        {
+            // Delta sync commit failure should not block email sending
+            // Log warning but don't throw
+            Log.Warning(ex, "Failed to commit delta sync for approved email {ApprovalId}, ReefId: {ReefId}",
+                approval.Id, approval.ReefId);
+        }
     }
 }

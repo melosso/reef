@@ -946,13 +946,14 @@ public class EmailExportService
     /// Render email details for approval workflow without actually sending
     /// Returns recipients, subject, HTML body, and attachment config
     /// </summary>
-    public async Task<(List<(string Recipients, string Subject, string HtmlBody, string? CcAddresses, string? AttachmentConfigJson)> RenderedEmails, List<string> Errors)> RenderEmailsForApprovalAsync(
+    public async Task<(List<(string Recipients, string Subject, string HtmlBody, string? CcAddresses, string? AttachmentConfigJson, string? ReefId, string? DeltaSyncHash)> RenderedEmails, List<string> Errors)> RenderEmailsForApprovalAsync(
         Profile profile,
         QueryTemplate emailTemplate,
         List<Dictionary<string, object>> queryResults,
-        AttachmentConfig? attachmentConfig = null)
+        AttachmentConfig? attachmentConfig = null,
+        Dictionary<string, string>? deltaSyncHashes = null)
     {
-        var renderedEmails = new List<(string, string, string, string?, string?)>();
+        var renderedEmails = new List<(string, string, string, string?, string?, string?, string?)>();
         var errors = new List<string>();
 
         try
@@ -1005,9 +1006,24 @@ public class EmailExportService
                         ? JsonSerializer.Serialize(attachmentConfig)
                         : null;
 
-                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson));
+                    // Extract ReefId for delta sync tracking
+                    string? reefId = null;
+                    if (!string.IsNullOrEmpty(profile.DeltaSyncReefIdColumn))
+                    {
+                        reefId = SafeGetValue(row, profile.DeltaSyncReefIdColumn)?.ToString();
+                    }
 
-                    Log.Debug("Rendered email for approval with subject: {Subject}", subject);
+                    // Get delta sync hash for this reef_id if available
+                    string? deltaSyncHash = null;
+                    if (!string.IsNullOrEmpty(reefId) && deltaSyncHashes != null)
+                    {
+                        deltaSyncHashes.TryGetValue(reefId, out deltaSyncHash);
+                    }
+
+                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefId, deltaSyncHash));
+
+                    Log.Debug("Rendered email for approval with subject: {Subject}, ReefId: {ReefId}, Hash: {HasHash}", 
+                        subject, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
                 }
                 catch (Exception ex)
                 {

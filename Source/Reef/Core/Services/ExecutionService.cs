@@ -407,7 +407,8 @@ public class ExecutionService
                                 profile,
                                 emailTemplate,
                                 rows,
-                                attachmentConfig);
+                                attachmentConfig,
+                                deltaSyncResult?.NewHashState);
 
                             if (renderErrors.Count > 0)
                             {
@@ -417,7 +418,7 @@ public class ExecutionService
 
                             // Store rendered emails as pending approvals
                             int approvalCount = 0;
-                            foreach (var (recipients, subject, htmlBody, ccAddresses, attachmentConfigJson) in renderedEmails)
+                            foreach (var (recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefId, deltaSyncHash) in renderedEmails)
                             {
                                 var approvalId = await _emailApprovalService.CreatePendingApprovalAsync(
                                     profileId,
@@ -426,10 +427,13 @@ public class ExecutionService
                                     subject,
                                     htmlBody,
                                     ccAddresses,
-                                    attachmentConfigJson);
+                                    attachmentConfigJson,
+                                    reefId,
+                                    deltaSyncHash);
 
                                 approvalCount++;
-                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}", approvalId, executionId);
+                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}, ReefId: {ReefId}, Hash: {HasHash}", 
+                                    approvalId, executionId, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
                             }
 
                             stopwatch.Stop();

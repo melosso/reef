@@ -469,6 +469,8 @@ public class PendingEmailApproval
     public required string Subject { get; set; } // Email subject
     public required string HtmlBody { get; set; } // Email body (rendered HTML)
     public string? AttachmentConfig { get; set; } // JSON serialized attachment metadata/paths
+    public string? ReefId { get; set; } // ReefId for delta sync tracking
+    public string? DeltaSyncHash { get; set; } // Delta sync hash for this row
     public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Sent, Failed
     public int? ApprovedByUserId { get; set; } // FK to Users table - who approved/rejected
     public DateTime? ApprovedAt { get; set; } // When email was approved/rejected
