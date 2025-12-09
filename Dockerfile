@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create directories used by the application
-RUN mkdir -p /app/exports /app/log /app/.core
+RUN mkdir -p /app/exports /app/log /app/.core /app/data
 
 # Set environment variables
 ENV ASPNETCORE_HTTP_PORTS=8085

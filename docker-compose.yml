@@ -7,10 +7,11 @@ services:
     volumes:
       - reef_core:/app/.core
       - reef_logs:/app/log
-      - reef_db:/app/reef.db
+      - reef_db:/app/data
       - ./exports:/app/exports
     environment:
       - REEF_ENCRYPTION_KEY=YourKeyHere
+      - Reef__DatabasePath=/app/data/Reef.db
 
 volumes:
   reef_core:

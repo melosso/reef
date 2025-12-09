@@ -2,6 +2,7 @@ using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace Reef.Api;
 
@@ -14,17 +15,20 @@ public class JobExecutorService
     private readonly ExecutionService _executionService;
     private readonly ProfileService _profileService;
     private readonly NotificationService _notificationService;
+    private readonly IConfiguration _configuration;
 
     public JobExecutorService(
         JobService jobService,
         ExecutionService executionService,
         ProfileService profileService,
-        NotificationService notificationService)
+        NotificationService notificationService,
+        IConfiguration configuration)
     {
         _jobService = jobService;
         _executionService = executionService;
         _profileService = profileService;
         _notificationService = notificationService;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -337,7 +341,21 @@ public class JobExecutorService
     {
         try
         {
-            var dbPath = "Reef.db";
+            // Get database path from configuration
+            var configuredPath = _configuration["Reef:DatabasePath"] ?? "Reef.db";
+            var connectionString = _configuration.GetConnectionString("Reef") ?? $"Data Source={configuredPath}";
+
+            // Extract database path from connection string
+            var dbPath = configuredPath;
+            if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+            {
+                var dataSourceStart = connectionString.IndexOf("Data Source=", StringComparison.OrdinalIgnoreCase) + "Data Source=".Length;
+                var semicolonIndex = connectionString.IndexOf(';', dataSourceStart);
+                dbPath = semicolonIndex > 0
+                    ? connectionString.Substring(dataSourceStart, semicolonIndex - dataSourceStart).Trim()
+                    : connectionString.Substring(dataSourceStart).Trim();
+            }
+
             var backupDir = "backups";
             
             if (!Directory.Exists(backupDir))
