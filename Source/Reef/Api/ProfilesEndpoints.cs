@@ -42,8 +42,9 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/preview-email-html", PreviewEmailHtml);
         group.MapPost("/{id:int}/validate-attachment-config", ValidateAttachmentConfig);
 
-        // Query Testing endpoint
+        // Query Testing endpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
+        group.MapPost("/test-query-preview", TestQueryPreview);
     }
 
     /// <summary>
@@ -1163,5 +1164,113 @@ public static class ProfilesEndpoints
             Log.Error(ex, "Error testing query for profile {Id}", id);
             return Results.Problem("Error testing query: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// POST /api/profiles/test-query-preview - Test a query without requiring a saved profile
+    /// </summary>
+    private static async Task<IResult> TestQueryPreview(
+        [FromBody] TestQueryPreviewRequest request,
+        ConnectionService connectionService,
+        QueryExecutor queryExecutor)
+    {
+        try
+        {
+            // Validate request
+            if (request.ConnectionId <= 0)
+            {
+                return Results.BadRequest(new { error = "Connection ID is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Query))
+            {
+                return Results.BadRequest(new { error = "Query is required" });
+            }
+
+            // Get connection
+            var connection = await connectionService.GetByIdAsync(request.ConnectionId);
+            if (connection == null)
+            {
+                return Results.NotFound(new { error = "Connection not found" });
+            }
+
+            // Add LIMIT 25 to the query (SQL Server uses TOP, MySQL/PostgreSQL use LIMIT)
+            var testQuery = request.Query.Trim();
+
+            // Check if query already has LIMIT/TOP
+            var hasLimit = testQuery.Contains("LIMIT", StringComparison.OrdinalIgnoreCase) ||
+                          testQuery.Contains("TOP", StringComparison.OrdinalIgnoreCase) ||
+                          testQuery.Contains("FETCH", StringComparison.OrdinalIgnoreCase);
+
+            if (!hasLimit)
+            {
+                // Determine database type and add appropriate limit clause
+                if (connection.Type == "SqlServer")
+                {
+                    // For SQL Server, we need to add TOP after SELECT
+                    var selectIndex = testQuery.IndexOf("SELECT", StringComparison.OrdinalIgnoreCase);
+                    if (selectIndex >= 0)
+                    {
+                        var insertPosition = selectIndex + "SELECT".Length;
+                        testQuery = testQuery.Insert(insertPosition, " TOP 25");
+                    }
+                }
+                else
+                {
+                    // For MySQL and PostgreSQL, add LIMIT at the end
+                    testQuery += " LIMIT 25";
+                }
+            }
+
+            Log.Information("Testing query preview for connection {ConnectionId}: {Query}", request.ConnectionId, testQuery);
+
+            // Execute query
+            var (success, rows, error, executionTime) = await queryExecutor.ExecuteQueryAsync(
+                connection,
+                testQuery,
+                null,
+                commandTimeout: 30 // 30 second timeout for testing
+            );
+
+            if (!success)
+            {
+                Log.Warning("Query preview test failed for connection {ConnectionId}: {Error}", request.ConnectionId, error);
+                return Results.Ok(new
+                {
+                    success = false,
+                    error = error,
+                    executionTimeMs = executionTime
+                });
+            }
+
+            // Take only first 25 rows (in case query already had a larger limit)
+            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+
+            Log.Information("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
+                request.ConnectionId, limitedRows.Count, executionTime);
+
+            return Results.Ok(new
+            {
+                success = true,
+                rowCount = limitedRows.Count,
+                totalExecutionTimeMs = executionTime,
+                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>(),
+                rows = limitedRows
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error testing query preview for connection {ConnectionId}", request?.ConnectionId);
+            return Results.Problem("Error testing query: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Request model for testing query preview without saved profile
+    /// </summary>
+    public class TestQueryPreviewRequest
+    {
+        public int ConnectionId { get; set; }
+        public string Query { get; set; } = string.Empty;
     }
 }

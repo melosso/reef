@@ -4432,11 +4432,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             try {
-                const profileId = document.getElementById('profile-id').value;
+                // Get query and connection from form (works for both saved and unsaved profiles)
+                const connectionId = parseInt(document.getElementById('profile-connection').value);
+                const query = document.getElementById('profile-query').value;
 
-                // Profile must be saved first
-                if (!profileId) {
-                    showToast('Please save the profile before testing the query', 'error');
+                // Validate inputs
+                if (!connectionId || isNaN(connectionId)) {
+                    showToast('Please select a connection', 'error');
+                    return;
+                }
+
+                if (!query || query.trim() === '') {
+                    showToast('Please enter a query', 'error');
                     return;
                 }
 
@@ -4454,10 +4461,17 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 `;
 
-                // Call test-query endpoint
-                const response = await fetch(`${API_BASE}/api/profiles/${profileId}/test-query`, {
+                // Call test-query-preview endpoint (works without saved profile)
+                const response = await fetch(`${API_BASE}/api/profiles/test-query-preview`, {
                     method: 'POST',
-                    headers: getAuthHeaders()
+                    headers: {
+                        ...getAuthHeaders(),
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        connectionId: connectionId,
+                        query: query
+                    })
                 });
 
                 if (!response.ok) {

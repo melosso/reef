@@ -7,6 +7,7 @@ This Scriban template generates a Dutch (NL) HTML email notifying customers abou
 
 ```sql
 SELECT
+    orders.id AS reef_id,
     CONCAT('Update over je bestelling #', orders.id) AS subject,
     orders.id AS order_number,
     DATE_FORMAT(orders.date_created_gmt, '%e %M %Y') AS order_date,
