@@ -518,6 +518,46 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Dialog -->
+    <div id="delete-template-dialog" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div class="flex items-start mb-4">
+                <div class="flex-shrink-0">
+                    <i data-lucide="alert-circle" class="h-6 w-6 text-yellow-500"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete Template</h3>
+                    <p class="text-sm text-gray-600 mb-4">
+                        What would you like to do with "<span id="delete-template-name" class="font-medium"></span>"?
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="disableTemplateFromDialog()"
+                        class="w-full px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition duration-150 ease-in-out flex items-center justify-center">
+                    <i data-lucide="eye-off" class="h-4 w-4 mr-2"></i>
+                    <span>Disable</span>
+                </button>
+
+                <button onclick="deleteTemplateFromDialog()"
+                        class="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150 ease-in-out flex items-center justify-center">
+                    <i data-lucide="trash-2" class="h-4 w-4 mr-2"></i>
+                    <span>Remove</span>
+                </button>
+
+                <button onclick="closeDeleteDialog()"
+                        class="w-full px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-150 ease-in-out">
+                    Cancel
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-500 mt-4">
+                <strong>Tip:</strong> Disabling keeps the template for future use while hiding it from the list.
+            </p>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '/api/templates';
         let importedTemplates = [];  // Store fetched templates for filtering
@@ -772,6 +812,9 @@
             }
         }
 
+        // Store current template being deleted for dialog actions
+        let currentDeletingTemplate = { id: null, name: null };
+
         async function deleteTemplate(id, name) {
             try {
                 // First, check if template is in use by any profiles
@@ -792,16 +835,76 @@
                     }
                 }
 
-                // Template is not in use, proceed with deletion
-                if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+                // Template is not in use, show dialog with options
+                currentDeletingTemplate = { id, name };
+                document.getElementById('delete-template-name').textContent = name;
+                document.getElementById('delete-template-dialog').classList.remove('hidden');
 
+                // Render icons in the dialog
+                setTimeout(() => lucide.createIcons(), 50);
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function closeDeleteDialog() {
+            document.getElementById('delete-template-dialog').classList.add('hidden');
+            currentDeletingTemplate = { id: null, name: null };
+        }
+
+        async function disableTemplateFromDialog() {
+            const { id, name } = currentDeletingTemplate;
+            if (!id) return;
+
+            try {
+                // Get the full template data
+                const getResponse = await fetch(`${API_BASE}/${id}`, {
+                    headers: getAuthHeaders()
+                });
+
+                if (!getResponse.ok) {
+                    showToast('Failed to load template', 'error');
+                    return;
+                }
+
+                const template = await getResponse.json();
+
+                // Update the isActive field to false
+                template.isActive = false;
+
+                // Send PUT request to update
+                const updateResponse = await fetch(`${API_BASE}/${id}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(template)
+                });
+
+                if (updateResponse.ok) {
+                    showToast(`Template "${name}" disabled successfully`, 'success');
+                    closeDeleteDialog();
+                    loadTemplates();
+                } else {
+                    const error = await updateResponse.json();
+                    showToast(`Error: ${error.message || 'Failed to disable template'}`, 'error');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteTemplateFromDialog() {
+            const { id, name } = currentDeletingTemplate;
+            if (!id) return;
+
+            try {
                 const deleteResponse = await fetch(`${API_BASE}/${id}`, {
                     method: 'DELETE',
                     headers: getAuthHeaders()
                 });
 
                 if (deleteResponse.ok) {
-                    showToast('Template deleted successfully', 'success');
+                    showToast(`Template "${name}" deleted permanently`, 'success');
+                    closeDeleteDialog();
                     loadTemplates();
                 } else {
                     const error = await deleteResponse.json();

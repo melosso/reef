@@ -294,7 +294,8 @@ public static class AdminEndpoints
             }
 
             // Get the destination to verify it exists
-            var destination = await destinationService.GetByIdAsync(request.DestinationId);
+            // Use GetByIdForExecutionAsync to get the fully decrypted config (not masked)
+            var destination = await destinationService.GetByIdForExecutionAsync(request.DestinationId);
             if (destination == null)
             {
                 return Results.BadRequest(new { error = "Destination not found" });

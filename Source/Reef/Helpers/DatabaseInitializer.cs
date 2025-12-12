@@ -1219,20 +1219,21 @@ public class DatabaseInitializer
             }
         };
 
-        // Insert each template if it doesn't exist
-        foreach (var template in templates)
+        // Only seed templates if the table is completely empty (first-time initialization)
+        // This ensures user-deleted templates are not re-created on subsequent app startups
+        var existingCount = await connection.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM QueryTemplates");
+
+        if (existingCount == 0)
         {
-            var exists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM QueryTemplates WHERE Name = @Name",
-                new { template.Name });
-            
-            if (exists == 0)
+            Log.Debug("QueryTemplates table is empty. Seeding {Count} default templates", templates.Length);
+
+            foreach (var template in templates)
             {
                 var hash = Reef.Helpers.HashHelper.ComputeDestinationHash(
-                    template.Name, 
-                    template.Type.ToString(), 
+                    template.Name,
+                    template.Type.ToString(),
                     template.Template);
-                
+
                 await connection.ExecuteAsync(@"
                     INSERT INTO QueryTemplates (Name, Description, Type, Template, OutputFormat, IsActive, Tags, CreatedAt, Hash)
                     VALUES (@Name, @Description, @Type, @Template, @OutputFormat, @IsActive, @Tags, datetime('now'), @Hash)",
@@ -1248,6 +1249,12 @@ public class DatabaseInitializer
                         Hash = hash
                     });
             }
+
+            Log.Debug("Successfully seeded {Count} default query templates", templates.Length);
+        }
+        else
+        {
+            Log.Debug("QueryTemplates table already contains {Count} templates. Skipping seed.", existingCount);
         }
     }
 

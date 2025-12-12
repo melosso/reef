@@ -415,7 +415,7 @@ public class ProfileService
 
             if (rowsAffected > 0)
             {
-                Log.Information("Profile updated: {Name} (ID: {Id})", profile.Name, profile.Id);
+                Log.Information("Profile updated: {Name} (#{Id})", profile.Name, profile.Id);
             }
 
             return rowsAffected > 0;

@@ -83,14 +83,17 @@ public static class ConnectionsEndpoints
         {
             connection.Id = id;
             var success = await service.UpdateAsync(connection);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Connection", id, "Updated", username, null, null);
-                return Results.Ok();
+
+                // Retrieve and return the updated connection
+                var updatedConnection = await service.GetByIdAsync(id);
+                return Results.Ok(updatedConnection);
             }
-            
+
             return Results.NotFound();
         }
         catch (Exception ex)
