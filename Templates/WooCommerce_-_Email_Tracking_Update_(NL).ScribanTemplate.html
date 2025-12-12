@@ -21,6 +21,9 @@
       .email-introduction p { margin: 0 0 8px !important; }
       .email-order-detail-heading { font-size: 16px !important; line-height: 130% !important; margin: 0 0 8px !important; }
       .order-meta { font-size: 12px !important; margin-top: 2px !important; }
+      .tracking-info { padding: 12px !important; margin-bottom: 12px !important; }
+      .tracking-info p { margin: 0 0 8px !important; font-size: 14px !important; }
+      .tracking-button { padding: 10px 20px !important; font-size: 14px !important; }
       .product-list-container { margin-bottom: 12px !important; }
       .email-order-item-meta { font-size: 12px !important; line-height: 130% !important; }
       .order-item-data td { padding-bottom: 8px !important; }
@@ -69,7 +72,7 @@
                               <tbody>
                                 <tr>
                                   <td id="header_wrapper" style="padding: 20px 32px 0; display: block;">
-                                    <h1 style="font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 120%; margin: 0; color: #1e1e1e; background-color: inherit; text-align: left;" bgcolor="inherit">Een update over jouw bestelling</h1>
+                                    <h1 style="font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 120%; margin: 0; color: #1e1e1e; background-color: inherit; text-align: left;" bgcolor="inherit">Jouw bestelling is onderweg!</h1>
                                   </td>
                                 </tr>
                               </tbody>
@@ -92,12 +95,23 @@
                                           <td valign="top" id="body_content_inner_cell" style="padding: 20px 32px 32px;">
                                             <div id="body_content_inner" style="color: #4b4b4b; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 16px; line-height: 150%; text-align: left;" align="left">
 
-                                              <!-- Introduction -->
-                                              <div class="email-introduction" style="padding-bottom: 24px;">
-                                                <p style="margin: 0 0 16px;">Hallo&nbsp; {{~ row.customer_name | default "daar" | html.escape ~}},</p>
-                                                <p style="margin: 0 0 16px;">Goed nieuws – jouw bestelling ligt klaar om op te halen. Ik laat je snel weten wanneer je langs kunt komen om 'm op te halen, houd je berichten de aankomende dagen even in de gaten.</p>
-                                                <p style="margin: 0 0 16px;">Hier is een herinnering van wat je hebt besteld:</p>
-                                              </div>
+											  <!-- Introduction -->
+											  <div class="email-introduction" style="padding-bottom: 24px;">
+											    <p style="margin: 0 0 16px;">Hallo&nbsp; {{~ row.customer_name | default "daar" | html.escape ~}},</p>
+											      <p style="margin: 0 0 16px;">Goed nieuws – je bestelling is verzonden en onderweg. Nog even geduld, dan heb je het boekje in handen.&nbsp; {{~ if row.tracking_url ~}} Je kunt 'm volgen via de track &amp; trace hieronder.{{~ end ~}}</p>
+											    {{~ if row.tracking_url ~}}
+											    <p style="margin: 0 0 16px;">Je kunt je zending volgen met het onderstaande tracking nummer:</p>
+											    {{~ end ~}}
+											  </div>
+											  
+											  {{~ if row.tracking_url ~}}
+											  <!-- Tracking Information -->
+											  <div class="tracking-info" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 20px; margin-bottom: 24px; text-align: center;">
+											    <p style="margin: 0 0 12px; font-weight: bold; color: #1e1e1e; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Track & Trace</p>
+											    <p style="margin: 0 0 16px; font-size: 18px; font-weight: 600; color: #1e1e1e; font-family: monospace;">{{~ row.tracking_number | html.escape ~}}</p>
+											    <a href="{{~ row.tracking_url | html.escape ~}}" class="tracking-button" style="display: inline-block; background-color: #bc6672; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 16px;">Volg je zending</a>
+											  </div>
+											  {{~ end ~}}
 
                                               <!-- Order Heading -->
                                               <h2 class="email-order-detail-heading" style="color: #1e1e1e; display: block; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 20px; font-weight: bold; line-height: 160%; margin: 0 0 18px; text-align: left;">
@@ -165,7 +179,7 @@
                                                   <tr>
                                                     <td class="email-additional-content" style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; padding: 32px 0 0;">
                                                       <p style="text-align: center; margin: 0 0 16px;" align="center">
-                                                        Nogmaals bedankt! Neem contact met mij op via&nbsp; {{~ row.support_email | default "support@company.com" | html.escape ~}} &nbsp;als je vragen of hulp nodig hebt.
+                                                        Bedankt voor je bestelling! Neem contact met mij op via&nbsp; {{~ row.support_email | default "support@company.com" | html.escape ~}} &nbsp;als je vragen of hulp nodig hebt.
                                                       </p>
                                                     </td>
                                                   </tr>
