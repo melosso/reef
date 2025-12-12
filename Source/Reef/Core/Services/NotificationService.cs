@@ -297,6 +297,43 @@ public class NotificationService
     }
 
     /// <summary>
+    /// Send notification for new email approval items
+    /// Uses throttling to prevent excessive emails (cooldown configurable, default once per 24 hours)
+    /// </summary>
+    public async Task SendNewEmailApprovalNotificationAsync(int pendingCount)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewEmailApproval)
+            {
+                return;
+            }
+
+            // Convert hours to seconds for throttler
+            var cooldownSeconds = settings.NewEmailApprovalCooldownHours * 3600;
+
+            // Check throttling using the configured cooldown period
+            if (!_throttler.ShouldNotify("NewEmailApproval", "pending", cooldownSeconds))
+            {
+                Log.Debug("New email approval notification throttled (cooldown: {Hours}h)",
+                    settings.NewEmailApprovalCooldownHours);
+                return;
+            }
+
+            var subject = $"[Reef] {pendingCount} email{(pendingCount != 1 ? "s" : "")} pending approval";
+            var body = BuildNewEmailApprovalEmailBody(pendingCount);
+
+            await SendSystemNotificationAsync(subject, body, settings);
+            Log.Information("Sent new email approval notification ({Count} pending)", pendingCount);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error sending new email approval notification");
+        }
+    }
+
+    /// <summary>
     /// Send notification for database size threshold exceeded
     /// Uses throttling to prevent excessive emails (max once per hour)
     /// </summary>
@@ -912,6 +949,66 @@ public class NotificationService
                         <span class='label'>Created At:</span>
                         <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string BuildNewEmailApprovalEmailBody(int pendingCount)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        * {{ margin: 0; padding: 0; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 10px; }}
+        .card {{ background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .header {{ background-color: #f59e0b; color: white; padding: 30px 20px; text-align: center; }}
+        .header h2 {{ font-size: 24px; margin: 0; font-weight: 600; }}
+        .content {{ padding: 20px; }}
+        .section {{ margin: 20px 0; }}
+        .detail-row {{ display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; word-break: break-word; }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .label {{ font-weight: 600; color: #f59e0b; min-width: 140px; padding-right: 15px; }}
+        .value {{ color: #555; flex: 1; word-break: break-all; }}
+        .info-box {{ background-color: #fef3c7; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }}
+        .info-box p {{ color: #92400e; margin: 0; }}
+        @media (max-width: 600px) {{
+            .container {{ padding: 5px; }}
+            .content {{ padding: 15px; }}
+            .detail-row {{ flex-direction: column; }}
+            .label {{ min-width: 100%; margin-bottom: 5px; }}
+            .header h2 {{ font-size: 20px; }}
+            .info-box {{ padding: 12px; }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='card'>
+            <div class='header'>
+                <h2>✉️ Email{(pendingCount != 1 ? "s" : "")} Pending Approval</h2>
+            </div>
+            <div class='content'>
+                <div class='section'>
+                    <div class='detail-row'>
+                        <span class='label'>Pending Items:</span>
+                        <span class='value'>{pendingCount}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='label'>Notification Time:</span>
+                        <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
+                    </div>
+                </div>
+                <div class='info-box'>
+                    <p>There {(pendingCount != 1 ? "are" : "is")} {pendingCount} email{(pendingCount != 1 ? "s" : "")} waiting for approval in the workflow. Please review and approve or reject {(pendingCount != 1 ? "them" : "it")} in the Reef dashboard.</p>
                 </div>
             </div>
         </div>

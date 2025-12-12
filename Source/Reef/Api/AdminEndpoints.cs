@@ -208,6 +208,13 @@ public static class AdminEndpoints
             }
 
             var settings = await service.GetNotificationSettingsAsync();
+
+            // Return empty object if no settings exist yet (instead of null)
+            if (settings == null)
+            {
+                return Results.Ok(new { });
+            }
+
             return Results.Ok(settings);
         }
         catch (Exception ex)

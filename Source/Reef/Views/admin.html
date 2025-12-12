@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin &middot; Reef</title>
     <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="/assets/js/_tailwind.3.4.17.js"></script>
     <script src="/assets/js/_lucide.0.552.0.js"></script>
     <script src="/assets/js/auth.js"></script>
@@ -858,6 +859,46 @@
                                         </div>
                                     </div>
 
+                                    <!-- Approval Notifications -->
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-4">
+                                            <div class="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                                <i data-lucide="mail-check" class="h-5 w-5 text-orange-600"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="text-base font-semibold text-gray-900">Approval</h4>
+                                                <p class="text-xs text-gray-600">Notifications for items awaiting approval</p>
+                                            </div>
+                                        </div>
+                                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                                            <!-- New Email Approval -->
+                                            <div>
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <div class="flex items-center gap-2">
+                                                        <h5 class="font-semibold text-gray-900">New item for approval</h5>
+                                                        <button onclick="toggleEmailApprovalSettings()" class="text-orange-600 hover:text-orange-700 transition-colors" title="Configure cooldown period">
+                                                            <i data-lucide="settings" class="h-4 w-4"></i>
+                                                        </button>
+                                                    </div>
+                                                    <label class="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" id="notify-email-approval" onchange="handleNotificationChange()" class="sr-only peer">
+                                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    </label>
+                                                </div>
+                                                <p class="text-sm text-gray-600 mb-2">Notify when new emails are pending approval</p>
+                                                <!-- Cooldown Configuration (Hidden by default) -->
+                                                <div id="email-approval-settings" class="hidden ml-4 mt-3 p-3 bg-white border border-orange-300 rounded-lg">
+                                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Cooldown Period</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input type="number" id="email-approval-cooldown-hours" min="1" max="168" value="24" class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <span class="text-sm text-gray-600">hours (notify at most once every N hours)</span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-500 mt-2">Default: 24 hours. Prevents notification spam when multiple emails are pending approval.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <!-- System Events Notifications -->
                                     <div>
                                         <div class="flex items-center gap-2 mb-4">
@@ -873,19 +914,26 @@
                                             <!-- Database Size Threshold -->
                                             <div>
                                                 <div class="flex items-center justify-between mb-3">
-                                                    <div>
+                                                    <div class="flex items-center gap-2">
                                                         <h5 class="font-semibold text-gray-900">Database Size Threshold</h5>
-                                                        <p class="text-sm text-gray-600">Notify when database exceeds limit</p>
+                                                        <button onclick="toggleDatabaseSizeSettings()" class="text-amber-600 hover:text-amber-700 transition-colors" title="Configure threshold size">
+                                                            <i data-lucide="settings" class="h-4 w-4"></i>
+                                                        </button>
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-db-size" onchange="handleNotificationChange()" class="sr-only peer" checked>
                                                         <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
-                                                <!-- Threshold Size Input -->
-                                                <div class="ml-4 flex items-center gap-2">
-                                                    <input type="number" id="db-threshold-mb" min="100" max="10240" class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent" onchange="handleNotificationChange()">
-                                                    <span class="text-sm text-gray-600">MB</span>
+                                                <p class="text-sm text-gray-600 mb-2">Notify when database exceeds limit</p>
+                                                <!-- Threshold Size Input (Hidden by default) -->
+                                                <div id="database-size-settings" class="hidden ml-4 mt-3 p-3 bg-white border border-amber-300 rounded-lg">
+                                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Threshold Size</label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input type="number" id="db-threshold-mb" min="100" max="10240" value="1024" class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <span class="text-sm text-gray-600">MB</span>
+                                                    </div>
+                                                    <p class="text-xs text-gray-500 mt-2">Default: 1024 MB (1 GB). Notify when database size exceeds this threshold.</p>
                                                 </div>
                                             </div>
 
@@ -981,6 +1029,7 @@
                                             <option value="NewUser">New User</option>
                                             <option value="NewApiKey">New API Key</option>
                                             <option value="NewWebhook">New Webhook</option>
+                                            <option value="NewEmailApproval">New Email Approval</option>
                                             <option value="DatabaseSizeThreshold">Database Size Alert</option>
                                         </select>
                                     </div>

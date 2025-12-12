@@ -798,6 +798,8 @@ public class DatabaseInitializer
                 NotifyOnNewUser INTEGER NOT NULL DEFAULT 0,
                 NotifyOnNewApiKey INTEGER NOT NULL DEFAULT 1,
                 NotifyOnNewWebhook INTEGER NOT NULL DEFAULT 0,
+                NotifyOnNewEmailApproval INTEGER NOT NULL DEFAULT 0,
+                NewEmailApprovalCooldownHours INTEGER NOT NULL DEFAULT 24,
 
                 -- Email Configuration
                 RecipientEmails TEXT NULL,
@@ -1265,10 +1267,17 @@ public class DatabaseInitializer
 
         // Email Approval Workflow migrations
         await AddEmailApprovalColumnsAsync(connection);
-        
+
         // Add ReefId and DeltaSyncHash columns to PendingEmailApprovals for delta sync support
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "ReefId", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncHash", "TEXT NULL");
+
+        // Add Email Approval Notification columns to NotificationSettings
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnNewEmailApproval", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NewEmailApprovalCooldownHours", "INTEGER NOT NULL DEFAULT 24");
+
+        // Add NewEmailApproval notification template if it doesn't exist
+        await AddEmailApprovalNotificationTemplateAsync(connection);
 
         // Legacy migrations removed: All columns are now defined in base table schemas
         // since there are no production customers yet. All new installations start with the complete schema.
@@ -1387,6 +1396,105 @@ public class DatabaseInitializer
         }
 
         Log.Debug("✓ Email approval migrations completed");
+    }
+
+    /// <summary>
+    /// Add NewEmailApproval notification template if it doesn't exist
+    /// </summary>
+    private async Task AddEmailApprovalNotificationTemplateAsync(SqliteConnection connection)
+    {
+        try
+        {
+            // Check if template already exists
+            const string checkSql = "SELECT COUNT(*) FROM NotificationEmailTemplate WHERE TemplateType = 'NewEmailApproval'";
+            var count = await connection.ExecuteScalarAsync<int>(checkSql);
+
+            if (count == 0)
+            {
+                const string insertSql = @"
+                    INSERT INTO NotificationEmailTemplate (TemplateType, Subject, HtmlBody, IsDefault, CreatedAt, UpdatedAt)
+                    VALUES (@TemplateType, @Subject, @HtmlBody, @IsDefault, @CreatedAt, @UpdatedAt)";
+
+                await connection.ExecuteAsync(insertSql, new
+                {
+                    TemplateType = "NewEmailApproval",
+                    Subject = "[Reef] {PendingCount} email{Plural} pending approval",
+                    HtmlBody = BuildDefaultNewEmailApprovalEmailBody(),
+                    IsDefault = 1,
+                    CreatedAt = DateTime.UtcNow.ToString("o"),
+                    UpdatedAt = DateTime.UtcNow.ToString("o")
+                });
+
+                Log.Information("Added NewEmailApproval notification template");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error adding NewEmailApproval notification template");
+        }
+    }
+
+    /// <summary>
+    /// Build default email body for NewEmailApproval notification
+    /// </summary>
+    private static string BuildDefaultNewEmailApprovalEmailBody()
+    {
+        return @"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; padding: 10px; }
+        .card { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { background-color: #f59e0b; color: white; padding: 30px 20px; text-align: center; }
+        .header h2 { font-size: 24px; margin: 0; font-weight: 600; }
+        .content { padding: 20px; }
+        .section { margin: 20px 0; }
+        .detail-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; word-break: break-word; }
+        .detail-row:last-child { border-bottom: none; }
+        .label { font-weight: 600; color: #f59e0b; min-width: 140px; padding-right: 15px; }
+        .value { color: #555; flex: 1; word-break: break-all; }
+        .info-box { background-color: #fef3c7; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
+        .info-box p { color: #92400e; margin: 0; }
+        @media (max-width: 600px) {
+            .container { padding: 5px; }
+            .content { padding: 15px; }
+            .detail-row { flex-direction: column; }
+            .label { min-width: 100%; margin-bottom: 5px; }
+            .header h2 { font-size: 20px; }
+            .info-box { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='card'>
+            <div class='header'>
+                <h2>✉️ Email{Plural} Pending Approval</h2>
+            </div>
+            <div class='content'>
+                <div class='section'>
+                    <div class='detail-row'>
+                        <span class='label'>Pending Items:</span>
+                        <span class='value'>{PendingCount}</span>
+                    </div>
+                    <div class='detail-row'>
+                        <span class='label'>Notification Time:</span>
+                        <span class='value'>{NotificationTime.GMT+1}</span>
+                    </div>
+                </div>
+                <div class='info-box'>
+                    <p>There {PluralVerb} {PendingCount} email{Plural} waiting for approval in the workflow. Please review and approve or reject {PluralThem} in the Reef dashboard.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
     }
 
     /// <summary>

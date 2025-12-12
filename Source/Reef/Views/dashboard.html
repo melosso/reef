@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard · Reef</title>
     <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <script src="/assets/js/_tailwind.3.4.17.js"></script>
     <script src="/assets/js/_lucide.0.552.0.js"></script>
     <script src="/assets/js/auth.js"></script>
@@ -562,6 +563,14 @@
             showToast('You must change your password to continue', 'warning');
         }
 
+        // Handle Enter key in password change modal
+        function handlePasswordModalKeypress(event) {
+            if (event.key === 'Enter' || event.keyCode === 13) {
+                event.preventDefault();
+                changePassword();
+            }
+        }
+
         // Change password
         async function changePassword() {
             const currentPassword = document.getElementById('currentPassword').value;
@@ -643,18 +652,18 @@
             <div class="space-y-4">
                 <div>
                     <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                    <input type="password" id="currentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="currentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
                 </div>
 
                 <div>
                     <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                    <input type="password" id="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
                     <p class="text-xs text-gray-500 mt-1">Must be at least 6 characters long</p>
                 </div>
 
                 <div>
                     <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                    <input type="password" id="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
                 </div>
             </div>
 

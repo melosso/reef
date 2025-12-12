@@ -89,7 +89,8 @@ function populateDestinationSelectOptions() {
  * Populate the UI with notification settings
  */
 function populateUI(settings) {
-    if (!settings) {
+    // Check if settings is null, undefined, or empty object
+    if (!settings || Object.keys(settings).length === 0) {
         // Default settings
         settings = {
             isEnabled: false,
@@ -103,7 +104,9 @@ function populateUI(settings) {
             databaseSizeThresholdBytes: 1073741824, // 1 GB default
             notifyOnNewApiKey: true,
             notifyOnNewUser: false,
-            notifyOnNewWebhook: false
+            notifyOnNewWebhook: false,
+            notifyOnNewEmailApproval: false,
+            newEmailApprovalCooldownHours: 24
         };
     }
 
@@ -118,6 +121,8 @@ function populateUI(settings) {
     document.getElementById('notify-api-key').checked = settings.notifyOnNewApiKey;
     document.getElementById('notify-user').checked = settings.notifyOnNewUser;
     document.getElementById('notify-webhook').checked = settings.notifyOnNewWebhook;
+    document.getElementById('notify-email-approval').checked = settings.notifyOnNewEmailApproval;
+    document.getElementById('email-approval-cooldown-hours').value = settings.newEmailApprovalCooldownHours || 24;
 
     // Convert bytes to MB for display
     const thresholdMb = settings.databaseSizeThresholdBytes ? Math.round(settings.databaseSizeThresholdBytes / (1024 * 1024)) : 1024;
@@ -174,6 +179,12 @@ async function saveNotificationSettings() {
         return;
     }
 
+    const cooldownHours = parseInt(document.getElementById('email-approval-cooldown-hours').value);
+    if (isNaN(cooldownHours) || cooldownHours < 1) {
+        showToast('Cooldown period must be at least 1 hour', 'warning');
+        return;
+    }
+
     const settings = {
         id: currentNotificationSettings?.id || 0,
         isEnabled: document.getElementById('notify-enabled').checked,
@@ -189,6 +200,8 @@ async function saveNotificationSettings() {
         notifyOnNewApiKey: document.getElementById('notify-api-key').checked,
         notifyOnNewUser: document.getElementById('notify-user').checked,
         notifyOnNewWebhook: document.getElementById('notify-webhook').checked,
+        notifyOnNewEmailApproval: document.getElementById('notify-email-approval').checked,
+        newEmailApprovalCooldownHours: cooldownHours,
         createdAt: currentNotificationSettings?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         hash: ''
@@ -261,6 +274,30 @@ async function sendTestNotification() {
         button.disabled = false;
         button.innerHTML = originalText;
         lucide.createIcons();
+    }
+}
+
+/**
+ * Toggle email approval settings visibility
+ */
+function toggleEmailApprovalSettings() {
+    const settingsDiv = document.getElementById('email-approval-settings');
+    if (settingsDiv) {
+        settingsDiv.classList.toggle('hidden');
+        // Re-render lucide icons when toggling
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+}
+
+/**
+ * Toggle database size settings visibility
+ */
+function toggleDatabaseSizeSettings() {
+    const settingsDiv = document.getElementById('database-size-settings');
+    if (settingsDiv) {
+        settingsDiv.classList.toggle('hidden');
+        // Re-render lucide icons when toggling
+        setTimeout(() => lucide.createIcons(), 50);
     }
 }
 

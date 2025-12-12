@@ -704,6 +704,8 @@ public class NotificationSettings
     public bool NotifyOnNewUser { get; set; } = false;
     public bool NotifyOnNewApiKey { get; set; } = true;
     public bool NotifyOnNewWebhook { get; set; } = false;
+    public bool NotifyOnNewEmailApproval { get; set; } = false;
+    public int NewEmailApprovalCooldownHours { get; set; } = 24; // Default cooldown: once per 24 hours
 
     // Email Configuration
     public string? RecipientEmails { get; set; } // Comma-separated; can also be overridden in Destination config

@@ -19,18 +19,21 @@ public class EmailApprovalService
     private readonly AuditService _auditService;
     private readonly EmailExportService _emailExportService;
     private readonly ProfileService _profileService;
+    private readonly NotificationService _notificationService;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailApprovalService>();
 
     public EmailApprovalService(
         DatabaseConfig config,
         AuditService auditService,
         EmailExportService emailExportService,
-        ProfileService profileService)
+        ProfileService profileService,
+        NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
         _auditService = auditService;
         _emailExportService = emailExportService;
         _profileService = profileService;
+        _notificationService = notificationService;
     }
 
     /// <summary>
@@ -110,6 +113,27 @@ public class EmailApprovalService
                     "System", $"Email pending approval (recipients: {recipients})");
             }
             catch { /* Audit logging failure should not block operation */ }
+
+            // Send notification if enabled - get count of all pending items for notification
+            try
+            {
+                var pendingCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'");
+
+                // Fire and forget - don't block approval creation on notification
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await _notificationService.SendNewEmailApprovalNotificationAsync(pendingCount);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to send email approval notification");
+                    }
+                });
+            }
+            catch { /* Notification failure should not block operation */ }
 
             return approvalId;
         }
