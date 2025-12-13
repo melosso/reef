@@ -212,7 +212,10 @@ public static class ProfilesEndpoints
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            var id = await service.CreateAsync(profile, username);
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
+
+            var id = await service.CreateAsync(profile, userId);
             
             await auditService.LogAsync("Profile", id, "Created", username, 
                 System.Text.Json.JsonSerializer.Serialize(new { profile.Name, profile.ConnectionId, profile.Query }));

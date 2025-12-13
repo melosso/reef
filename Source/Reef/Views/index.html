@@ -378,6 +378,11 @@
                         localStorage.setItem('reef_token', data.token);
                         localStorage.setItem('reef_username', data.username);
                         localStorage.setItem('reef_role', data.role);
+                        if (data.displayName) {
+                            localStorage.setItem('reef_display_name', data.displayName);
+                        } else {
+                            localStorage.removeItem('reef_display_name');
+                        }
                         window.location.href = '/dashboard';
                         return; 
                     } else {

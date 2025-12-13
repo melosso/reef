@@ -218,7 +218,8 @@ public class AdminService
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
 
-            var users = await conn.QueryAsync<User>("SELECT * FROM Users ORDER BY Username");
+            // Only return non-deleted users
+            var users = await conn.QueryAsync<User>("SELECT * FROM Users WHERE IsDeleted = 0 ORDER BY Username");
             return users;
         }
         catch (Exception ex)
@@ -241,9 +242,9 @@ public class AdminService
             // Normalize username to lowercase for consistency
             var normalizedUsername = username.ToLowerInvariant();
 
-            // Check if username already exists (case-insensitive)
+            // Check if username already exists among non-deleted users (case-insensitive)
             var exists = await conn.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM Users WHERE LOWER(Username) = @Username",
+                "SELECT COUNT(*) FROM Users WHERE LOWER(Username) = @Username AND IsDeleted = 0",
                 new { Username = normalizedUsername });
 
             if (exists > 0)
@@ -288,7 +289,7 @@ public class AdminService
     }
 
     /// <summary>
-    /// Update an existing user
+    /// Update an existing user with protection for last admin
     /// </summary>
     public async Task<bool> UpdateUserAsync(User user, string? newPassword = null)
     {
@@ -296,6 +297,37 @@ public class AdminService
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
+
+            // Get the current user state
+            var currentUser = await conn.QuerySingleOrDefaultAsync<User>(
+                "SELECT * FROM Users WHERE Id = @Id",
+                new { user.Id });
+
+            if (currentUser == null)
+            {
+                throw new InvalidOperationException("User not found");
+            }
+
+            // Check if this is the last active administrator
+            if ((currentUser.Role == "Admin" || currentUser.Role == "Administrator") && currentUser.IsActive)
+            {
+                // If trying to disable or change role of admin, check if it's the last one
+                if (!user.IsActive || (user.Role != "Admin" && user.Role != "Administrator"))
+                {
+                    var activeAdminCount = await CountActiveAdministratorsAsync();
+                    if (activeAdminCount <= 1)
+                    {
+                        if (!user.IsActive)
+                        {
+                            throw new InvalidOperationException("Cannot disable the last active administrator");
+                        }
+                        if (user.Role != "Admin" && user.Role != "Administrator")
+                        {
+                            throw new InvalidOperationException("Cannot change role of the last active administrator");
+                        }
+                    }
+                }
+            }
 
             int rowsAffected;
 
@@ -310,14 +342,15 @@ public class AdminService
                 // Update with new password
                 var passwordHash = _passwordHasher.HashPassword(newPassword);
                 rowsAffected = await conn.ExecuteAsync(
-                    @"UPDATE Users 
-                      SET Role = @Role, IsActive = @IsActive, PasswordHash = @PasswordHash 
+                    @"UPDATE Users
+                      SET Role = @Role, IsActive = @IsActive, DisplayName = @DisplayName, PasswordHash = @PasswordHash
                       WHERE Id = @Id",
                     new
                     {
                         user.Id,
                         user.Role,
                         user.IsActive,
+                        user.DisplayName,
                         PasswordHash = passwordHash
                     });
 
@@ -330,14 +363,15 @@ public class AdminService
             {
                 // Update without changing password
                 rowsAffected = await conn.ExecuteAsync(
-                    @"UPDATE Users 
-                      SET Role = @Role, IsActive = @IsActive 
+                    @"UPDATE Users
+                      SET Role = @Role, IsActive = @IsActive, DisplayName = @DisplayName
                       WHERE Id = @Id",
                     new
                     {
                         user.Id,
                         user.Role,
-                        user.IsActive
+                        user.IsActive,
+                        user.DisplayName
                     });
 
                 if (rowsAffected > 0)
@@ -356,29 +390,217 @@ public class AdminService
     }
 
     /// <summary>
-    /// Delete a user
+    /// Change username for an existing user with validation, history tracking, and transaction support
     /// </summary>
-    public async Task<bool> DeleteUserAsync(int userId)
+    public async Task<bool> ChangeUsernameAsync(int userId, string newUsername, string changedBy, int? changedByUserId, string? ipAddress = null)
     {
         try
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
 
+            // Validate username format
+            ValidateUsername(newUsername);
+
+            // Normalize new username to lowercase for consistency
+            var normalizedUsername = newUsername.ToLowerInvariant().Trim();
+
+            // Start a transaction to ensure atomicity
+            using var transaction = conn.BeginTransaction();
+
+            try
+            {
+                // Get current username before changing
+                var currentUsername = await conn.QuerySingleOrDefaultAsync<string>(
+                    "SELECT Username FROM Users WHERE Id = @UserId",
+                    new { UserId = userId },
+                    transaction);
+
+                if (string.IsNullOrEmpty(currentUsername))
+                {
+                    throw new InvalidOperationException("User not found");
+                }
+
+                // Check if username is actually different
+                if (currentUsername.Equals(normalizedUsername, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("New username must be different from current username");
+                }
+
+                // Check if the new username already exists (case-insensitive), excluding the current user
+                var exists = await conn.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM Users WHERE LOWER(Username) = @Username AND Id != @UserId",
+                    new { Username = normalizedUsername, UserId = userId },
+                    transaction);
+
+                if (exists > 0)
+                {
+                    throw new InvalidOperationException($"Username '{normalizedUsername}' is already taken");
+                }
+
+                // Update the username
+                var rowsAffected = await conn.ExecuteAsync(
+                    "UPDATE Users SET Username = @Username WHERE Id = @Id",
+                    new { Username = normalizedUsername, Id = userId },
+                    transaction);
+
+                if (rowsAffected == 0)
+                {
+                    throw new InvalidOperationException("Failed to update username");
+                }
+
+                // Record username change in history table
+                await conn.ExecuteAsync(
+                    @"INSERT INTO UsernameHistory (UserId, OldUsername, NewUsername, ChangedAt, ChangedBy, ChangedByUserId, IpAddress)
+                      VALUES (@UserId, @OldUsername, @NewUsername, @ChangedAt, @ChangedBy, @ChangedByUserId, @IpAddress)",
+                    new
+                    {
+                        UserId = userId,
+                        OldUsername = currentUsername,
+                        NewUsername = normalizedUsername,
+                        ChangedAt = DateTime.UtcNow,
+                        ChangedBy = changedBy,
+                        ChangedByUserId = changedByUserId,
+                        IpAddress = ipAddress
+                    },
+                    transaction);
+
+                // Note: CreatedBy columns now store User IDs (integers), not usernames
+                // No backfill needed - the User ID reference remains valid after username change
+
+                // Commit the transaction
+                transaction.Commit();
+
+                Log.Information("User {OldUsername} changed username for user {UserId} from '{OldUsername}' to '{NewUsername}'",
+                    currentUsername, userId, currentUsername, normalizedUsername);
+
+                return true;
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error changing username for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Validate username format and requirements
+    /// </summary>
+    private void ValidateUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new InvalidOperationException("Username cannot be empty");
+        }
+
+        var trimmedUsername = username.Trim();
+
+        // Check length
+        if (trimmedUsername.Length < 3)
+        {
+            throw new InvalidOperationException("Username must be at least 3 characters long");
+        }
+
+        if (trimmedUsername.Length > 50)
+        {
+            throw new InvalidOperationException("Username cannot exceed 50 characters");
+        }
+
+        // Check format: allow alphanumeric, underscores, hyphens, dots, @ symbol (for email addresses)
+        if (!System.Text.RegularExpressions.Regex.IsMatch(trimmedUsername, @"^[a-zA-Z0-9._@-]+$"))
+        {
+            throw new InvalidOperationException("Username can only contain letters, numbers, underscores, hyphens, dots, and @ symbols");
+        }
+
+        // If contains @, validate as email format
+        if (trimmedUsername.Contains("@"))
+        {
+            // Basic email validation
+            var emailRegex = new System.Text.RegularExpressions.Regex(@"^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$");
+            if (!emailRegex.IsMatch(trimmedUsername))
+            {
+                throw new InvalidOperationException("Invalid email address format");
+            }
+        }
+        else
+        {
+            // For non-email usernames, apply the original rules
+            // Cannot start or end with dots, underscores, or hyphens
+            if (System.Text.RegularExpressions.Regex.IsMatch(trimmedUsername, @"^[._-]|[._-]$"))
+            {
+                throw new InvalidOperationException("Username cannot start or end with dots, underscores, or hyphens");
+            }
+
+            // Cannot have consecutive dots
+            if (trimmedUsername.Contains(".."))
+            {
+                throw new InvalidOperationException("Username cannot contain consecutive dots");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Count active administrators (for last admin protection)
+    /// </summary>
+    public async Task<int> CountActiveAdministratorsAsync()
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var count = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Users WHERE (Role = 'Admin' OR Role = 'Administrator') AND IsActive = 1");
+
+            return count;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error counting active administrators");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Delete a user
+    /// </summary>
+    public async Task<bool> DeleteUserAsync(int userId, string deletedBy = "System")
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            // Soft delete: set IsDeleted flag instead of actually deleting
             var rowsAffected = await conn.ExecuteAsync(
-                "DELETE FROM Users WHERE Id = @Id",
-                new { Id = userId });
+                @"UPDATE Users 
+                  SET IsDeleted = 1, 
+                      DeletedAt = @DeletedAt, 
+                      DeletedBy = @DeletedBy,
+                      IsActive = 0
+                  WHERE Id = @Id AND IsDeleted = 0",
+                new { 
+                    Id = userId, 
+                    DeletedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
+                    DeletedBy = deletedBy
+                });
 
             if (rowsAffected > 0)
             {
-                Log.Information("Deleted user {UserId}", userId);
+                Log.Information("Soft deleted user {UserId} by {DeletedBy}", userId, deletedBy);
             }
 
             return rowsAffected > 0;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error deleting user {UserId}", userId);
+            Log.Error(ex, "Error soft deleting user {UserId}", userId);
             throw;
         }
     }

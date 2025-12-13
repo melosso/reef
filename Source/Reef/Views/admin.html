@@ -245,7 +245,7 @@
                             <div class="bg-white rounded-lg border border-gray-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="text-sm font-medium text-gray-600 flex items-center">
-                                        <span class="cursor-help" data-tooltip="Time is shown in UTC (default for system integration)." data-tooltip-position="top">Server Time</span>
+                                        <span class="cursor-help" data-tooltip="Time is shown in UTC and is not affected by user time zone settings." data-tooltip-position="top">Server Time</span>
                                     </div>
                                     <i data-lucide="server" class="h-4 w-4 text-purple-500"></i>
                                 </div>
@@ -1450,14 +1450,45 @@
     <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
+                    <div class="flex items-center space-x-2">
+                        <!-- More Options Menu (only visible when editing) -->
+                        <div id="user-more-options" class="relative">
+                            <button type="button" onclick="toggleUserOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1 transition duration-200 ease-in-out active:scale-95">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="more-vertical" class="lucide lucide-more-vertical h-6 w-6"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                            </button>
+                            <div id="user-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                <div class="py-1">
+                                    <button type="button" onclick="toggleUserActiveStatus()" id="user-toggle-button" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition duration-200 ease-in-out active:scale-95">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="power" class="lucide lucide-power h-4 w-4 mr-2"><path d="M12 2v10"></path><path d="M18.4 6.6a9 9 0 1 1-12.77.04"></path></svg>
+                                        <span id="user-toggle-text">Disable</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600 transition duration-200 ease-in-out active:scale-95">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="x" class="lucide lucide-x h-6 w-6"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="p-6">
                 <input type="hidden" id="edit-user-id">
+                <input type="hidden" id="edit-is-active">
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                        <input type="text" id="edit-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
+                        <div class="flex space-x-2">
+                            <input type="text" id="edit-username" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
+                            <button type="button" onclick="openChangeUsernameModal()" id="change-username-button" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center" title="Change username">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="edit" class="h-4 w-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                        <input type="text" id="edit-display-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Optional">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
@@ -1465,7 +1496,7 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                        <input type="password" id="edit-password-confirm" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="eave blank to keep current password">
+                        <input type="password" id="edit-password-confirm" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Leave blank to keep current password">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
@@ -1474,15 +1505,37 @@
                             <option value="Admin">Admin</option>
                         </select>
                     </div>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="edit-is-active" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <label for="edit-is-active" class="ml-2 block text-sm text-gray-900">Active</label>
-                    </div>
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
                 <button onclick="closeEditUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
                 <button onclick="updateUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Username Modal -->
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Change Username</h3>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="change-username-user-id">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Username</label>
+                        <input type="text" id="current-username-display" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Username</label>
+                        <input type="text" id="new-username-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Enter new username">
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button onclick="closeChangeUsernameModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="changeUsername()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Change Username</button>
             </div>
         </div>
     </div>
@@ -2273,6 +2326,12 @@
             document.getElementById('edit-password-confirm').value = '';
             document.getElementById('edit-role').value = 'User';
             document.getElementById('edit-is-active').checked = true;
+
+            // Close the user options menu if open
+            const userOptionsMenu = document.getElementById('user-options-menu');
+            if (userOptionsMenu) {
+                userOptionsMenu.classList.add('hidden');
+            }
         }
 
         async function createUser() {
@@ -2299,6 +2358,7 @@
                 }
                 
                 closeAddUserModal();
+                clearApiCache('/api/admin/users');  // Invalidate cache after mutation
                 loadUsers();
                 showToast('User created successfully', 'success');
             } catch (error) {
@@ -2307,29 +2367,9 @@
         }
 
         async function deleteUser(userId, username) {
-            // Prevent deletion of first user
+            // Prevent deletion of first user (admins can delete other admins)
             if (userId === 1) {
                 showToast('Cannot delete the first user', 'danger');
-                return;
-            }
-
-            // Check if attempting to delete another admin
-            try {
-                const response = await fetch(`${API_BASE}/api/admin/users`, {
-                    headers: getAuthHeaders()
-                });
-                if (response.ok) {
-                    const users = await response.json();
-                    const userToDelete = users.find(u => u.id === userId);
-                    const currentUserRole = localStorage.getItem('reef_role');
-
-                    if (userToDelete && (userToDelete.role === 'Admin' || userToDelete.role === 'Administrator') && currentUserRole === 'Admin') {
-                        showToast('Cannot delete another admin account', 'danger');
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.error('Error checking user role:', e);
                 return;
             }
 
@@ -2344,6 +2384,7 @@
 
                 if (!response.ok) throw new Error('Failed to delete user');
 
+                clearApiCache('/api/admin/users');  // Invalidate cache after mutation
                 loadUsers();
                 showToast('User deleted successfully', 'success');
             } catch (error) {

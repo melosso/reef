@@ -66,7 +66,7 @@ public class ConnectionService
     /// <summary>
     /// Create a new connection
     /// </summary>
-    public async Task<int> CreateAsync(Connection conn, string createdBy)
+    public async Task<int> CreateAsync(Connection conn, int? createdByUserId)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -86,7 +86,7 @@ public class ConnectionService
             conn.Tags
         });
 
-        conn.CreatedBy = createdBy;
+        conn.CreatedBy = createdByUserId;
         conn.CreatedAt = DateTime.UtcNow;
         conn.UpdatedAt = DateTime.UtcNow;
 

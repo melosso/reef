@@ -120,7 +120,7 @@ public class ProfileService
     /// <summary>
     /// Create a new profile with encryption and hash computation
     /// </summary>
-    public async Task<int> CreateAsync(Profile profile, string createdBy)
+    public async Task<int> CreateAsync(Profile profile, int? createdByUserId)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -199,7 +199,7 @@ public class ProfileService
 
             // Compute hash for tamper detection
             profile.Hash = _hashValidator.ComputeHash(profile);
-            profile.CreatedBy = createdBy;
+            profile.CreatedBy = createdByUserId;
             profile.CreatedAt = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
 
@@ -247,7 +247,7 @@ public class ProfileService
                 await CreateScheduledTask(connection, id, profile);
             }
 
-            Log.Information("Profile created: {Name} (ID: {Id}) by {CreatedBy}", profile.Name, id, createdBy);
+            Log.Information("Profile created: {Name} (ID: {Id}) by {CreatedBy}", profile.Name, id, createdByUserId);
             return id;
         }
         catch (Exception ex)

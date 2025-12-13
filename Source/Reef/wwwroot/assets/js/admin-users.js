@@ -53,28 +53,20 @@ async function loadUsers() {
 
         tbody.innerHTML = users.map(user => {
             const isFirstUser = user.id === 1;
-            // Get current user by comparing username from localStorage
-            const currentUsername = localStorage.getItem('reef_username');
-            const isCurrentUser = user.username === currentUsername;
-            const isOtherAdmin = (user.role === 'Admin' || user.role === 'Administrator') && currentUserRole === 'Admin' && !isCurrentUser;
 
-            // Disable delete button if: first user OR other admin
-            const canDelete = !isFirstUser && !isOtherAdmin;
+            // Only prevent deletion of the first user (admins can delete other admins)
+            const canDelete = !isFirstUser;
             const deleteButtonClass = !canDelete
                 ? 'text-gray-400 cursor-not-allowed'
                 : 'text-red-600 hover:text-red-800';
             const deleteButtonDisabled = !canDelete ? 'disabled' : '';
-            const deleteButtonTitle = isFirstUser ? 'Cannot delete the first user'
-                                     : isOtherAdmin ? 'Cannot delete another admin'
-                                     : '';
+            const deleteButtonTitle = isFirstUser ? 'Cannot delete the first user' : '';
 
-            // Disable edit button if: other admin (but allow editing current user even if admin)
-            const canEdit = !isOtherAdmin;
-            const editButtonClass = !canEdit
-                ? 'text-gray-400 cursor-not-allowed mr-3'
-                : 'text-blue-600 hover:text-blue-900 mr-3';
-            const editButtonDisabled = !canEdit ? 'disabled' : '';
-            const editButtonTitle = isOtherAdmin ? 'Cannot modify another admin' : '';
+            // Admins can edit all users (including other admins)
+            const canEdit = true;
+            const editButtonClass = 'text-blue-600 hover:text-blue-900 mr-3';
+            const editButtonDisabled = '';
+            const editButtonTitle = '';
 
             // Handle both camelCase and PascalCase from API
             const lastSeenAt = user.lastLoginAt || user.lastSeenAt || user.LastSeenAt;
@@ -121,20 +113,19 @@ async function editUser(userId) {
             return;
         }
 
-        // Prevent editing other admin accounts (but allow editing current user)
-        const currentUserRole = localStorage.getItem('reef_role');
+        // Admins can edit all users (including other admins)
         const currentUsername = localStorage.getItem('reef_username');
         const isCurrentUser = user.username === currentUsername;
-        const isOtherAdmin = (user.role === 'Admin' || user.role === 'Administrator') && currentUserRole === 'Admin' && !isCurrentUser;
-        if (isOtherAdmin) {
-            showToast('Cannot modify another admin account', 'danger');
-            return;
-        }
 
         // Populate edit modal
         document.getElementById('edit-user-id').value = user.id;
         document.getElementById('edit-username').value = user.username;
-        document.getElementById('edit-username').disabled = true; // Username cannot be changed
+        document.getElementById('edit-username').disabled = true; // Username cannot be changed inline
+        
+        const displayNameField = document.getElementById('edit-display-name');
+        if (displayNameField) {
+            displayNameField.value = user.displayName || '';
+        }
 
         const roleSelect = document.getElementById('edit-role');
         roleSelect.value = user.role;
@@ -150,17 +141,25 @@ async function editUser(userId) {
             roleSelect.classList.remove('cursor-not-allowed', 'opacity-50');
         }
 
-        document.getElementById('edit-is-active').checked = user.isActive;
+        // Store active status in hidden field
+        document.getElementById('edit-is-active').value = user.isActive ? 'true' : 'false';
+
+        // Update toggle button text based on current active status
+        const toggleText = document.getElementById('user-toggle-text');
+        if (toggleText) {
+            toggleText.textContent = user.isActive ? 'Disable' : 'Enable';
+        }
+
         document.getElementById('edit-password').value = '';
 
-        // Show password field: allow admins to change their OWN password, but not other admin passwords
+        // Always show password field (admins can change any user's password)
         const passwordContainer = document.getElementById('edit-password').parentElement;
-        if ((user.role === 'Admin' || user.role === 'Administrator') && !isCurrentUser) {
-            // Hide password field for other admins
-            passwordContainer.style.display = 'none';
-        } else {
-            // Show password field for regular users and for the current user (even if admin)
-            passwordContainer.style.display = 'block';
+        passwordContainer.style.display = 'block';
+
+        // Always show change username button (admins can change any username)
+        const changeUsernameButton = document.getElementById('change-username-button');
+        if (changeUsernameButton) {
+            changeUsernameButton.style.display = 'flex';
         }
 
         // Show modal
@@ -171,11 +170,206 @@ async function editUser(userId) {
     }
 }
 
+// Toggle user options menu
+function toggleUserOptionsMenu() {
+    const menu = document.getElementById('user-options-menu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
+}
+
+// Close user options menu when clicking outside
+document.addEventListener('click', function(event) {
+    const menu = document.getElementById('user-options-menu');
+    const button = document.querySelector('[onclick="toggleUserOptionsMenu()"]');
+    if (menu && button && !menu.contains(event.target) && !button.contains(event.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+// Toggle user active status
+async function toggleUserActiveStatus() {
+    const userId = parseInt(document.getElementById('edit-user-id').value);
+    const activeField = document.getElementById('edit-is-active');
+    const currentStatus = activeField.value === 'true';
+    const newStatus = !currentStatus;
+
+    try {
+        // Check if this would disable the last active administrator
+        const response = await fetch(`${window.location.origin}/api/admin/users`, {
+            headers: getAuthHeaders()
+        });
+        if (!response.ok) throw new Error('Failed to load users');
+
+        const users = await response.json();
+        const user = users.find(u => u.id === userId);
+
+        if (!user) {
+            showToast('User not found', 'danger');
+            return;
+        }
+
+        // Count active admins
+        if ((user.role === 'Admin' || user.role === 'Administrator') && currentStatus && !newStatus) {
+            // Trying to disable an admin, check if it's the last one
+            const countResponse = await fetch(`${window.location.origin}/api/admin/users/count-active-admins`, {
+                headers: getAuthHeaders()
+            });
+            if (countResponse.ok) {
+                const data = await countResponse.json();
+                if (data.count <= 1) {
+                    showToast('Cannot disable the last active administrator', 'danger');
+                    return;
+                }
+            }
+        }
+
+        // Toggle the status
+        activeField.value = newStatus ? 'true' : 'false';
+
+        // Update toggle button text
+        const toggleText = document.getElementById('user-toggle-text');
+        if (toggleText) {
+            toggleText.textContent = newStatus ? 'Disable' : 'Enable';
+        }
+
+        // Close the menu
+        const menu = document.getElementById('user-options-menu');
+        if (menu) {
+            menu.classList.add('hidden');
+        }
+
+        showToast(newStatus ? 'User will be enabled' : 'User will be disabled', 'info');
+    } catch (error) {
+        showToast('Error toggling user status: ' + error.message, 'danger');
+    }
+}
+
+// Open change username modal
+function openChangeUsernameModal() {
+    const userId = document.getElementById('edit-user-id').value;
+    const currentUsername = document.getElementById('edit-username').value;
+
+    document.getElementById('change-username-user-id').value = userId;
+    document.getElementById('current-username-display').value = currentUsername;
+    document.getElementById('new-username-input').value = '';
+
+    document.getElementById('changeUsernameModal').classList.remove('hidden');
+    queueLucideRender();
+}
+
+// Close change username modal
+function closeChangeUsernameModal() {
+    document.getElementById('changeUsernameModal').classList.add('hidden');
+    document.getElementById('change-username-user-id').value = '';
+    document.getElementById('current-username-display').value = '';
+    document.getElementById('new-username-input').value = '';
+}
+
+// Validate username format on client side
+function validateUsernameFormat(username) {
+    if (!username || username.trim().length === 0) {
+        return 'Username cannot be empty';
+    }
+
+    const trimmedUsername = username.trim();
+
+    // Check length
+    if (trimmedUsername.length < 3) {
+        return 'Username must be at least 3 characters long';
+    }
+
+    if (trimmedUsername.length > 50) {
+        return 'Username cannot exceed 50 characters';
+    }
+
+    // Check format: allow alphanumeric, underscores, hyphens, dots, @ symbol (for email addresses)
+    if (!/^[a-zA-Z0-9._@-]+$/.test(trimmedUsername)) {
+        return 'Username can only contain letters, numbers, underscores, hyphens, dots, and @ symbols';
+    }
+
+    // If contains @, validate as email format
+    if (trimmedUsername.includes('@')) {
+        // Basic email validation
+        const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(trimmedUsername)) {
+            return 'Invalid email address format';
+        }
+    } else {
+        // For non-email usernames, apply the original rules
+        // Cannot start or end with dots, underscores, or hyphens
+        if (/^[._-]|[._-]$/.test(trimmedUsername)) {
+            return 'Username cannot start or end with dots, underscores, or hyphens';
+        }
+
+        // Cannot have consecutive dots
+        if (trimmedUsername.includes('..')) {
+            return 'Username cannot contain consecutive dots';
+        }
+    }
+
+    return null; // Valid
+}
+
+// Change username
+async function changeUsername() {
+    const userId = parseInt(document.getElementById('change-username-user-id').value);
+    const newUsername = document.getElementById('new-username-input').value.trim();
+
+    // Client-side validation
+    const validationError = validateUsernameFormat(newUsername);
+    if (validationError) {
+        showToast(validationError, 'danger');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${window.location.origin}/api/admin/users/${userId}/username`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ newUsername })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to change username');
+        }
+
+        const result = await response.json();
+
+        // Update the username in the edit modal
+        document.getElementById('edit-username').value = newUsername;
+
+        closeChangeUsernameModal();
+        clearApiCache('/api/admin/users');  // Invalidate cache after mutation
+        loadUsers();
+
+        // If user changed their own username, update localStorage and token
+        if (result.requiresTokenRefresh && result.newToken) {
+            // Update localStorage
+            localStorage.setItem('reef_username', newUsername);
+            localStorage.setItem('reef_token', result.newToken);
+
+            showToast('Username changed successfully. Your session has been updated.', 'success');
+
+            // Optionally reload the page to ensure all UI updates
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showToast('Username changed successfully', 'success');
+        }
+    } catch (error) {
+        showToast('Error: ' + error.message, 'danger');
+    }
+}
+
 // Update user from edit modal
 async function updateUser() {
     const userId = parseInt(document.getElementById('edit-user-id').value);
     const role = document.getElementById('edit-role').value;
-    const isActive = document.getElementById('edit-is-active').checked;
+    const activeField = document.getElementById('edit-is-active');
+    const isActive = activeField ? activeField.value === 'true' : true;
     const password = document.getElementById('edit-password').value.trim();
     const passwordConfirm = document.getElementById('edit-password-confirm').value.trim();
 
@@ -228,9 +422,13 @@ async function updateUser() {
         }
     }
 
+    const displayNameField = document.getElementById('edit-display-name');
+    const displayName = displayNameField ? displayNameField.value.trim() : '';
+
     const payload = {
         role: role,
-        isActive: isActive
+        isActive: isActive,
+        displayName: displayName || null
     };
 
     // Only include password if provided
@@ -248,6 +446,24 @@ async function updateUser() {
         if (!response.ok) {
             const error = await response.json();
             throw new Error(error.error || 'Failed to update user');
+        }
+
+        // If user updated their own display name, update localStorage and sidebar
+        const currentUsername = localStorage.getItem('reef_username');
+        const users = await (await fetch(`${window.location.origin}/api/admin/users`, {
+            headers: getAuthHeaders()
+        })).json();
+        const updatedUser = users.find(u => u.id === userId);
+        
+        if (updatedUser && updatedUser.username === currentUsername) {
+            // User edited themselves, update localStorage
+            if (displayName) {
+                localStorage.setItem('reef_display_name', displayName);
+            } else {
+                localStorage.removeItem('reef_display_name');
+            }
+            // Update sidebar immediately
+            setUserSidebarInfo();
         }
 
         closeEditUserModal();

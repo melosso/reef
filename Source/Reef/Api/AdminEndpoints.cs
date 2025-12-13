@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
+using Reef.Core.Security;
 using Reef.Core.Destinations;
 using Serilog;
 using System.Security.Claims;
@@ -25,6 +26,8 @@ public static class AdminEndpoints
         group.MapGet("/users", GetUsers);
         group.MapPost("/users", CreateUser);
         group.MapPut("/users/{id:int}", UpdateUser);
+        group.MapPut("/users/{id:int}/username", ChangeUsername);
+        group.MapGet("/users/count-active-admins", CountActiveAdmins);
         group.MapDelete("/users/{id:int}", DeleteUser);
         group.MapGet("/api-keys", GetApiKeys);
         group.MapPost("/api-keys", CreateApiKey);
@@ -791,6 +794,7 @@ public static class AdminEndpoints
                 u.Username,
                 u.Role,
                 u.IsActive,
+                u.DisplayName,
                 u.CreatedAt,
                 u.LastLoginAt
             });
@@ -916,6 +920,7 @@ public static class AdminEndpoints
             // Update user
             existingUser.Role = request.Role;
             existingUser.IsActive = request.IsActive;
+            existingUser.DisplayName = request.DisplayName;
 
             var success = await service.UpdateUserAsync(existingUser, request.Password);
 
@@ -947,6 +952,133 @@ public static class AdminEndpoints
     }
 
     /// <summary>
+    /// PUT /api/admin/users/{id}/username - Change username
+    /// Body: { "newUsername": "newname" }
+    /// Returns new JWT token if user changes their own username
+    /// </summary>
+    private static async Task<IResult> ChangeUsername(
+        int id,
+        HttpContext context,
+        [FromBody] ChangeUsernameRequest request,
+        [FromServices] AdminService service,
+        [FromServices] AuditService auditService,
+        [FromServices] JwtTokenService jwtService)
+    {
+        try
+        {
+            if (!IsAdmin(context))
+            {
+                Log.Warning("Non-admin user {User} attempted to change username",
+                    context.User.Identity?.Name ?? "Unknown");
+                return Results.Forbid();
+            }
+
+            // Validate input
+            if (string.IsNullOrWhiteSpace(request.NewUsername))
+            {
+                return Results.BadRequest(new { error = "New username is required" });
+            }
+
+            // Get existing user
+            var users = await service.GetUsersAsync();
+            var existingUser = users.FirstOrDefault(u => u.Id == id);
+            if (existingUser == null)
+            {
+                return Results.NotFound(new { error = "User not found" });
+            }
+
+            // Get current admin's username and ID
+            var currentUsername = context.User.Identity?.Name;
+            var currentUserIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var currentUserId = int.TryParse(currentUserIdClaim, out var uid) ? uid : (int?)null;
+            var currentUser = users.FirstOrDefault(u => u.Username.Equals(currentUsername, StringComparison.OrdinalIgnoreCase));
+
+            // Admins cannot modify other admin accounts' usernames
+            if (existingUser.Role == "Admin" && currentUser?.Id != existingUser.Id)
+            {
+                return Results.BadRequest(new { error = "Admins cannot change usernames of other admin accounts" });
+            }
+
+            var oldUsername = existingUser.Username;
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString();
+
+            var success = await service.ChangeUsernameAsync(
+                id,
+                request.NewUsername,
+                currentUsername ?? "System",
+                currentUserId,
+                ipAddress);
+
+            if (success)
+            {
+                var performedBy = currentUsername ?? "Unknown";
+                var changes = System.Text.Json.JsonSerializer.Serialize(new {
+                    OldUsername = oldUsername,
+                    NewUsername = request.NewUsername
+                });
+                await auditService.LogAsync("User", id, "UsernameChanged", performedBy, changes, context);
+
+                // If user changed their own username, return a new JWT token
+                var isCurrentUser = existingUser.Id == currentUser?.Id;
+                if (isCurrentUser)
+                {
+                    var newToken = jwtService.GenerateToken(request.NewUsername, existingUser.Role, existingUser.Id);
+
+                    Log.Information("User {OldUsername} changed their own username to {NewUsername}, new token generated",
+                        oldUsername, request.NewUsername);
+
+                    return Results.Ok(new
+                    {
+                        message = "Username changed successfully",
+                        newToken = newToken,
+                        requiresTokenRefresh = true
+                    });
+                }
+
+                return Results.Ok(new { message = "Username changed successfully" });
+            }
+
+            return Results.Problem("Failed to change username");
+        }
+        catch (InvalidOperationException ex)
+        {
+            Log.Warning(ex, "Invalid username change request");
+            return Results.BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error changing username for user {Id}", id);
+            return Results.Problem("Error changing username");
+        }
+    }
+
+    /// <summary>
+    /// GET /api/admin/users/count-active-admins - Count active administrators
+    /// </summary>
+    private static async Task<IResult> CountActiveAdmins(
+        HttpContext context,
+        [FromServices] AdminService service)
+    {
+        try
+        {
+            if (!IsAdmin(context))
+            {
+                Log.Warning("Non-admin user {User} attempted to count active admins",
+                    context.User.Identity?.Name ?? "Unknown");
+                return Results.Forbid();
+            }
+
+            var count = await service.CountActiveAdministratorsAsync();
+            return Results.Ok(new { count });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error counting active administrators");
+            return Results.Problem("Error counting active administrators");
+        }
+    }
+
+    /// <summary>
     /// DELETE /api/admin/users/{id} - Delete user
     /// </summary>
     private static async Task<IResult> DeleteUser(
@@ -959,13 +1091,13 @@ public static class AdminEndpoints
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to delete user", 
+                Log.Warning("Non-admin user {User} attempted to delete user",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
 
-            // Prevent self-deletion and deletion of other admins
-            var currentUsername = context.User.Identity?.Name;
+            // Prevent self-deletion
+            var currentUsername = context.User.Identity?.Name ?? "Unknown";
             var users = await service.GetUsersAsync();
             var userToDelete = users.FirstOrDefault(u => u.Id == id);
 
@@ -974,19 +1106,14 @@ public static class AdminEndpoints
                 return Results.BadRequest(new { error = "Cannot delete your own user account" });
             }
 
-            // Admins cannot delete other admin accounts
-            if (userToDelete?.Role == "Admin")
-            {
-                return Results.BadRequest(new { error = "Admins cannot delete other admin accounts" });
-            }
-
-            var success = await service.DeleteUserAsync(id);
+            // Soft delete the user (pass current username as deletedBy)
+            var success = await service.DeleteUserAsync(id, currentUsername);
 
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("User", id, "Deleted", username, null, context);
-                
+
                 return Results.Ok(new { message = "User deleted successfully" });
             }
 
@@ -1398,6 +1525,7 @@ public record UpdateUserRequest
     public required string Role { get; init; }
     public bool IsActive { get; init; }
     public string? Password { get; init; }
+    public string? DisplayName { get; init; }
 }
 
 /// <summary>
@@ -1424,4 +1552,12 @@ public record DangerConfirmationRequest
 public record RetentionRequest
 {
     public required int RetentionDays { get; init; }
+}
+
+/// <summary>
+/// Request model for changing username
+/// </summary>
+public record ChangeUsernameRequest
+{
+    public required string NewUsername { get; init; }
 }

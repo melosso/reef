@@ -1286,6 +1286,16 @@ public class DatabaseInitializer
         // Add NewEmailApproval notification template if it doesn't exist
         await AddEmailApprovalNotificationTemplateAsync(connection);
 
+        // Username change tracking and User ID foreign keys
+        await CreateUsernameHistoryTableAsync(connection);
+        await MigrateCreatedByToUserIdsAsync(connection);
+        await AddColumnIfNotExistsAsync(connection, "Users", "DisplayName", "TEXT NULL");
+
+        // Add soft delete columns to Users table
+        await AddColumnIfNotExistsAsync(connection, "Users", "IsDeleted", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "Users", "DeletedAt", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "Users", "DeletedBy", "TEXT NULL");
+
         // Legacy migrations removed: All columns are now defined in base table schemas
         // since there are no production customers yet. All new installations start with the complete schema.
         //
@@ -1293,6 +1303,125 @@ public class DatabaseInitializer
         // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
 
         Log.Debug("Database schema migrations completed");
+    }
+
+    /// <summary>
+    /// Create UsernameHistory table for tracking username changes
+    /// </summary>
+    private async Task CreateUsernameHistoryTableAsync(SqliteConnection connection)
+    {
+        var tableExists = await connection.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='UsernameHistory'");
+
+        if (tableExists == 0)
+        {
+            Log.Debug("Creating UsernameHistory table...");
+
+            const string createTableSql = @"
+                CREATE TABLE UsernameHistory (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    UserId INTEGER NOT NULL,
+                    OldUsername TEXT NOT NULL,
+                    NewUsername TEXT NOT NULL,
+                    ChangedAt TEXT NOT NULL,
+                    ChangedBy TEXT NOT NULL,
+                    ChangedByUserId INTEGER NULL,
+                    IpAddress TEXT NULL,
+                    Reason TEXT NULL,
+                    FOREIGN KEY (UserId) REFERENCES Users(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ChangedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+                )
+            ";
+
+            await connection.ExecuteAsync(createTableSql);
+
+            // Create indexes for performance
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_UserId ON UsernameHistory(UserId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_ChangedAt ON UsernameHistory(ChangedAt DESC)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_OldUsername ON UsernameHistory(OldUsername)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_NewUsername ON UsernameHistory(NewUsername)");
+
+            Log.Debug("✓ Created UsernameHistory table");
+        }
+    }
+
+    /// <summary>
+    /// Migrate CreatedBy columns from username strings to User IDs
+    /// This converts existing string values to integer IDs in-place
+    /// Note: AuditLog.PerformedBy remains a string (username) as it's a historical record
+    /// </summary>
+    private async Task MigrateCreatedByToUserIdsAsync(SqliteConnection connection)
+    {
+        Log.Debug("Migrating CreatedBy columns from usernames to User IDs...");
+
+        // Check if CreatedBy in Connections contains text data (needs migration)
+        var connectionsNeedsMigration = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(*) FROM Connections
+            WHERE CreatedBy IS NOT NULL
+            AND typeof(CreatedBy) = 'text'
+            AND CAST(CreatedBy AS INTEGER) = 0
+        ");
+
+        if (connectionsNeedsMigration > 0)
+        {
+            Log.Information("Migrating {Count} Connections.CreatedBy records from usernames to User IDs", connectionsNeedsMigration);
+
+            // Convert username strings to User IDs for Connections
+            await connection.ExecuteAsync(@"
+                UPDATE Connections
+                SET CreatedBy = (SELECT Id FROM Users WHERE LOWER(Users.Username) = LOWER(Connections.CreatedBy))
+                WHERE CreatedBy IS NOT NULL
+                AND typeof(CreatedBy) = 'text'
+                AND (SELECT Id FROM Users WHERE LOWER(Users.Username) = LOWER(Connections.CreatedBy)) IS NOT NULL
+            ");
+
+            // Clear CreatedBy for records where user no longer exists
+            await connection.ExecuteAsync(@"
+                UPDATE Connections
+                SET CreatedBy = NULL
+                WHERE CreatedBy IS NOT NULL
+                AND typeof(CreatedBy) = 'text'
+            ");
+
+            Log.Debug("✓ Migrated Connections.CreatedBy to User IDs");
+        }
+
+        // Check if CreatedBy in Profiles contains text data (needs migration)
+        var profilesNeedsMigration = await connection.ExecuteScalarAsync<int>(@"
+            SELECT COUNT(*) FROM Profiles
+            WHERE CreatedBy IS NOT NULL
+            AND typeof(CreatedBy) = 'text'
+            AND CAST(CreatedBy AS INTEGER) = 0
+        ");
+
+        if (profilesNeedsMigration > 0)
+        {
+            Log.Information("Migrating {Count} Profiles.CreatedBy records from usernames to User IDs", profilesNeedsMigration);
+
+            // Convert username strings to User IDs for Profiles
+            await connection.ExecuteAsync(@"
+                UPDATE Profiles
+                SET CreatedBy = (SELECT Id FROM Users WHERE LOWER(Users.Username) = LOWER(Profiles.CreatedBy))
+                WHERE CreatedBy IS NOT NULL
+                AND typeof(CreatedBy) = 'text'
+                AND (SELECT Id FROM Users WHERE LOWER(Users.Username) = LOWER(Profiles.CreatedBy)) IS NOT NULL
+            ");
+
+            // Clear CreatedBy for records where user no longer exists
+            await connection.ExecuteAsync(@"
+                UPDATE Profiles
+                SET CreatedBy = NULL
+                WHERE CreatedBy IS NOT NULL
+                AND typeof(CreatedBy) = 'text'
+            ");
+
+            Log.Debug("✓ Migrated Profiles.CreatedBy to User IDs");
+        }
+
+        // Note: AuditLog.PerformedBy remains as string (username) intentionally
+        // Audit logs are historical records and should preserve the username used at the time
+
+        Log.Debug("✓ Migrated CreatedBy columns to User IDs");
     }
 
     /// <summary>

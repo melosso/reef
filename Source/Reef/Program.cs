@@ -155,7 +155,7 @@ public class Program
             // Initialize database (run before building the app)
             var dbInitializer = new DatabaseInitializer(connectionString, encryptionService);
             await dbInitializer.InitializeAsync();
-            await dbInitializer.SeedSampleDataAsync(); // Optional
+            await dbInitializer.SeedSampleDataAsync();
 
             // Seed default email templates
             Log.Debug("Seeding default email templates...");

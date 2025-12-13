@@ -8,12 +8,16 @@ public class User
     public int Id { get; set; }
     public required string Username { get; set; }
     public required string PasswordHash { get; set; }
+    public string? DisplayName { get; set; }
     public string Role { get; set; } = "User";
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
     public DateTime? LastSeenAt { get; set; }
     public bool PasswordChangeRequired { get; set; } = false;
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? DeletedAt { get; set; }
+    public string? DeletedBy { get; set; }
 }
 
 /// <summary>
@@ -59,7 +63,7 @@ public class Connection
     public required string Hash { get; set; } // SHA256 for tamper detection
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public string? CreatedBy { get; set; }
+    public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
     public DateTime? LastTestedAt { get; set; }
     public string? LastTestResult { get; set; }
 }
@@ -84,19 +88,19 @@ public class Profile
     public int? OutputDestinationId { get; set; } // FK to Destinations table (optional)
     public int? TemplateId { get; set; } // FK to QueryTemplates table (optional - for custom transformations)
     public string? TransformationOptionsJson { get; set; } // JSON options for SQL Server native transformations (ForJsonOptions, ForXmlOptions)
-    
+
     // Pre-Processing Configuration
     public string? PreProcessType { get; set; } // null, Query, StoredProcedure
     public string? PreProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
     public bool PreProcessRollbackOnFailure { get; set; } = true; // Rollback pre-processing if main query fails
-    
+
     // Post-Processing Configuration (enhanced existing)
     public string? PostProcessType { get; set; } // null, Query, StoredProcedure, Webhook
     public string? PostProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
     public bool PostProcessSkipOnFailure { get; set; } = true; // Skip post-processing if main query fails
     public bool PostProcessRollbackOnFailure { get; set; } = false; // Rollback post-processing on its own failure
     public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
-    
+
     public string? NotificationConfig { get; set; } // JSON configuration
 
     // Email Export Configuration
@@ -123,7 +127,7 @@ public class Profile
     public required string Hash { get; set; } // SHA256 for tamper detection
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public string? CreatedBy { get; set; }
+    public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
     public DateTime? LastExecutedAt { get; set; }
     
     // Delta Sync Configuration - Basic
@@ -261,7 +265,7 @@ public class AuditLog
     public required string EntityType { get; set; } // Connection, Profile, User, etc.
     public int EntityId { get; set; }
     public required string Action { get; set; } // Created, Updated, Deleted, Executed
-    public required string PerformedBy { get; set; }
+    public required string PerformedBy { get; set; } // Username string at time of action (historical record)
     public string? Changes { get; set; } // JSON diff
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string? IpAddress { get; set; }
@@ -758,4 +762,20 @@ public class NotificationEmailTemplate
     /// </summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Username change history for audit trail and reference tracking
+/// </summary>
+public class UsernameHistory
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public required string OldUsername { get; set; }
+    public required string NewUsername { get; set; }
+    public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+    public required string ChangedBy { get; set; } // Username of admin who made the change
+    public int? ChangedByUserId { get; set; } // FK to Users table
+    public string? IpAddress { get; set; }
+    public string? Reason { get; set; } // Optional reason for the change
 }

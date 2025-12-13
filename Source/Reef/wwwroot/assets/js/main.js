@@ -219,10 +219,15 @@ window.clearApiCache = function(pattern) {
 // -----------------------------
 function setUserSidebarInfo() {
     const username = safeGetItem('reef_username') || ' ';
+    const displayName = safeGetItem('reef_display_name');
     const usernameDisplay = document.getElementById('username-display');
     const userInitial = document.getElementById('user-initial');
-    if (usernameDisplay) usernameDisplay.textContent = username.charAt(0).toUpperCase() + username.slice(1);
-    if (userInitial) userInitial.textContent = username[0].toUpperCase();
+    
+    // Use display name if available, otherwise use username
+    const nameToDisplay = displayName || username;
+    
+    if (usernameDisplay) usernameDisplay.textContent = nameToDisplay.charAt(0).toUpperCase() + nameToDisplay.slice(1);
+    if (userInitial) userInitial.textContent = nameToDisplay[0].toUpperCase();
 }
 
 // -----------------------------

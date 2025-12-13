@@ -55,6 +55,11 @@ async function refreshToken() {
                 localStorage.setItem('reef_token', data.token);
                 localStorage.setItem('reef_username', data.username);
                 localStorage.setItem('reef_role', data.role);
+                if (data.displayName) {
+                    localStorage.setItem('reef_display_name', data.displayName);
+                } else {
+                    localStorage.removeItem('reef_display_name');
+                }
                 authCache = { token: data.token, valid: true };
                 return data.token;
             }
@@ -151,6 +156,7 @@ function clearAuth() {
     localStorage.removeItem('reef_token');
     localStorage.removeItem('reef_username');
     localStorage.removeItem('reef_role');
+    localStorage.removeItem('reef_display_name');
     authCache = { token: null, valid: false };
 }
 

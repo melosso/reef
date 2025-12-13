@@ -47,7 +47,7 @@ public static class AuthEndpoints
             var normalizedUsername = request.Username.ToLowerInvariant();
 
             // Find user by username (case-insensitive via COLLATE NOCASE)
-            const string sql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1";
+            const string sql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
             var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new { Username = normalizedUsername });
 
             if (user == null)
@@ -90,6 +90,7 @@ public static class AuthEndpoints
                 Token = token,
                 Username = user.Username,
                 Role = user.Role,
+                DisplayName = user.DisplayName,
                 ExpiresAt = expiresAt
             });
         }
@@ -106,38 +107,47 @@ public static class AuthEndpoints
     /// </summary>
     private static async Task<IResult> RefreshToken(
         HttpContext httpContext,
-        [FromServices] JwtTokenService jwtService)
+        [FromServices] JwtTokenService jwtService,
+        [FromServices] DatabaseConfig dbConfig)
     {
-        return await Task.Run(() =>
+        try
         {
+            var username = httpContext.User.Identity?.Name;
+            var role = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
+            var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "userId" || c.Type == "sub")?.Value;
+
+            if (username == null || role == null || !int.TryParse(userIdClaim, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            // Get user to fetch displayName
+            string? displayName = null;
             try
             {
-                var username = httpContext.User.Identity?.Name;
-                var role = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
-                var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "userId" || c.Type == "sub")?.Value;
-
-                if (username == null || role == null || !int.TryParse(userIdClaim, out var userId))
-                {
-                    return Results.Unauthorized();
-                }
-
-                var newToken = jwtService.GenerateToken(username, role, userId);
-                var expiresAt = DateTime.UtcNow.AddMinutes(60);
-
-                return Results.Ok(new
-                {
-                    token = newToken,
-                    username,
-                    role,
-                    expiresAt
-                });
+                using var connection = new SqliteConnection(dbConfig.ConnectionString);
+                const string sql = "SELECT DisplayName FROM Users WHERE Id = @UserId";
+                displayName = await connection.QueryFirstOrDefaultAsync<string>(sql, new { UserId = userId });
             }
-            catch (Exception ex)
+            catch { /* Ignore - displayName is optional */ }
+
+            var newToken = jwtService.GenerateToken(username, role, userId);
+            var expiresAt = DateTime.UtcNow.AddMinutes(60);
+
+            return Results.Ok(new
             {
-                Log.Error(ex, "Error during token refresh");
-                return Results.Problem("An error occurred during token refresh");
-            }
-        });
+                token = newToken,
+                username,
+                role,
+                displayName,
+                expiresAt
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during token refresh");
+            return Results.Problem("An error occurred during token refresh");
+        }
     }
 
     /// <summary>
@@ -170,7 +180,7 @@ public static class AuthEndpoints
             await using var connection = new SqliteConnection(dbConfig.ConnectionString);
             await connection.OpenAsync();
 
-            const string sql = "SELECT PasswordChangeRequired FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1";
+            const string sql = "SELECT PasswordChangeRequired FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
             var passwordChangeRequired = await connection.QueryFirstOrDefaultAsync<bool?>(
                 sql,
                 new { Username = username.ToLowerInvariant() });
@@ -214,7 +224,7 @@ public static class AuthEndpoints
             await connection.OpenAsync();
 
             // Get user from database
-            const string getUserSql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1";
+            const string getUserSql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
             var user = await connection.QueryFirstOrDefaultAsync<User>(getUserSql, new { Username = username.ToLowerInvariant() });
 
             if (user == null)
@@ -294,4 +304,13 @@ public class ChangePasswordRequest
 {
     public required string CurrentPassword { get; set; }
     public required string NewPassword { get; set; }
+}
+
+public class LoginResponse
+{
+    public required string Token { get; set; }
+    public required string Username { get; set; }
+    public required string Role { get; set; }
+    public string? DisplayName { get; set; }
+    public DateTime ExpiresAt { get; set; }
 }

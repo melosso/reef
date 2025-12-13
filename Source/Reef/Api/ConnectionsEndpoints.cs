@@ -59,10 +59,13 @@ public static class ConnectionsEndpoints
         try
         {
             var username = context.User.Identity?.Name ?? "Unknown";
-            var id = await service.CreateAsync(connection, username);
-            
+            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
+
+            var id = await service.CreateAsync(connection, userId);
+
             await auditService.LogAsync("Connection", id, "Created", username, null, null);
-            
+
             return Results.Created($"/api/connections/{id}", new { id });
         }
         catch (Exception ex)
