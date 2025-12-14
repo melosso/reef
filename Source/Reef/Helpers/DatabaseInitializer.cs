@@ -53,7 +53,6 @@ public class DatabaseInitializer
 
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
-        await SeedNotificationEmailTemplatesAsync(connection);
 
         // Email Approval Workflow Table
         await CreatePendingEmailApprovalsTableAsync(connection);
@@ -63,6 +62,9 @@ public class DatabaseInitializer
 
         // Apply schema migrations for existing databases
         await ApplyMigrationsAsync(connection);
+
+        // Seed notification templates AFTER migrations to ensure all columns exist
+        await SeedNotificationEmailTemplatesAsync(connection);
 
         // Create default admin user if not exists
         await CreateDefaultUser(connection);
