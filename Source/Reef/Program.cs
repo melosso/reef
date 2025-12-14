@@ -157,11 +157,6 @@ public class Program
             await dbInitializer.InitializeAsync();
             await dbInitializer.SeedSampleDataAsync();
 
-            // Seed default email templates
-            Log.Debug("Seeding default email templates...");
-            var templateService = new NotificationTemplateService(connectionString);
-            await templateService.SeedDefaultTemplatesAsync();
-
             // Run Jobs migration to fix any corrupted NextRunTime values
             Log.Debug("Running Jobs database migration...");
             var jobsMigration = new JobsMigration(connectionString);
