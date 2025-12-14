@@ -1365,9 +1365,6 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnNewEmailApproval", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NewEmailApprovalCooldownHours", "INTEGER NOT NULL DEFAULT 24");
 
-        // Add NewEmailApproval notification template if it doesn't exist
-        await AddEmailApprovalNotificationTemplateAsync(connection);
-
         // Username change tracking and User ID foreign keys
         await CreateUsernameHistoryTableAsync(connection);
         await MigrateCreatedByToUserIdsAsync(connection);
