@@ -251,12 +251,18 @@
                                         <i id="sort-icon-status" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
                                     </div>
                                 </th>
+                                <th onclick="sortProfiles('lastrun')" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none">
+                                    <div class="flex items-center">
+                                        <span>Last Run</span>
+                                        <i id="sort-icon-lastrun" data-lucide="chevrons-up-down" class="h-4 w-4 ml-1"></i>
+                                    </div>
+                                </th>
                                 <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="profiles-tbody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                <td colspan="8" class="px-6 py-4 text-center text-gray-500">
                                     <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
                                     Loading profiles...
                                 </td>
@@ -1559,7 +1565,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             localStorage.setItem('profiles_sortDirection', currentSortDirection);
 
             // Update sort icons
-            ['name', 'connection', 'group', 'format', 'destination', 'status'].forEach(col => {
+            ['name', 'connection', 'group', 'format', 'destination', 'status', 'lastrun'].forEach(col => {
                 const icon = document.getElementById(`sort-icon-${col}`);
                 if (icon) {
                     if (col === column) {
@@ -1604,6 +1610,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     case 'status':
                         aVal = a.isEnabled ? 1 : 0;
                         bVal = b.isEnabled ? 1 : 0;
+                        break;
+                    case 'lastrun':
+                        // Sort by lastExecutedAt, treating null/undefined as oldest (epoch time 0)
+                        aVal = a.lastExecutedAt ? new Date(a.lastExecutedAt).getTime() : 0;
+                        bVal = b.lastExecutedAt ? new Date(b.lastExecutedAt).getTime() : 0;
                         break;
                     default:
                         return 0;
@@ -1963,7 +1974,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             if (filteredProfiles.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                             <i data-lucide="file-code" class="h-12 w-12 mx-auto mb-2 text-gray-300"></i>
                             <p>No profiles found. Create your first profile to get started.</p>
                         </td>
@@ -2023,6 +2034,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             return dest ? escapeHtml(`${dest.name} (${dest.type})`) : 'Unknown';
                         })()}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
+                            ${(() => {
+                                const lastRun = formatDateTime(profile.lastExecutedAt);
+                                const lastRunRelative = formatRelativeTime(profile.lastExecutedAt);
+                                return lastRunRelative || lastRun;
+                            })()}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             ${executeButton}
                             ${testButton}
@@ -4369,6 +4387,52 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function formatDateTime(dateString) {
+            if (!dateString) return 'Never';
+            let date;
+            try {
+                // If already ends with Z or has timezone, don't add Z
+                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+                    date = new Date(dateString);
+                } else {
+                    date = new Date(dateString + 'Z');
+                }
+                if (isNaN(date.getTime())) return 'Never';
+                return date.toLocaleString();
+            } catch {
+                return 'Never';
+            }
+        }
+
+        function formatRelativeTime(dateString) {
+            if (!dateString) return null;
+            let date;
+            try {
+                // If already ends with Z or has timezone, don't add Z
+                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+                    date = new Date(dateString);
+                } else {
+                    date = new Date(dateString + 'Z');
+                }
+                if (isNaN(date.getTime())) return null;
+            } catch {
+                return null;
+            }
+
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins} min${diffMins === 1 ? '' : 's'} ago`;
+            if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
+            if (diffDays < 7) return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
+
+            return null; // Fall back to full date for older dates
         }
 
         let userMenuExpanded = false;
