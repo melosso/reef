@@ -711,6 +711,10 @@ public class NotificationSettings
     public bool NotifyOnNewEmailApproval { get; set; } = false;
     public int NewEmailApprovalCooldownHours { get; set; } = 24; // Default cooldown: once per 24 hours
 
+    // Instance Exposure Configuration (expose external Reef instance in email templates)
+    public bool EnableCTA { get; set; } = false;
+    public string? CTAUrl { get; set; } // External Reef instance URL
+
     // Email Configuration
     public string? RecipientEmails { get; set; } // Comma-separated; can also be overridden in Destination config
 
@@ -756,6 +760,16 @@ public class NotificationEmailTemplate
     /// Whether this is the default template (system-generated)
     /// </summary>
     public bool IsDefault { get; set; } = true;
+
+    /// <summary>
+    /// Call-to-action button text for this template (e.g., "View Execution", "Open Dashboard")
+    /// </summary>
+    public string? CTAButtonText { get; set; }
+
+    /// <summary>
+    /// Optional URL override for this template. If null, uses global CTAUrl from NotificationSettings
+    /// </summary>
+    public string? CTAUrlOverride { get; set; }
 
     /// <summary>
     /// Metadata

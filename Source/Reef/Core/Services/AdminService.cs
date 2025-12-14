@@ -929,6 +929,10 @@ public class AdminService
                         NotifyOnNewUser = @NotifyOnNewUser,
                         NotifyOnNewApiKey = @NotifyOnNewApiKey,
                         NotifyOnNewWebhook = @NotifyOnNewWebhook,
+                        NotifyOnNewEmailApproval = @NotifyOnNewEmailApproval,
+                        NewEmailApprovalCooldownHours = @NewEmailApprovalCooldownHours,
+                        EnableCTA = @EnableCTA,
+                        CTAUrl = @CTAUrl,
                         RecipientEmails = @RecipientEmails,
                         UpdatedAt = @UpdatedAt,
                         Hash = @Hash
@@ -946,6 +950,8 @@ public class AdminService
                         NotifyOnProfileFailure, NotifyOnProfileSuccess,
                         NotifyOnDatabaseSizeThreshold, DatabaseSizeThresholdBytes,
                         NotifyOnNewUser, NotifyOnNewApiKey, NotifyOnNewWebhook,
+                        NotifyOnNewEmailApproval, NewEmailApprovalCooldownHours,
+                        EnableCTA, CTAUrl,
                         RecipientEmails, CreatedAt, UpdatedAt, Hash)
                     VALUES (
                         @IsEnabled, @DestinationId, @DestinationName,
@@ -953,6 +959,8 @@ public class AdminService
                         @NotifyOnProfileFailure, @NotifyOnProfileSuccess,
                         @NotifyOnDatabaseSizeThreshold, @DatabaseSizeThresholdBytes,
                         @NotifyOnNewUser, @NotifyOnNewApiKey, @NotifyOnNewWebhook,
+                        @NotifyOnNewEmailApproval, @NewEmailApprovalCooldownHours,
+                        @EnableCTA, @CTAUrl,
                         @RecipientEmails, @CreatedAt, @UpdatedAt, @Hash)";
 
                 await conn.ExecuteAsync(insertSql, settings);

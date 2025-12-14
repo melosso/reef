@@ -324,72 +324,75 @@ public static class AdminEndpoints
                 UpdatedAt = DateTime.UtcNow,
                 Hash = ""
             };
-
             // Send a test notification (fire and forget)
             _ = Task.Run(async () =>
             {
                 try
                 {
                     var subject = "[Reef] Test Notification";
-                    var body = $@"
-<!DOCTYPE html>
-<html>
+var body = $@"
+<!doctype html>
+<html lang=""en"">
 <head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <style>
-        * {{ margin: 0; padding: 0; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; }}
-        .container {{ max-width: 600px; margin: 0 auto; padding: 10px; }}
-        .card {{ background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        .header {{ background-color: #06b6d4; color: white; padding: 30px 20px; text-align: center; }}
-        .header h2 {{ font-size: 24px; margin: 0; font-weight: 600; }}
-        .content {{ padding: 20px; }}
-        .section {{ margin: 20px 0; }}
-        .detail-row {{ display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; word-break: break-word; }}
-        .detail-row:last-child {{ border-bottom: none; }}
-        .label {{ font-weight: 600; color: #06b6d4; min-width: 140px; padding-right: 15px; }}
-        .value {{ color: #555; flex: 1; word-break: break-all; }}
-        .success-box {{ background-color: #d1fae5; border-left: 5px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 4px; }}
-        .success-box p {{ color: #065f46; margin: 0; }}
-        @media (max-width: 600px) {{
-            .container {{ padding: 5px; }}
-            .content {{ padding: 15px; }}
-            .detail-row {{ flex-direction: column; }}
-            .label {{ min-width: 100%; margin-bottom: 5px; }}
-            .header h2 {{ font-size: 20px; }}
-        }}
-    </style>
+    <meta charset=""utf-8"">
+    <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+    <title>Test Notification</title>
 </head>
-<body>
-    <div class='container'>
-        <div class='card'>
-            <div class='header'>
-                <h2>✓ Test Notification Successful</h2>
-            </div>
-            <div class='content'>
-                <div class='section'>
-                    <div class='detail-row'>
-                        <span class='label'>System:</span>
-                        <span class='value'>Reef Notification System</span>
-                    </div>
-                    <div class='detail-row'>
-                        <span class='label'>Sent At:</span>
-                        <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
-                    </div>
-                    <div class='detail-row'>
-                        <span class='label'>Test Type:</span>
-                        <span class='value'>Email Destination Verification</span>
-                    </div>
-                </div>
-                <div class='success-box'>
-                    <p>✓ Email configuration is working correctly! Your notification system is ready to receive alerts.</p>
-                </div>
-            </div>
-        </div>
-    </div>
+<body style=""margin:0; padding:0; background-color:#f3f4f6;"">
+
+    <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background-color:#f3f4f6;"">
+        <tr>
+            <td align=""center"" style=""padding: 24px;"">
+                <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" style=""background-color:#ffffff; border:1px solid #e5e7eb; border-radius:8px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;"">
+                    
+                    <tr>
+                        <td style=""padding: 24px 24px 0 24px;"">
+                            <div style=""font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;"">
+                                System Notification By <strong>Reef</strong>
+                            </div>
+                            <h1 style=""margin: 8px 0 0 0; font-size: 20px; color: #111827;"">
+                                Test notification successful
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style=""padding: 16px 24px;"">
+                            <p style=""margin: 0; font-size: 14px; line-height: 1.5; color: #374151;"">
+                                Your email notification system is configured correctly and working as expected.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style=""padding: 0 24px 24px 24px;"">
+                            <table role=""presentation"" cellpadding=""8"" cellspacing=""0"" border=""0"" width=""100%"" style=""background-color: #f9fafb; border-radius: 6px; font-size: 13px;"">
+                                <tr>
+                                    <td width=""40%"" style=""color: #6b7280;"">Test Type</td>
+                                    <td width=""60%"" align=""right"" style=""color: #111827; font-weight: 600;"">Email Destination Verification</td>
+                                </tr>
+                                <tr>
+                                    <td width=""40%"" style=""color: #6b7280;"">Sent At</td>
+                                    <td width=""60%"" align=""right"" style=""color: #111827; font-weight: 600;"">{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style=""padding: 0 24px 24px 24px;"">
+                            <p style=""margin: 0; font-size: 13px; color: #059669;"">
+                                Your notification system is ready to send alerts for profile, job, and system events.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
-</html>";
+</html>
+";
 
                     // Decrypt destination config and send
                     var decryptedConfig = destination.ConfigurationJson;
@@ -428,8 +431,28 @@ public static class AdminEndpoints
                     var bodyBuilder = new MimeKit.BodyBuilder { HtmlBody = body };
                     message.Body = bodyBuilder.ToMessageBody();
 
+                    // Detect email provider (with fallback detection for backward compatibility)
+                    string providerType = emailConfig.EmailProvider?.ToLower() ?? "";
+
+                    // If EmailProvider is not set, detect from configuration fields
+                    if (string.IsNullOrEmpty(providerType))
+                    {
+                        if (!string.IsNullOrEmpty(emailConfig.ResendApiKey))
+                        {
+                            providerType = "resend";
+                        }
+                        else if (!string.IsNullOrEmpty(emailConfig.SendGridApiKey))
+                        {
+                            providerType = "sendgrid";
+                        }
+                        else
+                        {
+                            providerType = "smtp";
+                        }
+                    }
+
                     // Send via appropriate provider
-                    IEmailProvider emailProvider = (emailConfig.EmailProvider?.ToLower()) switch
+                    IEmailProvider emailProvider = providerType switch
                     {
                         "resend" => new ResendEmailProvider(),
                         "sendgrid" => new SendGridEmailProvider(),
@@ -1024,7 +1047,7 @@ public static class AdminEndpoints
                 {
                     var newToken = jwtService.GenerateToken(request.NewUsername, existingUser.Role, existingUser.Id);
 
-                    Log.Information("User {OldUsername} changed their own username to {NewUsername}, new token generated",
+                    Log.Debug("User {OldUsername} changed their own username to {NewUsername}, new token generated",
                         oldUsername, request.NewUsername);
 
                     return Results.Ok(new

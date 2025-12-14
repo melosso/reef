@@ -106,7 +106,9 @@ function populateUI(settings) {
             notifyOnNewUser: false,
             notifyOnNewWebhook: false,
             notifyOnNewEmailApproval: false,
-            newEmailApprovalCooldownHours: 24
+            newEmailApprovalCooldownHours: 24,
+            enableCTA: false,
+            ctaUrl: ''
         };
     }
 
@@ -123,6 +125,18 @@ function populateUI(settings) {
     document.getElementById('notify-webhook').checked = settings.notifyOnNewWebhook;
     document.getElementById('notify-email-approval').checked = settings.notifyOnNewEmailApproval;
     document.getElementById('email-approval-cooldown-hours').value = settings.newEmailApprovalCooldownHours || 24;
+
+    // Instance exposure settings
+    document.getElementById('enable-cta').checked = settings.enableCTA || false;
+    document.getElementById('cta-url').value = settings.ctaUrl || '';
+
+    // Show/hide CTA settings based on toggle
+    const ctaSettingsDiv = document.getElementById('cta-settings');
+    if (settings.enableCTA) {
+        ctaSettingsDiv.classList.remove('hidden');
+    } else {
+        ctaSettingsDiv.classList.add('hidden');
+    }
 
     // Convert bytes to MB for display
     const thresholdMb = settings.databaseSizeThresholdBytes ? Math.round(settings.databaseSizeThresholdBytes / (1024 * 1024)) : 1024;
@@ -202,6 +216,8 @@ async function saveNotificationSettings() {
         notifyOnNewWebhook: document.getElementById('notify-webhook').checked,
         notifyOnNewEmailApproval: document.getElementById('notify-email-approval').checked,
         newEmailApprovalCooldownHours: cooldownHours,
+        enableCTA: document.getElementById('enable-cta').checked,
+        ctaUrl: document.getElementById('cta-url').value.trim() || null,
         createdAt: currentNotificationSettings?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         hash: ''
@@ -296,6 +312,24 @@ function toggleDatabaseSizeSettings() {
     const settingsDiv = document.getElementById('database-size-settings');
     if (settingsDiv) {
         settingsDiv.classList.toggle('hidden');
+        // Re-render lucide icons when toggling
+        setTimeout(() => lucide.createIcons(), 50);
+    }
+}
+
+/**
+ * Toggle CTA settings visibility
+ */
+function toggleCTASettings() {
+    const checkbox = document.getElementById('enable-cta');
+    const settingsDiv = document.getElementById('cta-settings');
+
+    if (settingsDiv) {
+        if (checkbox.checked) {
+            settingsDiv.classList.remove('hidden');
+        } else {
+            settingsDiv.classList.add('hidden');
+        }
         // Re-render lucide icons when toggling
         setTimeout(() => lucide.createIcons(), 50);
     }

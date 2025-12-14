@@ -50,6 +50,8 @@ async function loadTemplate() {
         // Populate form fields
         document.getElementById('template-subject').value = currentTemplate.subject || '';
         document.getElementById('template-body').value = currentTemplate.htmlBody || '';
+        document.getElementById('template-cta-button-text').value = currentTemplate.ctaButtonText || '';
+        document.getElementById('template-cta-url-override').value = currentTemplate.ctaUrlOverride || '';
 
         // Show editor, hide empty state
         document.getElementById('template-editor').classList.remove('hidden');
@@ -111,6 +113,8 @@ async function saveTemplate() {
 
     const subject = document.getElementById('template-subject').value.trim();
     const htmlBody = document.getElementById('template-body').value.trim();
+    const ctaButtonText = document.getElementById('template-cta-button-text').value.trim();
+    const ctaUrlOverride = document.getElementById('template-cta-url-override').value.trim();
 
     if (!subject) {
         showToast('Subject is required', 'warning');
@@ -126,6 +130,8 @@ async function saveTemplate() {
         templateType: currentTemplateType,
         subject: subject,
         htmlBody: htmlBody,
+        ctaButtonText: ctaButtonText || null,
+        ctaUrlOverride: ctaUrlOverride || null,
         isDefault: currentTemplate?.isDefault || false
     };
 
@@ -193,6 +199,8 @@ async function resetTemplateToDefault() {
         currentTemplate = template;
         document.getElementById('template-subject').value = template.subject || '';
         document.getElementById('template-body').value = template.htmlBody || '';
+        document.getElementById('template-cta-button-text').value = template.ctaButtonText || '';
+        document.getElementById('template-cta-url-override').value = template.ctaUrlOverride || '';
 
         showToast('Template reset to default successfully', 'success');
     } catch (error) {

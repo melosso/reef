@@ -30,7 +30,7 @@ public class NotificationTemplateService
             await connection.OpenAsync();
 
             const string sql = @"
-                SELECT Id, TemplateType, Subject, HtmlBody, IsDefault, CreatedAt, UpdatedAt
+                SELECT Id, TemplateType, Subject, HtmlBody, IsDefault, CTAButtonText, CTAUrlOverride, CreatedAt, UpdatedAt
                 FROM NotificationEmailTemplate
                 ORDER BY TemplateType";
 
@@ -55,7 +55,7 @@ public class NotificationTemplateService
             await connection.OpenAsync();
 
             const string sql = @"
-                SELECT Id, TemplateType, Subject, HtmlBody, IsDefault, CreatedAt, UpdatedAt
+                SELECT Id, TemplateType, Subject, HtmlBody, IsDefault, CTAButtonText, CTAUrlOverride, CreatedAt, UpdatedAt
                 FROM NotificationEmailTemplate
                 WHERE TemplateType = @TemplateType";
 
@@ -119,7 +119,8 @@ public class NotificationTemplateService
 
             const string sql = @"
                 UPDATE NotificationEmailTemplate
-                SET Subject = @Subject, HtmlBody = @HtmlBody, IsDefault = @IsDefault, UpdatedAt = @UpdatedAt
+                SET Subject = @Subject, HtmlBody = @HtmlBody, IsDefault = @IsDefault,
+                    CTAButtonText = @CTAButtonText, CTAUrlOverride = @CTAUrlOverride, UpdatedAt = @UpdatedAt
                 WHERE TemplateType = @TemplateType";
 
             var rowsAffected = await connection.ExecuteAsync(sql, new
@@ -128,6 +129,8 @@ public class NotificationTemplateService
                 template.Subject,
                 template.HtmlBody,
                 template.IsDefault,
+                template.CTAButtonText,
+                template.CTAUrlOverride,
                 template.UpdatedAt
             });
 

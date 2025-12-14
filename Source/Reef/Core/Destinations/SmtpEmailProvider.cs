@@ -35,15 +35,18 @@ public class SmtpEmailProvider : IEmailProvider
     {
         try
         {
+            // Get SMTP host (check both SmtpHost and SmtpServer for backward compatibility)
+            var smtpHost = !string.IsNullOrEmpty(config.SmtpHost) ? config.SmtpHost : config.SmtpServer;
+
             // Validate SMTP configuration
-            if (string.IsNullOrEmpty(config.SmtpHost))
+            if (string.IsNullOrEmpty(smtpHost))
             {
                 return (false, null, "SMTP host is required");
             }
 
             var maskedRecipients = string.Join(", ", config.ToAddresses.Select(MaskEmailForLog));
             Log.Information("Sending email via SMTP to {Recipients} using {SmtpHost}:{SmtpPort}",
-                maskedRecipients, config.SmtpHost, config.SmtpPort);
+                maskedRecipients, smtpHost, config.SmtpPort);
 
             using var client = new SmtpClient();
 
@@ -55,12 +58,16 @@ public class SmtpEmailProvider : IEmailProvider
 
             // Connect to SMTP server with security mode from configuration
             var secureSocketOptions = GetSecureSocketOptions(config.SecurityMode);
-            await client.ConnectAsync(config.SmtpHost, config.SmtpPort, secureSocketOptions);
+            await client.ConnectAsync(smtpHost, config.SmtpPort, secureSocketOptions);
+
+            // Get username and password (check both SmtpUsername/Username and SmtpPassword/Password for backward compatibility)
+            var username = !string.IsNullOrEmpty(config.SmtpUsername) ? config.SmtpUsername : config.Username;
+            var password = !string.IsNullOrEmpty(config.SmtpPassword) ? config.SmtpPassword : config.Password;
 
             // Authenticate if credentials provided
-            if (!string.IsNullOrEmpty(config.Username))
+            if (!string.IsNullOrEmpty(username))
             {
-                await client.AuthenticateAsync(config.Username, config.Password);
+                await client.AuthenticateAsync(username, password);
             }
 
             // Send message

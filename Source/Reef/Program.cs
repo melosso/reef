@@ -309,7 +309,8 @@ public class Program
                 connectionString,
                 sp.GetRequiredService<EncryptionService>(),
                 sp.GetRequiredService<NotificationThrottler>(),
-                sp.GetRequiredService<NotificationTemplateService>()));
+                sp.GetRequiredService<NotificationTemplateService>(),
+                sp.GetRequiredService<ScribanTemplateEngine>()));
 
         // Destination services
         services.AddScoped<DestinationService>(sp =>

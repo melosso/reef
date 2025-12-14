@@ -5,6 +5,9 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Destinations;
 using Reef.Core.Models;
+using Reef.Core.TemplateEngines;
+using Scriban;
+using Scriban.Runtime;
 using Serilog;
 using System.Text.Json;
 
@@ -22,17 +25,20 @@ public class NotificationService
     private readonly EncryptionService _encryptionService;
     private readonly NotificationThrottler _throttler;
     private readonly NotificationTemplateService _templateService;
+    private readonly ScribanTemplateEngine _scribanEngine;
 
     public NotificationService(
         string connectionString,
         EncryptionService encryptionService,
         NotificationThrottler throttler,
-        NotificationTemplateService templateService)
+        NotificationTemplateService templateService,
+        ScribanTemplateEngine scribanEngine)
     {
         _connectionString = connectionString;
         _encryptionService = encryptionService;
         _throttler = throttler;
         _templateService = templateService;
+        _scribanEngine = scribanEngine;
         _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(30)
@@ -104,12 +110,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] Profile '{profile.Name}' executed successfully";
-            var placeholders = BuildSuccessEmailPlaceholders(execution, profile);
-            var body = BuildSuccessEmailBodyTemplate();
-            var replacedBody = ReplacePlaceholders(body, placeholders);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] Profile '{profile.Name}' executed successfully";
+            var fallbackBody = BuildSuccessEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ProfileSuccess", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, replacedBody, settings);
+            // Build context with per-template CTA settings
+            var context = BuildSuccessEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileId})",
                 execution.Id, profile.Id);
         }
@@ -140,12 +153,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] Profile '{profile.Name}' execution failed";
-            var placeholders = BuildFailureEmailPlaceholders(execution, profile);
-            var body = BuildFailureEmailBodyTemplate();
-            var replacedBody = ReplacePlaceholders(body, placeholders);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] Profile '{profile.Name}' execution failed";
+            var fallbackBody = BuildFailureEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ProfileFailure", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, replacedBody, settings);
+            // Build context with per-template CTA settings
+            var context = BuildFailureEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileId})",
                 execution.Id, profile.Id);
         }
@@ -176,10 +196,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] Job '{jobName}' completed successfully";
-            var body = BuildJobSuccessEmailBody(jobName, jobDetails);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] Job '{jobName}' completed successfully";
+            var fallbackBody = BuildJobSuccessEmailBody(jobName, jobDetails);
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("JobSuccess", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildJobSuccessContext(jobId, jobName, jobDetails, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent job success notification for job {JobId} ({JobName})", jobId, jobName);
         }
         catch (Exception ex)
@@ -209,10 +238,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] Job '{jobName}' failed";
-            var body = BuildJobFailureEmailBody(jobName, errorMessage);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] Job '{jobName}' failed";
+            var fallbackBody = BuildJobFailureEmailBody(jobName, errorMessage ?? "Unknown error");
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("JobFailure", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildJobFailureContext(jobId, jobName, errorMessage ?? "Unknown error", settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent job failure notification for job {JobId} ({JobName})", jobId, jobName);
         }
         catch (Exception ex)
@@ -234,10 +272,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] New user created: {username}";
-            var body = BuildNewUserEmailBody(username, email);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] New user created: {username}";
+            var fallbackBody = BuildNewUserEmailBody(username, email ?? "N/A");
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("NewUser", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildNewUserContext(username, email ?? "N/A", settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent new user notification for {Username}", username);
         }
         catch (Exception ex)
@@ -259,10 +306,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] New API key created: {keyName}";
-            var body = BuildNewApiKeyEmailBody(keyName);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] New API key created: {keyName}";
+            var fallbackBody = BuildNewApiKeyEmailBody(keyName);
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("NewApiKey", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildNewApiKeyContext(keyName, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent new API key notification for {KeyName}", keyName);
         }
         catch (Exception ex)
@@ -284,10 +340,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] New webhook created: {webhookName}";
-            var body = BuildNewWebhookEmailBody(webhookName);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] New webhook created: {webhookName}";
+            var fallbackBody = BuildNewWebhookEmailBody(webhookName);
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("NewWebhook", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildNewWebhookContext(webhookName, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent new webhook notification for {WebhookName}", webhookName);
         }
         catch (Exception ex)
@@ -321,10 +386,19 @@ public class NotificationService
                 return;
             }
 
-            var subject = $"[Reef] {pendingCount} email{(pendingCount != 1 ? "s" : "")} pending approval";
-            var body = BuildNewEmailApprovalEmailBody(pendingCount);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] {pendingCount} email{(pendingCount != 1 ? "s" : "")} pending approval";
+            var fallbackBody = BuildNewEmailApprovalEmailBody(pendingCount);
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("NewEmailApproval", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildEmailApprovalContext(pendingCount, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent new email approval notification ({Count} pending)", pendingCount);
         }
         catch (Exception ex)
@@ -362,11 +436,20 @@ public class NotificationService
             var thresholdMb = settings.DatabaseSizeThresholdBytes / (1024 * 1024);
             var currentMb = currentSizeBytes / (1024 * 1024);
             var excessMb = currentMb - thresholdMb;
-            var subject = $"[Reef] Database size critical: {currentMb}MB (threshold: {thresholdMb}MB)";
 
-            var body = BuildDatabaseSizeEmailBody(thresholdMb, currentMb, excessMb);
+            // Load template from database or use fallback
+            var fallbackSubject = $"[Reef] Database size critical: {currentMb}MB (threshold: {thresholdMb}MB)";
+            var fallbackBody = BuildDatabaseSizeEmailBody(thresholdMb, currentMb, excessMb);
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("DatabaseSizeThreshold", fallbackSubject, fallbackBody);
 
-            await SendSystemNotificationAsync(subject, body, settings);
+            // Build context with per-template CTA settings
+            var context = BuildDatabaseSizeContext(thresholdMb, currentMb, excessMb, settings, ctaButtonText, ctaUrlOverride);
+
+            // Render subject and body
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
             Log.Information("Sent database size threshold notification ({CurrentMb}MB > {ThresholdMb}MB)",
                 currentMb, thresholdMb);
         }
@@ -454,8 +537,28 @@ public class NotificationService
             };
             message.Body = bodyBuilder.ToMessageBody();
 
+            // Detect email provider (with fallback detection for backward compatibility)
+            string providerType = emailConfig.EmailProvider?.ToLower() ?? "";
+
+            // If EmailProvider is not set, detect from configuration fields
+            if (string.IsNullOrEmpty(providerType))
+            {
+                if (!string.IsNullOrEmpty(emailConfig.ResendApiKey))
+                {
+                    providerType = "resend";
+                }
+                else if (!string.IsNullOrEmpty(emailConfig.SendGridApiKey))
+                {
+                    providerType = "sendgrid";
+                }
+                else
+                {
+                    providerType = "smtp";
+                }
+            }
+
             // Route to appropriate provider based on configuration
-            IEmailProvider emailProvider = (emailConfig.EmailProvider?.ToLower()) switch
+            IEmailProvider emailProvider = providerType switch
             {
                 "resend" => new ResendEmailProvider(),
                 "sendgrid" => new SendGridEmailProvider(),
@@ -694,6 +797,7 @@ public class NotificationService
         .detail-row:last-child {{ border-bottom: none; }}
         .label {{ font-weight: 600; color: #10b981; min-width: 140px; padding-right: 15px; }}
         .value {{ color: #555; flex: 1; word-break: break-all; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -721,6 +825,7 @@ public class NotificationService
                         <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
                     </div>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -752,6 +857,7 @@ public class NotificationService
         .error-box {{ background-color: #fee2e2; border-left: 5px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 4px; }}
         .error-box strong {{ color: #991b1b; display: block; margin-bottom: 8px; }}
         .error-message {{ color: #7f1d1d; word-break: break-word; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.5; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -784,6 +890,7 @@ public class NotificationService
                     <div class='error-message'>{errorMessage}</div>
                 </div>
                 <p style='color: #666; font-size: 13px;'>Please check the Reef dashboard job logs for additional diagnostic information.</p>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -812,6 +919,7 @@ public class NotificationService
         .detail-row:last-child {{ border-bottom: none; }}
         .label {{ font-weight: 600; color: #3b82f6; min-width: 140px; padding-right: 15px; }}
         .value {{ color: #555; flex: 1; word-break: break-all; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -842,6 +950,7 @@ public class NotificationService
                         <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
                     </div>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -870,6 +979,7 @@ public class NotificationService
         .detail-row:last-child {{ border-bottom: none; }}
         .label {{ font-weight: 600; color: #8b5cf6; min-width: 140px; padding-right: 15px; }}
         .value {{ color: #555; flex: 1; word-break: break-all; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -896,6 +1006,7 @@ public class NotificationService
                         <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
                     </div>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -924,6 +1035,7 @@ public class NotificationService
         .detail-row:last-child {{ border-bottom: none; }}
         .label {{ font-weight: 600; color: #06b6d4; min-width: 140px; padding-right: 15px; }}
         .value {{ color: #555; flex: 1; word-break: break-all; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -950,6 +1062,7 @@ public class NotificationService
                         <span class='value'>{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC</span>
                     </div>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -980,6 +1093,7 @@ public class NotificationService
         .value {{ color: #555; flex: 1; word-break: break-all; }}
         .info-box {{ background-color: #fef3c7; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }}
         .info-box p {{ color: #92400e; margin: 0; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -1010,6 +1124,7 @@ public class NotificationService
                 <div class='info-box'>
                     <p>There {(pendingCount != 1 ? "are" : "is")} {pendingCount} email{(pendingCount != 1 ? "s" : "")} waiting for approval in the workflow. Please review and approve or reject {(pendingCount != 1 ? "them" : "it")} in the Reef dashboard.</p>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -1040,6 +1155,7 @@ public class NotificationService
         .value {{ color: #555; flex: 1; word-break: break-all; }}
         .warning {{ background-color: #fef3c7; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }}
         .warning p {{ color: #92400e; margin: 0; }}
+{GetCtaStyles()}
         @media (max-width: 600px) {{
             .container {{ padding: 5px; }}
             .content {{ padding: 15px; }}
@@ -1078,6 +1194,7 @@ public class NotificationService
                 <div class='warning'>
                     <p>Please review your retention policies and consider archiving or cleaning old execution records to reclaim database storage space.</p>
                 </div>
+{GetCtaFooterHtml()}
             </div>
         </div>
     </div>
@@ -1099,95 +1216,213 @@ public class NotificationService
     }
 
     /// <summary>
-    /// Get template content with placeholder substitution
-    /// Loads from database if available, falls back to hardcoded defaults
+    /// Get CTA footer HTML with Scriban templating for conditional rendering
     /// </summary>
-    private async Task<(string? Subject, string? Body)> GetTemplateAsync(
-        string templateType,
-        Dictionary<string, string> placeholders)
+    private string GetCtaFooterHtml()
+    {
+        return @"
+                {{~ if EnableCTA && CTAUrl != """" ~}}
+                <div class='cta-section'>
+                    <a href='{{ CTAUrl }}' class='cta-button'>{{ CTAButtonText }}</a>
+                </div>
+                {{~ end ~}}";
+    }
+
+    /// <summary>
+    /// Get CTA CSS styles for email templates
+    /// </summary>
+    private string GetCtaStyles()
+    {
+        return @"
+        .cta-section { text-align: center; padding: 25px 20px; border-top: 1px solid #e5e7eb; margin-top: 20px; }
+        .cta-button { display: inline-block; padding: 12px 30px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; transition: background-color 0.2s; }
+        .cta-button:hover { background-color: #2563eb; }
+        @media (max-width: 600px) {
+            .cta-section { padding: 20px 15px; }
+            .cta-button { display: block; width: 100%; }
+        }";
+    }
+
+
+
+    /// <summary>
+    /// Render email template using Scriban template engine
+    /// </summary>
+    private async Task<string> RenderEmailTemplateAsync(string template, ScriptObject context)
     {
         try
         {
-            // Try to load from database first
-            var template = await _templateService.GetByTypeAsync(templateType);
+            var scribanTemplate = Template.Parse(template);
 
+            if (scribanTemplate.HasErrors)
+            {
+                var errors = string.Join("; ", scribanTemplate.Messages.Select(m => m.Message));
+                Log.Warning("Template parsing error: {Errors}", errors);
+                return template; // Return original if parsing fails
+            }
+
+            var templateContext = new TemplateContext
+            {
+                StrictVariables = false,
+                EnableRelaxedMemberAccess = true
+            };
+
+            templateContext.PushGlobal(context);
+
+            var rendered = await scribanTemplate.RenderAsync(templateContext);
+            return rendered;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error rendering email template with Scriban");
+            return template; // Return original template on error
+        }
+    }
+
+    /// <summary>
+    /// Add CTA variables to Scriban context
+    /// </summary>
+    private void AddCTAToContext(ScriptObject context, NotificationSettings settings, string? templateButtonText = null, string? templateUrlOverride = null)
+    {
+        // Enable CTA if either:
+        // 1. Global EnableCTA is true, OR
+        // 2. Template has its own URL override (template-level opt-in)
+        var ctaUrl = templateUrlOverride ?? settings.CTAUrl ?? "";
+        var enableCta = settings.EnableCTA || !string.IsNullOrWhiteSpace(templateUrlOverride);
+        
+        context["EnableCTA"] = enableCta && !string.IsNullOrWhiteSpace(ctaUrl);
+        context["CTAButtonText"] = templateButtonText ?? "Open Dashboard";
+        context["CTAUrl"] = ctaUrl;
+    }
+
+    /// <summary>
+    /// Load template from database or fall back to hardcoded template
+    /// Returns (subject, body, ctaButtonText, ctaUrlOverride)
+    /// </summary>
+    private async Task<(string subject, string body, string? ctaButtonText, string? ctaUrlOverride)> LoadTemplateAsync(
+        string templateType,
+        string fallbackSubject,
+        string fallbackBody)
+    {
+        try
+        {
+            var template = await _templateService.GetByTypeAsync(templateType);
             if (template != null)
             {
-                // Replace placeholders in subject and body
-                var subject = ReplacePlaceholders(template.Subject, placeholders);
-                var body = ReplacePlaceholders(template.HtmlBody, placeholders);
-                return (subject, body);
+                return (template.Subject, template.HtmlBody, template.CTAButtonText, template.CTAUrlOverride);
             }
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Error loading template {TemplateType} from database, falling back to defaults", templateType);
+            Log.Warning(ex, "Error loading template {TemplateType} from database, using fallback", templateType);
         }
 
-        // Fallback to hardcoded defaults based on template type
-        // This method will be called from the existing builder methods
-        return (null, null);
+        return (fallbackSubject, fallbackBody, null, null);
     }
 
-    /// <summary>
-    /// Replace placeholders in template strings
-    /// Supports timezone-aware formatting: {VariableName.GMT+1} or {VariableName.yyyy-MM-dd.GMT+1}
-    /// Regular placeholders: {PlaceholderName}
-    /// </summary>
-    private string ReplacePlaceholders(string text, Dictionary<string, string> placeholders)
-    {
-        if (string.IsNullOrEmpty(text) || placeholders == null || placeholders.Count == 0)
-            return text;
+    // Context builders for each notification type
 
-        // First replace regular placeholders
-        foreach (var kvp in placeholders)
+    private ScriptObject BuildSuccessEmailContext(ProfileExecution execution, Profile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ExecutionTime"] = execution.ExecutionTimeMs.HasValue
+            ? $"{execution.ExecutionTimeMs.Value / 1000.0:F2}s"
+            : "N/A";
+        context["RowCount"] = execution.RowCount?.ToString() ?? "0";
+        context["FileSize"] = execution.FileSizeBytes.HasValue
+            ? FormatFileSize(execution.FileSizeBytes.Value)
+            : "N/A";
+        context["OutputPath"] = execution.OutputPath ?? "N/A";
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildFailureEmailContext(ProfileExecution execution, Profile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ErrorMessage"] = execution.ErrorMessage ?? "Unknown error";
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildJobSuccessContext(int jobId, string jobName, Dictionary<string, object> jobDetails, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["JobId"] = jobId;
+        context["JobName"] = jobName;
+        foreach (var kvp in jobDetails)
         {
-            var placeholder = $"{{{kvp.Key}}}";
-            text = text.Replace(placeholder, kvp.Value ?? "", StringComparison.Ordinal);
+            context[kvp.Key] = kvp.Value;
         }
-
-        // Then replace timezone-aware placeholders
-        text = ReplaceTimezoneAwarePlaceholders(text, placeholders);
-
-        return text;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
     }
 
-    /// <summary>
-    /// Replace timezone-aware placeholders like {CreatedAt.GMT+1} or {StartedAt.yyyy-MM-dd.GMT-5}
-    /// Extracts the value from placeholders dictionary and formats with timezone offset
-    /// </summary>
-    private static string ReplaceTimezoneAwarePlaceholders(string text, Dictionary<string, string> placeholders)
+    private ScriptObject BuildJobFailureContext(int jobId, string jobName, string errorMessage, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
     {
-        if (string.IsNullOrEmpty(text) || placeholders == null || placeholders.Count == 0)
-            return text;
+        var context = new ScriptObject();
+        context["JobId"] = jobId;
+        context["JobName"] = jobName;
+        context["ErrorMessage"] = errorMessage;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
 
-        // Match pattern: {VariableName.OptionalFormat.GMT±Offset}
-        var pattern = @"\{(\w+)(?:\.([^\}\.]*?))?\.GMT([+-])(\d+)\}";
-        return System.Text.RegularExpressions.Regex.Replace(text, pattern, match =>
-        {
-            var variableName = match.Groups[1].Value;
-            var formatString = match.Groups[2].Value;
-            var offsetSign = match.Groups[3].Value;
-            var offsetValue = int.Parse(match.Groups[4].Value);
+    private ScriptObject BuildNewUserContext(string username, string email, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["Username"] = username;
+        context["Email"] = email;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
 
-            // Get the value from placeholders
-            if (!placeholders.TryGetValue(variableName, out var value) || value == null)
-                return match.Value; // Return unchanged if variable not found
+    private ScriptObject BuildNewApiKeyContext(string keyName, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["KeyName"] = keyName;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
 
-            // Try to parse as DateTime
-            if (!DateTime.TryParse(value, out var dateTime))
-                return value; // Return as-is if not a valid DateTime
+    private ScriptObject BuildNewWebhookContext(string webhookName, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["WebhookName"] = webhookName;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
 
-            // Apply timezone offset
-            var offset = TimeSpan.FromHours(offsetSign == "+" ? offsetValue : -offsetValue);
-            var offsetDateTime = dateTime.Add(offset);
+    private ScriptObject BuildEmailApprovalContext(int pendingCount, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["PendingCount"] = pendingCount;
+        context["Plural"] = pendingCount != 1 ? "s" : "";
+        context["PluralVerb"] = pendingCount != 1 ? "are" : "is";
+        context["PluralThem"] = pendingCount != 1 ? "them" : "it";
+        context["NotificationTime"] = DateTime.UtcNow;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
 
-            // Format the date
-            if (string.IsNullOrEmpty(formatString))
-                formatString = "yyyy-MM-dd HH:mm:ss"; // Default format
-
-            return offsetDateTime.ToString(formatString);
-        });
+    private ScriptObject BuildDatabaseSizeContext(long thresholdMb, long currentMb, long excessMb, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ThresholdMB"] = thresholdMb;
+        context["CurrentMB"] = currentMb;
+        context["ExcessMB"] = excessMb;
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
     }
 }
 

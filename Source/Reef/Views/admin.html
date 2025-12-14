@@ -978,6 +978,53 @@
 
                                 <hr class="my-6">
 
+                                <!-- Instance Exposure Configuration -->
+                                <div>
+                                    <div class="flex items-center gap-2 mb-4">
+                                        <div class="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                            <i data-lucide="external-link" class="h-5 w-5 text-indigo-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-base font-semibold text-gray-900">Instance Exposure</h4>
+                                            <p class="text-xs text-gray-600">Include links to your external Reef instance in emails</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-4">
+                                        <!-- Enable Instance Exposure Toggle -->
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <h5 class="font-semibold text-gray-900">Expose instance in template</h5>
+                                                <p class="text-sm text-gray-600">Enable action buttons and links to your external Reef instance</p>
+                                            </div>
+                                            <label class="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" id="enable-cta" onchange="handleNotificationChange(); toggleCTASettings();" class="sr-only peer">
+                                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                            </label>
+                                        </div>
+
+                                        <!-- Instance URL Configuration (Hidden by default) -->
+                                        <div id="cta-settings" class="hidden space-y-3 pt-3 border-t border-indigo-300">
+                                            <!-- Instance URL -->
+                                            <div>
+                                                <label for="cta-url" class="block text-sm font-semibold text-gray-900 mb-2">Instance URL</label>
+                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono" onchange="handleNotificationChange()">
+                                                <p class="text-xs text-gray-500 mt-1">
+                                                    External URL where Reef is accessible. Available as <code class="bg-gray-100 px-1 rounded text-xs">{CTAUrl}</code> in all templates.
+                                                </p>
+                                            </div>
+
+                                            <!-- Info Box -->
+                                            <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                                                <p class="text-xs text-blue-800">
+                                                    <strong>How it works:</strong> When enabled, email templates can include action buttons and footer links using the <code class="bg-blue-100 px-1 rounded">{CTAUrl}</code> placeholder. Configure button text per template in the Email Templates tab.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-6">
+
                                 <!-- Action Buttons -->
                                 <div class="flex justify-end gap-3">
                                     <button id="test-notification-btn" onclick="sendTestNotification()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center transition duration-200 ease-in-out active:scale-95">
@@ -1043,6 +1090,25 @@
                                                 <input type="text" id="template-subject" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm" placeholder="Email subject with optional placeholders">
                                             </div>
 
+                                            <!-- CTA Configuration -->
+                                            <div class="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+                                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Call-to-Action Button</h4>
+                                                <div class="space-y-3">
+                                                    <!-- Button Text -->
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">Button Text</label>
+                                                        <input type="text" id="template-cta-button-text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" placeholder="e.g., View Execution, Open Dashboard">
+                                                        <p class="text-xs text-gray-500 mt-1">Text displayed on the action button (uses global Instance URL)</p>
+                                                    </div>
+                                                    <!-- URL Override (Optional) -->
+                                                    <div>
+                                                        <label class="block text-xs font-medium text-gray-700 mb-1">URL Override (Optional)</label>
+                                                        <input type="text" id="template-cta-url-override" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-mono" placeholder="Leave empty to use global Instance URL">
+                                                        <p class="text-xs text-gray-500 mt-1">Override the global Instance URL for this template only. Supports placeholders.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <!-- HTML Body Editor -->
                                             <div class="mb-6">
                                                 <div class="flex items-center justify-between mb-2">
@@ -1076,36 +1142,42 @@
                             </div>
                         </div>
 
-                        <!-- Placeholder Variables Reference -->
+                        <!-- Scriban Template Reference -->
                         <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-semibold text-blue-900 mb-2">Available Placeholders</h4>
-                            <p class="text-sm text-blue-800 mb-3">Use these placeholders in your templates (they will be replaced with actual values):</p>
+                            <h4 class="font-semibold text-blue-900 mb-2">Scriban Template Syntax</h4>
+                            <p class="text-sm text-blue-800 mb-3">Email templates use <a href="https://github.com/scriban/scriban" target="_blank" class="underline">Scriban syntax</a> for variables and logic:</p>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="text-sm text-blue-800">
-                                    <p><strong>Profile Notifications:</strong></p>
-                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
-                                        <li>{ProfileName} - Profile name</li>
-                                        <li>{ExecutionId} - Execution ID</li>
-                                        <li>{StartedAt} - Execution start time</li>
-                                        <li>{CompletedAt} - Execution end time</li>
-                                        <li>{ExecutionTime} - How long it took</li>
-                                        <li>{RowCount} - Rows processed</li>
-                                        <li>{FileSize} - Output file size</li>
-                                        <li>{OutputPath} - File location</li>
-                                        <li>{ErrorMessage} - Error details (failures only)</li>
+                                    <p><strong>Variables (use double braces):</strong></p>
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                        <li>{{ "{{ ProfileName }}" }} - Profile name</li>
+                                        <li>{{ "{{ ExecutionId }}" }} - Execution ID</li>
+                                        <li>{{ "{{ StartedAt }}" }} - Execution start time</li>
+                                        <li>{{ "{{ CompletedAt }}" }} - Execution end time</li>
+                                        <li>{{ "{{ ExecutionTime }}" }} - How long it took</li>
+                                        <li>{{ "{{ RowCount }}" }} - Rows processed</li>
+                                        <li>{{ "{{ ErrorMessage }}" }} - Error details</li>
+                                    </ul>
+                                    <p class="mt-3"><strong>CTA Variables:</strong></p>
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                        <li>{{ "{{ EnableCTA }}" }} - true/false</li>
+                                        <li>{{ "{{ CTAUrl }}" }} - Instance URL</li>
+                                        <li>{{ "{{ CTAButtonText }}" }} - Button text</li>
                                     </ul>
                                 </div>
                                 <div class="text-sm text-blue-800">
-                                    <p><strong>Other Notifications:</strong></p>
-                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
-                                        <li>{JobName} - Job name</li>
-                                        <li>{Username} - User name</li>
-                                        <li>{Email} - User email</li>
-                                        <li>{KeyName} - API key name</li>
-                                        <li>{WebhookName} - Webhook name</li>
-                                        <li>{ThresholdMb} - Size threshold</li>
-                                        <li>{CurrentMb} - Current size</li>
-                                        <li>{ExcessMb} - Over threshold</li>
+                                    <p><strong>Conditionals:</strong></p>
+                                    <pre class="text-xs bg-blue-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ if EnableCTA }}" }}
+  &lt;a href="{{ "{{ CTAUrl }}" }}"&gt;{{ "{{ CTAButtonText }}" }}&lt;/a&gt;
+{{ "{{ end }}" }}</pre>
+                                    <p class="mt-3"><strong>Date Formatting:</strong></p>
+                                    <pre class="text-xs bg-blue-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ NotificationTime | date.to_string '%Y-%m-%d %H:%M:%S' }}" }}</pre>
+                                    <p class="mt-3"><strong>More Variables:</strong></p>
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                        <li>{{ "{{ JobName }}" }} - Job name</li>
+                                        <li>{{ "{{ Username }}" }} - User name</li>
+                                        <li>{{ "{{ KeyName }}" }} - API key name</li>
+                                        <li>{{ "{{ ThresholdMB }}" }} - Size threshold</li>
                                         <li>{CheckedAt} - Check timestamp</li>
                                     </ul>
                                 </div>

@@ -52,9 +52,20 @@ public static class DestinationsEndpoints
         // GET: List all destinations
         group.MapGet("/", async (
             [FromServices] DestinationService service,
-            [FromQuery] bool activeOnly = false) =>
+            [FromQuery] bool activeOnly = false,
+            [FromQuery] string? type = null) =>
         {
             var destinations = await service.GetAllAsync(activeOnly);
+
+            // Filter by type if specified
+            if (!string.IsNullOrEmpty(type))
+            {
+                if (Enum.TryParse<DestinationType>(type, true, out var destinationType))
+                {
+                    destinations = destinations.Where(d => d.Type == destinationType);
+                }
+            }
+
             return Results.Ok(destinations);
         })
         .WithName("GetAllDestinations")

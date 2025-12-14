@@ -53,6 +53,7 @@ public class DatabaseInitializer
 
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
+        await SeedNotificationEmailTemplatesAsync(connection);
 
         // Email Approval Workflow Table
         await CreatePendingEmailApprovalsTableAsync(connection);
@@ -474,11 +475,15 @@ public class DatabaseInitializer
                 Role TEXT NOT NULL DEFAULT 'User',
                 IsActive INTEGER NOT NULL DEFAULT 1,
                 Email TEXT NULL,
+                DisplayName TEXT NULL,
                 CreatedAt TEXT NOT NULL,
                 ModifiedAt TEXT NULL,
                 LastLoginAt TEXT NULL,
                 PasswordChangeRequired INTEGER NOT NULL DEFAULT 0,
-                LastSeenAt TEXT NULL
+                LastSeenAt TEXT NULL,
+                IsDeleted INTEGER NOT NULL DEFAULT 0,
+                DeletedAt TEXT NULL,
+                DeletedBy TEXT NULL
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username COLLATE NOCASE);
@@ -801,6 +806,10 @@ public class DatabaseInitializer
                 NotifyOnNewEmailApproval INTEGER NOT NULL DEFAULT 0,
                 NewEmailApprovalCooldownHours INTEGER NOT NULL DEFAULT 24,
 
+                -- Instance Exposure Configuration
+                EnableCTA INTEGER NOT NULL DEFAULT 0,
+                CTAUrl TEXT NULL,
+
                 -- Email Configuration
                 RecipientEmails TEXT NULL,
 
@@ -827,6 +836,8 @@ public class DatabaseInitializer
                 Subject TEXT NOT NULL,
                 HtmlBody TEXT NOT NULL,
                 IsDefault INTEGER NOT NULL DEFAULT 1,
+                CTAButtonText TEXT NULL,
+                CTAUrlOverride TEXT NULL,
                 CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
                 UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
             );
@@ -835,6 +846,75 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_notificationemailtemplate_default ON NotificationEmailTemplate(IsDefault);
         ";
         await connection.ExecuteAsync(sql);
+    }
+
+    /// <summary>
+    /// Seed default notification email templates if table is empty
+    /// </summary>
+    private async Task SeedNotificationEmailTemplatesAsync(SqliteConnection connection)
+    {
+        try
+        {
+            // Check if table is empty
+            const string checkSql = "SELECT COUNT(*) FROM NotificationEmailTemplate";
+            var count = await connection.ExecuteScalarAsync<int>(checkSql);
+
+            if (count == 0)
+            {
+                Log.Debug("Seeding default notification email templates...");
+
+                const string insertSql = @"
+                    INSERT INTO NotificationEmailTemplate (TemplateType, Subject, HtmlBody, IsDefault, CTAButtonText, CreatedAt, UpdatedAt)
+                    VALUES (@TemplateType, @Subject, @HtmlBody, @IsDefault, @CTAButtonText, @CreatedAt, @UpdatedAt)";
+
+                var templates = new[]
+                {
+                    new { TemplateType = "ProfileSuccess", Subject = "[Reef] Profile '{{ ProfileName }}' executed successfully", CTAButtonText = "View Execution" },
+                    new { TemplateType = "ProfileFailure", Subject = "[Reef] Profile '{{ ProfileName }}' execution failed", CTAButtonText = "View Execution" },
+                    new { TemplateType = "JobSuccess", Subject = "[Reef] Job '{{ JobName }}' completed successfully", CTAButtonText = "View Job" },
+                    new { TemplateType = "JobFailure", Subject = "[Reef] Job '{{ JobName }}' failed", CTAButtonText = "View Job" },
+                    new { TemplateType = "NewUser", Subject = "[Reef] New user created: {{ Username }}", CTAButtonText = "View Users" },
+                    new { TemplateType = "NewApiKey", Subject = "[Reef] New API key created: {{ KeyName }}", CTAButtonText = "Manage API Keys" },
+                    new { TemplateType = "NewWebhook", Subject = "[Reef] New webhook created: {{ WebhookName }}", CTAButtonText = "Manage Webhooks" },
+                    new { TemplateType = "NewEmailApproval", Subject = "[Reef] {{ PendingCount }} email{{ Plural }} pending approval", CTAButtonText = "Review Approvals" },
+                    new { TemplateType = "DatabaseSizeThreshold", Subject = "[Reef] Database size critical", CTAButtonText = "View System Status" }
+                };
+
+                foreach (var template in templates)
+                {
+                    var htmlBody = template.TemplateType switch
+                    {
+                        "ProfileSuccess" => BuildProfileSuccessEmailBody(),
+                        "ProfileFailure" => BuildProfileFailureEmailBody(),
+                        "JobSuccess" => BuildJobSuccessEmailBody(),
+                        "JobFailure" => BuildJobFailureEmailBody(),
+                        "NewUser" => BuildNewUserEmailBody(),
+                        "NewApiKey" => BuildNewApiKeyEmailBody(),
+                        "NewWebhook" => BuildNewWebhookEmailBody(),
+                        "NewEmailApproval" => BuildDefaultNewEmailApprovalEmailBody(),
+                        "DatabaseSizeThreshold" => BuildDatabaseSizeThresholdEmailBody(),
+                        _ => BuildSimpleNotificationTemplate(template.TemplateType)
+                    };
+
+                    await connection.ExecuteAsync(insertSql, new
+                    {
+                        template.TemplateType,
+                        template.Subject,
+                        HtmlBody = htmlBody,
+                        IsDefault = 1,
+                        template.CTAButtonText,
+                        CreatedAt = DateTime.UtcNow.ToString("o"),
+                        UpdatedAt = DateTime.UtcNow.ToString("o")
+                    });
+                }
+
+                Log.Debug("Seeded {Count} default notification email templates", templates.Length);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error seeding notification email templates");
+        }
     }
 
     private async Task CreatePendingEmailApprovalsTableAsync(SqliteConnection connection)
@@ -1296,6 +1376,14 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "Users", "DeletedAt", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "Users", "DeletedBy", "TEXT NULL");
 
+        // Add instance exposure columns to NotificationSettings
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "EnableCTA", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "CTAUrl", "TEXT NULL");
+
+        // Add CTA columns to NotificationEmailTemplate for per-template configuration
+        await AddColumnIfNotExistsAsync(connection, "NotificationEmailTemplate", "CTAButtonText", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "NotificationEmailTemplate", "CTAUrlOverride", "TEXT NULL");
+
         // Legacy migrations removed: All columns are now defined in base table schemas
         // since there are no production customers yet. All new installations start with the complete schema.
         //
@@ -1571,64 +1659,1139 @@ public class DatabaseInitializer
     }
 
     /// <summary>
-    /// Build default email body for NewEmailApproval notification
+    /// Build a simple notification template that will be replaced by in-code templates
+    /// This is just a placeholder to prevent 404 errors - actual emails use in-code templates
+    /// </summary>
+    private static string BuildSimpleNotificationTemplate(string templateType)
+    {
+        return @"
+<!doctype html>
+<html>
+<head>
+    <meta charset=""utf-8"">
+    <title>Notification</title>
+</head>
+<body style=""font-family: Arial, sans-serif; padding: 20px;"">
+    <p>This is a placeholder template for " + templateType + @".</p>
+    <p>The actual email content is generated programmatically.</p>
+    <p>You can customize this template in the Email Templates tab.</p>
+
+    {{~ if EnableCTA ~}}
+    <p style=""margin-top: 20px;"">
+        <a href=""{{ CTAUrl }}"" style=""display: inline-block; padding: 10px 20px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 5px;"">
+            {{ CTAButtonText }}
+        </a>
+    </p>
+    {{~ end ~}}
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for NewEmailApproval notification with Scriban conditional CTA support
     /// </summary>
     private static string BuildDefaultNewEmailApprovalEmailBody()
     {
         return @"
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang=""en"">
 <head>
-    <meta charset='utf-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-    <style>
-        * { margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f5f5f5; }
-        .container { max-width: 600px; margin: 0 auto; padding: 10px; }
-        .card { background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .header { background-color: #f59e0b; color: white; padding: 30px 20px; text-align: center; }
-        .header h2 { font-size: 24px; margin: 0; font-weight: 600; }
-        .content { padding: 20px; }
-        .section { margin: 20px 0; }
-        .detail-row { display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; word-break: break-word; }
-        .detail-row:last-child { border-bottom: none; }
-        .label { font-weight: 600; color: #f59e0b; min-width: 140px; padding-right: 15px; }
-        .value { color: #555; flex: 1; word-break: break-all; }
-        .info-box { background-color: #fef3c7; border-left: 5px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 4px; }
-        .info-box p { color: #92400e; margin: 0; }
-        @media (max-width: 600px) {
-            .container { padding: 5px; }
-            .content { padding: 15px; }
-            .detail-row { flex-direction: column; }
-            .label { min-width: 100%; margin-bottom: 5px; }
-            .header h2 { font-size: 20px; }
-            .info-box { padding: 12px; }
-        }
-    </style>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Pending Approval</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
 </head>
-<body>
-    <div class='container'>
-        <div class='card'>
-            <div class='header'>
-                <h2>✉️ Email{Plural} Pending Approval</h2>
-            </div>
-            <div class='content'>
-                <div class='section'>
-                    <div class='detail-row'>
-                        <span class='label'>Pending Items:</span>
-                        <span class='value'>{PendingCount}</span>
-                    </div>
-                    <div class='detail-row'>
-                        <span class='label'>Notification Time:</span>
-                        <span class='value'>{NotificationTime.GMT+1}</span>
-                    </div>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    {{ PendingCount }} pending approval in Reef.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
                 </div>
-                <div class='info-box'>
-                    <p>There {PluralVerb} {PendingCount} email{Plural} waiting for approval in the workflow. Please review and approve or reject {PluralThem} in the Reef dashboard.</p>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  Email{{ Plural }} pending approval
                 </div>
-            </div>
-        </div>
-    </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                There {{ PluralVerb }} <strong style=""color:#111827;"">{{ PendingCount }}</strong> email{{ Plural }} waiting for approval.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Pending items
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ PendingCount }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Notification time
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ NotificationTime | date.to_string '%Y-%m-%d %H:%M:%S' }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fff7ed; border:1px solid #ffedd5; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7c2d12;"">
+                    Please review and approve or reject {{ PluralThem }} in the application dashboard.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for ProfileSuccess notification
+    /// </summary>
+    private static string BuildProfileSuccessEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Profile Execution Success</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Profile {{ ProfileName }} executed successfully.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  Profile executed successfully
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> has completed successfully.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution Time
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionTime }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Row Count
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ RowCount }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    File Size
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ FileSize }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for ProfileFailure notification
+    /// </summary>
+    private static string BuildProfileFailureEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Profile Execution Failed</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Profile {{ ProfileName }} execution failed.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px; color:#dc2626;"">
+                  Profile execution failed
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> encountered an error during execution.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fef2f2; border:1px solid #fecaca; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7f1d1d;"">
+                    <strong>Error:</strong> {{ ErrorMessage }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for JobSuccess notification
+    /// </summary>
+    private static string BuildJobSuccessEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Job Completed Successfully</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Job {{ JobName }} completed successfully.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  Job completed successfully
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Job <strong style=""color:#111827;"">{{ JobName }}</strong> has completed successfully.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Job ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ JobId }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for JobFailure notification
+    /// </summary>
+    private static string BuildJobFailureEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Job Failed</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Job {{ JobName }} failed.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px; color:#dc2626;"">
+                  Job failed
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Job <strong style=""color:#111827;"">{{ JobName }}</strong> encountered an error.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fef2f2; border:1px solid #fecaca; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7f1d1d;"">
+                    <strong>Error:</strong> {{ ErrorMessage }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Job ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ JobId }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for NewUser notification
+    /// </summary>
+    private static string BuildNewUserEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>New User Created</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    New user {{ Username }} created.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  New user created
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                A new user account has been created in the system.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Username
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ Username }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Email
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ Email }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for NewApiKey notification
+    /// </summary>
+    private static string BuildNewApiKeyEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>New API Key Created</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    New API key {{ KeyName }} created.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  New API key created
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                A new API key has been created in the system.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Key Name
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ KeyName }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#eff6ff; border:1px solid #dbeafe; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#1e3a8a;"">
+                    Please ensure this API key is stored securely and rotated regularly according to your security policy.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for NewWebhook notification
+    /// </summary>
+    private static string BuildNewWebhookEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>New Webhook Created</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    New webhook {{ WebhookName }} created.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  New webhook created
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                A new webhook has been created in the system.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Webhook Name
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ WebhookName }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for DatabaseSizeThreshold notification
+    /// </summary>
+    private static string BuildDatabaseSizeThresholdEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Database Size Alert</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Database size threshold exceeded.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px; color:#dc2626;"">
+                  Database size critical
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                The database has exceeded the configured size threshold and requires attention.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Current Size
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ CurrentMB }} MB
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Threshold
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ThresholdMB }} MB
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Excess
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#dc2626; font-weight:600;"">
+                    +{{ ExcessMB }} MB
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fef2f2; border:1px solid #fecaca; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7f1d1d;"">
+                    <strong>Action Required:</strong> Consider archiving old data, increasing storage capacity, or adjusting the threshold limit.
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>";
     }
