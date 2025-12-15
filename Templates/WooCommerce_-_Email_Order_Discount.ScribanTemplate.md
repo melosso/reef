@@ -1,14 +1,14 @@
 
-This Scriban template generates a Dutch (NL) HTML email welcoming new customers with a 10% discount code for their first order.
+This Scriban template generates an English (EN) HTML email welcoming new customers with a 10% discount code for their first order.
 
-# WooCommerce Welkomstkorting Email (NL)
+# WooCommerce Welcome Discount Email (EN)
 
 ## Example SQL Query for New Users with 10% Welcome Discount
 
 ```sql
 SELECT
     users.ID AS reef_id,
-    CONCAT('Als bedankje voor jouw bestelling bij ', (SELECT option_value FROM wp_options WHERE option_name = 'blogname' LIMIT 1)) AS subject,
+    CONCAT('A thank you for your order at ', (SELECT option_value FROM wp_options WHERE option_name = 'blogname' LIMIT 1)) AS subject,
     users.user_email AS customer_email,
     SUBSTRING_INDEX(users.display_name, ' ', 1) AS customer_name,
     
@@ -56,11 +56,11 @@ ORDER BY users.user_registered DESC;
 
 ```mysql
 SELECT
-    'Welkom bij Jouw Boekwinkel – een cadeautje voor je eerste bestelling' AS subject,
-    'emma@voorbeeld.nl' AS customer_email,
+    'Welcome to Your Bookstore – a gift for your first order' AS subject,
+    'emma@example.com' AS customer_email,
     'Emma' AS customer_name,
-    'Jouw Boekwinkel' AS company,
-    'support@jouwboekwinkel.nl' AS support_email,
+    'Your Bookstore' AS company,
+    'support@yourbookstore.com' AS support_email,
     'W10-ABC12345' AS coupon_code,
-    '15 maart 2026' AS expiry_date;
+    'March 15, 2026' AS expiry_date;
 ```
