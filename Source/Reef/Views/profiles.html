@@ -3248,6 +3248,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     pendingEmailProfileId = id;
                     showEmailExecutionConfirmationModal();
                     if (typeof updateApprovalBadge === 'function') {
+                        // Small delay to ensure backend has processed the execution
+                        await new Promise(resolve => setTimeout(resolve, 300));
                         await updateApprovalBadge();
                     }
                     return;

@@ -1125,6 +1125,11 @@
                 showMessage(`Profile test started. Execution ID: ${result.executionId}`, 'success');
                 closeExecuteModal();
                 await refreshExecutions();
+                if (typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed the execution
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await updateApprovalBadge();
+                }
             } catch (error) {
                 console.error('Error executing profile:', error);
                 showMessage(error.message, 'error');
@@ -1166,6 +1171,11 @@
                 showMessage(`Job triggered successfully. Execution ID: ${result.executionId}`, 'success');
                 closeRunJobModal();
                 await refreshExecutions();
+                if (typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed the trigger
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await updateApprovalBadge();
+                }
             } catch (error) {
                 console.error('Error triggering job:', error);
                 showMessage(error.message, 'error');

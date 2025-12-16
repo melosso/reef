@@ -711,6 +711,7 @@ public class NotificationSettings
     public bool NotifyOnNewWebhook { get; set; } = false;
     public bool NotifyOnNewEmailApproval { get; set; } = false;
     public int NewEmailApprovalCooldownHours { get; set; } = 24; // Default cooldown: once per 24 hours
+    public DateTime? NewEmailApprovalCooldownTimestamp { get; set; } // Last time email approval notification was sent
 
     // Instance Exposure Configuration (expose external Reef instance in email templates)
     public bool EnableCTA { get; set; } = false;

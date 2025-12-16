@@ -1579,6 +1579,11 @@
                 if (response.ok) {
                     showToast('Job resumed successfully! It will run according to its schedule.', 'success');
                     await loadJobs();
+                    if (typeof updateApprovalBadge === 'function') {
+                        // Small delay to ensure backend has processed the resume
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        await updateApprovalBadge();
+                    }
                 } else {
                     const error = await response.text();
                     showToast('Failed to resume job: ' + error, 'error');
@@ -1603,6 +1608,11 @@
                 if (response.ok) {
                     showToast('Failure counter reset', 'success');
                     await loadJobs();
+                    if (typeof updateApprovalBadge === 'function') {
+                        // Small delay to ensure backend has processed the reset
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        await updateApprovalBadge();
+                    }
                 } else {
                     showToast('Failed to reset counter', 'error');
                 }
@@ -1891,6 +1901,11 @@
                 if (response.ok) {
                     showToast('Job triggered successfully', 'success');
                     await pollJobStatus(id);
+                    if (typeof updateApprovalBadge === 'function') {
+                        // Small delay to ensure backend has processed the job
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                        await updateApprovalBadge();
+                    }
                 } else {
                     const error = await response.json();
                     showToast(`Error: ${error.message || 'Failed to trigger job'}`, 'error');
@@ -1912,6 +1927,11 @@
                         if (job.status !== 2 && job.status !== 1) {
                             await loadJobs();
                             await loadQueueMetrics();
+                            if (typeof updateApprovalBadge === 'function') {
+                                // Small delay to ensure backend has processed the job
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                                await updateApprovalBadge();
+                            }
                             return;
                         }
                     }

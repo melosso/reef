@@ -78,7 +78,7 @@ public class DeltaSyncMigration
         }
 
         await conn.ExecuteAsync(@"
-            CREATE TABLE DeltaSyncState (
+            CREATE TABLE IF NOT EXISTS DeltaSyncState (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ProfileId INTEGER NOT NULL,
                 ReefId TEXT NOT NULL,

@@ -90,6 +90,37 @@ public class NotificationService
     }
 
     /// <summary>
+    /// Update the email approval cooldown timestamp in the database after sending notification
+    /// This persists the cooldown across application restarts
+    /// </summary>
+    private async Task UpdateEmailApprovalCooldownTimestampAsync(int settingsId)
+    {
+        try
+        {
+            using var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync();
+
+            const string sql = @"
+                UPDATE NotificationSettings 
+                SET NewEmailApprovalCooldownTimestamp = @Timestamp, UpdatedAt = @UpdatedAt
+                WHERE Id = @Id";
+            
+            await connection.ExecuteAsync(sql, new
+            {
+                Id = settingsId,
+                Timestamp = DateTime.UtcNow.ToString("o"),
+                UpdatedAt = DateTime.UtcNow.ToString("o")
+            });
+            
+            Log.Debug("Updated email approval cooldown timestamp for settings {SettingsId}", settingsId);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating email approval cooldown timestamp");
+        }
+    }
+
+    /// <summary>
     /// Send notification for successful profile execution
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
     /// </summary>
@@ -363,7 +394,8 @@ public class NotificationService
 
     /// <summary>
     /// Send notification for new email approval items
-    /// Uses throttling to prevent excessive emails (cooldown configurable, default once per 24 hours)
+    /// Uses database-persisted throttling to prevent excessive emails (cooldown configurable, default once per 24 hours)
+    /// This ensures cooldown persists across application restarts
     /// </summary>
     public async Task SendNewEmailApprovalNotificationAsync(int pendingCount)
     {
@@ -375,15 +407,19 @@ public class NotificationService
                 return;
             }
 
-            // Convert hours to seconds for throttler
-            var cooldownSeconds = settings.NewEmailApprovalCooldownHours * 3600;
-
-            // Check throttling using the configured cooldown period
-            if (!_throttler.ShouldNotify("NewEmailApproval", "pending", cooldownSeconds))
+            // Check database-persisted cooldown timestamp (survives app restarts)
+            if (settings.NewEmailApprovalCooldownTimestamp.HasValue)
             {
-                Log.Debug("New email approval notification throttled (cooldown: {Hours}h)",
-                    settings.NewEmailApprovalCooldownHours);
-                return;
+                var timeSinceLastNotification = DateTime.UtcNow - settings.NewEmailApprovalCooldownTimestamp.Value;
+                var cooldownPeriod = TimeSpan.FromHours(settings.NewEmailApprovalCooldownHours);
+                
+                if (timeSinceLastNotification < cooldownPeriod)
+                {
+                    var remainingTime = cooldownPeriod - timeSinceLastNotification;
+                    Log.Debug("New email approval notification throttled (cooldown: {Hours}h, remaining: {Minutes}m)",
+                        settings.NewEmailApprovalCooldownHours, (int)remainingTime.TotalMinutes);
+                    return;
+                }
             }
 
             // Load template from database or use fallback
@@ -399,6 +435,10 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            
+            // Update cooldown timestamp in database after successful send
+            await UpdateEmailApprovalCooldownTimestampAsync(settings.Id);
+            
             Log.Information("Sent new email approval notification ({Count} pending)", pendingCount);
         }
         catch (Exception ex)

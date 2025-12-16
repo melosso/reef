@@ -827,6 +827,8 @@
             await loadApprovals();
             await loadStatistics();
             if (typeof updateApprovalBadge === 'function') {
+                // Small delay to ensure backend has processed the approvals
+                await new Promise(resolve => setTimeout(resolve, 300));
                 await updateApprovalBadge();
             }
         }
@@ -879,6 +881,8 @@
             await loadApprovals();
             await loadStatistics();
             if (typeof updateApprovalBadge === 'function') {
+                // Small delay to ensure backend has processed the rejections
+                await new Promise(resolve => setTimeout(resolve, 300));
                 await updateApprovalBadge();
             }
         }
@@ -1141,6 +1145,8 @@
                 await loadApprovals();
                 await loadStatistics();
                 if (typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed the approval
+                    await new Promise(resolve => setTimeout(resolve, 300));
                     await updateApprovalBadge();
                 }
             } catch (error) {
@@ -1193,6 +1199,8 @@
                 await loadApprovals();
                 await loadStatistics();
                 if (typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed the rejection
+                    await new Promise(resolve => setTimeout(resolve, 300));
                     await updateApprovalBadge();
                 }
             } catch (error) {

@@ -400,7 +400,7 @@ public class DatabaseInitializer
         {
             // Create new table with full schema
             var sql = @"
-                CREATE TABLE WebhookTriggers (
+                CREATE TABLE IF NOT EXISTS WebhookTriggers (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ProfileId INTEGER NULL,
                     JobId INTEGER NULL,
@@ -432,7 +432,7 @@ public class DatabaseInitializer
                 Log.Information("Migrating WebhookTriggers table to add JobId column");
                 var migrationSql = @"
                     -- Create new table with updated schema (without CHECK constraint to avoid issues)
-                    CREATE TABLE WebhookTriggers_new (
+                    CREATE TABLE IF NOT EXISTS WebhookTriggers_new (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         ProfileId INTEGER NULL,
                         JobId INTEGER NULL,
@@ -807,6 +807,7 @@ public class DatabaseInitializer
                 NotifyOnNewWebhook INTEGER NOT NULL DEFAULT 0,
                 NotifyOnNewEmailApproval INTEGER NOT NULL DEFAULT 0,
                 NewEmailApprovalCooldownHours INTEGER NOT NULL DEFAULT 24,
+                NewEmailApprovalCooldownTimestamp TEXT NULL,
 
                 -- Instance Exposure Configuration
                 EnableCTA INTEGER NOT NULL DEFAULT 0,
@@ -970,7 +971,7 @@ public class DatabaseInitializer
         {
             // Create new table with StartupToken column
             var createTableSql = @"
-                CREATE TABLE ApplicationStartup (
+                CREATE TABLE IF NOT EXISTS ApplicationStartup (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     StartupToken TEXT NOT NULL UNIQUE,
                     StartedAt TEXT NOT NULL,
@@ -1366,6 +1367,7 @@ public class DatabaseInitializer
         // Add Email Approval Notification columns to NotificationSettings
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnNewEmailApproval", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NewEmailApprovalCooldownHours", "INTEGER NOT NULL DEFAULT 24");
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NewEmailApprovalCooldownTimestamp", "TEXT NULL");
 
         // Username change tracking and User ID foreign keys
         await CreateUsernameHistoryTableAsync(connection);
@@ -1407,7 +1409,7 @@ public class DatabaseInitializer
             Log.Debug("Creating UsernameHistory table...");
 
             const string createTableSql = @"
-                CREATE TABLE UsernameHistory (
+                CREATE TABLE IF NOT EXISTS UsernameHistory (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     UserId INTEGER NOT NULL,
                     OldUsername TEXT NOT NULL,
@@ -1536,7 +1538,7 @@ public class DatabaseInitializer
         if (tableExists == 0)
         {
             const string createTableSql = @"
-                CREATE TABLE PendingEmailApprovals (
+                CREATE TABLE IF NOT EXISTS PendingEmailApprovals (
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     Guid TEXT NOT NULL UNIQUE,
                     ProfileId INTEGER NOT NULL,
