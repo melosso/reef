@@ -512,7 +512,7 @@ function buildAllProfilesFlowchart() {
                 );
             } else {
                 edgeLines.push(
-                    `        ${profileNodeId} -.-|>|Disabled| ${destNodeId}\n`
+                    `        ${profileNodeId} -.->|Disabled| ${destNodeId}\n`
                 );
             }
         });
