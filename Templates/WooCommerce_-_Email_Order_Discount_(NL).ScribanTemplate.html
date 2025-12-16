@@ -1,0 +1,176 @@
+{{~ for row in rows ~}}
+<!doctype html>
+<html lang="nl-NL">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>Een bedankje van {{~ row.company | default "Company Name" | html.escape ~}} voor jouw eerste bestelling</title>
+  <style>
+    body { font-size: 16px; word-break: break-word; }
+  </style>
+  <style type="text/css">
+    @media screen and (max-width: 600px){
+      #wrapper { padding: 12px 0 !important; }
+      #template_header_image { padding: 12px 12px 0 !important; }
+      #header_wrapper { padding: 12px 12px 0 !important; }
+      #header_wrapper h1 { font-size: 24px !important; margin: 0 0 8px 0 !important; }
+      #body_content_inner_cell { padding: 12px !important; }
+      #body_content_inner { font-size: 14px !important; }
+      .email-introduction { padding-bottom: 12px !important; }
+      .email-introduction p { margin: 0 0 8px !important; }
+      .coupon-box { padding: 16px !important; margin: 12px 0 !important; }
+      .coupon-code { font-size: 20px !important; padding: 10px !important; }
+      .coupon-disclaimer { font-size: 12px !important; margin-top: 16px !important; }
+      #credit { padding: 16px 12px !important; }
+      #credit p { margin: 0 !important; }
+    }
+  </style>
+</head>
+<body bgcolor="#fff" style="background-color: #fff; padding: 0; text-align: center;" offset="0" marginheight="0" topmargin="0" marginwidth="0" leftmargin="0">
+  <table width="100%" id="outer_wrapper" style="background-color: #fff;" bgcolor="#fff">
+    <tbody>
+      <tr>
+        <td><!-- Deliberately empty to support consistent sizing and layout across multiple email clients. --></td>
+        <td width="600">
+          <div id="wrapper" dir="ltr" style="margin: 0 auto; padding: 24px 0; width: 100%; max-width: 600px; -webkit-text-size-adjust: none;" width="100%">
+            <table border="0" cellpadding="0" cellspacing="0" height="100%" width="100%" id="inner_wrapper" style="background-color: #fff; border-radius: 8px;" bgcolor="#fff">
+              <tbody>
+                <tr>
+                  <td align="center" valign="top">
+                    <!-- Logo -->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tbody>
+                        <tr>
+                          <td id="template_header_image" style="padding: 32px 32px 0;">
+                            <p class="email-logo-text" style="color: #bc6672; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 18px; margin-bottom: 0; text-align: left;" align="left">{{~ row.company | default "Company Name" | html.escape ~}}</p>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- Main Content Container -->
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_container" style="box-shadow: none; background-color: #fff; border: 0; border-radius: 3px;" bgcolor="#fff">
+                      <tbody>
+                        <tr>
+                          <td align="center" valign="top">
+                            <!-- Header -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_header" style="background-color: #fff; color: #1e1e1e; border-bottom: 0; font-weight: bold; line-height: 100%; vertical-align: middle; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; border-radius: 3px 3px 0 0;" bgcolor="#fff">
+                              <tbody>
+                                <tr>
+                                  <td id="header_wrapper" style="padding: 20px 32px 0; display: block;">
+                                    <h1 style="font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 120%; margin: 0; color: #1e1e1e; background-color: inherit; text-align: left;" bgcolor="inherit">Welkom bij ons</h1>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <!-- End Header -->
+                          </td>
+                        </tr>
+
+                        <tr>
+                          <td align="center" valign="top">
+                            <!-- Body -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" id="template_body">
+                              <tbody>
+                                <tr>
+                                  <td valign="top" id="body_content" style="background-color: #fff;" bgcolor="#fff">
+                                    <!-- Content -->
+                                    <table border="0" cellpadding="20" cellspacing="0" width="100%">
+                                      <tbody>
+                                        <tr>
+                                          <td valign="top" id="body_content_inner_cell" style="padding: 20px 32px 32px;">
+                                            <div id="body_content_inner" style="color: #4b4b4b; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 16px; line-height: 150%; text-align: left;" align="left">
+                                            
+                                            <!-- Introduction -->
+                                            <div class="email-introduction" style="padding-bottom: 24px;">
+                                              <p style="margin: 0 0 16px;">Hey {{~ row.customer_name | default "daar" | html.escape ~}},</p>
+                                              <p style="margin: 0 0 16px;">Leuk dat je er bent. Als welkom krijg je 10% korting op je volgende bestelling in de webshop. Je mag de code delen met iemand anders, maar hij kan maar één keer gebruikt worden.</p>
+                                              <p style="margin: 0 0 0px;">Hier is je kortingscode:</p>
+                                            </div>
+
+                                              <!-- 10% Coupon -->
+                                              <div class="coupon-box" style="background-color: #f8f8f8; border-left: 4px solid #bc6672; padding: 24px; margin: 16px 0; border-radius: 4px;">
+                                                <h2 style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 18px; font-weight: 600; margin: 0 0 12px; text-align: left;">Je welkomstkorting van 10%</h2>
+                                                <div class="coupon-code" style="background-color: #fff; border: 1px solid #d0d0d0; padding: 12px; text-align: center; font-family: 'Courier New', monospace; font-size: 24px; font-weight: bold; color: #1e1e1e; letter-spacing: 2px; margin: 12px 0; border-radius: 4px;">
+                                                  {{~ row.coupon_code | default "WELKOM10" | html.escape ~}}
+                                                </div>
+                                              </div>
+
+                                              <!-- How to Use -->
+                                              <div style="padding: 24px 0;">
+                                                <p style="margin: 0 0 16px;">Vul de code in bij het afrekenen en de korting wordt automatisch toegepast. De code is geldig tot {{~ row.expiry_date | default "90 dagen na ontvangst" | html.escape ~}} en kan één keer worden gebruikt.</p>
+                                              </div>
+
+                                              <!-- Footer Message -->
+                                              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                                <tbody>
+                                                  <tr>
+                                                    <td class="email-additional-content" style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; padding: 32px 0 0; border-top: 1px solid rgba(0,0,0,.1);">
+                                                      <p style="text-align: center; margin: 0 0 16px;" align="center">
+                                                        Heb je vragen? Neem contact met ons op via {{~ row.support_email | default "support@company.com" | html.escape ~}}
+                                                      </p>
+                                                    </td>
+                                                  </tr>
+                                                </tbody>
+                                              </table>
+
+                                              <!-- Small Print -->
+                                              <div class="coupon-disclaimer" style="padding-top: 24px; border-top: 1px solid rgba(0,0,0,.1); margin-top: 24px;">
+                                                <p style="font-size: 13px; color: #787c82; margin: 0 0 8px; line-height: 140%;">
+                                                  De kortingscode is 90 dagen geldig en kan één keer worden gebruikt. De code kan gecombineerd worden met lopende acties en is gekoppeld aan je e-mailadres.
+                                                </p>
+                                              </div>
+
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                    <!-- End Content -->
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <!-- End Body -->
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td align="center" valign="top">
+                    <!-- Footer -->
+                    <table border="0" cellpadding="10" cellspacing="0" width="100%" id="template_footer">
+                      <tbody>
+                        <tr>
+                          <td valign="top" style="padding: 0; border-radius: 0;">
+                            <table border="0" cellpadding="10" cellspacing="0" width="100%">
+                              <tbody>
+                                <tr>
+                                  <td colspan="2" valign="middle" id="credit" style="border-radius: 0; border: 0; border-top: 1px solid rgba(0,0,0,.2); font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; font-size: 12px; line-height: 140%; text-align: center; padding: 32px; color: #787c82;" align="center">
+                                    <p style="margin: 0;">{{~ row.company | default "Company Name" | html.escape ~}}</p>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <!-- End Footer -->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </td>
+        <td><!-- Deliberately empty to support consistent sizing and layout across multiple email clients. --></td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
+{{~ end ~}}
