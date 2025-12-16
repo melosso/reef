@@ -157,7 +157,7 @@ public class DeltaSyncService
         int executionId,
         DeltaSyncResult deltaSyncResult)
     {
-        Log.Information("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}, StateCount={StateCount}", 
+        Log.Debug("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}, StateCount={StateCount}", 
             profileId, executionId, deltaSyncResult.NewHashState.Count);
 
         // Update hash state for all current rows
@@ -199,7 +199,7 @@ public class DeltaSyncService
         using var db = new SqliteConnection(_connectionString);
         await db.OpenAsync();
         
-        Log.Information("UpdateHashStateAsync: Saving {Count} hash entries for profile {ProfileId}, execution {ExecutionId}",
+        Log.Debug("UpdateHashStateAsync: Saving {Count} hash entries for profile {ProfileId}, execution {ExecutionId}",
             newHashState.Count, profileId, executionId);
         
         using var transaction = await db.BeginTransactionAsync();
