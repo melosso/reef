@@ -438,6 +438,19 @@ public class ExecutionService
 
                             stopwatch.Stop();
 
+                            // Check if any emails were successfully rendered
+                            if (approvalCount == 0 && rows.Count > 0)
+                            {
+                                var errorMessage = renderErrors.Count > 0
+                                    ? $"Failed to render any emails for approval: {string.Join("; ", renderErrors)}"
+                                    : "No emails were rendered for approval despite having query results";
+                                
+                                Log.Error(errorMessage);
+                                await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, 
+                                    stopwatch.ElapsedMilliseconds, errorMessage);
+                                return (executionId, false, null, errorMessage);
+                            }
+
                             // Mark execution as successful (query succeeded, awaiting approval)
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 $"{approvalCount} emails pending approval");

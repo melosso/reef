@@ -1029,7 +1029,7 @@ public class EmailExportService
                 {
                     var errorMsg = $"Failed to render email: {ex.Message}";
                     errors.Add(errorMsg);
-                    Log.Warning(ex, errorMsg);
+                    Log.Error(ex, errorMsg);
                 }
             }
 
