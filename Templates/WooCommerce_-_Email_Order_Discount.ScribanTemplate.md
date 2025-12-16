@@ -20,7 +20,7 @@ SELECT
     coupons.coupon_code,
     
     -- Expiry date (90 days from now)
-    DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 90 DAY), '%e %M %Y') AS expiry_date
+    DATE_FORMAT(DATE_ADD(users.user_registered, INTERVAL 90 DAY), '%e %M %Y') AS expiry_date
     
 FROM wp_users AS users
 INNER JOIN (

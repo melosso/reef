@@ -111,7 +111,7 @@ public class ApprovedEmailSenderService : BackgroundService
                 return; // No approved emails to send
             }
 
-            Log.Debug("Found {Count} approved emails to send", emailList.Count);
+            Log.Information("Found {Count} approved emails ready to send", emailList.Count);
 
             foreach (var approval in emailList)
             {
@@ -146,7 +146,7 @@ public class ApprovedEmailSenderService : BackgroundService
             try
             {
                 attemptCount++;
-                Log.Debug("Sending approved email {ApprovalId} (attempt {Attempt}/{MaxRetries})", approval.Id, attemptCount, _maxRetries);
+                Log.Information("Sending approved email {ApprovalId} (attempt {Attempt}/{MaxRetries})", approval.Id, attemptCount, _maxRetries);
 
                 // Get email destination from ProfileExecutions -> Profiles
                 var profileId = approval.ProfileId;
@@ -437,6 +437,9 @@ public class ApprovedEmailSenderService : BackgroundService
                     [approval.ReefId] = approval.DeltaSyncHash
                 }
             };
+
+            Log.Information("Committing delta sync for approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}', ExecutionId={ExecutionId}",
+                approval.Id, approval.ReefId, approval.DeltaSyncHash, approval.ProfileExecutionId);
 
             // Commit the delta sync using the execution ID from the approval
             await deltaSyncService.CommitDeltaSyncAsync(

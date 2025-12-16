@@ -934,6 +934,7 @@ public class DatabaseInitializer
                 AttachmentConfig TEXT NULL,
                 ReefId TEXT NULL,
                 DeltaSyncHash TEXT NULL,
+                DeltaSyncRowType TEXT NULL,
                 Status TEXT NOT NULL DEFAULT 'Pending',
                 ApprovedByUserId INTEGER NULL,
                 ApprovedAt TEXT NULL,

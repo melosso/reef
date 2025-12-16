@@ -107,7 +107,13 @@ public class DeltaSyncService
             currentHashes[reefId] = hash;
             result.NewHashState[reefId] = hash;
 
-            if (!previousHashes.ContainsKey(reefId))
+            bool foundInPrevious = previousHashes.ContainsKey(reefId);
+            string? previousHash = foundInPrevious ? previousHashes[reefId] : null;
+            
+            Log.Information("Delta sync row: ReefId='{ReefId}', CurrentHash='{CurrentHash}', FoundInPrevious={Found}, PreviousHash='{PreviousHash}'",
+                reefId, hash?.Substring(0, 8) + "...", foundInPrevious, previousHash?.Substring(0, 8) + "...");
+
+            if (!foundInPrevious)
             {
                 // New row
                 result.NewRows.Add(row);
@@ -151,7 +157,8 @@ public class DeltaSyncService
         int executionId,
         DeltaSyncResult deltaSyncResult)
     {
-        Log.Debug("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}", profileId, executionId);
+        Log.Information("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}, StateCount={StateCount}", 
+            profileId, executionId, deltaSyncResult.NewHashState.Count);
 
         // Update hash state for all current rows
         await UpdateHashStateAsync(profileId, executionId, deltaSyncResult.NewHashState);
@@ -192,6 +199,9 @@ public class DeltaSyncService
         using var db = new SqliteConnection(_connectionString);
         await db.OpenAsync();
         
+        Log.Information("UpdateHashStateAsync: Saving {Count} hash entries for profile {ProfileId}, execution {ExecutionId}",
+            newHashState.Count, profileId, executionId);
+        
         using var transaction = await db.BeginTransactionAsync();
         try
         {
@@ -210,6 +220,9 @@ public class DeltaSyncService
                         @"SELECT Id FROM DeltaSyncState 
                           WHERE ProfileId = @ProfileId AND ReefId = @ReefId",
                         new { ProfileId = profileId, ReefId = reefId }, transaction);
+
+                    Log.Debug("UpdateHashStateAsync: ReefId='{ReefId}', Hash='{Hash}', Exists={Exists}",
+                        reefId, hash?.Substring(0, 8) + "...", existingId.HasValue);
 
                     if (existingId.HasValue)
                     {

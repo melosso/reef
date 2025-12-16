@@ -37,6 +37,42 @@ public class EmailApprovalService
     }
 
     /// <summary>
+    /// Check if an identical pending approval already exists
+    /// Returns the existing approval ID if found, null otherwise
+    /// </summary>
+    public async Task<int?> FindExistingPendingApprovalAsync(
+        int profileId,
+        string? reefId,
+        string? deltaSyncHash)
+    {
+        // Only check for duplicates if we have delta sync info
+        if (string.IsNullOrEmpty(reefId) || string.IsNullOrEmpty(deltaSyncHash))
+            return null;
+
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        const string sql = @"
+            SELECT Id 
+            FROM PendingEmailApprovals 
+            WHERE ProfileId = @ProfileId 
+              AND ReefId = @ReefId 
+              AND DeltaSyncHash = @DeltaSyncHash 
+              AND Status = 'Pending'
+            LIMIT 1
+        ";
+
+        var existingId = await connection.QueryFirstOrDefaultAsync<int?>(sql, new
+        {
+            ProfileId = profileId,
+            ReefId = reefId,
+            DeltaSyncHash = deltaSyncHash
+        });
+
+        return existingId;
+    }
+
+    /// <summary>
     /// Create a new pending email approval from rendered email details
     /// Stores the email details for later approval/rejection
     /// </summary>

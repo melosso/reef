@@ -512,6 +512,7 @@
         let currentApprovalId = null;
         let currentRejectionId = null;
         let allApprovals = [];
+        let profiles = [];
         let userMenuExpanded = false;
 
         // Pagination state for each tab
@@ -536,6 +537,7 @@
             // Initialize Lucide icons
             queueLucideRender();
 
+            await loadProfiles();
             await loadApprovals();
             await loadStatistics();
 
@@ -583,6 +585,24 @@
             } catch (error) {
                 console.error('Error loading statistics:', error);
             }
+        }
+
+        async function loadProfiles() {
+            try {
+                const response = await fetch(`${API_BASE}/api/profiles`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (response.ok) {
+                    profiles = await response.json();
+                }
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+            }
+        }
+
+        function getProfileName(profileId) {
+            const profile = profiles.find(p => p.id === profileId);
+            return profile ? profile.name : `Profile #${profileId}`;
         }
 
         function renderTables() {
@@ -642,7 +662,7 @@
                                onchange="toggleApprovalSelection('${approval.guid}')"
                                ${selectedApprovals.has(approval.guid) ? 'checked' : ''}>
                     </td>
-                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${getProfileName(approval.profileId)}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs" title="${approval.recipients}">
                         ${truncate(approval.recipients, 30)}
                     </td>
@@ -888,7 +908,7 @@
 
             tbody.innerHTML = paginatedData.map(approval => `
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${getProfileName(approval.profileId)}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.recipients, 30)}</td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs">${truncate(approval.subject, 30)}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${approval.approvedByUserId || 'N/A'}</td>
@@ -927,7 +947,7 @@
 
             tbody.innerHTML = paginatedData.map(approval => `
                 <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 text-sm text-gray-900">${approval.profileId}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${getProfileName(approval.profileId)}</td>
                     <td class="px-6 py-4 text-sm">
                         <span class="px-2 py-1 rounded text-xs font-medium ${getStatusBadge(approval.status)}">
                             ${approval.status}

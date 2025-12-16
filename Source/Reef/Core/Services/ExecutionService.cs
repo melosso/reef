@@ -446,6 +446,7 @@ public class ExecutionService
 
                             // Store rendered emails as pending approvals
                             int approvalCount = 0;
+                            int duplicateCount = 0;
                             foreach (var (recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefId, deltaSyncHash) in renderedEmails)
                             {
                                 // Determine row type for delta sync metrics
@@ -453,6 +454,21 @@ public class ExecutionService
                                 if (!string.IsNullOrEmpty(reefId) && rowTypeByReefId.TryGetValue(reefId, out var type))
                                 {
                                     rowType = type;
+                                }
+
+                                // Check if an identical approval already exists (deduplication)
+                                var existingApprovalId = await _emailApprovalService.FindExistingPendingApprovalAsync(
+                                    profileId,
+                                    reefId,
+                                    deltaSyncHash);
+
+                                if (existingApprovalId.HasValue)
+                                {
+                                    // Skip creating duplicate approval
+                                    duplicateCount++;
+                                    Log.Information("Skipping duplicate approval for execution {ExecutionId}, ReefId: {ReefId} - existing approval {ExistingApprovalId} already pending",
+                                        executionId, reefId ?? "(none)", existingApprovalId.Value);
+                                    continue;
                                 }
 
                                 var approvalId = await _emailApprovalService.CreatePendingApprovalAsync(
@@ -474,8 +490,15 @@ public class ExecutionService
 
                             stopwatch.Stop();
 
+                            // Log duplicate summary if any were found
+                            if (duplicateCount > 0)
+                            {
+                                Log.Information("Execution {ExecutionId}: Skipped {DuplicateCount} duplicate approvals (already pending), created {NewCount} new approvals",
+                                    executionId, duplicateCount, approvalCount);
+                            }
+
                             // Check if any emails were successfully rendered
-                            if (approvalCount == 0 && rows.Count > 0)
+                            if (approvalCount == 0 && duplicateCount == 0 && rows.Count > 0)
                             {
                                 var errorMessage = renderErrors.Count > 0
                                     ? $"Failed to render any emails for approval: {string.Join("; ", renderErrors)}"
@@ -487,9 +510,13 @@ public class ExecutionService
                                 return (executionId, false, null, errorMessage);
                             }
 
-                            // Mark execution as successful (query succeeded, awaiting approval)
+                            // Mark execution as successful (query succeeded, approvals created or already pending)
+                            string executionMessage = approvalCount > 0
+                                ? $"{approvalCount} emails pending approval"
+                                : $"All {duplicateCount} emails already pending approval (duplicates skipped)";
+                            
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
-                                $"{approvalCount} emails pending approval");
+                                executionMessage);
 
                             // Update profile's last executed timestamp
                             await UpdateProfileLastExecutedAsync(profileId);
@@ -498,7 +525,13 @@ public class ExecutionService
                             // Delta sync will be committed when emails are actually approved and sent
                             // Otherwise, we'd mark rows as "exported" even though emails were never sent
 
-                            Log.Information("Profile {ProfileId} execution completed: {ApprovalCount} emails stored for approval", profile.Id, approvalCount);
+                            string logMessage = approvalCount > 0 && duplicateCount > 0
+                                ? $"{approvalCount} new approvals, {duplicateCount} duplicates skipped"
+                                : approvalCount > 0
+                                    ? $"{approvalCount} emails stored for approval"
+                                    : $"All {duplicateCount} emails already pending (duplicates skipped)";
+                            
+                            Log.Information("Profile {ProfileId} execution completed: {LogMessage}", profile.Id, logMessage);
 
                             return (executionId, true, null, null);
                         }

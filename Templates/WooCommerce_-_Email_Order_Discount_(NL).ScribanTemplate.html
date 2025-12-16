@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>Een bedankje van {{~ row.company | default "Company Name" | html.escape ~}} voor jouw eerste bestelling</title>
+  <title>Een bedankje van&nbsp;{{~ row.company | default "Company Name" | html.escape ~}} voor jouw eerste bestelling</title>
   <style>
     body { font-size: 16px; word-break: break-word; }
   </style>
@@ -84,7 +84,7 @@
                                             
                                             <!-- Introduction -->
                                             <div class="email-introduction" style="padding-bottom: 24px;">
-                                              <p style="margin: 0 0 16px;">Hey {{~ row.customer_name | default "daar" | html.escape ~}},</p>
+                                              <p style="margin: 0 0 16px;">Hey&nbsp;{{~ row.customer_name | default "daar" | html.escape ~}},</p>
                                               <p style="margin: 0 0 16px;">Leuk dat je er bent. Als welkom krijg je 10% korting op je volgende bestelling in de webshop. Je mag de code delen met iemand anders, maar hij kan maar één keer gebruikt worden.</p>
                                               <p style="margin: 0 0 0px;">Hier is je kortingscode:</p>
                                             </div>
@@ -99,7 +99,7 @@
 
                                               <!-- How to Use -->
                                               <div style="padding: 24px 0;">
-                                                <p style="margin: 0 0 16px;">Vul de code in bij het afrekenen en de korting wordt automatisch toegepast. De code is geldig tot {{~ row.expiry_date | default "90 dagen na ontvangst" | html.escape ~}} en kan één keer worden gebruikt.</p>
+                                                <p style="margin: 0 0 16px;">Vul de code in bij het afrekenen en de korting wordt automatisch toegepast. De code is geldig tot&nbsp;{{~ row.expiry_date | default "90 dagen na ontvangst" | html.escape ~}}&nbsp;en kan één keer worden gebruikt.</p>
                                               </div>
 
                                               <!-- Footer Message -->
@@ -108,7 +108,7 @@
                                                   <tr>
                                                     <td class="email-additional-content" style="color: #1e1e1e; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; padding: 32px 0 0; border-top: 1px solid rgba(0,0,0,.1);">
                                                       <p style="text-align: center; margin: 0 0 16px;" align="center">
-                                                        Heb je vragen? Neem contact met ons op via {{~ row.support_email | default "support@company.com" | html.escape ~}}
+                                                        Heb je vragen? Neem contact met ons op via&nbsp;{{~ row.support_email | default "support@company.com" | html.escape ~}}
                                                       </p>
                                                     </td>
                                                   </tr>
