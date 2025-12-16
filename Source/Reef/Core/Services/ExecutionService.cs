@@ -2783,12 +2783,7 @@ public class ExecutionService
         if (string.IsNullOrEmpty(reefIdColumn))
             return null;
 
-        // Filter new rows to only include successful indices
-        var filteredNewRows = deltaSyncResult.NewRows
-            .Where((row, index) => successfulRowIndices.Contains(index))
-            .ToList();
-
-        // For changed rows, we need to match them back to original rows by ReefId
+        // First, build a set of successful ReefIds from the original rows list
         var successfulReefIds = new HashSet<string>();
         for (int i = 0; i < rows.Count; i++)
         {
@@ -2802,6 +2797,13 @@ public class ExecutionService
             }
         }
 
+        // Filter new rows to only include successful ReefIds (by matching ReefId, not by index)
+        var filteredNewRows = deltaSyncResult.NewRows
+            .Where(row => row.TryGetValue(reefIdColumn, out var reefIdVal) &&
+                   successfulReefIds.Contains(reefIdVal?.ToString() ?? ""))
+            .ToList();
+
+        // Filter changed rows to only include successful ReefIds
         var filteredChangedRows = deltaSyncResult.ChangedRows
             .Where(row => row.TryGetValue(reefIdColumn, out var reefIdVal) &&
                    successfulReefIds.Contains(reefIdVal?.ToString() ?? ""))
