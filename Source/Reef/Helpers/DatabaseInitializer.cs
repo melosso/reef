@@ -1360,6 +1360,7 @@ public class DatabaseInitializer
         // Add ReefId and DeltaSyncHash columns to PendingEmailApprovals for delta sync support
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "ReefId", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncHash", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncRowType", "TEXT NULL");
 
         // Add Email Approval Notification columns to NotificationSettings
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnNewEmailApproval", "INTEGER NOT NULL DEFAULT 0");

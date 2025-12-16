@@ -49,7 +49,8 @@ public class EmailApprovalService
         string? ccAddresses = null,
         string? attachmentConfig = null,
         string? reefId = null,
-        string? deltaSyncHash = null)
+        string? deltaSyncHash = null,
+        string? deltaSyncRowType = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -64,11 +65,11 @@ public class EmailApprovalService
             const string sql = @"
                 INSERT INTO PendingEmailApprovals (
                     Guid, ProfileId, ProfileExecutionId, Recipients, CcAddresses, Subject, HtmlBody,
-                    AttachmentConfig, ReefId, DeltaSyncHash, Status, CreatedAt, ExpiresAt, Hash
+                    AttachmentConfig, ReefId, DeltaSyncHash, DeltaSyncRowType, Status, CreatedAt, ExpiresAt, Hash
                 )
                 VALUES (
                     @Guid, @ProfileId, @ProfileExecutionId, @Recipients, @CcAddresses, @Subject, @HtmlBody,
-                    @AttachmentConfig, @ReefId, @DeltaSyncHash, 'Pending', @CreatedAt, @ExpiresAt, @Hash
+                    @AttachmentConfig, @ReefId, @DeltaSyncHash, @DeltaSyncRowType, 'Pending', @CreatedAt, @ExpiresAt, @Hash
                 );
                 SELECT last_insert_rowid();
             ";
@@ -85,6 +86,7 @@ public class EmailApprovalService
                 AttachmentConfig = attachmentConfig,
                 ReefId = reefId,
                 DeltaSyncHash = deltaSyncHash,
+                DeltaSyncRowType = deltaSyncRowType,
                 CreatedAt = DateTime.UtcNow.ToString("o"),
                 ExpiresAt = expiresAt.ToString("o"),
                 Hash = hash

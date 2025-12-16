@@ -444,8 +444,14 @@ public class ApprovedEmailSenderService : BackgroundService
                 approval.ProfileExecutionId,
                 deltaSyncResult);
 
-            Log.Information("Delta sync committed for approved email {ApprovalId}, ReefId: {ReefId}",
-                approval.Id, approval.ReefId);
+            // Update delta sync metrics on the execution record based on row type
+            await UpdateDeltaSyncMetricsForApprovalAsync(
+                approval.ProfileExecutionId,
+                approval.DeltaSyncRowType,
+                connection);
+
+            Log.Information("Delta sync committed for approved email {ApprovalId}, ReefId: {ReefId}, RowType: {RowType}",
+                approval.Id, approval.ReefId, approval.DeltaSyncRowType ?? "(unknown)");
         }
         catch (Exception ex)
         {
@@ -453,6 +459,67 @@ public class ApprovedEmailSenderService : BackgroundService
             // Log warning but don't throw
             Log.Warning(ex, "Failed to commit delta sync for approved email {ApprovalId}, ReefId: {ReefId}",
                 approval.Id, approval.ReefId);
+        }
+    }
+
+    /// <summary>
+    /// Update delta sync metrics incrementally as each approved email is sent
+    /// This increments the counters on the ProfileExecution record based on row type
+    /// </summary>
+    private async Task UpdateDeltaSyncMetricsForApprovalAsync(
+        int executionId,
+        string? rowType,
+        SqliteConnection connection)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(rowType))
+            {
+                Log.Debug("No row type for execution {ExecutionId}, skipping metrics update", executionId);
+                return;
+            }
+
+            // Increment the appropriate counter based on row type
+            string sql;
+            if (rowType == "New")
+            {
+                sql = @"
+                    UPDATE ProfileExecutions 
+                    SET DeltaSyncNewRows = COALESCE(DeltaSyncNewRows, 0) + 1,
+                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
+                    WHERE Id = @Id";
+            }
+            else if (rowType == "Changed")
+            {
+                sql = @"
+                    UPDATE ProfileExecutions 
+                    SET DeltaSyncChangedRows = COALESCE(DeltaSyncChangedRows, 0) + 1,
+                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
+                    WHERE Id = @Id";
+            }
+            else if (rowType == "Deleted")
+            {
+                sql = @"
+                    UPDATE ProfileExecutions 
+                    SET DeltaSyncDeletedRows = COALESCE(DeltaSyncDeletedRows, 0) + 1,
+                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
+                    WHERE Id = @Id";
+            }
+            else
+            {
+                Log.Debug("Unknown row type '{RowType}' for execution {ExecutionId}, skipping metrics update", 
+                    rowType, executionId);
+                return;
+            }
+
+            await connection.ExecuteAsync(sql, new { Id = executionId });
+
+            Log.Debug("Updated delta sync metrics for execution {ExecutionId}, RowType: {RowType}",
+                executionId, rowType);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to update delta sync metrics for execution {ExecutionId}", executionId);
         }
     }
 }

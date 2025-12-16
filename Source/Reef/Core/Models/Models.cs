@@ -475,6 +475,7 @@ public class PendingEmailApproval
     public string? AttachmentConfig { get; set; } // JSON serialized attachment metadata/paths
     public string? ReefId { get; set; } // ReefId for delta sync tracking
     public string? DeltaSyncHash { get; set; } // Delta sync hash for this row
+    public string? DeltaSyncRowType { get; set; } // "New", "Changed", or "Deleted" - for metrics tracking
     public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Sent, Failed
     public int? ApprovedByUserId { get; set; } // FK to Users table - who approved/rejected
     public DateTime? ApprovedAt { get; set; } // When email was approved/rejected

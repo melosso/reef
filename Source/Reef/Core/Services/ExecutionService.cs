@@ -416,10 +416,45 @@ public class ExecutionService
                                     profile.Id, string.Join("; ", renderErrors));
                             }
 
+                            // Build a lookup to determine row type (New/Changed/Deleted) by ReefId
+                            var rowTypeByReefId = new Dictionary<string, string>();
+                            if (profile.DeltaSyncEnabled && deltaSyncResult != null && !string.IsNullOrEmpty(profile.DeltaSyncReefIdColumn))
+                            {
+                                foreach (var row in deltaSyncResult.NewRows)
+                                {
+                                    if (row.TryGetValue(profile.DeltaSyncReefIdColumn, out var reefIdVal))
+                                    {
+                                        var reefId = reefIdVal?.ToString();
+                                        if (!string.IsNullOrEmpty(reefId))
+                                            rowTypeByReefId[reefId] = "New";
+                                    }
+                                }
+                                foreach (var row in deltaSyncResult.ChangedRows)
+                                {
+                                    if (row.TryGetValue(profile.DeltaSyncReefIdColumn, out var reefIdVal))
+                                    {
+                                        var reefId = reefIdVal?.ToString();
+                                        if (!string.IsNullOrEmpty(reefId))
+                                            rowTypeByReefId[reefId] = "Changed";
+                                    }
+                                }
+                                foreach (var deletedReefId in deltaSyncResult.DeletedReefIds)
+                                {
+                                    rowTypeByReefId[deletedReefId] = "Deleted";
+                                }
+                            }
+
                             // Store rendered emails as pending approvals
                             int approvalCount = 0;
                             foreach (var (recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefId, deltaSyncHash) in renderedEmails)
                             {
+                                // Determine row type for delta sync metrics
+                                string? rowType = null;
+                                if (!string.IsNullOrEmpty(reefId) && rowTypeByReefId.TryGetValue(reefId, out var type))
+                                {
+                                    rowType = type;
+                                }
+
                                 var approvalId = await _emailApprovalService.CreatePendingApprovalAsync(
                                     profileId,
                                     executionId,
@@ -429,11 +464,12 @@ public class ExecutionService
                                     ccAddresses,
                                     attachmentConfigJson,
                                     reefId,
-                                    deltaSyncHash);
+                                    deltaSyncHash,
+                                    rowType);
 
                                 approvalCount++;
-                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}, ReefId: {ReefId}, Hash: {HasHash}", 
-                                    approvalId, executionId, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
+                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}, ReefId: {ReefId}, RowType: {RowType}", 
+                                    approvalId, executionId, reefId ?? "(none)", rowType ?? "(none)");
                             }
 
                             stopwatch.Stop();
@@ -455,14 +491,12 @@ public class ExecutionService
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 $"{approvalCount} emails pending approval");
 
-                            // Update delta sync metrics if enabled (for initial execution stats)
-                            if (profile.DeltaSyncEnabled && deltaSyncResult != null)
-                            {
-                                await UpdateDeltaSyncMetricsAsync(executionId, deltaSyncResult);
-                            }
-
                             // Update profile's last executed timestamp
                             await UpdateProfileLastExecutedAsync(profileId);
+
+                            // NOTE: We do NOT commit delta sync or update metrics here
+                            // Delta sync will be committed when emails are actually approved and sent
+                            // Otherwise, we'd mark rows as "exported" even though emails were never sent
 
                             Log.Information("Profile {ProfileId} execution completed: {ApprovalCount} emails stored for approval", profile.Id, approvalCount);
 

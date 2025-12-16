@@ -1008,19 +1008,28 @@ public class EmailExportService
 
                     // Extract ReefId for delta sync tracking
                     string? reefId = null;
+                    string? reefIdNormalized = null;
                     if (!string.IsNullOrEmpty(profile.DeltaSyncReefIdColumn))
                     {
-                        reefId = SafeGetValue(row, profile.DeltaSyncReefIdColumn)?.ToString();
+                        var rawReefId = SafeGetValue(row, profile.DeltaSyncReefIdColumn);
+                        if (rawReefId != null)
+                        {
+                            reefId = rawReefId.ToString();
+                            // Normalize ReefId for hash lookup (must match ProcessDeltaAsync normalization)
+                            reefIdNormalized = NormalizeReefId(rawReefId, profile.DeltaSyncReefIdNormalization ?? "Trim");
+                        }
                     }
 
                     // Get delta sync hash for this reef_id if available
+                    // Use normalized ReefId for lookup since NewHashState uses normalized keys
                     string? deltaSyncHash = null;
-                    if (!string.IsNullOrEmpty(reefId) && deltaSyncHashes != null)
+                    if (!string.IsNullOrEmpty(reefIdNormalized) && deltaSyncHashes != null)
                     {
-                        deltaSyncHashes.TryGetValue(reefId, out deltaSyncHash);
+                        deltaSyncHashes.TryGetValue(reefIdNormalized, out deltaSyncHash);
                     }
 
-                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefId, deltaSyncHash));
+                    // Store the NORMALIZED ReefId (not raw) for consistency with DeltaSyncState table
+                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefIdNormalized, deltaSyncHash));
 
                     Log.Debug("Rendered email for approval with subject: {Subject}, ReefId: {ReefId}, Hash: {HasHash}", 
                         subject, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
@@ -1060,5 +1069,28 @@ public class EmailExportService
             k.Equals(columnName, StringComparison.OrdinalIgnoreCase));
 
         return key != null ? row[key] : null;
+    }
+
+    /// <summary>
+    /// Normalize ReefId value using the same logic as DeltaSyncService
+    /// This ensures consistency between email approval and delta sync state
+    /// </summary>
+    private static string NormalizeReefId(object reefIdValue, string normalization)
+    {
+        if (reefIdValue == null || reefIdValue == DBNull.Value)
+            return null!;
+
+        var strValue = reefIdValue.ToString()!;
+
+        if (normalization.Contains("Trim"))
+            strValue = strValue.Trim();
+
+        if (normalization.Contains("Lowercase"))
+            strValue = strValue.ToLowerInvariant();
+
+        if (normalization.Contains("RemoveWhitespace"))
+            strValue = System.Text.RegularExpressions.Regex.Replace(strValue, @"\s+", "");
+
+        return strValue;
     }
 }
