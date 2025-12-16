@@ -35,7 +35,10 @@ public class ApprovedEmailSenderService : BackgroundService
     /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        Log.Debug("ApprovedEmailSenderService started");
+        Log.Debug("ApprovedEmailSenderService polling for approved/skipped emails");
+
+        // Give the application a moment to fully start up
+        await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
 
         try
         {
@@ -47,7 +50,7 @@ public class ApprovedEmailSenderService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error processing approved emails, will retry");
+                    Log.Error(ex, "Error processing approved/skipped emails, will retry");
                 }
 
                 // Wait before next poll
@@ -65,7 +68,7 @@ public class ApprovedEmailSenderService : BackgroundService
         catch (OperationCanceledException)
         {
             // Normal cancellation during shutdown - don't log as error
-            Log.Debug("ApprovedEmailSenderService cancelled during operation");
+            Log.Information("ApprovedEmailSenderService cancelled during operation");
         }
         catch (Exception ex)
         {
@@ -74,7 +77,7 @@ public class ApprovedEmailSenderService : BackgroundService
         }
         finally
         {
-            Log.Debug("ApprovedEmailSenderService stopped");
+            Log.Information("ApprovedEmailSenderService stopped");
         }
     }
 
@@ -124,6 +127,113 @@ public class ApprovedEmailSenderService : BackgroundService
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to process approved emails");
+        }
+
+        // Also process skipped emails (commit delta sync without sending)
+        Log.Information("Now checking for skipped emails...");
+        try
+        {
+            await ProcessSkippedEmailsAsync(connection, deltaSyncService, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to process skipped emails");
+        }
+    }
+
+    /// <summary>
+    /// Process all skipped emails - commit delta sync hash without sending
+    /// </summary>
+    private async Task ProcessSkippedEmailsAsync(
+        SqliteConnection connection,
+        DeltaSyncService deltaSyncService,
+        CancellationToken cancellationToken)
+    {
+        // Get all skipped emails that haven't been processed
+        const string sql = @"
+            SELECT *
+            FROM PendingEmailApprovals
+            WHERE Status = 'Skipped' AND SentAt IS NULL
+            ORDER BY SkippedAt ASC
+            LIMIT 10
+        ";
+
+        var skippedEmails = await connection.QueryAsync<PendingEmailApproval>(sql);
+        var emailList = skippedEmails.ToList();
+
+        Log.Information("Checking for skipped emails to process: found {Count}", emailList.Count);
+
+        if (emailList.Count == 0)
+        {
+            return; // No skipped emails to process
+        }
+
+        Log.Information("Processing {Count} skipped emails (delta sync only)", emailList.Count);
+
+        foreach (var approval in emailList)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                break;
+
+            await ProcessSkippedEmailAsync(approval, connection, deltaSyncService);
+        }
+    }
+
+    /// <summary>
+    /// Process a single skipped email - commit delta sync without sending
+    /// </summary>
+    private async Task ProcessSkippedEmailAsync(
+        PendingEmailApproval approval,
+        SqliteConnection connection,
+        DeltaSyncService deltaSyncService)
+    {
+        try
+        {
+            // Commit delta sync hash (if present)
+            await CommitDeltaSyncForApprovalAsync(approval, connection, deltaSyncService, "Skipped");
+
+            // Mark as processed (use SentAt even though we didn't send - it means "processed")
+            const string updateSql = @"
+                UPDATE PendingEmailApprovals
+                SET SentAt = @ProcessedAt
+                WHERE Id = @Id
+            ";
+
+            await connection.ExecuteAsync(updateSql, new
+            {
+                Id = approval.Id,
+                ProcessedAt = DateTime.UtcNow.ToString("o")
+            });
+
+            // Redact email content for privacy (same as rejected emails)
+            const string redactSql = @"
+                UPDATE PendingEmailApprovals
+                SET Recipients = '[REDACTED]',
+                    CcAddresses = CASE WHEN CcAddresses IS NOT NULL THEN '[REDACTED]' ELSE NULL END,
+                    HtmlBody = '[REDACTED]',
+                    AttachmentConfig = NULL
+                WHERE Id = @Id
+            ";
+            await connection.ExecuteAsync(redactSql, new { Id = approval.Id });
+
+            Log.Information("Successfully processed skipped email {ApprovalId} (delta sync committed, email not sent)", approval.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to process skipped email {ApprovalId}", approval.Id);
+
+            // Mark as failed
+            const string failSql = @"
+                UPDATE PendingEmailApprovals
+                SET Status = 'Failed', ErrorMessage = @ErrorMessage
+                WHERE Id = @Id
+            ";
+
+            await connection.ExecuteAsync(failSql, new
+            {
+                Id = approval.Id,
+                ErrorMessage = $"Failed to process skip: {ex.Message}"
+            });
         }
     }
 
@@ -403,6 +513,18 @@ public class ApprovedEmailSenderService : BackgroundService
         SqliteConnection connection,
         DeltaSyncService deltaSyncService)
     {
+        await CommitDeltaSyncForApprovalAsync(approval, connection, deltaSyncService, "Approved");
+    }
+
+    /// <summary>
+    /// Commit delta sync hash for an approval (approved or skipped)
+    /// </summary>
+    private async Task CommitDeltaSyncForApprovalAsync(
+        PendingEmailApproval approval,
+        SqliteConnection connection,
+        DeltaSyncService deltaSyncService,
+        string action)
+    {
         try
         {
             // Only commit delta sync if ReefId and DeltaSyncHash are present
@@ -438,8 +560,8 @@ public class ApprovedEmailSenderService : BackgroundService
                 }
             };
 
-            Log.Information("Committing delta sync for approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}', ExecutionId={ExecutionId}",
-                approval.Id, approval.ReefId, approval.DeltaSyncHash, approval.ProfileExecutionId);
+            Log.Information("Committing delta sync for {Action} approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}', ExecutionId={ExecutionId}",
+                action, approval.Id, approval.ReefId, approval.DeltaSyncHash, approval.ProfileExecutionId);
 
             // Commit the delta sync using the execution ID from the approval
             await deltaSyncService.CommitDeltaSyncAsync(
@@ -453,15 +575,15 @@ public class ApprovedEmailSenderService : BackgroundService
                 approval.DeltaSyncRowType,
                 connection);
 
-            Log.Information("Delta sync committed for approved email {ApprovalId}, ReefId: {ReefId}, RowType: {RowType}",
-                approval.Id, approval.ReefId, approval.DeltaSyncRowType ?? "(unknown)");
+            Log.Information("Delta sync committed for {Action} email {ApprovalId}, ReefId: {ReefId}, RowType: {RowType}",
+                action, approval.Id, approval.ReefId, approval.DeltaSyncRowType ?? "(unknown)");
         }
         catch (Exception ex)
         {
-            // Delta sync commit failure should not block email sending
+            // Delta sync commit failure should not block processing
             // Log warning but don't throw
-            Log.Warning(ex, "Failed to commit delta sync for approved email {ApprovalId}, ReefId: {ReefId}",
-                approval.Id, approval.ReefId);
+            Log.Warning(ex, "Failed to commit delta sync for {Action} email {ApprovalId}, ReefId: {ReefId}",
+                action, approval.Id, approval.ReefId);
         }
     }
 

@@ -136,7 +136,7 @@
 
             <div class="flex-1 overflow-y-auto p-6">
                 <!-- Statistics Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
                         <p class="text-gray-500 text-sm mb-2">Pending</p>
                         <p class="text-3xl font-bold text-gray-900" id="stat-pending">0</p>
@@ -148,6 +148,10 @@
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
                         <p class="text-gray-500 text-sm mb-2">Sent This Week</p>
                         <p class="text-3xl font-bold text-gray-900" id="stat-sent-week">0</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
+                        <p class="text-gray-500 text-sm mb-2">Skipped</p>
+                        <p class="text-3xl font-bold text-gray-900" id="stat-skipped">0</p>
                     </div>
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
                         <p class="text-gray-500 text-sm mb-2">Rejected</p>
@@ -409,6 +413,10 @@
                         <i data-lucide="check" class="h-4 w-4"></i>
                         Approve
                     </button>
+                    <button onclick="skipCurrentPreview()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
+                        <i data-lucide="skip-forward" class="h-4 w-4"></i>
+                        Skip
+                    </button>
                     <button onclick="rejectCurrentPreview()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center gap-2 transition-colors">
                         <i data-lucide="x" class="h-4 w-4"></i>
                         Reject
@@ -505,12 +513,59 @@
         </div>
     </div>
 
+    <!-- Skip Notes Modal -->
+    <div id="skipNotesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+        <div class="relative w-full max-w-md mx-auto my-20">
+            <div class="bg-white rounded-lg shadow-xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Skip Email</h2>
+                    <button onclick="closeSkipNotesModal()" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <!-- Content -->
+                <div class="px-6 py-4">
+                    <div class="mb-4">
+                        <label for="skip-notes-input" class="block text-sm font-medium text-gray-700 mb-2">
+                            Skip notes (optional):
+                        </label>
+                        <textarea id="skip-notes-input"
+                                  rows="3"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  placeholder="Explain why this email is being skipped..."
+                                  autocomplete="off"></textarea>
+                    </div>
+                    <p class="text-sm text-gray-600">
+                        <i data-lucide="info" class="inline h-4 w-4 mr-1"></i>
+                        The email will not be sent, but the delta sync hash will be committed to prevent future duplicates.
+                    </p>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
+                    <button type="button" onclick="closeSkipNotesModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" id="confirm-skip-btn" onclick="confirmSkip()"
+                            class="px-4 py-2 bg-yellow-600 text-white rounded-md text-sm font-medium hover:bg-yellow-700 flex items-center">
+                        <i data-lucide="skip-forward" class="h-4 w-4 mr-2"></i>
+                        Skip
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = '';
         let token = localStorage.getItem('reef_token');
         let currentPreviewId = null;
         let currentApprovalId = null;
         let currentRejectionId = null;
+        let currentSkipId = null;
         let allApprovals = [];
         let profiles = [];
         let userMenuExpanded = false;
@@ -581,6 +636,7 @@
                 document.getElementById('stat-pending').textContent = stats.pendingCount || 0;
                 document.getElementById('stat-approved').textContent = stats.approvedCount || 0;
                 document.getElementById('stat-sent-week').textContent = stats.sentThisWeek || 0;
+                document.getElementById('stat-skipped').textContent = stats.skippedCount || 0;
                 document.getElementById('stat-rejected').textContent = stats.rejectedCount || 0;
             } catch (error) {
                 console.error('Error loading statistics:', error);
@@ -679,6 +735,9 @@
                             </button>
                             <button onclick="approveApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-green-600 transition-colors" data-tooltip="Approve" data-tooltip-position="bottom">
                                 <i data-lucide="check" class="h-4 w-4"></i>
+                            </button>
+                            <button onclick="skipApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-yellow-600 transition-colors" data-tooltip="Skip (commits hash without sending)" data-tooltip-position="bottom">
+                                <i data-lucide="skip-forward" class="h-4 w-4"></i>
                             </button>
                             <button onclick="rejectApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-red-600 transition-colors" data-tooltip="Reject" data-tooltip-position="bottom">
                                 <i data-lucide="x" class="h-4 w-4"></i>
@@ -1173,6 +1232,11 @@
             currentRejectionId = null;
         }
 
+        function closeSkipNotesModal() {
+            document.getElementById('skipNotesModal').classList.add('hidden');
+            currentSkipId = null;
+        }
+
         async function confirmRejection() {
             if (!currentRejectionId) return;
 
@@ -1212,6 +1276,60 @@
         async function rejectCurrentPreview() {
             if (!currentPreviewId) return;
             await rejectApproval(currentPreviewId);
+            closePreviewModal();
+        }
+
+        async function skipApproval(guid) {
+            currentSkipId = guid;
+            document.getElementById('skip-notes-input').value = '';
+            document.getElementById('skipNotesModal').classList.remove('hidden');
+            queueLucideRender();
+        }
+
+        function closeSkipNotesModal() {
+            document.getElementById('skipNotesModal').classList.add('hidden');
+            currentSkipId = null;
+        }
+
+        async function confirmSkip() {
+            if (!currentSkipId) return;
+
+            const notes = document.getElementById('skip-notes-input').value.trim() || null;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/email-approvals/${currentSkipId}/skip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ notes: notes })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to skip');
+                }
+
+                showToast('Email skipped (delta sync will be committed)', 'success');
+                closeSkipNotesModal();
+                selectedApprovals.delete(currentSkipId);
+                await loadApprovals();
+                await loadStatistics();
+                if (typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed the skip
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    await updateApprovalBadge();
+                }
+            } catch (error) {
+                console.error('Error skipping:', error);
+                showToast('Failed to skip email: ' + error.message, 'error');
+            }
+        }
+
+        async function skipCurrentPreview() {
+            if (!currentPreviewId) return;
+            await skipApproval(currentPreviewId);
             closePreviewModal();
         }
 

@@ -20,6 +20,7 @@ public class EmailApprovalService
     private readonly EmailExportService _emailExportService;
     private readonly ProfileService _profileService;
     private readonly NotificationService _notificationService;
+    private readonly DeltaSyncService _deltaSyncService;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailApprovalService>();
 
     public EmailApprovalService(
@@ -27,13 +28,15 @@ public class EmailApprovalService
         AuditService auditService,
         EmailExportService emailExportService,
         ProfileService profileService,
-        NotificationService notificationService)
+        NotificationService notificationService,
+        DeltaSyncService deltaSyncService)
     {
         _connectionString = config.ConnectionString;
         _auditService = auditService;
         _emailExportService = emailExportService;
         _profileService = profileService;
         _notificationService = notificationService;
+        _deltaSyncService = deltaSyncService;
     }
 
     /// <summary>
@@ -322,6 +325,116 @@ public class EmailApprovalService
     }
 
     /// <summary>
+    /// Skip a pending email approval - commits delta sync hash without sending email
+    /// This marks the row as "seen" in delta sync but doesn't send the email
+    /// </summary>
+    public async Task<PendingEmailApproval?> SkipPendingEmailAsync(
+        int approvalId,
+        int userId,
+        string? skipNotes = null)
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        try
+        {
+            const string updateSql = @"
+                UPDATE PendingEmailApprovals
+                SET Status = 'Skipped', SkippedByUserId = @UserId, SkippedAt = @SkippedAt, ApprovalNotes = @SkipNotes
+                WHERE Id = @Id;
+
+                SELECT * FROM PendingEmailApprovals WHERE Id = @Id;
+            ";
+
+            var approval = await connection.QueryFirstOrDefaultAsync<PendingEmailApproval>(
+                updateSql, new
+                {
+                    Id = approvalId,
+                    UserId = userId,
+                    SkippedAt = DateTime.UtcNow.ToString("o"),
+                    SkipNotes = skipNotes
+                });
+
+            if (approval != null)
+            {
+                // Immediately commit delta sync hash (don't wait for background service)
+                if (!string.IsNullOrEmpty(approval.DeltaSyncHash) && !string.IsNullOrEmpty(approval.ReefId))
+                {
+                    try
+                    {
+                        // Create a minimal DeltaSyncResult with just this one reef_id
+                        var deltaSyncResult = new DeltaSyncResult
+                        {
+                            NewRows = new List<Dictionary<string, object>>(),
+                            ChangedRows = new List<Dictionary<string, object>>(),
+                            UnchangedRows = new List<Dictionary<string, object>>(),
+                            DeletedReefIds = new List<string>(),
+                            TotalRowsProcessed = 1,
+                            NewHashState = new Dictionary<string, string>
+                            {
+                                [approval.ReefId] = approval.DeltaSyncHash
+                            }
+                        };
+
+                        Log.Information("Committing delta sync for skipped approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}'",
+                            approvalId, approval.ReefId, approval.DeltaSyncHash);
+
+                        await _deltaSyncService.CommitDeltaSyncAsync(
+                            approval.ProfileId,
+                            approval.ProfileExecutionId,
+                            deltaSyncResult);
+
+                        Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}", 
+                            approvalId, approval.ReefId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "Failed to commit delta sync hash for skipped email {ApprovalId}", approvalId);
+                        // Don't throw - the background service can retry
+                    }
+                }
+
+                // Update ProfileExecution approval status
+                const string updateExecutionSql = @"
+                    UPDATE ProfileExecutions
+                    SET ApprovalStatus = 'Skipped'
+                    WHERE PendingEmailApprovalId = @ApprovalId
+                ";
+
+                await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
+
+                // Mark as processed
+                const string markProcessedSql = @"
+                    UPDATE PendingEmailApprovals
+                    SET SentAt = @ProcessedAt
+                    WHERE Id = @Id
+                ";
+                await connection.ExecuteAsync(markProcessedSql, new 
+                { 
+                    Id = approvalId, 
+                    ProcessedAt = DateTime.UtcNow.ToString("o") 
+                });
+
+                Log.Information("Skipped email approval {ApprovalId} by user {UserId}", approvalId, userId);
+
+                try
+                {
+                    await _auditService.LogAsync("PendingEmailApproval", approvalId, "Skipped",
+                        userId.ToString(), $"Email skipped (delta sync will be committed). Notes: {skipNotes}");
+                }
+                catch { /* Audit logging failure should not block operation */ }
+            }
+
+            return approval;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to skip pending email approval {ApprovalId}", approvalId);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Get paginated pending approvals for dashboard display
     /// Optionally filter by profile ID
     /// </summary>
@@ -456,6 +569,22 @@ public class EmailApprovalService
     }
 
     /// <summary>
+    /// Skip a pending email approval by GUID
+    /// </summary>
+    public async Task<PendingEmailApproval?> SkipPendingEmailAsync(
+        string guid,
+        int userId,
+        string? skipNotes = null)
+    {
+        // Get the approval by GUID first to find the ID
+        var approval = await GetApprovalByGuidAsync(guid);
+        if (approval == null) return null;
+
+        // Use the existing int-based method
+        return await SkipPendingEmailAsync(approval.Id, userId, skipNotes);
+    }
+
+    /// <summary>
     /// Get approval statistics for dashboard summary
     /// </summary>
     public async Task<object> GetApprovalStatisticsAsync()
@@ -479,6 +608,9 @@ public class EmailApprovalService
 
                 RejectedCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Rejected'"),
+                
+                SkippedCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Skipped'"),
 
                 SentCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Sent'"),

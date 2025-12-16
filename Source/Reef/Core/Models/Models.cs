@@ -476,10 +476,12 @@ public class PendingEmailApproval
     public string? ReefId { get; set; } // ReefId for delta sync tracking
     public string? DeltaSyncHash { get; set; } // Delta sync hash for this row
     public string? DeltaSyncRowType { get; set; } // "New", "Changed", or "Deleted" - for metrics tracking
-    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Sent, Failed
+    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected, Skipped, Sent, Failed
     public int? ApprovedByUserId { get; set; } // FK to Users table - who approved/rejected
     public DateTime? ApprovedAt { get; set; } // When email was approved/rejected
-    public string? ApprovalNotes { get; set; } // Notes/reason for approval or rejection
+    public int? SkippedByUserId { get; set; } // FK to Users table - who skipped
+    public DateTime? SkippedAt { get; set; } // When email was skipped
+    public string? ApprovalNotes { get; set; } // Notes/reason for approval, rejection, or skip
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ExpiresAt { get; set; } // Auto-cleanup after N days
     public string? ErrorMessage { get; set; } // Error message if sending failed

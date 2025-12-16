@@ -25,6 +25,7 @@ public static class EmailApprovalsEndpoints
 
         group.MapPost("/{guid:guid}/approve", ApproveEmail);
         group.MapPost("/{guid:guid}/reject", RejectEmail);
+        group.MapPost("/{guid:guid}/skip", SkipEmail);
         group.MapPost("/{guid:guid}/send-now", SendApprovedEmailNow);
 
         group.MapDelete("/{guid:guid}", DeleteApproval);
@@ -271,6 +272,43 @@ public static class EmailApprovalsEndpoints
     }
 
     /// <summary>
+    /// POST /api/email-approvals/{guid}/skip - Skip an email (commit delta sync hash without sending)
+    /// </summary>
+    private static async Task<IResult> SkipEmail(
+        string guid,
+        [FromBody] SkipEmailRequest request,
+        [FromServices] EmailApprovalService service,
+        HttpContext context)
+    {
+        try
+        {
+            var userId = GetUserIdFromContext(context);
+            if (userId <= 0)
+                return Results.Unauthorized();
+
+            // Check if user has permission to approve (skip uses same permission as approve)
+            var approval = await service.GetApprovalByGuidAsync(guid);
+            if (approval == null)
+                return Results.NotFound(new { message = "Approval not found" });
+
+            var canApprove = await service.UserCanApproveAsync(approval.ProfileId, userId);
+            if (!canApprove)
+                return Results.Forbid();
+
+            var skippedApproval = await service.SkipPendingEmailAsync(guid, userId, request.Notes);
+
+            return skippedApproval != null
+                ? Results.Ok(new { message = "Email skipped (delta sync will be committed)", approval = skippedApproval })
+                : Results.NotFound(new { message = "Approval not found" });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error skipping email {Guid}", guid);
+            return Results.Problem("Error skipping email");
+        }
+    }
+
+    /// <summary>
     /// POST /api/email-approvals/{guid}/send-now - Force send an already-approved email
     /// </summary>
     private static async Task<IResult> SendApprovedEmailNow(
@@ -384,4 +422,12 @@ public class ApproveEmailRequest
 public class RejectEmailRequest
 {
     public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Request model for skipping an email
+/// </summary>
+public class SkipEmailRequest
+{
+    public string? Notes { get; set; }
 }

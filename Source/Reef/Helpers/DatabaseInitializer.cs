@@ -940,6 +940,11 @@ public class DatabaseInitializer
                 ApprovedByUserId INTEGER NULL,
                 ApprovedAt TEXT NULL,
                 ApprovalNotes TEXT NULL,
+                RejectedByUserId INTEGER NULL,
+                RejectedAt TEXT NULL,
+                RejectionReason TEXT NULL,
+                SkippedByUserId INTEGER NULL,
+                SkippedAt TEXT NULL,
                 CreatedAt TEXT NOT NULL,
                 ExpiresAt TEXT NULL,
                 ErrorMessage TEXT NULL,
@@ -947,7 +952,9 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
                 FOREIGN KEY (ProfileExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE,
-                FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+                FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL,
+                FOREIGN KEY (RejectedByUserId) REFERENCES Users(Id) ON DELETE SET NULL,
+                FOREIGN KEY (SkippedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
             );
 
             CREATE UNIQUE INDEX IF NOT EXISTS IX_PendingEmailApprovals_Guid ON PendingEmailApprovals(Guid);
@@ -1364,6 +1371,10 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncHash", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "DeltaSyncRowType", "TEXT NULL");
 
+        // Add Skip functionality columns to PendingEmailApprovals
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "SkippedByUserId", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "SkippedAt", "TEXT NULL");
+
         // Add Email Approval Notification columns to NotificationSettings
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnNewEmailApproval", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NewEmailApprovalCooldownHours", "INTEGER NOT NULL DEFAULT 24");
@@ -1548,10 +1559,18 @@ public class DatabaseInitializer
                     Subject TEXT NOT NULL,
                     HtmlBody TEXT NOT NULL,
                     AttachmentConfig TEXT NULL,
+                    ReefId TEXT NULL,
+                    DeltaSyncHash TEXT NULL,
+                    DeltaSyncRowType TEXT NULL,
                     Status TEXT DEFAULT 'Pending',
                     ApprovedByUserId INTEGER NULL,
                     ApprovedAt TEXT NULL,
                     ApprovalNotes TEXT NULL,
+                    RejectedByUserId INTEGER NULL,
+                    RejectedAt TEXT NULL,
+                    RejectionReason TEXT NULL,
+                    SkippedByUserId INTEGER NULL,
+                    SkippedAt TEXT NULL,
                     CreatedAt TEXT NOT NULL,
                     ExpiresAt TEXT NULL,
                     ErrorMessage TEXT NULL,
@@ -1559,7 +1578,9 @@ public class DatabaseInitializer
                     Hash TEXT NOT NULL,
                     FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
                     FOREIGN KEY (ProfileExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE,
-                    FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
+                    FOREIGN KEY (ApprovedByUserId) REFERENCES Users(Id) ON DELETE SET NULL,
+                    FOREIGN KEY (RejectedByUserId) REFERENCES Users(Id) ON DELETE SET NULL,
+                    FOREIGN KEY (SkippedByUserId) REFERENCES Users(Id) ON DELETE SET NULL
                 )
             ";
 
