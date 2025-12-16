@@ -17,6 +17,7 @@ public static class EmailApprovalsEndpoints
         var group = app.MapGroup("/api/email-approvals").RequireAuthorization();
 
         group.MapGet("/", GetPendingApprovals);
+        group.MapGet("/count", GetPendingCount);
         group.MapGet("/{guid:guid}", GetApprovalByGuid);
         group.MapGet("/profile/{profileId:int}", GetApprovalsByProfile);
         group.MapGet("/statistics", GetApprovalStatistics);
@@ -64,6 +65,28 @@ public static class EmailApprovalsEndpoints
         {
             Log.Error(ex, "Error getting pending approvals");
             return Results.Problem("Error retrieving pending approvals");
+        }
+    }
+
+    /// <summary>
+    /// GET /api/email-approvals/count - Get pending approvals count (lightweight endpoint for badges)
+    /// Returns count 1-99, or 99 for anything >= 99
+    /// </summary>
+    private static async Task<IResult> GetPendingCount(
+        [FromServices] EmailApprovalService service)
+    {
+        try
+        {
+            var count = await service.GetPendingCountAsync();
+            // Cap at 99 for display purposes
+            var displayCount = count > 99 ? 99 : count;
+            
+            return Results.Ok(new { count = displayCount });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error getting pending count");
+            return Results.Problem("Error retrieving pending count");
         }
     }
 

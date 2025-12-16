@@ -366,6 +366,26 @@ public class EmailApprovalService
     }
 
     /// <summary>
+    /// Get pending approvals count (lightweight for badge display)
+    /// </summary>
+    public async Task<int> GetPendingCountAsync()
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        try
+        {
+            return await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to retrieve pending count");
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Approve a pending email approval by GUID
     /// </summary>
     public async Task<PendingEmailApproval?> ApprovePendingEmailAsync(

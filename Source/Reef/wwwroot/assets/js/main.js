@@ -555,6 +555,12 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceInteractions();
     enhanceTooltips();
     responsiveGrids();
+    
+    // Update approval badge if not on login page
+    const menuLink = document.querySelector('a[href="/email-approvals"]');
+    if (menuLink) {
+        updateApprovalBadge();
+    }
 });
 
 // -----------------------------
@@ -582,6 +588,58 @@ function getCookie(name) {
 function deleteCookie(name) {
     setCookie(name, "", -1);
 }
+
+// -----------------------------
+// Approval Badge Update
+// -----------------------------
+/**
+ * Adds or updates a notification badge on the Approvals menu item.
+ * @param {number} count - The number of items to display.
+ */
+async function updateApprovalBadge(count) {
+    // If count is not provided, fetch it from the API
+    if (count === undefined) {
+        try {
+            const response = await authenticatedFetch('/api/email-approvals/count');
+            if (response.ok) {
+                const data = await response.json();
+                count = data.count || 0;
+            } else {
+                console.warn('Failed to fetch approval count');
+                return;
+            }
+        } catch (err) {
+            console.warn('Error fetching approval count:', err);
+            return;
+        }
+    }
+
+    // 1. Select the specific menu item by its href
+    const menuLink = document.querySelector('a[href="/email-approvals"]');
+    
+    if (!menuLink) return;
+
+    // 2. Check if a badge already exists to update it, or create a new one
+    let badge = menuLink.querySelector('.approval-count-badge');
+
+    if (count > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            // Tailwind classes: 
+            // ml-auto (pushes to right), bg-red-500 (red background), rounded-full (pill shape)
+            badge.className = 'approval-count-badge ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full';
+            menuLink.appendChild(badge);
+        }
+        // Display infinity symbol for 99+, otherwise show the count
+        badge.textContent = count >= 99 ? '∞' : count;
+    } else {
+        // 3. Remove the badge if the count is 0
+        if (badge) badge.remove();
+    }
+}
+
+// Make updateApprovalBadge available globally
+window.updateApprovalBadge = updateApprovalBadge;
 
 // Initialize remember me functionality on page load
 document.addEventListener('DOMContentLoaded', function() {

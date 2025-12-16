@@ -806,6 +806,9 @@
 
             await loadApprovals();
             await loadStatistics();
+            if (typeof updateApprovalBadge === 'function') {
+                await updateApprovalBadge();
+            }
         }
 
         async function bulkReject() {
@@ -855,6 +858,9 @@
 
             await loadApprovals();
             await loadStatistics();
+            if (typeof updateApprovalBadge === 'function') {
+                await updateApprovalBadge();
+            }
         }
 
         function renderApprovedTable() {
@@ -1114,6 +1120,9 @@
                 selectedApprovals.delete(currentApprovalId);
                 await loadApprovals();
                 await loadStatistics();
+                if (typeof updateApprovalBadge === 'function') {
+                    await updateApprovalBadge();
+                }
             } catch (error) {
                 console.error('Error approving:', error);
                 showToast('Failed to approve email: ' + error.message, 'error');
@@ -1163,6 +1172,9 @@
                 selectedApprovals.delete(currentRejectionId);
                 await loadApprovals();
                 await loadStatistics();
+                if (typeof updateApprovalBadge === 'function') {
+                    await updateApprovalBadge();
+                }
             } catch (error) {
                 console.error('Error rejecting:', error);
                 showToast('Failed to reject email: ' + error.message, 'error');
