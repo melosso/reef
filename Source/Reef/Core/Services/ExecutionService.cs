@@ -455,6 +455,15 @@ public class ExecutionService
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 $"{approvalCount} emails pending approval");
 
+                            // Update delta sync metrics if enabled (for initial execution stats)
+                            if (profile.DeltaSyncEnabled && deltaSyncResult != null)
+                            {
+                                await UpdateDeltaSyncMetricsAsync(executionId, deltaSyncResult);
+                            }
+
+                            // Update profile's last executed timestamp
+                            await UpdateProfileLastExecutedAsync(profileId);
+
                             Log.Information("Profile {ProfileId} execution completed: {ApprovalCount} emails stored for approval", profile.Id, approvalCount);
 
                             return (executionId, true, null, null);
