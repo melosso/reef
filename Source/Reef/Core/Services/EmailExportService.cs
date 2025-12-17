@@ -989,6 +989,9 @@ public class EmailExportService
 
     /// <summary>
     /// Resolves DocumentTemplate attachments - generates PDF/DOCX from template for rows
+    /// Supports two modes:
+    /// 1. GeneratePerRow=false (default): One document with all rows (e.g., picklist with all items)
+    /// 2. GeneratePerRow=true: One document per row (e.g., one invoice PDF per row for approval emails)
     /// </summary>
     private List<EmailAttachment> ResolveDocumentTemplateAttachments(
         List<Dictionary<string, object>> rows,
@@ -1007,11 +1010,9 @@ public class EmailExportService
         {
             var templateId = attachmentConfig.DocumentTemplate.TemplateId;
             var filenameColumn = attachmentConfig.DocumentTemplate.FilenameColumnName;
+            var generatePerRow = attachmentConfig.DocumentTemplate.GeneratePerRow;
 
-            Log.Information("Generating DocumentTemplate attachment for profile {ProfileId} using template {TemplateId}",
-                profile.Id, templateId);
-
-            // 1. Load template from database
+            // Load template from database (shared for all documents)
             var template = _queryTemplateService.GetByIdAsync(templateId).GetAwaiter().GetResult();
             if (template == null)
             {
@@ -1020,75 +1021,177 @@ public class EmailExportService
                 return attachments;
             }
 
-            // 2. Determine filename
-            string filename;
-            if (!string.IsNullOrEmpty(filenameColumn) && rows.Count > 0)
+            if (generatePerRow)
             {
-                var filenameValue = SafeGetValue(rows[0], filenameColumn)?.ToString();
-                filename = !string.IsNullOrEmpty(filenameValue) 
-                    ? filenameValue 
-                    : $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                // Mode 1: Generate one document per row (invoice approval scenario)
+                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) for profile {ProfileId} using template {TemplateId}",
+                    rows.Count, profile.Id, templateId);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    var singleRowList = new List<Dictionary<string, object>> { row };
+
+                    try
+                    {
+                        // Determine filename for this row
+                        string filename;
+                        if (!string.IsNullOrEmpty(filenameColumn))
+                        {
+                            var filenameValue = SafeGetValue(row, filenameColumn)?.ToString();
+                            filename = !string.IsNullOrEmpty(filenameValue)
+                                ? filenameValue
+                                : $"{profile.Name}_doc{i + 1}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                        }
+                        else
+                        {
+                            filename = $"{profile.Name}_doc{i + 1}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                        }
+
+                        // Build context for this row
+                        var context = new Dictionary<string, object>
+                        {
+                            { "profile_name", profile.Name },
+                            { "profile_id", profile.Id },
+                            { "execution_id", 0 },
+                            { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
+                            { "date", DateTime.Now.ToString("yyyyMMdd") },
+                            { "time", DateTime.Now.ToString("HHmmss") },
+                            { "guid", Guid.NewGuid().ToString() },
+                            { "row_index", i + 1 }
+                        };
+
+                        // Generate document for this single row
+                        var outputPath = _documentTemplateEngine.TransformAsync(
+                            singleRowList,
+                            template.Template,
+                            context,
+                            filenameTemplate: null,
+                            useTemporaryDirectory: true).GetAwaiter().GetResult();
+
+                        Log.Debug("Document {Index} generated at path: {OutputPath}", i + 1, outputPath);
+
+                        // Read file bytes from disk
+                        var documentBytes = File.ReadAllBytes(outputPath);
+
+                        // Determine content type based on file extension
+                        var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
+                        {
+                            ".pdf" => "application/pdf",
+                            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            _ => "application/octet-stream"
+                        };
+
+                        // Create attachment
+                        var attachment = new EmailAttachment
+                        {
+                            Filename = Path.GetFileName(outputPath),
+                            Content = documentBytes,
+                            ContentType = contentType
+                        };
+
+                        attachments.Add(attachment);
+
+                        Log.Debug("Generated DocumentTemplate attachment {Index}/{Total}: '{Filename}' ({Size} bytes)",
+                            i + 1, rows.Count, attachment.Filename, attachment.Content.Length);
+
+                        // Clean up temporary file
+                        try
+                        {
+                            File.Delete(outputPath);
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+                        }
+                    }
+                    catch (Exception rowEx)
+                    {
+                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index} in profile {ProfileId}",
+                            i + 1, profile.Id);
+                        // Continue with next row
+                    }
+                }
+
+                Log.Information("Generated {Count} DocumentTemplate attachments for profile {ProfileId}",
+                    attachments.Count, profile.Id);
             }
             else
             {
-                filename = $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
-            }
+                // Mode 2: Generate one document with all rows (picklist scenario - original behavior)
+                Log.Information("Generating DocumentTemplate attachment for profile {ProfileId} using template {TemplateId}",
+                    profile.Id, templateId);
 
-            // 3. Build context for filename template processing
-            var context = new Dictionary<string, object>
-            {
-                { "profile_name", profile.Name },
-                { "profile_id", profile.Id },
-                { "execution_id", 0 }, // TODO: Pass actual execution ID if available
-                { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
-                { "date", DateTime.Now.ToString("yyyyMMdd") },
-                { "time", DateTime.Now.ToString("HHmmss") },
-                { "guid", Guid.NewGuid().ToString() }
-            };
+                // Determine filename
+                string filename;
+                if (!string.IsNullOrEmpty(filenameColumn) && rows.Count > 0)
+                {
+                    var filenameValue = SafeGetValue(rows[0], filenameColumn)?.ToString();
+                    filename = !string.IsNullOrEmpty(filenameValue)
+                        ? filenameValue
+                        : $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                }
+                else
+                {
+                    filename = $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+                }
 
-            // 4. Generate document using DocumentTemplateEngine (use temporary directory for email attachments)
-            var outputPath = _documentTemplateEngine.TransformAsync(
-                rows,
-                template.Template,
-                context,
-                filenameTemplate: null,
-                useTemporaryDirectory: true).GetAwaiter().GetResult();
+                // Build context for filename template processing
+                var context = new Dictionary<string, object>
+                {
+                    { "profile_name", profile.Name },
+                    { "profile_id", profile.Id },
+                    { "execution_id", 0 },
+                    { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
+                    { "date", DateTime.Now.ToString("yyyyMMdd") },
+                    { "time", DateTime.Now.ToString("HHmmss") },
+                    { "guid", Guid.NewGuid().ToString() }
+                };
 
-            Log.Debug("Document generated at path: {OutputPath}", outputPath);
+                // Generate document using DocumentTemplateEngine (use temporary directory for email attachments)
+                var outputPath = _documentTemplateEngine.TransformAsync(
+                    rows,
+                    template.Template,
+                    context,
+                    filenameTemplate: null,
+                    useTemporaryDirectory: true).GetAwaiter().GetResult();
 
-            // 5. Read file bytes from disk
-            var documentBytes = File.ReadAllBytes(outputPath);
+                Log.Debug("Document generated at path: {OutputPath}", outputPath);
 
-            // 6. Determine content type based on file extension
-            var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
-            {
-                ".pdf" => "application/pdf",
-                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                _ => "application/octet-stream"
-            };
+                // Read file bytes from disk
+                var documentBytes = File.ReadAllBytes(outputPath);
 
-            // 7. Create attachment
-            var attachment = new EmailAttachment
-            {
-                Filename = Path.GetFileName(outputPath),
-                Content = documentBytes,
-                ContentType = contentType
-            };
+                // Determine content type based on file extension
+                var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
+                {
+                    ".pdf" => "application/pdf",
+                    ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    _ => "application/octet-stream"
+                };
 
-            attachments.Add(attachment);
+                // Create attachment
+                var attachment = new EmailAttachment
+                {
+                    Filename = Path.GetFileName(outputPath),
+                    Content = documentBytes,
+                    ContentType = contentType
+                };
 
-            Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes) for profile {ProfileId}",
-                attachment.Filename, attachment.Content.Length, profile.Id);
+                attachments.Add(attachment);
 
-            // 8. Clean up temporary file after reading into memory
-            try
-            {
-                File.Delete(outputPath);
-                Log.Debug("Deleted temporary document file: {OutputPath}", outputPath);
-            }
-            catch (Exception deleteEx)
-            {
-                Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+                Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes) for profile {ProfileId}",
+                    attachment.Filename, attachment.Content.Length, profile.Id);
+
+                // Clean up temporary file after reading into memory
+                try
+                {
+                    File.Delete(outputPath);
+                    Log.Debug("Deleted temporary document file: {OutputPath}", outputPath);
+                }
+                catch (Exception deleteEx)
+                {
+                    Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+                }
             }
         }
         catch (Exception ex)

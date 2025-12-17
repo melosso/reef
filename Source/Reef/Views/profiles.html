@@ -1125,18 +1125,28 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                     <div id="splitFields" class="space-y-4 opacity-50 pointer-events-none">
                         <!-- Email Grouping (for Email Export profiles only) -->
-                        <div id="emailGroupingOption" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                            <div class="flex items-center space-x-3">
-                                <i data-lucide="mail" class="w-5 h-5 text-gray-400"></i>
-                                <div>
-                                    <label for="emailGroupBySplitKey" class="text-sm font-medium text-gray-900">Group rows by split key</label>
-                                    <p class="text-xs text-gray-500">Send one email per split key with all rows</p>
+                        <div id="emailGroupingOption" class="hidden">
+                            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="mail" class="w-5 h-5 text-gray-400"></i>
+                                    <div>
+                                        <label for="emailGroupBySplitKey" class="text-sm font-medium text-gray-900">Group rows by split key</label>
+                                        <p class="text-xs text-gray-500">Send one email per split key value (e.g., one email per approver)</p>
+                                    </div>
                                 </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="emailGroupBySplitKey" class="sr-only peer" onchange="updateWorkflowHint()">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="emailGroupBySplitKey" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
+                            
+                            <!-- Workflow hint when enabled -->
+                            <div id="emailGroupingHint" class="hidden mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p class="text-xs text-blue-800">
+                                    <i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>
+                                    <strong>Tip for invoice approvals:</strong> Also enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Enable Email Attachments → DocumentTemplate mode</strong> (scroll down) to create separate PDFs for each invoice.
+                                </p>
+                            </div>
                         </div>
 
                         <!-- Post-process per split -->
@@ -1419,6 +1429,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
                                     <p class="text-xs text-blue-700">
                                         <strong>How it works:</strong> Your query data will be passed to the document template, which generates a PDF/DOCX file dynamically. This file is then attached to the email. Works with SplitKeyColumn for one attachment per email.
+                                    </p>
+                                </div>
+
+                                <!-- Generate Per Row Checkbox -->
+                                <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="emailAttachmentGeneratePerRow" onchange="saveAttachmentConfig()"
+                                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-sm font-semibold text-gray-900">Generate one document per row</span>
+                                        <span class="ml-1 text-gray-400 cursor-help" data-tooltip="When enabled, creates a separate PDF/DOCX for each row (e.g., one invoice PDF per row). When disabled, creates one document with all rows (e.g., one picklist with all items)." data-tooltip-position="top">
+                                            <i data-lucide="info" class="w-4 h-4"></i>
+                                        </span>
+                                    </label>
+                                    <p class="ml-6 mt-2 text-xs text-gray-600">
+                                        <strong>Use case:</strong> Invoice approvals where each approver receives multiple PDF attachments (one per invoice).<br>
+                                        <strong>Combine with:</strong> "Group rows by split key" to send one email per approver with their specific invoices.
                                     </p>
                                 </div>
                             </div>
@@ -2790,18 +2816,21 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             // Document template mode
                             const templateIdEl = document.getElementById('emailAttachmentDocumentTemplateId');
                             const filenameColEl = document.getElementById('emailAttachmentFilenameColumn');
+                            const generatePerRowEl = document.getElementById('emailAttachmentGeneratePerRow');
                             const pageSizeEl = document.getElementById('emailAttachmentPageSize');
                             const orientationEl = document.getElementById('emailAttachmentOrientation');
                             const watermarkEl = document.getElementById('emailAttachmentWatermark');
                             
                             const templateId = documentTemplate.TemplateId ?? documentTemplate.templateId;
                             const filenameColumnName = documentTemplate.FilenameColumnName ?? documentTemplate.filenameColumnName;
+                            const generatePerRow = documentTemplate.GeneratePerRow ?? documentTemplate.generatePerRow ?? false;
                             const pageSize = documentTemplate.PageSize ?? documentTemplate.pageSize;
                             const orientation = documentTemplate.Orientation ?? documentTemplate.orientation;
                             const watermark = documentTemplate.Watermark ?? documentTemplate.watermark;
                             
                             if (templateIdEl) templateIdEl.value = templateId || '';
                             if (filenameColEl) filenameColEl.value = filenameColumnName || '';
+                            if (generatePerRowEl) generatePerRowEl.checked = generatePerRow;
                             if (pageSizeEl) pageSizeEl.value = pageSize || 'A4';
                             if (orientationEl) orientationEl.value = orientation || 'Portrait';
                             if (watermarkEl) watermarkEl.value = watermark || '';
@@ -5050,7 +5079,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         function updateEmailAttachmentTemplateInfo() {
             const templateSelect = document.getElementById('emailAttachmentDocumentTemplateId');
             const infoElement = document.getElementById('emailAttachmentTemplateInfo');
-            const optionsPanel = document.getElementById('emailAttachmentDocumentOptions');
+            const filenameField = document.getElementById('emailAttachmentFilenameField');
             const selectedOption = templateSelect.options[templateSelect.selectedIndex];
 
             if (templateSelect.value) {
@@ -5058,16 +5087,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const templateName = selectedOption.textContent;
                 infoElement.innerHTML = `<span class="text-purple-600 font-medium">✓ Will generate ${format} attachment</span> using "${templateName}"`;
                 
-                // Show document options panel
-                if (optionsPanel) {
-                    optionsPanel.classList.remove('hidden');
+                // Show filename field and Generate Per Row option
+                if (filenameField) {
+                    filenameField.classList.remove('hidden');
                 }
             } else {
                 infoElement.innerHTML = 'No document template selected';
                 
-                // Hide document options panel
-                if (optionsPanel) {
-                    optionsPanel.classList.add('hidden');
+                // Hide filename field and Generate Per Row option
+                if (filenameField) {
+                    filenameField.classList.add('hidden');
                 }
             }
         }
@@ -5292,6 +5321,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             if (docTemplateId) {
                 // Document template mode - save config
                 const filenameColumnElement = document.getElementById('emailAttachmentFilenameColumn');
+                const generatePerRowElement = document.getElementById('emailAttachmentGeneratePerRow');
                 const pageSizeElement = document.getElementById('emailAttachmentPageSize');
                 const orientationElement = document.getElementById('emailAttachmentOrientation');
                 const watermarkElement = document.getElementById('emailAttachmentWatermark');
@@ -5304,6 +5334,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     DocumentTemplate: {
                         TemplateId: parseInt(docTemplateId),
                         FilenameColumnName: filenameColumnElement ? filenameColumnElement.value : null,
+                        GeneratePerRow: generatePerRowElement ? generatePerRowElement.checked : false,
                         PageSize: pageSizeElement ? (pageSizeElement.value || 'A4') : 'A4',
                         Orientation: orientationElement ? (orientationElement.value || 'Portrait') : 'Portrait',
                         Watermark: watermarkElement ? (watermarkElement.value || null) : null
@@ -5340,6 +5371,30 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 } else {
                     // No valid configuration - clear the field
                     configField.value = '';
+                }
+            }
+            
+            // Update workflow hint after saving
+            updateWorkflowHint();
+        }
+        
+        // Show/hide workflow hint when both settings are enabled
+        function updateWorkflowHint() {
+            const emailGroupingCheckbox = document.getElementById('emailGroupBySplitKey');
+            const generatePerRowCheckbox = document.getElementById('emailAttachmentGeneratePerRow');
+            const hintElement = document.getElementById('emailGroupingHint');
+            
+            if (hintElement && emailGroupingCheckbox) {
+                // Show hint only when emailGroupBySplitKey is enabled
+                if (emailGroupingCheckbox.checked) {
+                    hintElement.classList.remove('hidden');
+                    
+                    // Re-initialize lucide icons for the hint
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                } else {
+                    hintElement.classList.add('hidden');
                 }
             }
         }

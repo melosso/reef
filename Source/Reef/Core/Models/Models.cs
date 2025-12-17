@@ -680,6 +680,7 @@ public class DocumentTemplateAttachmentMode
     public string? PageSize { get; set; }
     public string? Orientation { get; set; }
     public string? Watermark { get; set; }
+    public bool GeneratePerRow { get; set; } = false; // If true, generate one document per row (for invoice approval scenarios)
 }
 
 /// <summary>
