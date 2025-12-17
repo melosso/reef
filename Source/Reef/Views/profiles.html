@@ -2741,20 +2741,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             // Load Email Attachment Config
-            console.log('Profile isEmailExport:', profile.isEmailExport);
-            console.log('Profile emailAttachmentConfig:', profile.emailAttachmentConfig);
-            
             if (profile.isEmailExport && profile.emailAttachmentConfig) {
-                console.log('Loading email attachment config:', profile.emailAttachmentConfig);
                 try {
                     const attachmentConfig = JSON.parse(profile.emailAttachmentConfig);
-                    console.log('Parsed attachment config:', attachmentConfig);
                     
                     // CRITICAL: Set the hidden field value from database
                     const configField = document.getElementById('emailAttachmentConfig');
                     if (configField) {
                         configField.value = profile.emailAttachmentConfig;
-                        console.log('Set hidden field emailAttachmentConfig from database:', profile.emailAttachmentConfig);
                     }
                     
                     if (attachmentConfig.enabled) {
@@ -3076,9 +3070,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 documentOptions: documentOptions,
                 hash
             };
-
-            console.log('Saving profile with emailAttachmentConfig:', emailAttachmentConfig);
-            console.log('Full profile object:', profile);
 
             try {
                 const url = profileId ? `${API_BASE}/api/profiles/${profileId}` : `${API_BASE}/api/profiles`;
@@ -5238,7 +5229,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
             if (!enabled) {
                 configField.value = '';
-                console.log('saveAttachmentConfig() called: Attachments disabled, clearing config field');
                 return;
             }
 
@@ -5270,7 +5260,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     missingFileStrategy: 'Skip'
                 };
                 configField.value = JSON.stringify(config);
-                console.log('saveAttachmentConfig() called: DocumentTemplate mode config saved:', config);
             } else {
                 // Binary mode (original functionality)
                 const contentColumnElement = document.getElementById('attachmentContentColumn');
@@ -5290,7 +5279,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     missingFileStrategy: 'Skip'
                 };
                 configField.value = JSON.stringify(config);
-                console.log('saveAttachmentConfig() called: Binary mode config saved:', config);
             }
         }
 
