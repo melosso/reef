@@ -218,7 +218,7 @@ public class ProfileService
                     DeltaSyncDuplicateStrategy, DeltaSyncNullStrategy, DeltaSyncNumericPrecision,
                     DeltaSyncTrackDeletes, DeltaSyncRetentionDays, DeltaSyncResetOnSchemaChange, DeltaSyncRemoveNonPrintable, DeltaSyncReefIdNormalization,
                     ExcludeReefIdFromOutput, ExcludeSplitKeyFromOutput,
-                    SplitEnabled, SplitKeyColumn, SplitFilenameTemplate, SplitBatchSize, PostProcessPerSplit, FilenameTemplate,
+                    SplitEnabled, SplitKeyColumn, SplitFilenameTemplate, SplitBatchSize, PostProcessPerSplit, EmailGroupBySplitKey, FilenameTemplate,
                     IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy
                 ) VALUES (
                     @Name, @ConnectionId, @GroupId, @Query, @ScheduleType, @ScheduleCron,
@@ -234,7 +234,7 @@ public class ProfileService
                     @DeltaSyncDuplicateStrategy, @DeltaSyncNullStrategy, @DeltaSyncNumericPrecision,
                     @DeltaSyncTrackDeletes, @DeltaSyncRetentionDays, @DeltaSyncResetOnSchemaChange, @DeltaSyncRemoveNonPrintable, @DeltaSyncReefIdNormalization,
                     @ExcludeReefIdFromOutput, @ExcludeSplitKeyFromOutput,
-                    @SplitEnabled, @SplitKeyColumn, @SplitFilenameTemplate, @SplitBatchSize, @PostProcessPerSplit, @FilenameTemplate,
+                    @SplitEnabled, @SplitKeyColumn, @SplitFilenameTemplate, @SplitBatchSize, @PostProcessPerSplit, @EmailGroupBySplitKey, @FilenameTemplate,
                     @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy
                 );
                 SELECT last_insert_rowid();";
@@ -394,6 +394,7 @@ public class ProfileService
                     FilenameTemplate = @FilenameTemplate,
                     SplitBatchSize = @SplitBatchSize,
                     PostProcessPerSplit = @PostProcessPerSplit,
+                    EmailGroupBySplitKey = @EmailGroupBySplitKey,
                     IsEnabled = @IsEnabled,
                     Hash = @Hash,
                     UpdatedAt = @UpdatedAt

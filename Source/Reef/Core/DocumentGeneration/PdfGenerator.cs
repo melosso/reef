@@ -28,7 +28,7 @@ public class PdfGenerator : IDocumentGenerator
                 {
                     QuestPDF.Settings.License = LicenseType.Community;
                     _licenseConfigured = true;
-                    Log.Information("QuestPDF Community License configured (valid for < $1M revenue)");
+                    Log.Information("QuestPDF Community License configured");
                 }
             }
         }

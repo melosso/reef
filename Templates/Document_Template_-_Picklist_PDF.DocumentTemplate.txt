@@ -4,7 +4,7 @@
 
 {{# header }}
 <strong>Picking List</strong>
-Order: {{ rows[0].order_number }} | Date: {{ rows[0].pick_date | date.to_string '%d-%m-%Y' }}
+Order: {{ rows[0].order_number }} | Date: {{ rows[0].pick_date | date.to_string "%d-%m-%Y" }}
 {{/ header }}
 
 {{# content }}

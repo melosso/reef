@@ -235,17 +235,17 @@ public class EmailExportService
                 }
             }
 
-            // For email exports: split is enabled by default if a split key column is configured
-            // If SplitKeyColumn is set: send one email per group (prevents duplicate recipients)
-            // If SplitKeyColumn is empty: send one email per row
-            if (!string.IsNullOrEmpty(profile.SplitKeyColumn))
+            // For email exports with EmailGroupBySplitKey: group by split key and send one email per group
+            // For email exports without EmailGroupBySplitKey: use default behavior (check if same recipient)
+            // If SplitKeyColumn is set AND EmailGroupBySplitKey is true: send one email per split group
+            if (profile.EmailGroupBySplitKey && !string.IsNullOrEmpty(profile.SplitKeyColumn))
             {
                 // Group results by split key
                 var groupedResults = queryResults
                     .GroupBy(r => SafeGetValue(r, profile.SplitKeyColumn)?.ToString() ?? "unknown")
                     .ToList();
 
-                Log.Information("Sending {Count} emails (grouped by split key '{SplitKey}' to prevent duplicate recipients) from profile {ProfileId}",
+                Log.Information("Sending {Count} emails (grouped by split key '{SplitKey}') from profile {ProfileId}",
                     groupedResults.Count, profile.SplitKeyColumn, profile.Id);
 
                 foreach (var group in groupedResults)
@@ -516,13 +516,16 @@ public class EmailExportService
             // Check if multiple HTML documents were rendered (split by <!doctype html>)
             var htmlDocuments = SplitHtmlDocuments(emailBody);
 
-            // Don't split HTML documents if using DocumentTemplate attachments
-            // The attachment contains all the data, email is just a notification
+            // Don't split HTML documents if:
+            // 1. Using DocumentTemplate attachments (attachment contains all data, email is just notification)
+            // 2. EmailGroupBySplitKey is enabled (want to keep all rows in one email)
             bool hasDocumentTemplateAttachment = attachmentConfig != null && 
                                                   attachmentConfig.Enabled && 
                                                   attachmentConfig.Mode == "DocumentTemplate";
 
-            if (htmlDocuments.Count > 1 && rows.Count > 1 && !hasDocumentTemplateAttachment)
+            bool preventSplit = hasDocumentTemplateAttachment || profile.EmailGroupBySplitKey;
+
+            if (htmlDocuments.Count > 1 && rows.Count > 1 && !preventSplit)
             {
                 // Multiple rows rendered multiple HTML documents - send one email per row
                 Log.Information("Template rendered {HtmlCount} documents for {RowCount} rows. Sending separate emails.",
@@ -714,7 +717,15 @@ public class EmailExportService
             }
             else
             {
-                // Single HTML document - send to first row's recipient
+                // Single HTML document OR EmailGroupBySplitKey enabled OR DocumentTemplate attachment
+                // If EmailGroupBySplitKey is true but template rendered multiple HTML docs, log warning
+                if (profile.EmailGroupBySplitKey && htmlDocuments.Count > 1)
+                {
+                    Log.Warning("EmailGroupBySplitKey is enabled but email template rendered {HtmlCount} HTML documents for {RowCount} rows. All HTML will be concatenated in one email. Consider updating template to use a loop (e.g., {{{{ for row in rows }}}}) to render all rows in one HTML document.",
+                        htmlDocuments.Count, rows.Count);
+                }
+
+                // Send ONE email with entire email body
                 // Create MIME message
                 var message = new MimeMessage();
                 message.From.Add(new MailboxAddress(emailConfig.FromName ?? "Reef", emailConfig.FromAddress));
@@ -1035,12 +1046,13 @@ public class EmailExportService
                 { "guid", Guid.NewGuid().ToString() }
             };
 
-            // 4. Generate document using DocumentTemplateEngine
+            // 4. Generate document using DocumentTemplateEngine (use temporary directory for email attachments)
             var outputPath = _documentTemplateEngine.TransformAsync(
                 rows,
                 template.Template,
                 context,
-                filenameTemplate: null).GetAwaiter().GetResult();
+                filenameTemplate: null,
+                useTemporaryDirectory: true).GetAwaiter().GetResult();
 
             Log.Debug("Document generated at path: {OutputPath}", outputPath);
 
@@ -1068,8 +1080,16 @@ public class EmailExportService
             Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes) for profile {ProfileId}",
                 attachment.Filename, attachment.Content.Length, profile.Id);
 
-            // 8. Optionally delete temp file (keep it for now for debugging)
-            // File.Delete(outputPath);
+            // 8. Clean up temporary file after reading into memory
+            try
+            {
+                File.Delete(outputPath);
+                Log.Debug("Deleted temporary document file: {OutputPath}", outputPath);
+            }
+            catch (Exception deleteEx)
+            {
+                Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+            }
         }
         catch (Exception ex)
         {

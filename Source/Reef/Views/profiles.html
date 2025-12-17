@@ -1124,6 +1124,21 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
 
                     <div id="splitFields" class="space-y-4 opacity-50 pointer-events-none">
+                        <!-- Email Grouping (for Email Export profiles only) -->
+                        <div id="emailGroupingOption" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <i data-lucide="mail" class="w-5 h-5 text-gray-400"></i>
+                                <div>
+                                    <label for="emailGroupBySplitKey" class="text-sm font-medium text-gray-900">Group rows by split key</label>
+                                    <p class="text-xs text-gray-500">Send one email per split key with all rows</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="emailGroupBySplitKey" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
                         <!-- Post-process per split -->
                         <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                             <div class="flex items-center space-x-3">
@@ -2305,6 +2320,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 if (splitFields) {
                     splitFields.classList.remove('opacity-50', 'pointer-events-none');
                 }
+                // Show email grouping option for email profiles when split is enabled
+                toggleSplitFields();
             }
 
             document.getElementById('modal-title').textContent = isEmailExport ? 'Add Email Export Profile' : 'Add Profile';
@@ -2604,6 +2621,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('excludeReefIdFromOutput').checked = profile.excludeReefIdFromOutput !== false;
             toggleDeltaSyncFields();
 
+            // Set email export flag BEFORE loading split settings (needed for toggleSplitFields logic)
+            document.getElementById('isEmailExport').checked = profile.isEmailExport || false;
+
             // Load Split Output settings
             document.getElementById('splitEnabled').checked = profile.splitEnabled || false;
             document.getElementById('splitKeyColumn').value = profile.splitKeyColumn || '';
@@ -2612,10 +2632,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('splitBatchSize').value = profile.splitBatchSize || 1;
             document.getElementById('excludeSplitKeyFromOutput').checked = profile.excludeSplitKeyFromOutput !== false;
             document.getElementById('postProcessPerSplit').checked = profile.postProcessPerSplit || false;
+            document.getElementById('emailGroupBySplitKey').checked = profile.emailGroupBySplitKey || false;
             toggleSplitFields();
 
-            // Load Email Export settings
-            document.getElementById('isEmailExport').checked = profile.isEmailExport || false;
+            // Load Email Export settings (isEmailExport already set above)
 
             // Populate email template dropdown with HTML templates only (for consistency with new profiles)
             if (profile.isEmailExport) {
@@ -2751,14 +2771,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         configField.value = profile.emailAttachmentConfig;
                     }
                     
-                    if (attachmentConfig.enabled) {
+                    // Support both PascalCase (new) and camelCase (legacy) for backwards compatibility
+                    const enabled = attachmentConfig.Enabled ?? attachmentConfig.enabled;
+                    const mode = attachmentConfig.Mode ?? attachmentConfig.mode;
+                    const documentTemplate = attachmentConfig.DocumentTemplate ?? attachmentConfig.documentTemplate;
+                    const binary = attachmentConfig.Binary ?? attachmentConfig.binary;
+                    const deduplication = attachmentConfig.Deduplication ?? attachmentConfig.deduplication;
+                    const maxAttachments = attachmentConfig.MaxAttachmentsPerEmail ?? attachmentConfig.maxAttachmentsPerEmail;
+                    
+                    if (enabled) {
                         const attachmentsEnabledCheckbox = document.getElementById('attachmentsEnabled');
                         if (attachmentsEnabledCheckbox) {
                             attachmentsEnabledCheckbox.checked = true;
                             toggleAttachmentConfig();
                         }
 
-                        if (attachmentConfig.mode === 'DocumentTemplate' && attachmentConfig.documentTemplate) {
+                        if (mode === 'DocumentTemplate' && documentTemplate) {
                             // Document template mode
                             const templateIdEl = document.getElementById('emailAttachmentDocumentTemplateId');
                             const filenameColEl = document.getElementById('emailAttachmentFilenameColumn');
@@ -2766,30 +2794,39 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             const orientationEl = document.getElementById('emailAttachmentOrientation');
                             const watermarkEl = document.getElementById('emailAttachmentWatermark');
                             
-                            if (templateIdEl) templateIdEl.value = attachmentConfig.documentTemplate.templateId || '';
-                            if (filenameColEl) filenameColEl.value = attachmentConfig.documentTemplate.filenameColumnName || '';
-                            if (pageSizeEl) pageSizeEl.value = attachmentConfig.documentTemplate.pageSize || 'A4';
-                            if (orientationEl) orientationEl.value = attachmentConfig.documentTemplate.orientation || 'Portrait';
-                            if (watermarkEl) watermarkEl.value = attachmentConfig.documentTemplate.watermark || '';
+                            const templateId = documentTemplate.TemplateId ?? documentTemplate.templateId;
+                            const filenameColumnName = documentTemplate.FilenameColumnName ?? documentTemplate.filenameColumnName;
+                            const pageSize = documentTemplate.PageSize ?? documentTemplate.pageSize;
+                            const orientation = documentTemplate.Orientation ?? documentTemplate.orientation;
+                            const watermark = documentTemplate.Watermark ?? documentTemplate.watermark;
+                            
+                            if (templateIdEl) templateIdEl.value = templateId || '';
+                            if (filenameColEl) filenameColEl.value = filenameColumnName || '';
+                            if (pageSizeEl) pageSizeEl.value = pageSize || 'A4';
+                            if (orientationEl) orientationEl.value = orientation || 'Portrait';
+                            if (watermarkEl) watermarkEl.value = watermark || '';
                             
                             if (typeof updateEmailAttachmentTemplateInfo === 'function') {
                                 updateEmailAttachmentTemplateInfo();
                             }
-                        } else if (attachmentConfig.mode === 'Binary' && attachmentConfig.binary) {
+                        } else if (mode === 'Binary' && binary) {
                             // Binary mode
                             const contentColEl = document.getElementById('attachmentContentColumn');
                             const filenameColEl = document.getElementById('attachmentFilenameColumn');
                             
-                            if (contentColEl) contentColEl.value = attachmentConfig.binary.contentColumnName || '';
-                            if (filenameColEl) filenameColEl.value = attachmentConfig.binary.filenameColumnName || '';
+                            const contentColumnName = binary.ContentColumnName ?? binary.contentColumnName;
+                            const filenameColumnName = binary.FilenameColumnName ?? binary.filenameColumnName;
+                            
+                            if (contentColEl) contentColEl.value = contentColumnName || '';
+                            if (filenameColEl) filenameColEl.value = filenameColumnName || '';
                         }
 
                         // Common settings
                         const dedupEl = document.getElementById('attachmentDeduplication');
                         const maxCountEl = document.getElementById('attachmentMaxCount');
                         
-                        if (dedupEl) dedupEl.value = attachmentConfig.deduplication || 'Auto';
-                        if (maxCountEl) maxCountEl.value = attachmentConfig.maxAttachmentsPerEmail || 50;
+                        if (dedupEl) dedupEl.value = deduplication || 'Auto';
+                        if (maxCountEl) maxCountEl.value = maxAttachments || 50;
                     }
                 } catch (e) {
                     console.error('Error parsing email attachment config:', e);
@@ -2900,6 +2937,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const splitBatchSize = splitEnabled ? parseInt(document.getElementById('splitBatchSize').value) : 1;
             // Always retrieve postProcessPerSplit from checkbox, regardless of splitEnabled
             const postProcessPerSplit = document.getElementById('postProcessPerSplit').checked;
+            const emailGroupBySplitKey = document.getElementById('emailGroupBySplitKey').checked;
 
             // Email Export fields (isEmailExportProfile already defined above)
             const emailTemplateId = isEmailExportProfile && document.getElementById('emailTemplateId').value ?
@@ -3013,7 +3051,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             // Combine fields for hash (including pre/post-processing, delta sync, splitting, email config, email attachments, and document options)
-            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}|${emailApprovalRequired}|${emailApprovalRolesJson || ''}|${emailAttachmentConfig || ''}|${documentOptions || ''}`;
+            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${emailGroupBySplitKey}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}|${emailApprovalRequired}|${emailApprovalRolesJson || ''}|${emailAttachmentConfig || ''}|${documentOptions || ''}`;
             const hash = await window.sha256(hashInput);
 
             const profile = {
@@ -3052,6 +3090,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 filenameTemplate: filenameTemplate,
                 splitBatchSize: splitBatchSize,
                 postProcessPerSplit: postProcessPerSplit,
+                emailGroupBySplitKey: emailGroupBySplitKey,
                 isEmailExport: isEmailExportProfile,
                 emailTemplateId: emailTemplateId,
                 emailRecipientsColumn: emailRecipientsColumn,
@@ -3341,6 +3380,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     const filenameTemplate = splitEnabled ? null : document.getElementById('filenameTemplate').value;
                     const splitBatchSize = splitEnabled ? parseInt(document.getElementById('splitBatchSize').value) : 1;
                     const postProcessPerSplit = document.getElementById('postProcessPerSplit').checked;
+                    const emailGroupBySplitKey = document.getElementById('emailGroupBySplitKey').checked;
 
                     // Email Export fields
                     const emailTemplateId = isEmailExportProfile && document.getElementById('emailTemplateId').value ?
@@ -3367,7 +3407,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 }
                     
                                 // Combine fields for hash (including pre/post-processing, delta sync, splitting, and email config)
-                                const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
+                                const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${emailGroupBySplitKey}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}`;
                                 const hash = await window.sha256(hashInput);
                     
                                 const profile = {
@@ -3406,6 +3446,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                                     filenameTemplate: filenameTemplate,
                                                     splitBatchSize: splitBatchSize,
                                                     postProcessPerSplit: postProcessPerSplit,
+                                                    emailGroupBySplitKey: emailGroupBySplitKey,
                                                     hash
                                 };
                     const saveResponse = await fetch(`${API_BASE}/api/profiles`, {
@@ -4313,13 +4354,25 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const splitEnabled = document.getElementById('splitEnabled').checked;
             const splitFields = document.getElementById('splitFields');
             const nonSplitFields = document.getElementById('nonSplitFields');
+            const emailGroupingOption = document.getElementById('emailGroupingOption');
+            const isEmailExport = document.getElementById('isEmailExport').checked;
 
             if (splitEnabled) {
                 splitFields.classList.remove('opacity-50', 'pointer-events-none');
                 nonSplitFields.style.display = 'none';
+                
+                // Show email grouping option only for email export profiles
+                if (isEmailExport && emailGroupingOption) {
+                    emailGroupingOption.classList.remove('hidden');
+                }
             } else {
                 splitFields.classList.add('opacity-50', 'pointer-events-none');
                 nonSplitFields.style.display = 'block';
+                
+                // Hide email grouping option when split is disabled
+                if (emailGroupingOption) {
+                    emailGroupingOption.classList.add('hidden');
+                }
             }
         }
 
@@ -5104,15 +5157,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             if (docTemplateId) {
                 // Document template mode
                 config = {
-                    enabled: true,
-                    mode: 'DocumentTemplate',
-                    documentTemplate: {
-                        templateId: parseInt(docTemplateId),
-                        filenameColumnName: document.getElementById('emailAttachmentFilenameColumn').value || null
+                    Enabled: true,
+                    Mode: 'DocumentTemplate',
+                    DocumentTemplate: {
+                        TemplateId: parseInt(docTemplateId),
+                        FilenameColumnName: document.getElementById('emailAttachmentFilenameColumn').value || null
                     },
-                    deduplication: dedup,
-                    maxAttachmentsPerEmail: maxCount,
-                    missingFileStrategy: 'Skip'
+                    Deduplication: dedup,
+                    MaxAttachmentsPerEmail: maxCount,
+                    MissingFileStrategy: 'Skip'
                 };
             } else {
                 // Binary mode
@@ -5125,15 +5178,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
 
                 config = {
-                    enabled: true,
-                    mode: 'Binary',
-                    binary: {
-                        contentColumnName: contentColumn,
-                        filenameColumnName: filenameColumn
+                    Enabled: true,
+                    Mode: 'Binary',
+                    Binary: {
+                        ContentColumnName: contentColumn,
+                        FilenameColumnName: filenameColumn
                     },
-                    deduplication: dedup,
-                    maxAttachmentsPerEmail: maxCount,
-                    missingFileStrategy: 'Skip'
+                    Deduplication: dedup,
+                    MaxAttachmentsPerEmail: maxCount,
+                    MissingFileStrategy: 'Skip'
                 };
             }
 
@@ -5237,7 +5290,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const docTemplateId = docTemplateIdElement ? docTemplateIdElement.value : null;
             
             if (docTemplateId) {
-                // Document template mode
+                // Document template mode - save config
                 const filenameColumnElement = document.getElementById('emailAttachmentFilenameColumn');
                 const pageSizeElement = document.getElementById('emailAttachmentPageSize');
                 const orientationElement = document.getElementById('emailAttachmentOrientation');
@@ -5246,39 +5299,48 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const maxCountElement = document.getElementById('attachmentMaxCount');
                 
                 const config = {
-                    enabled: true,
-                    mode: 'DocumentTemplate',
-                    documentTemplate: {
-                        templateId: parseInt(docTemplateId),
-                        filenameColumnName: filenameColumnElement ? filenameColumnElement.value : null,
-                        pageSize: pageSizeElement ? (pageSizeElement.value || 'A4') : 'A4',
-                        orientation: orientationElement ? (orientationElement.value || 'Portrait') : 'Portrait',
-                        watermark: watermarkElement ? (watermarkElement.value || null) : null
+                    Enabled: true,
+                    Mode: 'DocumentTemplate',
+                    DocumentTemplate: {
+                        TemplateId: parseInt(docTemplateId),
+                        FilenameColumnName: filenameColumnElement ? filenameColumnElement.value : null,
+                        PageSize: pageSizeElement ? (pageSizeElement.value || 'A4') : 'A4',
+                        Orientation: orientationElement ? (orientationElement.value || 'Portrait') : 'Portrait',
+                        Watermark: watermarkElement ? (watermarkElement.value || null) : null
                     },
-                    deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
-                    maxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
-                    missingFileStrategy: 'Skip'
+                    Deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                    MaxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
+                    MissingFileStrategy: 'Skip'
                 };
                 configField.value = JSON.stringify(config);
             } else {
-                // Binary mode (original functionality)
+                // Binary mode - only save if content and filename columns are provided
                 const contentColumnElement = document.getElementById('attachmentContentColumn');
                 const filenameColumnElement = document.getElementById('attachmentFilenameColumn');
                 const dedupElement = document.getElementById('attachmentDeduplication');
                 const maxCountElement = document.getElementById('attachmentMaxCount');
                 
-                const config = {
-                    enabled: true,
-                    mode: 'Binary',
-                    binary: {
-                        contentColumnName: contentColumnElement ? contentColumnElement.value : '',
-                        filenameColumnName: filenameColumnElement ? filenameColumnElement.value : ''
-                    },
-                    deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
-                    maxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
-                    missingFileStrategy: 'Skip'
-                };
-                configField.value = JSON.stringify(config);
+                const contentColumn = contentColumnElement ? contentColumnElement.value : '';
+                const filenameColumn = filenameColumnElement ? filenameColumnElement.value : '';
+                
+                // Only save Binary config if both columns are provided
+                if (contentColumn && filenameColumn) {
+                    const config = {
+                        Enabled: true,
+                        Mode: 'Binary',
+                        Binary: {
+                            ContentColumnName: contentColumn,
+                            FilenameColumnName: filenameColumn
+                        },
+                        Deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                        MaxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
+                        MissingFileStrategy: 'Skip'
+                    };
+                    configField.value = JSON.stringify(config);
+                } else {
+                    // No valid configuration - clear the field
+                    configField.value = '';
+                }
             }
         }
 

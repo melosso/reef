@@ -43,7 +43,8 @@ public class DocumentTemplateEngine
         List<Dictionary<string, object>> data,
         string template,
         Dictionary<string, object>? context = null,
-        string? filenameTemplate = null)
+        string? filenameTemplate = null,
+        bool useTemporaryDirectory = false)
     {
         try
         {
@@ -64,7 +65,18 @@ public class DocumentTemplateEngine
             // Step 3: Generate output file path
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
             var fileName = GenerateFilename(filenameTemplate, layout.OutputFormat, timestamp, context);
-            var outputPath = Path.Combine(_exportsPath, fileName);
+            
+            // Use temp directory for email attachments, exports directory for regular exports
+            var outputDirectory = useTemporaryDirectory 
+                ? Path.Combine(Path.GetTempPath(), "reef-temp-docs")
+                : _exportsPath;
+            
+            if (useTemporaryDirectory && !Directory.Exists(outputDirectory))
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+            
+            var outputPath = Path.Combine(outputDirectory, fileName);
 
             // Step 4: Get appropriate generator and generate document
             var generator = _generatorFactory.GetGenerator(layout.OutputFormat);

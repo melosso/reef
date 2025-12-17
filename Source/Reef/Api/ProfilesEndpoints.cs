@@ -315,6 +315,7 @@ public static class ProfilesEndpoints
 
             // Email Export Configuration
             existingProfile.IsEmailExport = profile.IsEmailExport;
+            existingProfile.EmailGroupBySplitKey = profile.EmailGroupBySplitKey;
             existingProfile.EmailTemplateId = profile.EmailTemplateId;
             existingProfile.EmailRecipientsColumn = profile.EmailRecipientsColumn;
             existingProfile.EmailRecipientsHardcoded = profile.EmailRecipientsHardcoded;

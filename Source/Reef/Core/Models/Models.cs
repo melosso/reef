@@ -157,6 +157,7 @@ public class Profile
     public string? SplitFilenameTemplate { get; set; } = "{profile}_{splitkey}_{timestamp}.{format}"; // Filename template for split files
     public int SplitBatchSize { get; set; } = 1; // Number of rows per file (1 = one file per split key, N = batch N rows per file)
     public bool PostProcessPerSplit { get; set; } = false; // Run post-processing for each split
+    public bool EmailGroupBySplitKey { get; set; } = false; // For email exports: group rows by split key (one email per split key value)
 }
 
 /// <summary>

@@ -137,6 +137,9 @@ public class ScribanTemplateEngine : ITemplateEngine
             };
             
             templateContext.PushGlobal(scriptObject);
+            
+            // Import all Scriban built-in functions
+            templateContext.PushGlobal(templateContext.BuiltinObject);
 
             // Render template ONCE with all data
             string output;
