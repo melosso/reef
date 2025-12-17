@@ -204,6 +204,10 @@
                             <option value="">Select type...</option>
                             <option value="ScribanTemplate">Scriban Template (CSV, XML, JSON, EDI, etc.)</option>
                             
+                            <!-- Document Generation -->
+                            <option disabled style="color: #cbd5e0;">──────────</option>
+                            <option value="DocumentTemplate">Document Template (PDF, DOCX, ODT)</option>
+                            
                             <!-- Built-in SQL Server Transforms -->
                             <option disabled style="color: #cbd5e0;">──────────</option>
                             <option value="XsltTransform">XSLT Transform</option>
@@ -1190,6 +1194,11 @@
                 formats: ['CSV', 'JSON', 'XML', 'YAML', 'HTML', 'EDI', 'Text'],
                 defaultFormat: 'CSV',
                 description: 'Supports any output format'
+            },
+            'DocumentTemplate': {
+                formats: ['PDF', 'DOCX', 'ODT'],
+                defaultFormat: 'PDF',
+                description: 'Generate documents with page layout'
             },
             'XsltTransform': {
                 formats: ['XML'],

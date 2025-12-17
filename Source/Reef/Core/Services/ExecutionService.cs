@@ -4,6 +4,7 @@ using Reef.Core.Formatters;
 using Reef.Core.Destinations;
 using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
+using Reef.Core.DocumentGeneration;
 using Serilog;
 using System.Diagnostics;
 
@@ -23,6 +24,7 @@ public class ExecutionService
     private readonly AuditService _auditService;
     private readonly QueryTemplateService _templateService;
     private readonly ITemplateEngine _templateEngine;
+    private readonly DocumentTemplateEngine _documentEngine;
     private readonly DeltaSyncService _deltaSyncService;
     private readonly EmailExportService _emailExportService;
     private readonly EmailApprovalService _emailApprovalService;
@@ -38,6 +40,7 @@ public class ExecutionService
         ConnectionService connectionService,
         AuditService auditService,
         QueryTemplateService templateService,
+        DocumentTemplateEngine documentEngine,
         DeltaSyncService deltaSyncService,
         EmailExportService emailExportService,
         EmailApprovalService emailApprovalService,
@@ -53,6 +56,7 @@ public class ExecutionService
         _templateService = templateService;
         _configuration = configuration;
         _templateEngine = new ScribanTemplateEngine(_configuration);
+        _documentEngine = documentEngine;
         _deltaSyncService = deltaSyncService;
         _emailExportService = emailExportService;
         _emailApprovalService = emailApprovalService;
@@ -797,6 +801,19 @@ public class ExecutionService
                             Log.Debug("Native template transformation completed. Output length: {Length} chars, Row count: {RowCount}", 
                                 transformedContent?.Length ?? 0, transformResult.RowCount);
                         }
+                        else if (template.Type == QueryTemplateType.DocumentTemplate)
+                        {
+                            // Document Template (PDF, DOCX, ODT) - Use DocumentTemplateEngine
+                            Log.Information("Applying document template '{TemplateName}' ({OutputFormat})", 
+                                template.Name, template.OutputFormat);
+                            
+                            // DocumentTemplateEngine returns file path directly - store in transformedContent as marker
+                            var documentPath = await _documentEngine.TransformAsync(rows, template.Template);
+                            transformedContent = $"__DOCUMENT_PATH__:{documentPath}";
+                            actualOutputFormat = template.OutputFormat; // PDF, DOCX, or ODT
+                            
+                            Log.Information("Document generation completed. File: {FilePath}", documentPath);
+                        }
                         else
                         {
                             // Custom Template (Scriban) - Use TemplateEngine
@@ -835,8 +852,18 @@ public class ExecutionService
                 long fileSize;
                 if (!string.IsNullOrEmpty(transformedContent))
                 {
+                    // Check if this is a document template (file path marker)
+                    if (transformedContent.StartsWith("__DOCUMENT_PATH__:"))
+                    {
+                        // Document already generated - extract path and use it
+                        var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
+                        tempFilePath = documentPath;
+                        fileSize = new FileInfo(tempFilePath).Length;
+                        finalPath = tempFilePath;
+                        Log.Debug("Using pre-generated document: {FilePath}, Size: {FileSize} bytes", tempFilePath, fileSize);
+                    }
                     // Template was applied - check if this is email test mode with multiple documents
-                    if (profile.IsEmailExport && destinationOverrideId.HasValue)
+                    else if (profile.IsEmailExport && destinationOverrideId.HasValue)
                     {
                         // Split HTML documents and save separately
                         var htmlDocs = SplitHtmlDocuments(transformedContent);
@@ -2623,6 +2650,9 @@ public class ExecutionService
             "xml" => "xml",
             "csv" => "csv",
             "yaml" => "yaml",
+            "pdf" => "pdf",
+            "docx" => "docx",
+            "odt" => "odt",
             _ => "txt"
         };
     }

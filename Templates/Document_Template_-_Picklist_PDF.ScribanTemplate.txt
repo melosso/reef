@@ -1,0 +1,54 @@
+{{! format: pdf }}
+{{! pageSize: A4 }}
+{{! orientation: Portrait }}
+
+{{# header }}
+<div style="text-align: center; font-weight: bold; font-size: 16pt;">
+  Warehouse Picking List
+</div>
+<div style="text-align: center; font-size: 10pt;">
+  Order: {{ .[0].order_number }} | Date: {{ .[0].pick_date | date.to_string '%Y-%m-%d' }}
+</div>
+<hr />
+{{/ header }}
+
+{{# content }}
+<p><strong>Ship To:</strong><br/>
+{{ .[0].customer_name }}<br/>
+{{ .[0].ship_address }}</p>
+
+<table border="1" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="background-color: #f0f0f0;">
+      <th>SKU</th>
+      <th>Description</th>
+      <th>Location</th>
+      <th>Qty</th>
+      <th>Picked</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{~ for item in . ~}}
+    <tr>
+      <td>{{ item.sku }}</td>
+      <td>{{ item.description }}</td>
+      <td>{{ item.warehouse_location }}</td>
+      <td style="text-align: center;">{{ item.quantity }}</td>
+      <td style="width: 60px; border: 1px solid #ccc;"></td>
+    </tr>
+    {{~ end ~}}
+  </tbody>
+</table>
+
+<div style="margin-top: 30px;">
+  <p>Picker: ________________________</p>
+  <p>Checked By: ___________________</p>
+  <p>Date: __________________________</p>
+</div>
+{{/ content }}
+
+{{# footer }}
+<div style="text-align: center; font-size: 8pt; color: gray;">
+  Confidential - For internal use only
+</div>
+{{/ footer }}

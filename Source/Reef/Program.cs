@@ -278,6 +278,16 @@ public class Program
         // Template engines
         services.AddSingleton<ScribanTemplateEngine>();
 
+        // Document generation services
+        services.AddScoped<Reef.Core.DocumentGeneration.PdfGenerator>();
+        services.AddScoped<Reef.Core.DocumentGeneration.DocxGenerator>();
+        services.AddScoped<Reef.Core.DocumentGeneration.IDocumentGeneratorFactory, Reef.Core.DocumentGeneration.DocumentGeneratorFactory>();
+        services.AddScoped<Reef.Core.DocumentGeneration.DocumentTemplateEngine>(sp =>
+            new Reef.Core.DocumentGeneration.DocumentTemplateEngine(
+                sp.GetRequiredService<ScribanTemplateEngine>(),
+                sp.GetRequiredService<Reef.Core.DocumentGeneration.IDocumentGeneratorFactory>(),
+                configuration));
+
         // Scoped services (each request gets its own instance)
         // Core services
         services.AddScoped<QueryExecutor>();

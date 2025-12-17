@@ -1,0 +1,53 @@
+{{! format: pdf }}
+{{! pageSize: A4 }}
+{{! orientation: Portrait }}
+
+{{# header }}
+<div style="text-align: center; font-weight: bold; font-size: 18pt;">
+  {{ .[0].company_name }}
+</div>
+<div style="text-align: center; font-size: 10pt;">
+  {{ .[0].company_address }} | {{ .[0].company_phone }}
+</div>
+<hr />
+{{/ header }}
+
+{{# content }}
+<h2>Invoice {{ .[0].invoice_number }}</h2>
+<p><strong>Date:</strong> {{ .[0].invoice_date | date.to_string '%Y-%m-%d' }}</p>
+<p><strong>Customer:</strong> {{ .[0].customer_name }}<br/>
+{{ .[0].customer_address }}</p>
+
+<table border="1" cellpadding="5" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+  <thead>
+    <tr style="background-color: #f0f0f0;">
+      <th>Item</th>
+      <th>Qty</th>
+      <th>Unit Price</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{~ for line in . ~}}
+    <tr>
+      <td>{{ line.item_description }}</td>
+      <td style="text-align: center;">{{ line.quantity }}</td>
+      <td style="text-align: right;">${{ line.unit_price | math.format '0.00' }}</td>
+      <td style="text-align: right;">${{ line.line_total | math.format '0.00' }}</td>
+    </tr>
+    {{~ end ~}}
+  </tbody>
+</table>
+
+<div style="margin-top: 20px; text-align: right;">
+  <p><strong>Subtotal:</strong> ${{ .[0].subtotal | math.format '0.00' }}</p>
+  <p><strong>Tax:</strong> ${{ .[0].tax_amount | math.format '0.00' }}</p>
+  <p style="font-size: 14pt;"><strong>Total:</strong> ${{ .[0].total_amount | math.format '0.00' }}</p>
+</div>
+{{/ content }}
+
+{{# footer }}
+<div style="text-align: center; font-size: 8pt; color: gray;">
+  {{ .[0].company_terms }}
+</div>
+{{/ footer }}
