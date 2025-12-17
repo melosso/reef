@@ -1,8 +1,13 @@
 # Document Generation Implementation Summary
 
-## ✅ Implementation Complete
+## 🚧 Implementation Status: Phase 1-3 Complete (~70%)
 
-The document generation feature has been successfully implemented in Reef. This allows you to create professional PDF and DOCX documents (invoices, picklists, reports, etc.) using a hybrid approach that combines Scriban templates with document layout.
+The document generation feature has been **partially implemented** in Reef with core functionality working. You can create basic PDF and DOCX documents (invoices, picklists, reports) using a hybrid approach that combines Scriban templates with document layout.
+
+### Current Status
+✅ **Core functionality is production-ready** for basic use cases  
+⚠️ **Advanced features pending** (UI options, validation endpoint, tests, rich HTML rendering)  
+📋 **See "Remaining Work" section** below for unimplemented features
 
 ---
 
@@ -295,22 +300,79 @@ Use the sample templates in `/Templates/` for testing:
 
 ## 🐛 Known Limitations
 
-1. **HTML Rendering**: Phase 1 uses simple HTML stripping. Full HTML/CSS rendering planned for future phase.
+1. **HTML Rendering**: Currently uses simple HTML stripping. Rich formatting (bold, tables, colors) not yet supported.
 2. **ODT Format**: Not yet implemented (deferred to future phase).
-3. **Complex Tables**: Basic table support only. Advanced features (merged cells, nested tables) in Phase 4.
-4. **Images**: Not yet supported. Planned for future phase.
+3. **No UI Options**: Document options (page size, orientation, watermark) must be set in template directives - no UI controls.
+4. **No Template Validation**: Template syntax errors only discovered at runtime - no validation endpoint.
+5. **Images**: Not yet supported. Planned for future phase.
+6. **No Preview**: Must execute profile to see document output.
 
 ---
 
-## 🔮 Future Enhancements
+## 🔲 Remaining Work (from Design Document)
 
-- Full HTML/CSS rendering in PDF (QuestPDF supports CSS-like styling)
+### High Priority (Production Hardening)
+1. **Document Options UI** (Section 5.1.3)
+   - Add page size dropdown (A4/Letter/Legal)
+   - Add orientation selector (Portrait/Landscape)
+   - Add page numbers checkbox
+   - Add watermark text input
+   - Show/hide panel based on template type
+
+2. **Template Validation Endpoint** (Section 5.2)
+   - Update `/Source/Reef/Api/QueryTemplateEndpoints.cs`
+   - Add POST `/validate` endpoint for DocumentTemplate
+   - Return real-time syntax validation to UI
+
+3. **Unit Tests** (Section 10.1)
+   - Create `PdfGeneratorTests.cs`
+   - Create `DocxGeneratorTests.cs`
+   - Create `DocumentTemplateEngineTests.cs`
+   - Test coverage: generation, pagination, validation, errors
+
+4. **Integration Tests** (Section 10.2)
+   - Create `DocumentGenerationEndToEndTests.cs`
+   - Test profile execution with DocumentTemplate
+   - Test SplitKeyColumn multi-document generation
+   - Test destination uploads
+
+5. **README.md Update** (Section 13.1, Phase 5)
+   - Document QuestPDF Community License requirements
+   - Add revenue limit notice (< $1M USD)
+   - Include upgrade instructions
+
+### Medium Priority (Enhanced Functionality)
+6. **Rich HTML Rendering** (Section 2.2.3)
+   - Replace simple HTML stripping with proper parsing
+   - Support tables with styling
+   - Support bold/italic/underline
+   - Support colors and backgrounds
+
+7. **Error Handling Improvements** (Section 11.2)
+   - Add specific error messages for common cases
+   - Handle out-of-memory for large documents
+   - Improve QuestPDF exception handling
+
+8. **License Compliance Check** (Section 11.3)
+   - Add startup validation for QuestPDF license
+   - Log warning if license invalid
+
+### Lower Priority (Nice to Have)
+9. **Preview Functionality**
+   - Template preview without full execution
+   
+10. **Performance Benchmarks** (Section 12)
+    - Verify targets: 100-page doc < 2s
+    - Test 1000-invoice split < 30s
+    - Validate memory usage < 500 MB
+
+## 🔮 Future Enhancements (Beyond Design Doc)
+
 - Image support (logos, barcodes, QR codes)
 - ODT (OpenDocument) format support
-- Advanced table features (merged cells, borders, colors)
 - Chart/graph generation
-- Watermark support
 - Digital signatures
+- Visual template designer (drag-and-drop)
 - Batch processing optimizations
 
 ---
@@ -327,20 +389,53 @@ For issues or questions:
 
 ## ✨ Summary
 
-The document generation feature is **production-ready** and fully integrated into Reef. You can now create professional PDF and DOCX documents using familiar Scriban syntax combined with document layout directives.
+### What Works Now (Phase 1-3: ~70% Complete)
+The document generation feature has **core functionality working** and can be used for basic PDF/DOCX generation:
 
-**Key Benefits:**
-- ✅ Professional document output (invoices, reports, picklists)
-- ✅ Familiar Scriban syntax for data binding
+**Currently Available:**
+- ✅ Basic PDF and DOCX generation
+- ✅ Scriban data binding in templates
 - ✅ Automatic page numbering and multi-page support
 - ✅ Headers and footers on every page
-- ✅ Multiple output formats (PDF, DOCX)
-- ✅ Integrates seamlessly with existing Reef profiles and destinations
+- ✅ Template type dropdown in UI
+- ✅ Integration with profiles and destinations
+- ✅ SplitKeyColumn support for multi-document output
 
-**Next Steps:**
+**Current Limitations:**
+- ⚠️ No UI controls for page size/orientation (must use template directives)
+- ⚠️ No real-time template validation in UI
+- ⚠️ Simple text rendering only (no rich HTML formatting)
+- ⚠️ No automated tests
+- ⚠️ No preview functionality
+
+### Implementation Goal (100% Complete)
+To fully complete the design document specification, the following must be added:
+1. Document options UI panel with dropdowns/checkboxes
+2. Template validation endpoint for real-time error checking
+3. Comprehensive unit and integration test coverage
+4. Rich HTML/CSS rendering for tables and formatting
+5. README.md updates with license information
+6. Error handling improvements
+7. Performance validation
+
+### Next Steps for Users
+**You can start using document generation now for basic use cases:**
 1. Try the sample templates in `/Templates/`
-2. Create your first document template
+2. Create a document template using template directives (see examples)
 3. Execute a profile and review the generated document
-4. Customize templates for your business needs
+4. Report any issues or requirements for remaining features
 
-🎉 **Congratulations! Document generation is ready to use!**
+**For Production Use:**
+- ✅ **Safe to use** for basic PDF/DOCX generation
+- ⚠️ **Be aware** of limitations (no UI options, basic formatting only)
+- 📋 **Plan ahead** for testing and validation before heavy production workloads
+
+### Next Steps for Development
+To complete the implementation per design document:
+1. Implement document options UI (highest priority for UX)
+2. Add validation endpoint (critical for user feedback)
+3. Write comprehensive tests (essential for production)
+4. Enhance HTML rendering (important for professional documents)
+5. Update documentation (README.md)
+
+🎯 **Current Status: Core feature functional, advanced features pending**
