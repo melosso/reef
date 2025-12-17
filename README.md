@@ -17,6 +17,7 @@ Reef automates data exports for **reporting workflows**, **integration pipelines
 - **Web-based interface**: Manage everything through the browser
 - **Connection management**:  PostgreSQL MySQL or SQL Server. Store and reuse database connections across profiles
 - **Multiple formats**: JSON, XML, CSV, YAML with optional [Scriban](https://github.com/scriban/scriban) templates
+- **Document generation**: Generate paginated PDF and DOCX documents (such as invoices, reports, picklists) 
 - **Flexible destinations**: Local, FTP/SFTP, AWS S3, Azure Blob, HTTP, SMB, SMTP
 - **Job scheduling**: Cron expressions, intervals, or webhook triggers
 - **Execution history**: Track all runs with detailed logging
@@ -111,6 +112,85 @@ Use Scriban for advanced transformations. If you're interested in more examples,
   ]
 }
 ```
+
+#### Document Generation (PDF, DOCX)
+
+Reef includes built-in document generation capabilities for creating professional PDF and DOCX documents directly from your query results:
+
+**Features:**
+- **PDF & DOCX Support**: Generate paginated documents with automatic page numbering
+- **Multi-page Documents**: Headers and footers repeat on every page automatically
+- **Scriban Data Binding**: Full template syntax support within documents
+- **Flexible Layouts**: Control page size (A4/Letter/Legal), orientation, margins
+- **Document Options**: Watermarks, custom page numbering formats
+
+**Example Invoice Template:**
+
+```liquid
+{{! format: pdf }}
+{{! pageSize: A4 }}
+{{! orientation: Portrait }}
+
+{{# header }}
+<div style="text-align: center; font-weight: bold;">
+  {{ .[0].company_name }}
+</div>
+{{/ header }}
+
+{{# content }}
+<h2>Invoice {{ .[0].invoice_number }}</h2>
+<p>Date: {{ .[0].invoice_date }}</p>
+<p>Customer: {{ .[0].customer_name }}</p>
+
+<table>
+  <tr><th>Description</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+  {{~ for line in . ~}}
+  <tr>
+    <td>{{ line.item_description }}</td>
+    <td>{{ line.quantity }}</td>
+    <td>{{ line.unit_price }}</td>
+    <td>{{ line.line_total }}</td>
+  </tr>
+  {{~ end ~}}
+</table>
+
+<p><strong>Total: ${{ .[0].total_amount }}</strong></p>
+{{/ content }}
+
+{{# footer }}
+<div style="text-align: center; font-size: 8pt;">
+  Thank you for your business
+</div>
+{{/ footer }}
+```
+
+**Sample templates available in `/Templates/` directory:**
+- `Document_Template_-_Invoice_PDF.DocumentTemplate.txt`
+- `Document_Template_-_Picklist_PDF.DocumentTemplate.txt`
+
+For detailed documentation and advanced features, see `/DESIGN_DOCUMENT_GENERATION.md` and `/IMPLEMENTATION_SUMMARY.md`.
+
+**⚠️ QuestPDF License Notice:**
+
+Reef uses [QuestPDF](https://www.questpdf.com/) (Community License) for PDF generation. This license is **free for organizations with annual gross revenue under $1M USD**.
+
+- **Community License**: Valid if your annual revenue < $1M USD
+- **No action required** if you meet this criteria
+- **Professional License required** if annual revenue ≥ $1M USD
+
+If you exceed this revenue threshold, you must:
+1. Purchase a QuestPDF Professional License from https://www.questpdf.com/license/
+2. Update the license configuration in `/Source/Reef/Core/DocumentGeneration/PdfGenerator.cs`
+
+```csharp
+// Change from:
+QuestPDF.Settings.License = LicenseType.Community;
+
+// To (after purchasing):
+QuestPDF.Settings.License = LicenseType.Professional;
+```
+
+For more information about QuestPDF licensing, visit: https://www.questpdf.com/license/
 
 #### Job Scheduling
 

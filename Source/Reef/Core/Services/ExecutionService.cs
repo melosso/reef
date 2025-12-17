@@ -2229,9 +2229,35 @@ public class ExecutionService
             
             if (!string.IsNullOrEmpty(transformedContent))
             {
-                // Template was applied, write directly
-                await File.WriteAllTextAsync(tempFilePath, transformedContent);
-                fileSizeBytes = new FileInfo(tempFilePath).Length;
+                // Check if this is a document template (file path marker)
+                if (transformedContent.StartsWith("__DOCUMENT_PATH__:"))
+                {
+                    // Document already generated - extract path and use it
+                    var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
+                    
+                    // Copy document to split temp location with correct filename
+                    File.Copy(documentPath, tempFilePath, overwrite: true);
+                    fileSizeBytes = new FileInfo(tempFilePath).Length;
+                    
+                    // Clean up the original generated document
+                    try
+                    {
+                        File.Delete(documentPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to delete original document: {DocumentPath}", documentPath);
+                    }
+                    
+                    Log.Debug("Split '{SplitKey}' document copied to {FilePath} ({FileSize} bytes)",
+                        splitKey, tempFilePath, fileSizeBytes);
+                }
+                else
+                {
+                    // Template was applied, write directly
+                    await File.WriteAllTextAsync(tempFilePath, transformedContent);
+                    fileSizeBytes = new FileInfo(tempFilePath).Length;
+                }
             }
             else
             {
@@ -2356,7 +2382,22 @@ public class ExecutionService
             throw new InvalidOperationException($"Template {profile.TemplateId} not found");
         }
         
-        // Use the template engine's TransformAsync method
+        // Check if this is a DocumentTemplate (PDF, DOCX, ODT)
+        if (template.Type == QueryTemplateType.DocumentTemplate)
+        {
+            Log.Information("Applying document template '{TemplateName}' to split '{SplitKey}' ({OutputFormat})", 
+                template.Name, splitKey, template.OutputFormat);
+            
+            // DocumentTemplateEngine returns file path directly - use marker format
+            var documentPath = await _documentEngine.TransformAsync(splitRows, template.Template);
+            
+            Log.Information("Document generation completed for split '{SplitKey}'. File: {FilePath}", 
+                splitKey, documentPath);
+            
+            return $"__DOCUMENT_PATH__:{documentPath}";
+        }
+        
+        // Use the template engine's TransformAsync method for Scriban templates
         return await _templateEngine.TransformAsync(splitRows, template.Template);
     }
 
