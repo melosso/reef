@@ -77,7 +77,7 @@ public class ApprovedEmailSenderService : BackgroundService
         }
         finally
         {
-            Log.Information("ApprovedEmailSenderService stopped");
+            Log.Debug("ApprovedEmailSenderService stopped");
         }
     }
 

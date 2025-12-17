@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using Reef.Core.DocumentGeneration.HtmlParsing;
 using Serilog;
 
 namespace Reef.Core.DocumentGeneration;
@@ -192,19 +193,182 @@ public class DocxGenerator : IDocumentGenerator
 
     private void RenderSectionAsWordContent(Body body, DocumentSection section, List<Dictionary<string, object>> data)
     {
-        // Simple text rendering for Phase 1
-        // TODO Phase 4: Add proper HTML parsing with tables, formatting, etc.
-        var content = StripHtml(section.RenderedContent);
-
-        var lines = content.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-        foreach (var line in lines)
+        var content = section.RenderedContent;
+        
+        // Check if content contains HTML tables
+        if (content.Contains("<table"))
         {
-            var paragraph = new Paragraph();
-            var run = new Run();
-            run.Append(new Text(line.Trim()));
-            paragraph.Append(run);
-            body.Append(paragraph);
+            RenderHtmlContent(body, content);
         }
+        else if (content.Contains("<h") || content.Contains("<strong") || content.Contains("<b>") || content.Contains("<em") || content.Contains("<i>"))
+        {
+            // Contains HTML formatting
+            RenderFormattedText(body, content);
+        }
+        else
+        {
+            // Plain text
+            var plainText = StripHtml(content);
+            var lines = plainText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var line in lines)
+            {
+                var paragraph = new Paragraph();
+                var run = new Run();
+                run.Append(new Text(line.Trim()));
+                paragraph.Append(run);
+                body.Append(paragraph);
+            }
+        }
+    }
+    
+    private void RenderHtmlContent(Body body, string html)
+    {
+        // Parse and render tables
+        var tables = HtmlTableParser.ParseTables(html);
+        var parts = SplitHtmlByTables(html);
+        
+        for (int i = 0; i < parts.Count; i++)
+        {
+            // Render text content
+            if (!string.IsNullOrWhiteSpace(parts[i]))
+            {
+                RenderFormattedText(body, parts[i]);
+            }
+            
+            // Render table if exists at this position
+            if (i < tables.Count)
+            {
+                var tableData = tables[i];
+                var table = new Table();
+                
+                // Table properties
+                var tableProperties = new TableProperties(
+                    new TableBorders(
+                        new TopBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                        new BottomBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                        new LeftBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                        new RightBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                        new InsideHorizontalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 },
+                        new InsideVerticalBorder { Val = new EnumValue<BorderValues>(BorderValues.Single), Size = 4 }
+                    )
+                );
+                table.AppendChild(tableProperties);
+                
+                // Header row
+                if (tableData.Headers.Any())
+                {
+                    var headerRow = new TableRow();
+                    foreach (var header in tableData.Headers)
+                    {
+                        var cell = new TableCell();
+                        var cellProperties = new TableCellProperties(
+                            new Shading { Val = ShadingPatternValues.Clear, Fill = "D3D3D3" }
+                        );
+                        cell.Append(cellProperties);
+                        
+                        var paragraph = new Paragraph();
+                        var run = new Run(new RunProperties(new Bold()), new Text(header));
+                        paragraph.Append(run);
+                        cell.Append(paragraph);
+                        headerRow.Append(cell);
+                    }
+                    table.Append(headerRow);
+                }
+                
+                // Data rows
+                foreach (var row in tableData.Rows)
+                {
+                    var tableRow = new TableRow();
+                    foreach (var cellText in row)
+                    {
+                        var cell = new TableCell();
+                        var paragraph = new Paragraph();
+                        var run = new Run(new Text(cellText));
+                        paragraph.Append(run);
+                        cell.Append(paragraph);
+                        tableRow.Append(cell);
+                    }
+                    table.Append(tableRow);
+                }
+                
+                body.Append(table);
+            }
+        }
+    }
+    
+    private void RenderFormattedText(Body body, string html)
+    {
+        var segments = HtmlTextParser.ParseFormattedText(html);
+        
+        Paragraph? currentParagraph = null;
+        
+        foreach (var segment in segments)
+        {
+            // Start new paragraph if needed
+            if (currentParagraph == null || segment.Content.Contains("\n"))
+            {
+                if (currentParagraph != null)
+                {
+                    body.Append(currentParagraph);
+                }
+                currentParagraph = new Paragraph();
+            }
+            
+            // Create run with formatting
+            var runProperties = new RunProperties();
+            
+            if (segment.Style.IsBold)
+                runProperties.Append(new Bold());
+                
+            if (segment.Style.IsItalic)
+                runProperties.Append(new Italic());
+                
+            if (segment.Style.IsUnderline)
+                runProperties.Append(new Underline { Val = UnderlineValues.Single });
+                
+            if (segment.Style.IsHeading)
+                runProperties.Append(new FontSize { Val = (segment.Style.FontSize * 2).ToString() }); // Half-points
+            
+            var run = new Run(runProperties, new Text(segment.Content.Replace("\n", "")));
+            currentParagraph.Append(run);
+        }
+        
+        if (currentParagraph != null)
+        {
+            body.Append(currentParagraph);
+        }
+    }
+    
+    private List<string> SplitHtmlByTables(string html)
+    {
+        var parts = new List<string>();
+        var remainingHtml = html;
+        
+        while (remainingHtml.Contains("<table"))
+        {
+            var tableStart = remainingHtml.IndexOf("<table");
+            
+            // Add text before table
+            if (tableStart > 0)
+            {
+                parts.Add(remainingHtml.Substring(0, tableStart));
+            }
+            
+            // Find table end
+            var tableEnd = remainingHtml.IndexOf("</table>", tableStart);
+            if (tableEnd == -1) break;
+            
+            tableEnd += "</table>".Length;
+            remainingHtml = remainingHtml.Substring(tableEnd);
+        }
+        
+        // Add remaining text
+        if (!string.IsNullOrWhiteSpace(remainingHtml))
+        {
+            parts.Add(remainingHtml);
+        }
+        
+        return parts;
     }
 
     private string StripHtml(string html)

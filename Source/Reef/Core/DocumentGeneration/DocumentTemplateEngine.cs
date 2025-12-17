@@ -37,11 +37,13 @@ public class DocumentTemplateEngine
     /// <param name="data">Query results as list of dictionaries</param>
     /// <param name="template">Hybrid template string (directives + Scriban sections)</param>
     /// <param name="context">Additional context variables (optional)</param>
+    /// <param name="filenameTemplate">Optional filename template with placeholders like {timestamp}, {profile}, etc.</param>
     /// <returns>Full path to generated document file</returns>
     public async Task<string> TransformAsync(
         List<Dictionary<string, object>> data,
         string template,
-        Dictionary<string, object>? context = null)
+        Dictionary<string, object>? context = null,
+        string? filenameTemplate = null)
     {
         try
         {
@@ -61,7 +63,7 @@ public class DocumentTemplateEngine
 
             // Step 3: Generate output file path
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
-            var fileName = $"document_{timestamp}.{layout.OutputFormat.ToLowerInvariant()}";
+            var fileName = GenerateFilename(filenameTemplate, layout.OutputFormat, timestamp, context);
             var outputPath = Path.Combine(_exportsPath, fileName);
 
             // Step 4: Get appropriate generator and generate document
@@ -73,7 +75,7 @@ public class DocumentTemplateEngine
                 throw new InvalidOperationException($"Document generation failed: {errorMessage}");
             }
 
-            Log.Information("Document generated successfully: {FileName}, Format: {Format}, Size: {FileSize} bytes",
+            Log.Debug("Document generated successfully: {FileName}, Format: {Format}, Size: {FileSize} bytes",
                 fileName, layout.OutputFormat, fileSize);
 
             return outputPath;
@@ -83,6 +85,40 @@ public class DocumentTemplateEngine
             Log.Error(ex, "Document template transformation failed");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Generate filename from template with placeholder replacement
+    /// </summary>
+    private string GenerateFilename(string? template, string outputFormat, string timestamp, Dictionary<string, object>? context)
+    {
+        var extension = outputFormat.ToLowerInvariant();
+        
+        // Default filename if no template provided
+        if (string.IsNullOrWhiteSpace(template))
+        {
+            return $"document_{timestamp}.{extension}";
+        }
+
+        var now = DateTime.UtcNow;
+        var profileName = context?.GetValueOrDefault("profile_name")?.ToString() ?? "export";
+        
+        return template
+            .Replace("{profile}", SanitizeFilename(profileName), StringComparison.OrdinalIgnoreCase)
+            .Replace("{timestamp}", timestamp, StringComparison.OrdinalIgnoreCase)
+            .Replace("{date}", now.ToString("yyyyMMdd"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{time}", now.ToString("HHmmss"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{guid}", Guid.NewGuid().ToString("N"), StringComparison.OrdinalIgnoreCase)
+            .Replace("{format}", extension, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Sanitize filename by removing invalid characters
+    /// </summary>
+    private static string SanitizeFilename(string filename)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Join("_", filename.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).TrimEnd('.');
     }
 
     /// <summary>

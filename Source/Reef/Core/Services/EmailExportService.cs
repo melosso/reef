@@ -4,6 +4,7 @@ using MailKit.Net.Smtp;
 using MailKit.Security;
 using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
+using Reef.Core.DocumentGeneration;
 using Reef.Core.Destinations;
 using Serilog;
 
@@ -16,14 +17,21 @@ namespace Reef.Core.Services;
 public class EmailExportService
 {
     private readonly ScribanTemplateEngine _templateEngine;
+    private readonly QueryTemplateService _queryTemplateService;
+    private readonly DocumentTemplateEngine _documentTemplateEngine;
     private readonly AttachmentVariableResolver _variableResolver;
     private readonly BinaryAttachmentResolver _binaryResolver;
     private readonly HashSet<string> _deduplicationCache;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailExportService>();
 
-    public EmailExportService(ScribanTemplateEngine templateEngine)
+    public EmailExportService(
+        ScribanTemplateEngine templateEngine,
+        QueryTemplateService queryTemplateService,
+        DocumentTemplateEngine documentTemplateEngine)
     {
         _templateEngine = templateEngine;
+        _queryTemplateService = queryTemplateService;
+        _documentTemplateEngine = documentTemplateEngine;
         _variableResolver = new AttachmentVariableResolver();
         _binaryResolver = new BinaryAttachmentResolver(_variableResolver);
         _deduplicationCache = new HashSet<string>();
@@ -281,23 +289,93 @@ public class EmailExportService
             }
             else
             {
-                // Send one email per row (or combined if recipients are same)
-                Log.Debug("Sending {Count} emails from profile {ProfileId}",
-                    queryResults.Count, profile.Id);
-
-                for (int i = 0; i < queryResults.Count; i++)
+                // Check if using hardcoded recipient or if all rows have same recipient
+                // If yes, send ONE email with ALL rows
+                // If no, send one email per row (different recipients)
+                
+                bool useHardcodedRecipient = profile.UseHardcodedRecipients;
+                bool allSameRecipient = true;
+                string? firstRecipient = null;
+                
+                if (!useHardcodedRecipient && queryResults.Count > 1)
                 {
-                    var row = queryResults[i];
+                    firstRecipient = SafeGetValue(queryResults[0], profile.EmailRecipientsColumn ?? string.Empty)?.ToString();
+                    for (int i = 1; i < queryResults.Count; i++)
+                    {
+                        var currentRecipient = SafeGetValue(queryResults[i], profile.EmailRecipientsColumn ?? string.Empty)?.ToString();
+                        if (currentRecipient != firstRecipient)
+                        {
+                            allSameRecipient = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (useHardcodedRecipient || allSameRecipient)
+                {
+                    // Send ALL rows in ONE email
+                    Log.Information("Sending 1 email with {RowCount} rows from profile {ProfileId}",
+                        queryResults.Count, profile.Id);
+                    
                     var result = await SendEmailBatchAsync(
                         profile,
                         emailConfig,
                         emailTemplate.Template,
-                        new List<Dictionary<string, object>> { row },
+                        queryResults,
                         attachmentConfig);
-
-                    // Use row index or email address (masked) as split key when no split key column is set
-                    var recipient = SafeGetValue(row, profile.EmailRecipientsColumn ?? string.Empty)?.ToString() ?? "unknown";
+                    
+                    var recipient = useHardcodedRecipient 
+                        ? (profile.EmailRecipientsHardcoded ?? "unknown")
+                        : (firstRecipient ?? "unknown");
                     var splitKey = MaskEmailForLog(recipient);
+                    
+                    if (result.Success)
+                    {
+                        successCount++;
+                        splits.Add(new ProfileExecutionSplit
+                        {
+                            SplitKey = splitKey,
+                            Status = "Success",
+                            RowCount = queryResults.Count,
+                            CompletedAt = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        failureCount++;
+                        if (!string.IsNullOrEmpty(result.Error))
+                        {
+                            errors.Add(result.Error);
+                        }
+                        splits.Add(new ProfileExecutionSplit
+                        {
+                            SplitKey = splitKey,
+                            Status = "Failed",
+                            RowCount = queryResults.Count,
+                            ErrorMessage = result.Error,
+                            CompletedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+                else
+                {
+                    // Send one email per row (different recipients)
+                    Log.Information("Sending {Count} emails (one per row, different recipients) from profile {ProfileId}",
+                        queryResults.Count, profile.Id);
+
+                    for (int i = 0; i < queryResults.Count; i++)
+                    {
+                        var row = queryResults[i];
+                        var result = await SendEmailBatchAsync(
+                            profile,
+                            emailConfig,
+                            emailTemplate.Template,
+                            new List<Dictionary<string, object>> { row },
+                            attachmentConfig);
+
+                        // Use row index or email address (masked) as split key when no split key column is set
+                        var recipient = SafeGetValue(row, profile.EmailRecipientsColumn ?? string.Empty)?.ToString() ?? "unknown";
+                        var splitKey = MaskEmailForLog(recipient);
 
                     if (result.Success)
                     {
@@ -326,6 +404,7 @@ public class EmailExportService
                             CompletedAt = DateTime.UtcNow
                         });
                     }
+                }
                 }
             }
 
@@ -437,7 +516,13 @@ public class EmailExportService
             // Check if multiple HTML documents were rendered (split by <!doctype html>)
             var htmlDocuments = SplitHtmlDocuments(emailBody);
 
-            if (htmlDocuments.Count > 1 && rows.Count > 1)
+            // Don't split HTML documents if using DocumentTemplate attachments
+            // The attachment contains all the data, email is just a notification
+            bool hasDocumentTemplateAttachment = attachmentConfig != null && 
+                                                  attachmentConfig.Enabled && 
+                                                  attachmentConfig.Mode == "DocumentTemplate";
+
+            if (htmlDocuments.Count > 1 && rows.Count > 1 && !hasDocumentTemplateAttachment)
             {
                 // Multiple rows rendered multiple HTML documents - send one email per row
                 Log.Information("Template rendered {HtmlCount} documents for {RowCount} rows. Sending separate emails.",
@@ -830,7 +915,11 @@ public class EmailExportService
         if (attachmentConfig == null || !attachmentConfig.Enabled)
             return attachments;
 
-        if (attachmentConfig.Mode != "Binary" || attachmentConfig.Binary == null)
+        if (attachmentConfig.Mode == "DocumentTemplate")
+        {
+            return ResolveDocumentTemplateAttachments(rows, attachmentConfig, profile);
+        }
+        else if (attachmentConfig.Mode != "Binary" || attachmentConfig.Binary == null)
         {
             Log.Debug("Attachment mode '{Mode}' not supported yet", attachmentConfig.Mode);
             return attachments;
@@ -885,6 +974,119 @@ public class EmailExportService
         ValidateAttachmentLimits(attachments, attachmentConfig);
 
         return attachments;
+    }
+
+    /// <summary>
+    /// Resolves DocumentTemplate attachments - generates PDF/DOCX from template for rows
+    /// </summary>
+    private List<EmailAttachment> ResolveDocumentTemplateAttachments(
+        List<Dictionary<string, object>> rows,
+        AttachmentConfig attachmentConfig,
+        Profile profile)
+    {
+        var attachments = new List<EmailAttachment>();
+
+        if (attachmentConfig.DocumentTemplate == null)
+        {
+            Log.Warning("DocumentTemplate attachment config is null for profile {ProfileId}", profile.Id);
+            return attachments;
+        }
+
+        try
+        {
+            var templateId = attachmentConfig.DocumentTemplate.TemplateId;
+            var filenameColumn = attachmentConfig.DocumentTemplate.FilenameColumnName;
+
+            Log.Information("Generating DocumentTemplate attachment for profile {ProfileId} using template {TemplateId}",
+                profile.Id, templateId);
+
+            // 1. Load template from database
+            var template = _queryTemplateService.GetByIdAsync(templateId).GetAwaiter().GetResult();
+            if (template == null)
+            {
+                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment in profile {ProfileId}",
+                    templateId, profile.Id);
+                return attachments;
+            }
+
+            // 2. Determine filename
+            string filename;
+            if (!string.IsNullOrEmpty(filenameColumn) && rows.Count > 0)
+            {
+                var filenameValue = SafeGetValue(rows[0], filenameColumn)?.ToString();
+                filename = !string.IsNullOrEmpty(filenameValue) 
+                    ? filenameValue 
+                    : $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+            }
+            else
+            {
+                filename = $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}";
+            }
+
+            // 3. Build context for filename template processing
+            var context = new Dictionary<string, object>
+            {
+                { "profile_name", profile.Name },
+                { "profile_id", profile.Id },
+                { "execution_id", 0 }, // TODO: Pass actual execution ID if available
+                { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
+                { "date", DateTime.Now.ToString("yyyyMMdd") },
+                { "time", DateTime.Now.ToString("HHmmss") },
+                { "guid", Guid.NewGuid().ToString() }
+            };
+
+            // 4. Generate document using DocumentTemplateEngine
+            var outputPath = _documentTemplateEngine.TransformAsync(
+                rows,
+                template.Template,
+                context,
+                filenameTemplate: null).GetAwaiter().GetResult();
+
+            Log.Debug("Document generated at path: {OutputPath}", outputPath);
+
+            // 5. Read file bytes from disk
+            var documentBytes = File.ReadAllBytes(outputPath);
+
+            // 6. Determine content type based on file extension
+            var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
+            {
+                ".pdf" => "application/pdf",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                _ => "application/octet-stream"
+            };
+
+            // 7. Create attachment
+            var attachment = new EmailAttachment
+            {
+                Filename = Path.GetFileName(outputPath),
+                Content = documentBytes,
+                ContentType = contentType
+            };
+
+            attachments.Add(attachment);
+
+            Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes) for profile {ProfileId}",
+                attachment.Filename, attachment.Content.Length, profile.Id);
+
+            // 8. Optionally delete temp file (keep it for now for debugging)
+            // File.Delete(outputPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to generate DocumentTemplate attachment for profile {ProfileId}", profile.Id);
+        }
+
+        return attachments;
+    }
+
+    /// <summary>
+    /// Sanitizes filename to remove invalid characters
+    /// </summary>
+    private string SanitizeFilename(string filename)
+    {
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Concat(filename.Select(c => invalidChars.Contains(c) ? '_' : c));
+        return sanitized;
     }
 
     /// <summary>

@@ -642,9 +642,10 @@ public class DatabaseConfig
 public class AttachmentConfig
 {
     public bool Enabled { get; set; }
-    public required string Mode { get; set; } // "Binary" | "DirectPath"
+    public required string Mode { get; set; } // "Binary" | "DirectPath" | "DocumentTemplate"
     public BinaryAttachmentMode? Binary { get; set; }
     public DirectPathAttachmentMode? DirectPath { get; set; }
+    public DocumentTemplateAttachmentMode? DocumentTemplate { get; set; }
     public string Deduplication { get; set; } = "Auto"; // Auto | ByFilename | ByHash
     public int MaxAttachmentsPerEmail { get; set; } = 50;
     public string MissingFileStrategy { get; set; } = "Skip"; // Skip | Fail
@@ -666,6 +667,18 @@ public class DirectPathAttachmentMode
 {
     public required string BaseDirectory { get; set; }
     public required string FilenameTemplate { get; set; }
+}
+
+/// <summary>
+/// Document template attachment mode - generate PDFs/DOCX from template for each row
+/// </summary>
+public class DocumentTemplateAttachmentMode
+{
+    public int TemplateId { get; set; }
+    public string? FilenameColumnName { get; set; }
+    public string? PageSize { get; set; }
+    public string? Orientation { get; set; }
+    public string? Watermark { get; set; }
 }
 
 /// <summary>

@@ -807,12 +807,24 @@ public class ExecutionService
                             Log.Information("Applying document template '{TemplateName}' ({OutputFormat})", 
                                 template.Name, template.OutputFormat);
                             
+                            // Build context for filename template resolution
+                            var documentContext = new Dictionary<string, object>
+                            {
+                                { "profile_name", profile.Name },
+                                { "profile_id", profile.Id.ToString() },
+                                { "execution_id", executionId.ToString() }
+                            };
+                            
                             // DocumentTemplateEngine returns file path directly - store in transformedContent as marker
-                            var documentPath = await _documentEngine.TransformAsync(rows, template.Template);
+                            var documentPath = await _documentEngine.TransformAsync(
+                                rows, 
+                                template.Template, 
+                                documentContext, 
+                                profile.FilenameTemplate);
                             transformedContent = $"__DOCUMENT_PATH__:{documentPath}";
                             actualOutputFormat = template.OutputFormat; // PDF, DOCX, or ODT
                             
-                            Log.Information("Document generation completed. File: {FilePath}", documentPath);
+                            Log.Debug("Document generation completed. File: {FilePath}", documentPath);
                         }
                         else
                         {
@@ -857,10 +869,32 @@ public class ExecutionService
                     {
                         // Document already generated - extract path and use it
                         var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
-                        tempFilePath = documentPath;
+                        
+                        // Copy the document to temp to avoid file locking issues with the original
+                        // This allows the original file to be locked by viewers/antivirus while we upload the copy
+                        var tempCopyPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(documentPath));
+                        
+                        // Retry copy operation in case of temporary lock
+                        int copyRetries = 5;
+                        while (copyRetries > 0)
+                        {
+                            try
+                            {
+                                File.Copy(documentPath, tempCopyPath, overwrite: true);
+                                break;
+                            }
+                            catch (IOException) when (copyRetries > 1)
+                            {
+                                Log.Debug("File copy locked, waiting 200ms before retry (retries left: {Retries})", copyRetries - 1);
+                                await Task.Delay(200);
+                                copyRetries--;
+                            }
+                        }
+                        
+                        tempFilePath = tempCopyPath;
                         fileSize = new FileInfo(tempFilePath).Length;
                         finalPath = tempFilePath;
-                        Log.Debug("Using pre-generated document: {FilePath}, Size: {FileSize} bytes", tempFilePath, fileSize);
+                        Log.Debug("Copied document to temp: {TempPath}, Size: {FileSize} bytes", tempFilePath, fileSize);
                     }
                     // Template was applied - check if this is email test mode with multiple documents
                     else if (profile.IsEmailExport && destinationOverrideId.HasValue)

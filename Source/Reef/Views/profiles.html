@@ -391,47 +391,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <p id="template-info" class="mt-1 text-xs text-gray-500">No template selected</p>
                         </div>
                     </div>
-
-                    <!-- Document Options Panel (for DocumentTemplate types) -->
-                    <div id="fileExportDocumentOptions" class="hidden border-t border-gray-200 pt-4 mt-4">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i data-lucide="file-text" class="w-4 h-4 mr-2 text-purple-600"></i>
-                            Document Generation Options
-                        </h4>
-
-                        <div class="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="fileExportPageSize" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Page Size
-                                </label>
-                                <select id="fileExportPageSize"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="A4">A4</option>
-                                    <option value="Letter">Letter</option>
-                                    <option value="Legal">Legal</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="fileExportOrientation" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Orientation
-                                </label>
-                                <select id="fileExportOrientation"
-                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <option value="Portrait">Portrait</option>
-                                    <option value="Landscape">Landscape</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="fileExportWatermark" class="block text-sm font-medium text-gray-700 mb-1">
-                                Watermark Text (Optional)
-                            </label>
-                            <input type="text" id="fileExportWatermark" placeholder="e.g., CONFIDENTIAL, DRAFT"
-                                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <p class="mt-1 text-xs text-gray-500">Optional watermark text to overlay on each page</p>
-                        </div>
-                    </div>
                     
                     <div class="border-t border-gray-200 pt-4 mt-4">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Output Destination *</h4>
@@ -1419,7 +1378,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <label for="emailAttachmentDocumentTemplateId" class="block text-sm font-medium text-gray-700 mb-1">
                                     Document Template (Optional)
                                 </label>
-                                <select id="emailAttachmentDocumentTemplateId" onchange="updateEmailAttachmentTemplateInfo()"
+                                <select id="emailAttachmentDocumentTemplateId" onchange="updateEmailAttachmentTemplateInfo(); saveAttachmentConfig();"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="">None - Use binary content columns above</option>
                                     <!-- Will be populated with DocumentTemplate types only -->
@@ -1427,55 +1386,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <p id="emailAttachmentTemplateInfo" class="mt-1 text-xs text-gray-500">No document template selected</p>
                             </div>
 
-                            <!-- Document Options for Email Attachments -->
-                            <div id="emailAttachmentDocumentOptions" class="hidden mt-4 space-y-3 p-4 bg-purple-50 border border-purple-200 rounded">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="emailAttachmentPageSize" class="block text-sm font-medium text-gray-700 mb-1">
-                                            Page Size
-                                        </label>
-                                        <select id="emailAttachmentPageSize"
-                                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="A4">A4</option>
-                                            <option value="Letter">Letter</option>
-                                            <option value="Legal">Legal</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label for="emailAttachmentOrientation" class="block text-sm font-medium text-gray-700 mb-1">
-                                            Orientation
-                                        </label>
-                                        <select id="emailAttachmentOrientation"
-                                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                            <option value="Portrait">Portrait</option>
-                                            <option value="Landscape">Landscape</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label for="emailAttachmentWatermark" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Watermark Text (Optional)
-                                    </label>
-                                    <input type="text" id="emailAttachmentWatermark" placeholder="e.g., CONFIDENTIAL, DRAFT"
-                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <p class="mt-1 text-xs text-gray-500">Optional watermark text to overlay on each page</p>
-                                </div>
-
-                                <div>
-                                    <label for="emailAttachmentFilenameColumn" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                        Filename Column *
-                                        <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Column containing the filename for the generated attachment (e.g., 'invoice.pdf')" data-tooltip-position="top">
-                                            <i data-lucide="info" class="w-4 h-4"></i>
-                                        </span>
-                                    </label>
-                                    <input type="text" id="emailAttachmentFilenameColumn" placeholder="e.g., filename, report_name"
-                                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                                    <p class="mt-1 text-xs text-gray-500">
-                                        Query must return this column with the desired filename (include extension: .pdf or .docx)
-                                    </p>
-                                </div>
-
-                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                            <!-- Filename Column for Document Template Attachments -->
+                            <div id="emailAttachmentFilenameField" class="hidden mt-4">
+                                <label for="emailAttachmentFilenameColumn" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                    Filename Column *
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Column containing the filename for the generated attachment (e.g., 'invoice.pdf')" data-tooltip-position="top">
+                                        <i data-lucide="info" class="w-4 h-4"></i>
+                                    </span>
+                                </label>
+                                <input type="text" id="emailAttachmentFilenameColumn" placeholder="e.g., filename, report_name"
+                                       onchange="saveAttachmentConfig()"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Query must return this column with the desired filename (include extension: .pdf or .docx)
+                                </p>
+                                
+                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
                                     <p class="text-xs text-blue-700">
                                         <strong>How it works:</strong> Your query data will be passed to the document template, which generates a PDF/DOCX file dynamically. This file is then attached to the email. Works with SplitKeyColumn for one attachment per email.
                                     </p>
@@ -1784,6 +1710,31 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 section.classList.remove('hidden', 'opacity-50', 'pointer-events-none');
             } else {
                 section.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        function updateEmailAttachmentTemplateInfo() {
+            const templateSelect = document.getElementById('emailAttachmentDocumentTemplateId');
+            const infoElement = document.getElementById('emailAttachmentTemplateInfo');
+            const filenameField = document.getElementById('emailAttachmentFilenameField');
+            const selectedOption = templateSelect.options[templateSelect.selectedIndex];
+
+            if (templateSelect.value) {
+                const format = selectedOption.dataset.outputFormat || 'Unknown';
+                const templateName = selectedOption.textContent;
+                infoElement.innerHTML = `<span class="text-purple-600 font-medium">✓ Will generate ${format} attachment</span> using "${templateName}"`;
+                
+                // Show filename column field
+                if (filenameField) {
+                    filenameField.classList.remove('hidden');
+                }
+            } else {
+                infoElement.innerHTML = 'No document template selected';
+                
+                // Hide filename column field
+                if (filenameField) {
+                    filenameField.classList.add('hidden');
+                }
             }
         }
 
@@ -2173,7 +2124,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                 const canExecute = profile.connectionIsActive && profile.isEnabled;
                 const executeButton = canExecute
-                    ? `<button onclick="executeProfileNormal(${profile.id})" class="text-green-600 hover:text-green-900 mr-3" title="Execute Profile">
+                    ? `<button id="play-btn-${profile.id}" onclick="executeProfileNormal(${profile.id})" class="text-green-600 hover:text-green-900 mr-3" title="Execute Profile">
                           <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
                        </button>`
                     : `<button disabled class="text-gray-400 cursor-not-allowed mr-3" title="${!profile.connectionIsActive ? 'Connection Disabled' : 'Profile Disabled'}">
@@ -2790,30 +2741,61 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             // Load Email Attachment Config
+            console.log('Profile isEmailExport:', profile.isEmailExport);
+            console.log('Profile emailAttachmentConfig:', profile.emailAttachmentConfig);
+            
             if (profile.isEmailExport && profile.emailAttachmentConfig) {
+                console.log('Loading email attachment config:', profile.emailAttachmentConfig);
                 try {
                     const attachmentConfig = JSON.parse(profile.emailAttachmentConfig);
+                    console.log('Parsed attachment config:', attachmentConfig);
+                    
+                    // CRITICAL: Set the hidden field value from database
+                    const configField = document.getElementById('emailAttachmentConfig');
+                    if (configField) {
+                        configField.value = profile.emailAttachmentConfig;
+                        console.log('Set hidden field emailAttachmentConfig from database:', profile.emailAttachmentConfig);
+                    }
+                    
                     if (attachmentConfig.enabled) {
-                        document.getElementById('attachmentsEnabled').checked = true;
-                        toggleAttachmentConfig();
+                        const attachmentsEnabledCheckbox = document.getElementById('attachmentsEnabled');
+                        if (attachmentsEnabledCheckbox) {
+                            attachmentsEnabledCheckbox.checked = true;
+                            toggleAttachmentConfig();
+                        }
 
                         if (attachmentConfig.mode === 'DocumentTemplate' && attachmentConfig.documentTemplate) {
                             // Document template mode
-                            document.getElementById('emailAttachmentDocumentTemplateId').value = attachmentConfig.documentTemplate.templateId || '';
-                            document.getElementById('emailAttachmentFilenameColumn').value = attachmentConfig.documentTemplate.filenameColumnName || '';
-                            document.getElementById('emailAttachmentPageSize').value = attachmentConfig.documentTemplate.pageSize || 'A4';
-                            document.getElementById('emailAttachmentOrientation').value = attachmentConfig.documentTemplate.orientation || 'Portrait';
-                            document.getElementById('emailAttachmentWatermark').value = attachmentConfig.documentTemplate.watermark || '';
-                            updateEmailAttachmentTemplateInfo();
+                            const templateIdEl = document.getElementById('emailAttachmentDocumentTemplateId');
+                            const filenameColEl = document.getElementById('emailAttachmentFilenameColumn');
+                            const pageSizeEl = document.getElementById('emailAttachmentPageSize');
+                            const orientationEl = document.getElementById('emailAttachmentOrientation');
+                            const watermarkEl = document.getElementById('emailAttachmentWatermark');
+                            
+                            if (templateIdEl) templateIdEl.value = attachmentConfig.documentTemplate.templateId || '';
+                            if (filenameColEl) filenameColEl.value = attachmentConfig.documentTemplate.filenameColumnName || '';
+                            if (pageSizeEl) pageSizeEl.value = attachmentConfig.documentTemplate.pageSize || 'A4';
+                            if (orientationEl) orientationEl.value = attachmentConfig.documentTemplate.orientation || 'Portrait';
+                            if (watermarkEl) watermarkEl.value = attachmentConfig.documentTemplate.watermark || '';
+                            
+                            if (typeof updateEmailAttachmentTemplateInfo === 'function') {
+                                updateEmailAttachmentTemplateInfo();
+                            }
                         } else if (attachmentConfig.mode === 'Binary' && attachmentConfig.binary) {
                             // Binary mode
-                            document.getElementById('attachmentContentColumn').value = attachmentConfig.binary.contentColumnName || '';
-                            document.getElementById('attachmentFilenameColumn').value = attachmentConfig.binary.filenameColumnName || '';
+                            const contentColEl = document.getElementById('attachmentContentColumn');
+                            const filenameColEl = document.getElementById('attachmentFilenameColumn');
+                            
+                            if (contentColEl) contentColEl.value = attachmentConfig.binary.contentColumnName || '';
+                            if (filenameColEl) filenameColEl.value = attachmentConfig.binary.filenameColumnName || '';
                         }
 
                         // Common settings
-                        document.getElementById('attachmentDeduplication').value = attachmentConfig.deduplication || 'Auto';
-                        document.getElementById('attachmentMaxCount').value = attachmentConfig.maxAttachmentsPerEmail || 50;
+                        const dedupEl = document.getElementById('attachmentDeduplication');
+                        const maxCountEl = document.getElementById('attachmentMaxCount');
+                        
+                        if (dedupEl) dedupEl.value = attachmentConfig.deduplication || 'Auto';
+                        if (maxCountEl) maxCountEl.value = attachmentConfig.maxAttachmentsPerEmail || 50;
                     }
                 } catch (e) {
                     console.error('Error parsing email attachment config:', e);
@@ -2823,6 +2805,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const profileId = document.getElementById('profile-id').value;
             const name = document.getElementById('profile-name').value;
             const connectionId = parseInt(document.getElementById('profile-connection').value);
@@ -2951,6 +2934,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const emailApprovalRoles = Array.from(emailApprovalRolesCheckboxes).map(cb => cb.value);
             const emailApprovalRolesJson = emailApprovalRequired ? JSON.stringify(emailApprovalRoles) : null;
 
+            // Email Attachment Configuration
+            const emailAttachmentConfigValue = document.getElementById('emailAttachmentConfig')?.value;
+            const emailAttachmentConfig = isEmailExportProfile && emailAttachmentConfigValue && emailAttachmentConfigValue.trim() !== '' ? 
+                emailAttachmentConfigValue : null;
+
             // Document Options (for DocumentTemplate types in regular file export)
             let documentOptions = null;
             if (!isEmailExportProfile && templateId) {
@@ -3030,8 +3018,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
             }
 
-            // Combine fields for hash (including pre/post-processing, delta sync, splitting, email config, and document options)
-            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}|${emailApprovalRequired}|${emailApprovalRolesJson || ''}|${documentOptions || ''}`;
+            // Combine fields for hash (including pre/post-processing, delta sync, splitting, email config, email attachments, and document options)
+            const hashInput = `${name}|${connectionId}|${groupId}|${query}|${outputFormat}|${templateId}|${outputDestinationId}|${isEnabled}|${preProcessType || ''}|${preProcessConfig || ''}|${preProcessRollbackOnFailure}|${postProcessType || ''}|${postProcessConfig || ''}|${postProcessSkipOnFailure}|${postProcessOnZeroRows}|${deltaSyncEnabled}|${deltaSyncReefIdColumn || ''}|${deltaSyncHashAlgorithm || ''}|${deltaSyncDuplicateStrategy || ''}|${deltaSyncNullStrategy || ''}|${deltaSyncNumericPrecision || ''}|${deltaSyncTrackDeletes}|${excludeReefIdFromOutput}|${excludeSplitKeyFromOutput}|${splitEnabled}|${splitKeyColumn || ''}|${splitFilenameTemplate || ''}|${splitBatchSize}|${postProcessPerSplit}|${filenameTemplate || ''}|${emailSuccessThresholdPercent}|${emailApprovalRequired}|${emailApprovalRolesJson || ''}|${emailAttachmentConfig || ''}|${documentOptions || ''}`;
             const hash = await window.sha256(hashInput);
 
             const profile = {
@@ -3082,11 +3070,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 emailSubjectHardcoded: emailSubjectHardcoded,
                 useHardcodedSubject: useHardcodedSubject,
                 emailSuccessThresholdPercent: emailSuccessThresholdPercent,
+                emailAttachmentConfig: emailAttachmentConfig,
                 emailApprovalRequired: emailApprovalRequired,
                 emailApprovalRoles: emailApprovalRolesJson,
                 documentOptions: documentOptions,
                 hash
             };
+
+            console.log('Saving profile with emailAttachmentConfig:', emailAttachmentConfig);
+            console.log('Full profile object:', profile);
 
             try {
                 const url = profileId ? `${API_BASE}/api/profiles/${profileId}` : `${API_BASE}/api/profiles`;
@@ -3471,7 +3463,31 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         let pendingEmailProfileId = null;
         let currentMathQuestion = null;
 
+        // Helper functions for play button loading state
+        function setPlayButtonLoading(profileId, isLoading) {
+            const button = document.getElementById(`play-btn-${profileId}`);
+            if (!button) return;
+
+            if (isLoading) {
+                button.disabled = true;
+                button.classList.add('cursor-not-allowed', 'opacity-50');
+                button.innerHTML = '<i data-lucide="loader-circle" class="h-4 w-4 inline animate-spin"></i>';
+            } else {
+                button.disabled = false;
+                button.classList.remove('cursor-not-allowed', 'opacity-50');
+                button.innerHTML = '<i data-lucide="play-circle" class="h-4 w-4 inline"></i>';
+            }
+
+            // Reinitialize lucide icons for the updated button
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        }
+
         async function executeProfileNormal(id) {
+            // Set loading state immediately
+            setPlayButtonLoading(id, true);
+
             try {
                 const profile = profiles.find(p => p.id === id);
                 if (!profile) {
@@ -3481,6 +3497,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                 // For email profiles, show confirmation modal with math verification
                 if (profile.isEmailExport) {
+                    // Clear loading state since modal will handle the execution
+                    setPlayButtonLoading(id, false);
                     pendingEmailProfileId = id;
                     showEmailExecutionConfirmationModal();
                     if (typeof updateApprovalBadge === 'function') {
@@ -3496,6 +3514,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             } catch (error) {
                 console.error('Error in executeProfileNormal:', error);
                 showToast(error.message || 'Failed to execute profile', 'error');
+            } finally {
+                // Always clear loading state when done (for non-email profiles)
+                const profile = profiles.find(p => p.id === id);
+                if (profile && !profile.isEmailExport) {
+                    setPlayButtonLoading(id, false);
+                }
             }
         }
 
@@ -3566,7 +3590,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Answer is correct, proceed with execution
             const profileId = pendingEmailProfileId;
             closeEmailExecutionConfirmationModal();
-            await performProfileExecution(profileId);
+
+            // Set loading state for email profile button
+            setPlayButtonLoading(profileId, true);
+            try {
+                await performProfileExecution(profileId);
+            } finally {
+                setPlayButtonLoading(profileId, false);
+            }
         }
 
         async function performProfileExecution(id) {
@@ -4968,6 +4999,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     configDiv.classList.add('hidden');
                 }
             }
+            // Update the hidden field with current attachment configuration
+            saveAttachmentConfig();
         }
 
         function updateEmailAttachmentTemplateInfo() {
@@ -5063,27 +5096,55 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
 
             const profileId = profileIdInput.value;
-            const contentColumn = document.getElementById('attachmentContentColumn').value;
-            const filenameColumn = document.getElementById('attachmentFilenameColumn').value;
-            const dedup = document.getElementById('attachmentDeduplication').value;
-            const maxCount = parseInt(document.getElementById('attachmentMaxCount').value) || 50;
-
-            if (!contentColumn || !filenameColumn) {
-                showToast('Both content and filename columns are required', 'error');
+            const enabled = document.getElementById('attachmentsEnabled').checked;
+            
+            if (!enabled) {
+                showToast('Attachments are not enabled', 'error');
                 return;
             }
 
-            const config = {
-                enabled: document.getElementById('attachmentsEnabled').checked,
-                mode: 'Binary',
-                binary: {
-                    contentColumnName: contentColumn,
-                    filenameColumnName: filenameColumn
-                },
-                deduplication: dedup,
-                maxAttachmentsPerEmail: maxCount,
-                missingFileStrategy: 'Skip'
-            };
+            // Check if using document template mode
+            const docTemplateId = document.getElementById('emailAttachmentDocumentTemplateId').value;
+            const dedup = document.getElementById('attachmentDeduplication').value;
+            const maxCount = parseInt(document.getElementById('attachmentMaxCount').value) || 50;
+
+            let config;
+            
+            if (docTemplateId) {
+                // Document template mode
+                config = {
+                    enabled: true,
+                    mode: 'DocumentTemplate',
+                    documentTemplate: {
+                        templateId: parseInt(docTemplateId),
+                        filenameColumnName: document.getElementById('emailAttachmentFilenameColumn').value || null
+                    },
+                    deduplication: dedup,
+                    maxAttachmentsPerEmail: maxCount,
+                    missingFileStrategy: 'Skip'
+                };
+            } else {
+                // Binary mode
+                const contentColumn = document.getElementById('attachmentContentColumn').value;
+                const filenameColumn = document.getElementById('attachmentFilenameColumn').value;
+
+                if (!contentColumn || !filenameColumn) {
+                    showToast('Both content and filename columns are required for Binary mode', 'error');
+                    return;
+                }
+
+                config = {
+                    enabled: true,
+                    mode: 'Binary',
+                    binary: {
+                        contentColumnName: contentColumn,
+                        filenameColumnName: filenameColumn
+                    },
+                    deduplication: dedup,
+                    maxAttachmentsPerEmail: maxCount,
+                    missingFileStrategy: 'Skip'
+                };
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/api/profiles/${profileId}/validate-attachment-config`, {
@@ -5164,46 +5225,72 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         }
 
         function saveAttachmentConfig() {
-            const enabled = document.getElementById('attachmentsEnabled').checked;
+            const enabledCheckbox = document.getElementById('attachmentsEnabled');
+            const configField = document.getElementById('emailAttachmentConfig');
+            
+            // Safety check - these elements must exist
+            if (!enabledCheckbox || !configField) {
+                console.warn('Attachment config elements not found - skipping save');
+                return;
+            }
+            
+            const enabled = enabledCheckbox.checked;
+
             if (!enabled) {
-                document.getElementById('emailAttachmentConfig').value = '';
+                configField.value = '';
+                console.log('saveAttachmentConfig() called: Attachments disabled, clearing config field');
                 return;
             }
 
             // Check if using document template mode
-            const docTemplateId = document.getElementById('emailAttachmentDocumentTemplateId').value;
+            const docTemplateIdElement = document.getElementById('emailAttachmentDocumentTemplateId');
+            const docTemplateId = docTemplateIdElement ? docTemplateIdElement.value : null;
             
             if (docTemplateId) {
                 // Document template mode
+                const filenameColumnElement = document.getElementById('emailAttachmentFilenameColumn');
+                const pageSizeElement = document.getElementById('emailAttachmentPageSize');
+                const orientationElement = document.getElementById('emailAttachmentOrientation');
+                const watermarkElement = document.getElementById('emailAttachmentWatermark');
+                const dedupElement = document.getElementById('attachmentDeduplication');
+                const maxCountElement = document.getElementById('attachmentMaxCount');
+                
                 const config = {
                     enabled: true,
                     mode: 'DocumentTemplate',
                     documentTemplate: {
                         templateId: parseInt(docTemplateId),
-                        filenameColumnName: document.getElementById('emailAttachmentFilenameColumn').value,
-                        pageSize: document.getElementById('emailAttachmentPageSize').value || 'A4',
-                        orientation: document.getElementById('emailAttachmentOrientation').value || 'Portrait',
-                        watermark: document.getElementById('emailAttachmentWatermark').value || null
+                        filenameColumnName: filenameColumnElement ? filenameColumnElement.value : null,
+                        pageSize: pageSizeElement ? (pageSizeElement.value || 'A4') : 'A4',
+                        orientation: orientationElement ? (orientationElement.value || 'Portrait') : 'Portrait',
+                        watermark: watermarkElement ? (watermarkElement.value || null) : null
                     },
-                    deduplication: document.getElementById('attachmentDeduplication').value || 'Auto',
-                    maxAttachmentsPerEmail: parseInt(document.getElementById('attachmentMaxCount').value) || 50,
+                    deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                    maxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
                     missingFileStrategy: 'Skip'
                 };
-                document.getElementById('emailAttachmentConfig').value = JSON.stringify(config);
+                configField.value = JSON.stringify(config);
+                console.log('saveAttachmentConfig() called: DocumentTemplate mode config saved:', config);
             } else {
                 // Binary mode (original functionality)
+                const contentColumnElement = document.getElementById('attachmentContentColumn');
+                const filenameColumnElement = document.getElementById('attachmentFilenameColumn');
+                const dedupElement = document.getElementById('attachmentDeduplication');
+                const maxCountElement = document.getElementById('attachmentMaxCount');
+                
                 const config = {
                     enabled: true,
                     mode: 'Binary',
                     binary: {
-                        contentColumnName: document.getElementById('attachmentContentColumn').value,
-                        filenameColumnName: document.getElementById('attachmentFilenameColumn').value
+                        contentColumnName: contentColumnElement ? contentColumnElement.value : '',
+                        filenameColumnName: filenameColumnElement ? filenameColumnElement.value : ''
                     },
-                    deduplication: document.getElementById('attachmentDeduplication').value || 'Auto',
-                    maxAttachmentsPerEmail: parseInt(document.getElementById('attachmentMaxCount').value) || 50,
+                    deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                    maxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
                     missingFileStrategy: 'Skip'
                 };
-                document.getElementById('emailAttachmentConfig').value = JSON.stringify(config);
+                configField.value = JSON.stringify(config);
+                console.log('saveAttachmentConfig() called: Binary mode config saved:', config);
             }
         }
 
@@ -5333,15 +5420,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             window.updateRecipientsModeDisplay = updateRecipientsModeDisplay;
             window.updateCcModeDisplay = updateCcModeDisplay;
             window.updateSubjectModeDisplay = updateSubjectModeDisplay;
-        }
-
-        // Hook into the existing save function
-        const originalSaveProfile = window.saveProfile;
-        if (originalSaveProfile) {
-            window.saveProfile = async function(...args) {
-                saveAttachmentConfig();
-                return originalSaveProfile.apply(this, args);
-            };
+            // Store saveAttachmentConfig globally so form submit handler can call it
+            window.saveAttachmentConfig = saveAttachmentConfig;
         }
 
         window.addEventListener('DOMContentLoaded', () => {

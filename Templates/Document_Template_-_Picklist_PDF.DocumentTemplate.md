@@ -2,41 +2,37 @@ A warehouse picking list PDF with ship-to address, SKU locations, quantities, an
 
 # Document Template - Picklist PDF
 
-## Overview
-
 This DocumentTemplate generates a PDF picking list for warehouse operations. The template shows which items to pick, their locations, and provides checkboxes for picker verification.
-
-**Key Features:**
-- A4 portrait layout with order header
-- Ship-to customer information
-- SKU, description, warehouse location, and quantity columns
-- Checkbox column for physical pick verification
-- Signature lines for picker and checker
-- Multi-page support if many items
-
-## SQL Output Structure
-
-Your query must return one row per line item to pick:
-
-**Order Header** (same on all rows):
-- `order_number` – Order/picking reference
-- `pick_date` – Date of pick
-- `customer_name` – Customer name
-- `ship_address` – Shipping address
-
-**Pick Items** (varies per row):
-- `sku` – Stock keeping unit code
-- `description` – Item description
-- `warehouse_location` – Bin/shelf location (e.g., "A12-3")
-- `quantity` – Number to pick
 
 ## Example SQL
 
+### With Database Tables
+
+```sql
+SELECT 
+    ord.OrderNumber AS order_number,
+    GETDATE() AS pick_date,
+    cust.Name AS customer_name,
+    cust.ShipAddress AS ship_address,
+    li.SKU AS sku,
+    li.Description AS description,
+    inv.Location AS warehouse_location,
+    li.Quantity AS quantity
+FROM Orders ord
+JOIN Customers cust ON ord.CustomerId = cust.Id
+JOIN OrderLines li ON ord.Id = li.OrderId
+JOIN Inventory inv ON li.SKU = inv.SKU
+WHERE ord.Id = @OrderId
+ORDER BY inv.Location, li.SKU;
+```
+
+### Static Values (MySQL - No Tables Required)
+
 ```sql
 SELECT
-    -- Order header
+    -- Order header (repeated on every line)
     'ORD-2025-1234' AS order_number,
-    GETDATE() AS pick_date,
+    DATE('2025-12-17') AS pick_date,
     'Acme Industries Ltd.' AS customer_name,
     '456 Client Ave, Building B, New York, NY 10001' AS ship_address,
     
@@ -50,7 +46,7 @@ UNION ALL
 
 SELECT
     'ORD-2025-1234',
-    GETDATE(),
+    DATE('2025-12-17'),
     'Acme Industries Ltd.',
     '456 Client Ave, Building B, New York, NY 10001',
     
@@ -64,7 +60,7 @@ UNION ALL
 
 SELECT
     'ORD-2025-1234',
-    GETDATE(),
+    DATE('2025-12-17'),
     'Acme Industries Ltd.',
     '456 Client Ave, Building B, New York, NY 10001',
     

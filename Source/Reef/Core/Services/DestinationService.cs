@@ -111,7 +111,16 @@ public class DestinationService
             Log.Debug("DestinationService: Extracted relative path from temp: {RelativePath}", fileRelativePath);
 
             var fileName = Path.GetFileName(sourceFilePath);
-            byte[] fileBytes = await File.ReadAllBytesAsync(sourceFilePath);
+            
+            // Read file with FileShare.Read to allow other processes to read concurrently
+            byte[] fileBytes;
+            using (var fs = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var ms = new MemoryStream())
+            {
+                await fs.CopyToAsync(ms);
+                fileBytes = ms.ToArray();
+            }
+            
             string? finalPath = null;
 
             switch (destinationType)
@@ -156,7 +165,7 @@ public class DestinationService
                     {
                         await sourceStream.CopyToAsync(destStream);
                     }
-                    Log.Information("DestinationService: File saved to local destination: {FinalPath}", finalPath);
+                    Log.Information("File saved to local destination: {FinalPath}", finalPath);
                     return (true, finalPath, null);
 
                 case DestinationType.Ftp:

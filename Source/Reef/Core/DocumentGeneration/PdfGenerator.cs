@@ -1,6 +1,7 @@
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using Reef.Core.DocumentGeneration.HtmlParsing;
 using Serilog;
 
 namespace Reef.Core.DocumentGeneration;
@@ -45,88 +46,103 @@ public class PdfGenerator : IDocumentGenerator
             {
                 options ??= new DocumentOptions();
 
-                Document.Create(container =>
+                // Generate PDF to MemoryStream first to avoid file locking issues
+                byte[] pdfBytes;
+                using (var memoryStream = new MemoryStream())
                 {
-                    container.Page(page =>
+                    Document.Create(container =>
                     {
-                        // Apply page setup from layout definition
-                        ApplyPageSetup(page, layoutDefinition.PageSetup);
-
-                        // Header section (repeats on every page)
-                        var headerSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "header");
-                        if (headerSection != null && !string.IsNullOrWhiteSpace(headerSection.RenderedContent))
+                        container.Page(page =>
                         {
-                            page.Header().Element(container =>
-                            {
-                                RenderSectionContent(container, headerSection, data);
-                            });
-                        }
+                            // Apply page setup from layout definition
+                            ApplyPageSetup(page, layoutDefinition.PageSetup);
 
-                        // Main content section
-                        var contentSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "content");
-                        if (contentSection != null && !string.IsNullOrWhiteSpace(contentSection.RenderedContent))
-                        {
-                            page.Content().Element(container =>
+                            // Header section (repeats on every page)
+                            var headerSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "header");
+                            if (headerSection != null && !string.IsNullOrWhiteSpace(headerSection.RenderedContent))
                             {
-                                RenderSectionContent(container, contentSection, data);
-                            });
-                        }
-
-                        // Footer section (repeats on every page)
-                        var footerSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "footer");
-                        if (footerSection != null && !string.IsNullOrWhiteSpace(footerSection.RenderedContent))
-                        {
-                            page.Footer().Element(container =>
-                            {
-                                if (options.IncludePageNumbers)
+                                page.Header().Element(container =>
                                 {
-                                    container.Column(column =>
+                                    RenderSectionContent(container, headerSection, data);
+                                });
+                            }
+
+                            // Main content section
+                            var contentSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "content");
+                            if (contentSection != null && !string.IsNullOrWhiteSpace(contentSection.RenderedContent))
+                            {
+                                page.Content().Element(container =>
+                                {
+                                    RenderSectionContent(container, contentSection, data);
+                                });
+                            }
+
+                            // Footer section (repeats on every page)
+                            var footerSection = layoutDefinition.Sections.FirstOrDefault(s => s.Name == "footer");
+                            if (footerSection != null && !string.IsNullOrWhiteSpace(footerSection.RenderedContent))
+                            {
+                                page.Footer().Element(container =>
+                                {
+                                    if (options.IncludePageNumbers)
                                     {
-                                        // Custom footer content
-                                        column.Item().Element(c => RenderSectionContent(c, footerSection, data));
-                                        
-                                        // Page numbers
-                                        column.Item().AlignCenter().Text(text =>
+                                        container.Column(column =>
                                         {
-                                            text.Span("Page ");
-                                            text.CurrentPageNumber();
-                                            text.Span(" of ");
-                                            text.TotalPages();
+                                            // Custom footer content
+                                            column.Item().Element(c => RenderSectionContent(c, footerSection, data));
+                                            
+                                            // Page numbers
+                                            column.Item().AlignCenter().Text(text =>
+                                            {
+                                                text.Span("Page ").FontSize(9);
+                                                text.CurrentPageNumber().FontSize(9);
+                                                text.Span(" of ").FontSize(9);
+                                                text.TotalPages().FontSize(9);
+                                            });
                                         });
-                                    });
-                                }
-                                else
-                                {
-                                    RenderSectionContent(container, footerSection, data);
-                                }
-                            });
-                        }
-                        else if (options.IncludePageNumbers)
-                        {
-                            // Page numbers only (no custom footer)
-                            page.Footer().AlignCenter().Text(text =>
+                                    }
+                                    else
+                                    {
+                                        RenderSectionContent(container, footerSection, data);
+                                    }
+                                });
+                            }
+                            else if (options.IncludePageNumbers)
                             {
-                                text.Span("Page ");
-                                text.CurrentPageNumber();
-                                text.Span(" of ");
-                                text.TotalPages();
-                            });
-                        }
+                                // Page numbers only (no custom footer)
+                                page.Footer().AlignCenter().Text(text =>
+                                {
+                                    text.Span("Page ").FontSize(9);
+                                    text.CurrentPageNumber().FontSize(9);
+                                    text.Span(" of ").FontSize(9);
+                                    text.TotalPages().FontSize(9);
+                                });
+                            }
 
-                        // Watermark (if specified)
-                        if (!string.IsNullOrWhiteSpace(options.Watermark))
-                        {
-                            page.Foreground().AlignCenter().AlignMiddle().Rotate(-45).Text(options.Watermark)
-                                .FontSize(60)
-                                .FontColor(Colors.Grey.Lighten3)
-                                .Bold();
-                        }
-                    });
-                })
-                .GeneratePdf(outputPath);
+                            // Watermark (if specified)
+                            if (!string.IsNullOrWhiteSpace(options.Watermark))
+                            {
+                                page.Foreground().AlignCenter().AlignMiddle().Rotate(-45).Text(options.Watermark)
+                                    .FontSize(60)
+                                    .FontColor(Colors.Grey.Lighten3)
+                                    .Bold();
+                            }
+                        });
+                    })
+                    .GeneratePdf(memoryStream);
 
-                var fileSize = new FileInfo(outputPath).Length;
-                Log.Information("PDF generated successfully: {OutputPath}, Size: {FileSize} bytes", outputPath, fileSize);
+                    pdfBytes = memoryStream.ToArray();
+                }
+
+                // Write to file with proper disposal to avoid file locking
+                // Use FileStream with explicit Flush to ensure file is fully written
+                using (var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    fileStream.Write(pdfBytes, 0, pdfBytes.Length);
+                    fileStream.Flush(true); // Flush to disk
+                }
+                
+                var fileSize = pdfBytes.Length;
+                Log.Debug("PDF generated successfully: {OutputPath}, Size: {FileSize} bytes", outputPath, fileSize);
                 return (true, fileSize, null);
             }
             catch (Exception ex)
@@ -188,19 +204,161 @@ public class PdfGenerator : IDocumentGenerator
 
     private void RenderSectionContent(IContainer container, DocumentSection section, List<Dictionary<string, object>> data)
     {
-        // Parse HTML-like content from Scriban rendering
-        // For Phase 1, use simple text rendering
-        // TODO Phase 4: Add proper HTML parsing with tables, styling, etc.
-        
         var content = section.RenderedContent.Trim();
         
-        // Simple HTML tag stripping for Phase 1
-        content = System.Text.RegularExpressions.Regex.Replace(content, @"<[^>]+>", "");
-        content = content.Replace("&nbsp;", " ")
-                        .Replace("&lt;", "<")
-                        .Replace("&gt;", ">")
-                        .Replace("&amp;", "&");
-
-        container.Padding(5).Text(content).FontSize(10);
+        // Check if content contains HTML tables
+        if (content.Contains("<table"))
+        {
+            RenderHtmlContent(container, content);
+        }
+        else if (content.Contains("<h") || content.Contains("<strong") || content.Contains("<b>") || content.Contains("<em") || content.Contains("<i>"))
+        {
+            // Contains HTML formatting
+            RenderFormattedText(container, content);
+        }
+        else
+        {
+            // Plain text - strip any remaining HTML
+            content = System.Text.RegularExpressions.Regex.Replace(content, @"<[^>]+>", "");
+            content = content.Replace("&nbsp;", " ")
+                            .Replace("&lt;", "<")
+                            .Replace("&gt;", ">")
+                            .Replace("&amp;", "&");
+            
+            container.Padding(5).Text(content).FontSize(10);
+        }
+    }
+    
+    private void RenderHtmlContent(IContainer container, string html)
+    {
+        container.Column(column =>
+        {
+            // Parse and render tables
+            var tables = HtmlTableParser.ParseTables(html);
+            
+            // Get text content before/between/after tables
+            var parts = SplitHtmlByTables(html);
+            
+            for (int i = 0; i < parts.Count; i++)
+            {
+                // Render text content
+                if (!string.IsNullOrWhiteSpace(parts[i].Text))
+                {
+                    column.Item().Element(c => RenderFormattedText(c, parts[i].Text));
+                }
+                
+                // Render table if exists at this position
+                if (i < tables.Count)
+                {
+                    column.Item().PaddingVertical(5).Table(table =>
+                    {
+                        var tableData = tables[i];
+                        
+                        // Define columns
+                        table.ColumnsDefinition(columns =>
+                        {
+                            for (int j = 0; j < tableData.ColumnCount; j++)
+                            {
+                                columns.RelativeColumn();
+                            }
+                        });
+                        
+                        // Render headers if present
+                        if (tableData.Headers.Any())
+                        {
+                            table.Header(header =>
+                            {
+                                foreach (var headerCell in tableData.Headers)
+                                {
+                                    header.Cell()
+                                        .Background(Colors.Grey.Lighten2)
+                                        .Border(1)
+                                        .BorderColor(Colors.Grey.Medium)
+                                        .Padding(5)
+                                        .Text(headerCell)
+                                        .FontSize(10)
+                                        .Bold();
+                                }
+                            });
+                        }
+                        
+                        // Render data rows
+                        foreach (var row in tableData.Rows)
+                        {
+                            foreach (var cell in row)
+                            {
+                                table.Cell()
+                                    .Border(1)
+                                    .BorderColor(Colors.Grey.Lighten1)
+                                    .Padding(5)
+                                    .Text(cell)
+                                    .FontSize(10);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+    
+    private void RenderFormattedText(IContainer container, string html)
+    {
+        var segments = HtmlTextParser.ParseFormattedText(html);
+        
+        container.Padding(5).Text(text =>
+        {
+            foreach (var segment in segments)
+            {
+                var span = text.Span(segment.Content);
+                
+                if (segment.Style.IsBold)
+                    span.Bold();
+                    
+                if (segment.Style.IsItalic)
+                    span.Italic();
+                    
+                if (segment.Style.IsHeading)
+                    span.FontSize(segment.Style.FontSize).Bold();
+                else
+                    span.FontSize(segment.Style.FontSize);
+            }
+        });
+    }
+    
+    private List<HtmlPart> SplitHtmlByTables(string html)
+    {
+        var parts = new List<HtmlPart>();
+        var remainingHtml = html;
+        
+        while (remainingHtml.Contains("<table"))
+        {
+            var tableStart = remainingHtml.IndexOf("<table");
+            
+            // Add text before table
+            if (tableStart > 0)
+            {
+                parts.Add(new HtmlPart { Text = remainingHtml.Substring(0, tableStart) });
+            }
+            
+            // Find table end
+            var tableEnd = remainingHtml.IndexOf("</table>", tableStart);
+            if (tableEnd == -1) break;
+            
+            tableEnd += "</table>".Length;
+            remainingHtml = remainingHtml.Substring(tableEnd);
+        }
+        
+        // Add remaining text
+        if (!string.IsNullOrWhiteSpace(remainingHtml))
+        {
+            parts.Add(new HtmlPart { Text = remainingHtml });
+        }
+        
+        return parts;
+    }
+    
+    private class HtmlPart
+    {
+        public string Text { get; set; } = string.Empty;
     }
 }

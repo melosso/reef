@@ -326,6 +326,7 @@ public static class ProfilesEndpoints
             existingProfile.EmailSubjectHardcoded = profile.EmailSubjectHardcoded;
             existingProfile.UseHardcodedSubject = profile.UseHardcodedSubject;
             existingProfile.EmailSuccessThresholdPercent = profile.EmailSuccessThresholdPercent;
+            existingProfile.EmailAttachmentConfig = profile.EmailAttachmentConfig;
 
             // Email Approval Workflow Configuration
             existingProfile.EmailApprovalRequired = profile.EmailApprovalRequired;
@@ -963,85 +964,123 @@ public static class ProfilesEndpoints
                 return Results.Ok(result);
             }
 
-            // Only Binary mode is supported in Phase 1
-            if (config.Mode != "Binary")
+            // Validate based on mode
+            if (config.Mode == "Binary")
             {
-                result.Errors.Add($"Attachment mode '{config.Mode}' is not supported in this version");
-                return Results.Ok(result);
-            }
-
-            if (config.Binary == null)
-            {
-                result.Errors.Add("Binary attachment configuration is missing");
-                return Results.Ok(result);
-            }
-
-            // Note: Sample query execution would require more complex setup
-            // For Phase 1, we do basic validation without running sample query
-            // This can be enhanced in future phases
-            List<Dictionary<string, object>>? sampleRows = null;
-
-            // Validate Binary mode configuration
-            if (string.IsNullOrEmpty(config.Binary.ContentColumnName))
-            {
-                result.Errors.Add("Content column name is required");
-            }
-
-            if (string.IsNullOrEmpty(config.Binary.FilenameColumnName))
-            {
-                result.Errors.Add("Filename column name is required");
-            }
-
-            // If we have sample data, validate against it
-            if (sampleRows != null && sampleRows.Count > 0)
-            {
-                var availableColumns = sampleRows[0].Keys.ToList();
-                result.Info.Add($"Query returned {sampleRows.Count} sample rows with {availableColumns.Count} columns");
-
-                // Use BinaryAttachmentResolver to validate
-                var resolver = new BinaryAttachmentResolver();
-                var validationErrors = resolver.ValidateConfiguration(config.Binary, availableColumns);
-                result.Errors.AddRange(validationErrors);
-
-                // Check for data issues in sample rows
-                var contentColumnExists = availableColumns.Any(c =>
-                    c.Equals(config.Binary.ContentColumnName, StringComparison.OrdinalIgnoreCase));
-                var filenameColumnExists = availableColumns.Any(c =>
-                    c.Equals(config.Binary.FilenameColumnName, StringComparison.OrdinalIgnoreCase));
-
-                if (contentColumnExists && filenameColumnExists)
+                if (config.Binary == null)
                 {
-                    int nullContentCount = 0;
-                    int nullFilenameCount = 0;
-                    int validCount = 0;
-
-                    foreach (var row in sampleRows)
-                    {
-                        var contentVal = row.Values.FirstOrDefault(v =>
-                            row.Keys.First(k => k.Equals(config.Binary.ContentColumnName, StringComparison.OrdinalIgnoreCase)) != null);
-                        var filenameVal = row.Values.FirstOrDefault(v =>
-                            row.Keys.First(k => k.Equals(config.Binary.FilenameColumnName, StringComparison.OrdinalIgnoreCase)) != null);
-
-                        if (contentVal == null)
-                            nullContentCount++;
-                        if (filenameVal == null)
-                            nullFilenameCount++;
-                        if (contentVal != null && filenameVal != null)
-                            validCount++;
-                    }
-
-                    if (nullContentCount > 0)
-                    {
-                        result.Warnings.Add($"Content column has {nullContentCount} NULL values in sample");
-                    }
-
-                    if (nullFilenameCount > 0)
-                    {
-                        result.Warnings.Add($"Filename column has {nullFilenameCount} NULL values in sample");
-                    }
-
-                    result.Info.Add($"{validCount} of {sampleRows.Count} sample rows have both content and filename");
+                    result.Errors.Add("Binary attachment configuration is missing");
+                    return Results.Ok(result);
                 }
+
+                // Validate Binary mode configuration
+                if (string.IsNullOrEmpty(config.Binary.ContentColumnName))
+                {
+                    result.Errors.Add("Content column name is required");
+                }
+
+                if (string.IsNullOrEmpty(config.Binary.FilenameColumnName))
+                {
+                    result.Errors.Add("Filename column name is required");
+                }
+
+                // Note: Sample query execution would require more complex setup
+                // For Phase 1, we do basic validation without running sample query
+                // This can be enhanced in future phases
+                List<Dictionary<string, object>>? sampleRows = null;
+
+                // If we have sample data, validate against it
+                if (sampleRows != null && sampleRows.Count > 0)
+                {
+                    var availableColumns = sampleRows[0].Keys.ToList();
+                    result.Info.Add($"Query returned {sampleRows.Count} sample rows with {availableColumns.Count} columns");
+
+                    // Use BinaryAttachmentResolver to validate
+                    var resolver = new BinaryAttachmentResolver();
+                    var validationErrors = resolver.ValidateConfiguration(config.Binary, availableColumns);
+                    result.Errors.AddRange(validationErrors);
+
+                    // Check for data issues in sample rows
+                    var contentColumnExists = availableColumns.Any(c =>
+                        c.Equals(config.Binary.ContentColumnName, StringComparison.OrdinalIgnoreCase));
+                    var filenameColumnExists = availableColumns.Any(c =>
+                        c.Equals(config.Binary.FilenameColumnName, StringComparison.OrdinalIgnoreCase));
+
+                    if (contentColumnExists && filenameColumnExists)
+                    {
+                        int nullContentCount = 0;
+                        int nullFilenameCount = 0;
+                        int validCount = 0;
+
+                        foreach (var row in sampleRows)
+                        {
+                            var contentVal = row.Values.FirstOrDefault(v =>
+                                row.Keys.First(k => k.Equals(config.Binary.ContentColumnName, StringComparison.OrdinalIgnoreCase)) != null);
+                            var filenameVal = row.Values.FirstOrDefault(v =>
+                                row.Keys.First(k => k.Equals(config.Binary.FilenameColumnName, StringComparison.OrdinalIgnoreCase)) != null);
+
+                            if (contentVal == null)
+                                nullContentCount++;
+                            if (filenameVal == null)
+                                nullFilenameCount++;
+                            if (contentVal != null && filenameVal != null)
+                                validCount++;
+                        }
+
+                        if (nullContentCount > 0)
+                        {
+                            result.Warnings.Add($"Content column has {nullContentCount} NULL values in sample");
+                        }
+
+                        if (nullFilenameCount > 0)
+                        {
+                            result.Warnings.Add($"Filename column has {nullFilenameCount} NULL values in sample");
+                        }
+
+                        result.Info.Add($"{validCount} of {sampleRows.Count} sample rows have both content and filename");
+                    }
+                }
+            }
+            else if (config.Mode == "DocumentTemplate")
+            {
+                if (config.DocumentTemplate == null)
+                {
+                    result.Errors.Add("Document template configuration is missing");
+                    return Results.Ok(result);
+                }
+
+                // Validate DocumentTemplate mode configuration
+                if (config.DocumentTemplate.TemplateId <= 0)
+                {
+                    result.Errors.Add("Template ID is required for DocumentTemplate mode");
+                }
+                else
+                {
+                    result.Info.Add($"Using document template ID: {config.DocumentTemplate.TemplateId}");
+                }
+
+                // FilenameColumnName is optional for DocumentTemplate mode
+                if (!string.IsNullOrEmpty(config.DocumentTemplate.FilenameColumnName))
+                {
+                    result.Info.Add($"Filename will be read from column: {config.DocumentTemplate.FilenameColumnName}");
+                }
+                else
+                {
+                    result.Info.Add("Filename will be auto-generated from template");
+                }
+
+                result.Info.Add($"Page size: {config.DocumentTemplate.PageSize ?? "A4"}");
+                result.Info.Add($"Orientation: {config.DocumentTemplate.Orientation ?? "Portrait"}");
+                
+                if (!string.IsNullOrEmpty(config.DocumentTemplate.Watermark))
+                {
+                    result.Info.Add($"Watermark: {config.DocumentTemplate.Watermark}");
+                }
+            }
+            else
+            {
+                result.Errors.Add($"Attachment mode '{config.Mode}' is not supported. Supported modes: Binary, DocumentTemplate");
+                return Results.Ok(result);
             }
 
             // Validate deduplication strategy

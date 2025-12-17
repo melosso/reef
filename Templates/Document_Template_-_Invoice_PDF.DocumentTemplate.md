@@ -42,6 +42,8 @@ Your query must return one row per invoice line item with the following columns:
 
 ## Example SQL
 
+### With Database Tables
+
 ```sql
 SELECT 
     -- Invoice header
@@ -71,6 +73,56 @@ JOIN Customers cust ON inv.CustomerId = cust.Id
 JOIN InvoiceLines li ON inv.Id = li.InvoiceId
 WHERE inv.Id = @InvoiceId
 ORDER BY li.LineNumber;
+```
+
+### Static Values (MySQL - No Tables Required)
+
+```sql
+SELECT
+  -- Invoice header (repeated on every line)
+  'INV-1001'                       AS invoice_number,
+  DATE('2025-12-01')               AS invoice_date,
+  'Example Customer Ltd'           AS customer_name,
+  '1 Client Road, Amsterdam, NL'   AS customer_address,
+
+  -- Company info (repeated on every line)
+  'ACME Corporation'               AS company_name,
+  '123 Business St, Suite 100'     AS company_address,
+  '(555) 123-4567'                 AS company_phone,
+  'Payment due within 30 days. Late fees may apply.' AS company_terms,
+
+  -- Line items (one row per item)
+  li.item_description              AS item_description,
+  li.quantity                      AS quantity,
+  li.unit_price                    AS unit_price,
+  ROUND(li.quantity * li.unit_price, 2) AS line_total,
+
+  -- Totals (same on every line)
+  totals.subtotal                  AS subtotal,
+  totals.tax_amount                AS tax_amount,
+  totals.total_amount              AS total_amount
+FROM
+(
+  /* LINE ITEMS (1): rows */
+  SELECT 'Consulting services (Nov 2025)' AS item_description, CAST(10 AS DECIMAL(10,2)) AS quantity, CAST(120.00 AS DECIMAL(10,2)) AS unit_price
+  UNION ALL SELECT 'On-site workshop',    CAST( 1 AS DECIMAL(10,2)),                     CAST(850.00 AS DECIMAL(10,2))
+  UNION ALL SELECT 'Travel expenses',     CAST( 1 AS DECIMAL(10,2)),                     CAST(150.00 AS DECIMAL(10,2))
+) AS li
+CROSS JOIN
+(
+  /* Totals derived from the same static line items */
+  SELECT
+    ROUND(SUM(x.quantity * x.unit_price), 2)                AS subtotal,
+    ROUND(SUM(x.quantity * x.unit_price) * 0.21, 2)         AS tax_amount,   -- change 0.21 to your tax rate
+    ROUND(SUM(x.quantity * x.unit_price) * (1 + 0.21), 2)   AS total_amount
+  FROM
+  (
+    /* LINE ITEMS (2): must match LINE ITEMS (1) */
+    SELECT CAST(10 AS DECIMAL(10,2)) AS quantity, CAST(120.00 AS DECIMAL(10,2)) AS unit_price
+    UNION ALL SELECT CAST(1 AS DECIMAL(10,2)), CAST(850.00 AS DECIMAL(10,2))
+    UNION ALL SELECT CAST(1 AS DECIMAL(10,2)), CAST(150.00 AS DECIMAL(10,2))
+  ) AS x
+) AS totals;
 ```
 
 ## Template Content

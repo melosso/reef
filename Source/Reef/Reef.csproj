@@ -31,6 +31,7 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="FluentFTP" Version="53.0.2" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
     <PackageReference Include="MailKit" Version="4.14.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.2" />
