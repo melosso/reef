@@ -648,8 +648,24 @@ public class AttachmentConfig
     public DirectPathAttachmentMode? DirectPath { get; set; }
     public DocumentTemplateAttachmentMode? DocumentTemplate { get; set; }
     public string Deduplication { get; set; } = "Auto"; // Auto | ByFilename | ByHash
+    public string Failsafe { get; set; } = "Disabled"; // Disabled | RequireAttachments
     public int MaxAttachmentsPerEmail { get; set; } = 50;
     public string MissingFileStrategy { get; set; } = "Skip"; // Skip | Fail
+
+    /// <summary>
+    /// Pre-generated attachments for approval flow (documents generated before approval, stored as base64)
+    /// </summary>
+    public List<PreGeneratedAttachment>? GeneratedAttachments { get; set; }
+}
+
+/// <summary>
+/// Pre-generated attachment stored with approval (contains base64-encoded document)
+/// </summary>
+public class PreGeneratedAttachment
+{
+    public required string Filename { get; set; }
+    public required string ContentType { get; set; }
+    public required string ContentBase64 { get; set; }
 }
 
 /// <summary>

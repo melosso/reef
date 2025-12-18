@@ -453,6 +453,48 @@ public class ApprovedEmailSenderService : BackgroundService
         // Set subject and body
         message.Subject = approval.Subject;
         var bodyBuilder = new BodyBuilder { HtmlBody = approval.HtmlBody };
+
+        // Attach pre-generated documents if present in AttachmentConfig
+        if (!string.IsNullOrEmpty(approval.AttachmentConfig))
+        {
+            try
+            {
+                var attachmentConfig = JsonSerializer.Deserialize<AttachmentConfig>(approval.AttachmentConfig);
+                if (attachmentConfig?.GeneratedAttachments != null && attachmentConfig.GeneratedAttachments.Count > 0)
+                {
+                    Log.Information("Attaching {Count} pre-generated document(s) to approved email {ApprovalId}",
+                        attachmentConfig.GeneratedAttachments.Count, approval.Id);
+
+                    foreach (var preGenAttachment in attachmentConfig.GeneratedAttachments)
+                    {
+                        try
+                        {
+                            // Decode base64 content
+                            var contentBytes = Convert.FromBase64String(preGenAttachment.ContentBase64);
+
+                            // Add attachment to body builder
+                            bodyBuilder.Attachments.Add(
+                                preGenAttachment.Filename,
+                                contentBytes,
+                                ContentType.Parse(preGenAttachment.ContentType));
+
+                            Log.Debug("Attached document '{Filename}' ({Size} bytes) to email {ApprovalId}",
+                                preGenAttachment.Filename, contentBytes.Length, approval.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "Failed to attach pre-generated document '{Filename}' to email {ApprovalId}",
+                                preGenAttachment.Filename, approval.Id);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Failed to parse AttachmentConfig for email {ApprovalId}", approval.Id);
+            }
+        }
+
         message.Body = bodyBuilder.ToMessageBody();
 
         // Route to appropriate email provider

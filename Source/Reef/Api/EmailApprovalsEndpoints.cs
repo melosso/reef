@@ -185,6 +185,7 @@ public static class EmailApprovalsEndpoints
                 ccAddresses = approval.CcAddresses,
                 subject = approval.Subject,
                 htmlBody = approval.HtmlBody,
+                attachmentConfig = approval.AttachmentConfig,
                 status = approval.Status,
                 createdAt = approval.CreatedAt,
                 approvalNotes = approval.ApprovalNotes

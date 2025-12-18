@@ -1374,6 +1374,20 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
 
                             <div>
+                                <label for="attachmentFailsafe" class="block text-sm font-medium text-gray-700 mb-1">
+                                    Failsafe
+                                </label>
+                                <select id="attachmentFailsafe" onchange="saveAttachmentConfig()"
+                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="Disabled">Disabled</option>
+                                    <option value="RequireAttachments">Fail if no attachments generated</option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Prevent emails from being sent if attachment generation fails
+                                </p>
+                            </div>
+
+                            <div>
                                 <label for="attachmentMaxCount" class="block text-sm font-medium text-gray-700 mb-1">
                                     Max Attachments per Email
                                 </label>
@@ -2801,8 +2815,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     const documentTemplate = attachmentConfig.DocumentTemplate ?? attachmentConfig.documentTemplate;
                     const binary = attachmentConfig.Binary ?? attachmentConfig.binary;
                     const deduplication = attachmentConfig.Deduplication ?? attachmentConfig.deduplication;
+                    const failsafe = attachmentConfig.Failsafe ?? attachmentConfig.failsafe ?? 'Disabled';
                     const maxAttachments = attachmentConfig.MaxAttachmentsPerEmail ?? attachmentConfig.maxAttachmentsPerEmail;
-                    
+
                     if (enabled) {
                         const attachmentsEnabledCheckbox = document.getElementById('attachmentsEnabled');
                         if (attachmentsEnabledCheckbox) {
@@ -2854,9 +2869,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                         // Common settings
                         const dedupEl = document.getElementById('attachmentDeduplication');
+                        const failsafeEl = document.getElementById('attachmentFailsafe');
                         const maxCountEl = document.getElementById('attachmentMaxCount');
-                        
+
                         if (dedupEl) dedupEl.value = deduplication || 'Auto';
+                        if (failsafeEl) failsafeEl.value = failsafe || 'Disabled';
                         if (maxCountEl) maxCountEl.value = maxAttachments || 50;
                     }
                     
@@ -3571,11 +3588,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     setPlayButtonLoading(id, false);
                     pendingEmailProfileId = id;
                     showEmailExecutionConfirmationModal();
-                    if (typeof updateApprovalBadge === 'function') {
-                        // Small delay to ensure backend has processed the execution
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                        await updateApprovalBadge();
-                    }
                     return;
                 }
 
@@ -3705,6 +3717,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const profileType = profile && profile.isEmailExport ? 'Email' : 'Profile';
                 showToast(`${profileType} executed successfully! Check the Executions page for results.`, 'success');
                 await loadProfiles();
+
+                // Update approval badge after email profile execution (if approvals were created)
+                if (profile && profile.isEmailExport && typeof updateApprovalBadge === 'function') {
+                    // Small delay to ensure backend has processed and stored approvals
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await updateApprovalBadge();
+                }
             } catch (error) {
                 console.error('Error executing profile:', error);
                 showToast(error.message || 'Failed to execute profile', 'error');
@@ -5188,10 +5207,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Check if using document template mode
             const docTemplateId = document.getElementById('emailAttachmentDocumentTemplateId').value;
             const dedup = document.getElementById('attachmentDeduplication').value;
+            const failsafe = document.getElementById('attachmentFailsafe').value;
             const maxCount = parseInt(document.getElementById('attachmentMaxCount').value) || 50;
 
             let config;
-            
+
             if (docTemplateId) {
                 // Document template mode
                 config = {
@@ -5202,6 +5222,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         FilenameColumnName: document.getElementById('emailAttachmentFilenameColumn').value || null
                     },
                     Deduplication: dedup,
+                    Failsafe: failsafe,
                     MaxAttachmentsPerEmail: maxCount,
                     MissingFileStrategy: 'Skip'
                 };
@@ -5223,6 +5244,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         FilenameColumnName: filenameColumn
                     },
                     Deduplication: dedup,
+                    Failsafe: failsafe,
                     MaxAttachmentsPerEmail: maxCount,
                     MissingFileStrategy: 'Skip'
                 };
@@ -5335,8 +5357,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const orientationElement = document.getElementById('emailAttachmentOrientation');
                 const watermarkElement = document.getElementById('emailAttachmentWatermark');
                 const dedupElement = document.getElementById('attachmentDeduplication');
+                const failsafeElement = document.getElementById('attachmentFailsafe');
                 const maxCountElement = document.getElementById('attachmentMaxCount');
-                
+
                 const config = {
                     Enabled: true,
                     Mode: 'DocumentTemplate',
@@ -5349,6 +5372,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         Watermark: watermarkElement ? (watermarkElement.value || null) : null
                     },
                     Deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                    Failsafe: failsafeElement ? (failsafeElement.value || 'Disabled') : 'Disabled',
                     MaxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
                     MissingFileStrategy: 'Skip'
                 };
@@ -5358,11 +5382,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const contentColumnElement = document.getElementById('attachmentContentColumn');
                 const filenameColumnElement = document.getElementById('attachmentFilenameColumn');
                 const dedupElement = document.getElementById('attachmentDeduplication');
+                const failsafeElement = document.getElementById('attachmentFailsafe');
                 const maxCountElement = document.getElementById('attachmentMaxCount');
-                
+
                 const contentColumn = contentColumnElement ? contentColumnElement.value : '';
                 const filenameColumn = filenameColumnElement ? filenameColumnElement.value : '';
-                
+
                 // Only save Binary config if both columns are provided
                 if (contentColumn && filenameColumn) {
                     const config = {
@@ -5373,6 +5398,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             FilenameColumnName: filenameColumn
                         },
                         Deduplication: dedupElement ? (dedupElement.value || 'Auto') : 'Auto',
+                        Failsafe: failsafeElement ? (failsafeElement.value || 'Disabled') : 'Disabled',
                         MaxAttachmentsPerEmail: maxCountElement ? (parseInt(maxCountElement.value) || 50) : 50,
                         MissingFileStrategy: 'Skip'
                     };

@@ -440,6 +440,17 @@ public class EmailExportService
             // Resolve attachments if configured
             var attachments = ResolveAttachmentsForBatch(rows, attachmentConfig, profile);
 
+            // Check failsafe: if enabled and no attachments were generated, fail the email send
+            if (attachmentConfig != null &&
+                attachmentConfig.Enabled &&
+                attachmentConfig.Failsafe == "RequireAttachments" &&
+                attachments.Count == 0)
+            {
+                var errorMsg = $"Failsafe triggered: No attachments were generated, but attachment config requires attachments. Email not sent.";
+                Log.Warning(errorMsg + " Profile: {ProfileName} ({ProfileId})", profile.Name, profile.Id);
+                return (false, errorMsg);
+            }
+
             // Extract recipient from first row
             var firstRow = rows.First();
             var toRecipient = profile.UseHardcodedRecipients
@@ -1085,7 +1096,7 @@ public class EmailExportService
                         // Create attachment
                         var attachment = new EmailAttachment
                         {
-                            Filename = Path.GetFileName(outputPath),
+                            Filename = filename,  // Use the filename from the column, not the temp file path
                             Content = documentBytes,
                             ContentType = contentType
                         };
@@ -1172,7 +1183,7 @@ public class EmailExportService
                 // Create attachment
                 var attachment = new EmailAttachment
                 {
-                    Filename = Path.GetFileName(outputPath),
+                    Filename = filename,  // Use the filename from the column, not the temp file path
                     Content = documentBytes,
                     ContentType = contentType
                 };
@@ -1210,6 +1221,215 @@ public class EmailExportService
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Concat(filename.Select(c => invalidChars.Contains(c) ? '_' : c));
         return sanitized;
+    }
+
+    /// <summary>
+    /// Generates document template attachments for approval flow and returns them as base64-encoded PreGeneratedAttachment objects
+    /// This is called during approval creation so documents can be stored with the approval record
+    /// </summary>
+    private List<PreGeneratedAttachment> GenerateDocumentTemplateAttachmentsForApproval(
+        List<Dictionary<string, object>> rows,
+        AttachmentConfig attachmentConfig,
+        Profile profile)
+    {
+        var preGeneratedAttachments = new List<PreGeneratedAttachment>();
+
+        if (attachmentConfig.DocumentTemplate == null)
+        {
+            Log.Warning("DocumentTemplate attachment config is null for profile {ProfileId}", profile.Id);
+            return preGeneratedAttachments;
+        }
+
+        try
+        {
+            var templateId = attachmentConfig.DocumentTemplate.TemplateId;
+            var filenameColumn = attachmentConfig.DocumentTemplate.FilenameColumnName;
+            var generatePerRow = attachmentConfig.DocumentTemplate.GeneratePerRow;
+
+            // Load template from database
+            var template = _queryTemplateService.GetByIdAsync(templateId).GetAwaiter().GetResult();
+            if (template == null)
+            {
+                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment in profile {ProfileId}",
+                    templateId, profile.Id);
+                return preGeneratedAttachments;
+            }
+
+            if (generatePerRow)
+            {
+                // Generate one document per row
+                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) for approval in profile {ProfileId}",
+                    rows.Count, profile.Id);
+
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    var singleRowList = new List<Dictionary<string, object>> { row };
+
+                    try
+                    {
+                        // Determine filename
+                        string filename;
+                        if (!string.IsNullOrEmpty(filenameColumn))
+                        {
+                            var filenameValue = SafeGetValue(row, filenameColumn)?.ToString();
+                            filename = !string.IsNullOrEmpty(filenameValue)
+                                ? filenameValue
+                                : $"{profile.Name}_doc{i + 1}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                        }
+                        else
+                        {
+                            filename = $"{profile.Name}_doc{i + 1}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                        }
+
+                        // Build context
+                        var context = new Dictionary<string, object>
+                        {
+                            { "profile_name", profile.Name },
+                            { "profile_id", profile.Id },
+                            { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
+                            { "date", DateTime.Now.ToString("yyyyMMdd") },
+                            { "time", DateTime.Now.ToString("HHmmss") },
+                            { "row_index", i + 1 }
+                        };
+
+                        // Generate document
+                        var outputPath = _documentTemplateEngine.TransformAsync(
+                            singleRowList,
+                            template.Template,
+                            context,
+                            filenameTemplate: null,
+                            useTemporaryDirectory: true).GetAwaiter().GetResult();
+
+                        // Read file bytes and convert to base64
+                        var documentBytes = File.ReadAllBytes(outputPath);
+                        var contentBase64 = Convert.ToBase64String(documentBytes);
+
+                        // Determine content type
+                        var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
+                        {
+                            ".pdf" => "application/pdf",
+                            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            _ => "application/octet-stream"
+                        };
+
+                        // Create pre-generated attachment
+                        preGeneratedAttachments.Add(new PreGeneratedAttachment
+                        {
+                            Filename = filename,  // Use the filename from the column, not the temp file path
+                            ContentType = contentType,
+                            ContentBase64 = contentBase64
+                        });
+
+                        Log.Debug("Generated DocumentTemplate attachment {Index}/{Total} for approval: '{Filename}' ({Size} bytes)",
+                            i + 1, rows.Count, filename, documentBytes.Length);
+
+                        // Clean up temporary file
+                        try
+                        {
+                            File.Delete(outputPath);
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+                        }
+                    }
+                    catch (Exception rowEx)
+                    {
+                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index} in profile {ProfileId} (approval flow)",
+                            i + 1, profile.Id);
+                    }
+                }
+            }
+            else
+            {
+                // Generate one document with all rows
+                Log.Information("Generating 1 combined DocumentTemplate attachment for approval in profile {ProfileId} using template {TemplateId}",
+                    profile.Id, templateId);
+
+                try
+                {
+                    // Determine filename from first row or use default
+                    string filename;
+                    if (!string.IsNullOrEmpty(filenameColumn) && rows.Count > 0)
+                    {
+                        var filenameValue = SafeGetValue(rows[0], filenameColumn)?.ToString();
+                        filename = !string.IsNullOrEmpty(filenameValue)
+                            ? filenameValue
+                            : $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                    }
+                    else
+                    {
+                        filename = $"{profile.Name}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+                    }
+
+                    // Build context
+                    var context = new Dictionary<string, object>
+                    {
+                        { "profile_name", profile.Name },
+                        { "profile_id", profile.Id },
+                        { "timestamp", DateTime.Now.ToString("yyyyMMdd_HHmmss") },
+                        { "date", DateTime.Now.ToString("yyyyMMdd") },
+                        { "time", DateTime.Now.ToString("HHmmss") }
+                        // Note: row_count is automatically added by ScribanTemplateEngine, don't add it here
+                    };
+
+                    // Generate document with all rows
+                    var outputPath = _documentTemplateEngine.TransformAsync(
+                        rows,
+                        template.Template,
+                        context,
+                        filenameTemplate: null,
+                        useTemporaryDirectory: true).GetAwaiter().GetResult();
+
+                    // Read file bytes and convert to base64
+                    var documentBytes = File.ReadAllBytes(outputPath);
+                    var contentBase64 = Convert.ToBase64String(documentBytes);
+
+                    // Determine content type
+                    var contentType = Path.GetExtension(outputPath).ToLowerInvariant() switch
+                    {
+                        ".pdf" => "application/pdf",
+                        ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        _ => "application/octet-stream"
+                    };
+
+                    // Create pre-generated attachment
+                    preGeneratedAttachments.Add(new PreGeneratedAttachment
+                    {
+                        Filename = filename,  // Use the filename from the column, not the temp file path
+                        ContentType = contentType,
+                        ContentBase64 = contentBase64
+                    });
+
+                    Log.Information("Generated combined DocumentTemplate attachment for approval: '{Filename}' ({Size} bytes, {RowCount} rows)",
+                        filename, documentBytes.Length, rows.Count);
+
+                    // Clean up temporary file
+                    try
+                    {
+                        File.Delete(outputPath);
+                    }
+                    catch (Exception deleteEx)
+                    {
+                        Log.Warning(deleteEx, "Failed to delete temporary document file: {OutputPath}", outputPath);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Failed to generate combined DocumentTemplate attachment for profile {ProfileId} (approval flow)", profile.Id);
+                }
+            }
+
+            Log.Information("Generated {Count} DocumentTemplate attachment(s) for approval in profile {ProfileId}",
+                preGeneratedAttachments.Count, profile.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error generating DocumentTemplate attachments for approval in profile {ProfileId}", profile.Id);
+        }
+
+        return preGeneratedAttachments;
     }
 
     /// <summary>
@@ -1377,7 +1597,23 @@ public class EmailExportService
                         // Render HTML body using Scriban template with ALL rows in the group
                         var htmlBody = await _templateEngine.TransformAsync(groupRows, emailTemplate.Template);
 
-                        // Serialize attachment config
+                        // Generate document template attachments if configured (for approval flow)
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
+                        {
+                            var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(groupRows, attachmentConfig, profile);
+                            attachmentConfig.GeneratedAttachments = preGeneratedAttachments;
+
+                            // Check failsafe: if enabled and no attachments were generated, skip this email
+                            if (attachmentConfig.Failsafe == "RequireAttachments" && preGeneratedAttachments.Count == 0)
+                            {
+                                var errorMsg = $"Failsafe triggered: No attachments were generated for split key '{group.Key}', skipping email creation.";
+                                errors.Add(errorMsg);
+                                Log.Warning(errorMsg + " Profile: {ProfileName} ({ProfileId})", profile.Name, profile.Id);
+                                continue; // Skip this grouped email
+                            }
+                        }
+
+                        // Serialize attachment config (now includes pre-generated attachments if applicable)
                         var attachmentConfigJson = attachmentConfig != null
                             ? JsonSerializer.Serialize(attachmentConfig)
                             : null;
@@ -1431,7 +1667,7 @@ public class EmailExportService
 
                     // Extract subject and parse if hardcoded (may contain Scriban variables)
                     string subject;
-                    if (profile.UseHardcodedSubject)
+                    if (profile.UseHardcodedSubject && !string.IsNullOrEmpty(profile.EmailSubjectHardcoded))
                     {
                         try
                         {
@@ -1458,7 +1694,7 @@ public class EmailExportService
                         catch (Exception ex)
                         {
                             Log.Warning(ex, "Failed to parse hardcoded subject template in approval flow (per-row), using raw value");
-                            subject = profile.EmailSubjectHardcoded ?? "[No Subject]";
+                            subject = profile.EmailSubjectHardcoded;
                         }
                     }
                     else
@@ -1473,10 +1709,41 @@ public class EmailExportService
                         new List<Dictionary<string, object>> { row },
                         emailTemplate.Template);
 
-                    // Serialize attachment config
-                    var attachmentConfigJson = attachmentConfig != null
-                        ? JsonSerializer.Serialize(attachmentConfig)
-                        : null;
+                    // Generate document template attachments if configured (for approval flow)
+                    AttachmentConfig? rowAttachmentConfig = null;
+                    if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
+                    {
+                        // Clone the attachment config for this row
+                        rowAttachmentConfig = new AttachmentConfig
+                        {
+                            Enabled = attachmentConfig.Enabled,
+                            Mode = attachmentConfig.Mode,
+                            DocumentTemplate = attachmentConfig.DocumentTemplate,
+                            Deduplication = attachmentConfig.Deduplication,
+                            Failsafe = attachmentConfig.Failsafe,
+                            MaxAttachmentsPerEmail = attachmentConfig.MaxAttachmentsPerEmail,
+                            MissingFileStrategy = attachmentConfig.MissingFileStrategy
+                        };
+
+                        var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(
+                            new List<Dictionary<string, object>> { row },
+                            rowAttachmentConfig,
+                            profile);
+                        rowAttachmentConfig.GeneratedAttachments = preGeneratedAttachments;
+
+                        // Check failsafe: if enabled and no attachments were generated, skip this row
+                        if (rowAttachmentConfig.Failsafe == "RequireAttachments" && preGeneratedAttachments.Count == 0)
+                        {
+                            Log.Warning("Failsafe triggered: No attachments were generated for row, skipping email creation. Profile: {ProfileName} ({ProfileId})",
+                                profile.Name, profile.Id);
+                            continue; // Skip this row's email
+                        }
+                    }
+
+                    // Serialize attachment config (now includes pre-generated attachments if applicable)
+                    var attachmentConfigJson = rowAttachmentConfig != null
+                        ? JsonSerializer.Serialize(rowAttachmentConfig)
+                        : (attachmentConfig != null ? JsonSerializer.Serialize(attachmentConfig) : null);
 
                     // Extract ReefId for delta sync tracking
                     string? reefId = null;

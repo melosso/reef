@@ -209,13 +209,16 @@
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Subject</th>
+                                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700" title="Attachments">
+                                            <i data-lucide="paperclip" class="h-4 w-4 inline-block"></i>
+                                        </th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="pending-table-body" class="divide-y divide-gray-200">
                                     <tr class="hover:bg-gray-50">
-                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                                             <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
                                             <p>No pending approvals</p>
                                         </td>
@@ -713,7 +716,7 @@
             if (totalCount === 0) {
                 tbody.innerHTML = `
                     <tr class="hover:bg-gray-50">
-                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                             <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50 text-gray-400"></i>
                             <p>No pending approvals</p>
                         </td>
@@ -730,7 +733,9 @@
             const endIndex = Math.min(startIndex + pageSize, totalCount);
             const paginatedData = data.slice(startIndex, endIndex);
 
-            tbody.innerHTML = paginatedData.map(approval => `
+            tbody.innerHTML = paginatedData.map(approval => {
+                const hasAttachments = checkHasAttachments(approval);
+                return `
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4">
                         <input type="checkbox"
@@ -745,6 +750,13 @@
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600 truncate max-w-xs" title="${approval.subject !== '[REDACTED]' ? approval.subject : 'Redacted'}">
                         ${displaySubject(approval.subject)}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        ${hasAttachments ? `
+                            <button onclick="previewApproval('${approval.guid}')" class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors" data-tooltip="Click to preview" data-tooltip-position="bottom">
+                                <i data-lucide="paperclip" class="h-4 w-4"></i>
+                            </button>
+                        ` : '<span class="text-gray-300">—</span>'}
                     </td>
                     <td class="px-6 py-4 text-sm text-gray-600">
                         ${formatTimestamp(approval.createdAt)}
@@ -766,7 +778,8 @@
                         </div>
                     </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
             queueLucideRender();
             renderPaginationControls('pending');
@@ -1169,6 +1182,36 @@
             return truncate(subject, 30);
         }
 
+        function checkHasAttachments(approval) {
+            if (!approval.attachmentConfig || approval.attachmentConfig === 'null' || approval.attachmentConfig === '') {
+                return false;
+            }
+
+            try {
+                const attachmentConfig = JSON.parse(approval.attachmentConfig);
+
+                // Check for pre-generated attachments (DocumentTemplate mode)
+                // Handle both camelCase and PascalCase property names
+                const generatedAttachments = attachmentConfig.generatedAttachments || attachmentConfig.GeneratedAttachments;
+                if (generatedAttachments && generatedAttachments.length > 0) {
+                    return true;
+                }
+
+                // Check for other attachment modes (Binary, DirectPath)
+                // Handle both camelCase and PascalCase
+                const enabled = attachmentConfig.enabled ?? attachmentConfig.Enabled;
+                const mode = attachmentConfig.mode ?? attachmentConfig.Mode;
+                if (enabled && mode) {
+                    return true;
+                }
+
+                return false;
+            } catch (error) {
+                console.error('Error parsing attachment config:', error);
+                return false;
+            }
+        }
+
         function getStatusBadge(status) {
             switch (status) {
                 case 'Sent': return 'bg-green-50 text-green-700 border border-green-200';
@@ -1284,8 +1327,15 @@
             try {
                 const attachmentConfig = JSON.parse(attachmentConfigJson);
 
+                // Get attachments array - could be regular attachments or pre-generated (DocumentTemplate mode)
+                // Handle both camelCase and PascalCase property names
+                const attachments = attachmentConfig.attachments
+                    || attachmentConfig.generatedAttachments
+                    || attachmentConfig.GeneratedAttachments
+                    || [];
+
                 // Check if there are attachments in the config
-                if (!attachmentConfig.attachments || attachmentConfig.attachments.length === 0) {
+                if (attachments.length === 0) {
                     attachmentsSection.classList.add('hidden');
                     return;
                 }
@@ -1293,21 +1343,32 @@
                 // Show attachments section
                 attachmentsSection.classList.remove('hidden');
 
-                const count = attachmentConfig.attachments.length;
+                const count = attachments.length;
                 attachmentCountBadge.textContent = `${count} file${count !== 1 ? 's' : ''}`;
 
                 // Build attachment list
-                attachmentsItems.innerHTML = attachmentConfig.attachments.map((att, index) => {
-                    const fileName = att.fileName || att.filename || `Attachment ${index + 1}`;
-                    const fileSize = att.fileSize ? formatFileSize(att.fileSize) : '';
-                    const fileType = att.contentType || att.mimeType || '';
+                attachmentsItems.innerHTML = attachments.map((att, index) => {
+                    // Handle both regular attachments and pre-generated attachments
+                    const fileName = att.fileName || att.filename || att.Filename || `Attachment ${index + 1}`;
+                    const fileSizeBytes = att.fileSize || att.FileSize;
+                    const fileSize = fileSizeBytes ? formatFileSize(fileSizeBytes) : '';
+                    const fileType = att.contentType || att.mimeType || att.ContentType || '';
+
+                    // For pre-generated attachments (base64), calculate size from ContentBase64
+                    let displaySize = fileSize;
+                    if (!displaySize && (att.contentBase64 || att.ContentBase64)) {
+                        const base64String = att.contentBase64 || att.ContentBase64;
+                        // Rough estimate: base64 is ~4/3 of original size
+                        const estimatedBytes = Math.floor((base64String.length * 3) / 4);
+                        displaySize = formatFileSize(estimatedBytes);
+                    }
 
                     return `
                         <li class="flex items-start space-x-3 p-2 bg-white rounded border border-gray-200">
                             <i data-lucide="file" class="h-5 w-5 text-gray-400 mt-0.5"></i>
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm font-medium text-gray-900 break-all">${fileName}</p>
-                                ${fileSize || fileType ? `<p class="text-xs text-gray-500 mt-0.5">${[fileSize, fileType].filter(Boolean).join(' • ')}</p>` : ''}
+                                ${displaySize || fileType ? `<p class="text-xs text-gray-500 mt-0.5">${[displaySize, fileType].filter(Boolean).join(' • ')}</p>` : ''}
                             </div>
                         </li>
                     `;

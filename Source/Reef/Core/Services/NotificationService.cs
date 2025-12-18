@@ -425,14 +425,14 @@ public class NotificationService
                 {
                     await Task.Delay(_approvalNotificationDebounceDelay, cts.Token);
 
-                    // After delay, get the current pending count and send notification
+                    // After delay, get the current pending count and check if notification should be sent
                     using var connection = new SqliteConnection(_connectionString);
                     await connection.OpenAsync();
 
                     var pendingCount = await connection.ExecuteScalarAsync<int>(
                         "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'");
 
-                    Log.Information("Debounce delay completed, sending notification for {Count} pending approvals",
+                    Log.Debug("Debounce delay completed, evaluating notification for {Count} pending approval(s)",
                         pendingCount);
 
                     await SendNewEmailApprovalNotificationAsync(pendingCount);
@@ -473,15 +473,22 @@ public class NotificationService
             {
                 var timeSinceLastNotification = DateTime.UtcNow - settings.NewEmailApprovalCooldownTimestamp.Value;
                 var cooldownPeriod = TimeSpan.FromHours(settings.NewEmailApprovalCooldownHours);
-                
+
                 if (timeSinceLastNotification < cooldownPeriod)
                 {
                     var remainingTime = cooldownPeriod - timeSinceLastNotification;
-                    Log.Debug("New email approval notification throttled (cooldown: {Hours}h, remaining: {Minutes}m)",
-                        settings.NewEmailApprovalCooldownHours, (int)remainingTime.TotalMinutes);
+                    Log.Debug("Email approval notification skipped due to cooldown period (last sent: {TimeSince} ago, cooldown: {Hours}h, remaining: {RemainingHours}h {RemainingMinutes}m)",
+                        timeSinceLastNotification.ToString(@"hh\:mm\:ss"),
+                        settings.NewEmailApprovalCooldownHours,
+                        (int)remainingTime.TotalHours,
+                        remainingTime.Minutes);
                     return;
                 }
             }
+
+            // Cooldown check passed - proceed with sending notification
+            Log.Information("Sending email approval notification for {Count} pending approval(s) (cooldown check passed)",
+                pendingCount);
 
             // Load template from database or use fallback
             var fallbackSubject = $"[Reef] {pendingCount} email{(pendingCount != 1 ? "s" : "")} pending approval";
@@ -496,11 +503,12 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            
+
             // Update cooldown timestamp in database after successful send
             await UpdateEmailApprovalCooldownTimestampAsync(settings.Id);
-            
-            Log.Information("Sent new email approval notification ({Count} pending)", pendingCount);
+
+            Log.Information("Email approval notification sent successfully (next notification allowed in {Hours}h)",
+                settings.NewEmailApprovalCooldownHours);
         }
         catch (Exception ex)
         {
