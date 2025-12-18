@@ -6,6 +6,7 @@ WORKDIR /src
 
 # Copy solution and project files first to leverage layer caching
 COPY Source/Reef.sln ./
+COPY Source/Reef.Tests/*.csproj ./Reef.Tests/
 COPY Source/Reef/*.csproj ./Reef/
 
 # Restore dependencies (use BuildKit cache for NuGet packages)
