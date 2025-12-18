@@ -1337,7 +1337,25 @@ public class EmailExportService
                             // Process hardcoded subject through Scriban template engine to support variables
                             try
                             {
-                                subject = await _templateEngine.TransformAsync(groupRows, profile.EmailSubjectHardcoded);
+                                // Create system context with profile metadata and current date/time
+                                var now = DateTime.Now;
+
+                                var systemContext = new Dictionary<string, object>
+                                {
+                                    { "system", new Dictionary<string, object>
+                                    {
+                                        { "profileId", profile.Id },
+                                        { "profileNumber", profile.Id },
+                                        { "profileName", profile.Name },
+                                        { "date", now.ToString("yyyy-MM-dd") },
+                                        { "time", now.ToString("HH:mm:ss") },
+                                        { "datetime", now.ToString("yyyy-MM-dd HH:mm:ss") },
+                                        { "timestamp", now.ToString("O") }, // ISO 8601 format
+                                        { "now", now }
+                                    }}
+                                };
+
+                                subject = await _templateEngine.TransformAsync(groupRows, profile.EmailSubjectHardcoded, systemContext);
                                 subject = subject?.Trim();
                             }
                             catch (Exception ex)
@@ -1417,7 +1435,25 @@ public class EmailExportService
                     {
                         try
                         {
-                            subject = await _templateEngine.TransformAsync(new List<Dictionary<string, object>> { row }, profile.EmailSubjectHardcoded);
+                            // Create system context with profile metadata and current date/time
+                            var now = DateTime.Now;
+
+                            var systemContext = new Dictionary<string, object>
+                            {
+                                { "system", new Dictionary<string, object>
+                                {
+                                    { "profileId", profile.Id },
+                                    { "profileNumber", profile.Id },
+                                    { "profileName", profile.Name },
+                                    { "date", now.ToString("yyyy-MM-dd") },
+                                    { "time", now.ToString("HH:mm:ss") },
+                                    { "datetime", now.ToString("yyyy-MM-dd HH:mm:ss") },
+                                    { "timestamp", now.ToString("O") }, // ISO 8601 format
+                                    { "now", now }
+                                }}
+                            };
+
+                            subject = await _templateEngine.TransformAsync(new List<Dictionary<string, object>> { row }, profile.EmailSubjectHardcoded, systemContext);
                         }
                         catch (Exception ex)
                         {

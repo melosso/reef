@@ -155,22 +155,20 @@ public class EmailApprovalService
             }
             catch { /* Audit logging failure should not block operation */ }
 
-            // Send notification if enabled - get count of all pending items for notification
+            // Queue notification with debouncing - prevents spam when multiple approvals are created rapidly
+            // The debouncing logic will wait 10 seconds and then send ONE notification with the current total count
             try
             {
-                var pendingCount = await connection.ExecuteScalarAsync<int>(
-                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'");
-
                 // Fire and forget - don't block approval creation on notification
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        await _notificationService.SendNewEmailApprovalNotificationAsync(pendingCount);
+                        await _notificationService.QueueEmailApprovalNotificationAsync();
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to send email approval notification");
+                        Log.Warning(ex, "Failed to queue email approval notification");
                     }
                 });
             }

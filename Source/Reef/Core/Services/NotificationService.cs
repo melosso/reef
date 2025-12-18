@@ -27,6 +27,11 @@ public class NotificationService
     private readonly NotificationTemplateService _templateService;
     private readonly ScribanTemplateEngine _scribanEngine;
 
+    // Debouncing state for email approval notifications to prevent spam when multiple approvals are created rapidly
+    private static readonly SemaphoreSlim _approvalNotificationLock = new SemaphoreSlim(1, 1);
+    private static CancellationTokenSource? _approvalNotificationCts;
+    private static readonly TimeSpan _approvalNotificationDebounceDelay = TimeSpan.FromSeconds(10);
+
     public NotificationService(
         string connectionString,
         EncryptionService encryptionService,
@@ -389,6 +394,62 @@ public class NotificationService
         catch (Exception ex)
         {
             Log.Error(ex, "Error sending new webhook notification for {WebhookName}", webhookName);
+        }
+    }
+
+    /// <summary>
+    /// Queue an email approval notification with debouncing to prevent spam from rapid batch imports
+    /// This method implements a 10-second debounce window - if multiple approvals are created within 10 seconds,
+    /// only ONE notification is sent after the delay with the current total count
+    /// </summary>
+    public async Task QueueEmailApprovalNotificationAsync()
+    {
+        await _approvalNotificationLock.WaitAsync();
+        try
+        {
+            // Cancel any existing pending notification
+            _approvalNotificationCts?.Cancel();
+            _approvalNotificationCts?.Dispose();
+
+            // Create a new cancellation token for this debounce window
+            _approvalNotificationCts = new CancellationTokenSource();
+            var cts = _approvalNotificationCts;
+
+            Log.Debug("Email approval notification queued with {Delay}s debounce",
+                _approvalNotificationDebounceDelay.TotalSeconds);
+
+            // Start debounce delay (fire and forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(_approvalNotificationDebounceDelay, cts.Token);
+
+                    // After delay, get the current pending count and send notification
+                    using var connection = new SqliteConnection(_connectionString);
+                    await connection.OpenAsync();
+
+                    var pendingCount = await connection.ExecuteScalarAsync<int>(
+                        "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'");
+
+                    Log.Information("Debounce delay completed, sending notification for {Count} pending approvals",
+                        pendingCount);
+
+                    await SendNewEmailApprovalNotificationAsync(pendingCount);
+                }
+                catch (TaskCanceledException)
+                {
+                    Log.Debug("Email approval notification was cancelled (another approval came in)");
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Error sending debounced email approval notification");
+                }
+            });
+        }
+        finally
+        {
+            _approvalNotificationLock.Release();
         }
     }
 

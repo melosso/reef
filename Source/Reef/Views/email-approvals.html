@@ -401,6 +401,27 @@
                     <p id="preview-cc" class="text-gray-900 mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm break-all"></p>
                 </div>
 
+                <!-- Attachments Section -->
+                <div id="preview-attachments-section" class="hidden">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-semibold text-gray-700">Attachments</label>
+                        <button onclick="toggleAttachmentsList()" id="attachments-toggle-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors">
+                            <i data-lucide="paperclip" class="h-4 w-4"></i>
+                            <span id="attachment-count-badge">0 files</span>
+                            <i data-lucide="chevron-down" id="attachments-chevron" class="h-4 w-4"></i>
+                        </button>
+                    </div>
+                    <div id="attachments-list" class="hidden mt-2 p-3 bg-gray-50 rounded border border-gray-200">
+                        <ul id="attachments-items" class="space-y-2 text-sm">
+                            <!-- Attachment items will be populated here -->
+                        </ul>
+                        <p class="text-xs text-gray-500 mt-3 italic border-t border-gray-300 pt-2">
+                            <i data-lucide="info" class="inline h-3 w-3 mr-1"></i>
+                            Attachments cannot be opened or downloaded from this preview for security reasons.
+                        </p>
+                    </div>
+                </div>
+
                 <div>
                     <label class="text-sm font-semibold text-gray-700">Email Body</label>
                     <div id="preview-body" class="mt-1 p-3 bg-gray-50 rounded border border-gray-200 h-64 overflow-y-auto">
@@ -1205,24 +1226,27 @@
                 const subjectEl = document.getElementById('preview-subject');
                 const recipientsEl = document.getElementById('preview-recipients');
                 const ccEl = document.getElementById('preview-cc');
-                
+
                 if (approval.subject === '[REDACTED]') {
                     subjectEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
                 } else {
                     subjectEl.textContent = approval.subject;
                 }
-                
+
                 if (approval.recipients === '[REDACTED]') {
                     recipientsEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
                 } else {
                     recipientsEl.textContent = approval.recipients;
                 }
-                
+
                 if (approval.ccAddresses === '[REDACTED]') {
                     ccEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
                 } else {
                     ccEl.textContent = approval.ccAddresses || '(none)';
                 }
+
+                // Handle attachments
+                displayAttachments(approval.attachmentConfig);
 
                 // Set iframe content
                 const iframe = document.getElementById('preview-iframe');
@@ -1233,10 +1257,90 @@
                 }
 
                 document.getElementById('previewModal').classList.remove('hidden');
+                queueLucideRender();
             } catch (error) {
                 console.error('Error loading preview:', error);
                 showToast('Failed to load preview', 'error');
             }
+        }
+
+        function displayAttachments(attachmentConfigJson) {
+            const attachmentsSection = document.getElementById('preview-attachments-section');
+            const attachmentsList = document.getElementById('attachments-list');
+            const attachmentsItems = document.getElementById('attachments-items');
+            const attachmentCountBadge = document.getElementById('attachment-count-badge');
+
+            // Reset state - hide list by default
+            attachmentsList.classList.add('hidden');
+            const chevron = document.getElementById('attachments-chevron');
+            chevron.style.transform = 'rotate(0deg)';
+
+            // Check if attachments exist
+            if (!attachmentConfigJson || attachmentConfigJson === 'null' || attachmentConfigJson === '') {
+                attachmentsSection.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const attachmentConfig = JSON.parse(attachmentConfigJson);
+
+                // Check if there are attachments in the config
+                if (!attachmentConfig.attachments || attachmentConfig.attachments.length === 0) {
+                    attachmentsSection.classList.add('hidden');
+                    return;
+                }
+
+                // Show attachments section
+                attachmentsSection.classList.remove('hidden');
+
+                const count = attachmentConfig.attachments.length;
+                attachmentCountBadge.textContent = `${count} file${count !== 1 ? 's' : ''}`;
+
+                // Build attachment list
+                attachmentsItems.innerHTML = attachmentConfig.attachments.map((att, index) => {
+                    const fileName = att.fileName || att.filename || `Attachment ${index + 1}`;
+                    const fileSize = att.fileSize ? formatFileSize(att.fileSize) : '';
+                    const fileType = att.contentType || att.mimeType || '';
+
+                    return `
+                        <li class="flex items-start space-x-3 p-2 bg-white rounded border border-gray-200">
+                            <i data-lucide="file" class="h-5 w-5 text-gray-400 mt-0.5"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-gray-900 break-all">${fileName}</p>
+                                ${fileSize || fileType ? `<p class="text-xs text-gray-500 mt-0.5">${[fileSize, fileType].filter(Boolean).join(' • ')}</p>` : ''}
+                            </div>
+                        </li>
+                    `;
+                }).join('');
+
+                queueLucideRender();
+            } catch (error) {
+                console.error('Error parsing attachment config:', error);
+                attachmentsSection.classList.add('hidden');
+            }
+        }
+
+        function toggleAttachmentsList() {
+            const attachmentsList = document.getElementById('attachments-list');
+            const chevron = document.getElementById('attachments-chevron');
+            const isHidden = attachmentsList.classList.contains('hidden');
+
+            if (isHidden) {
+                attachmentsList.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                attachmentsList.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+
+            queueLucideRender();
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '';
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
         }
 
         function closePreviewModal() {
