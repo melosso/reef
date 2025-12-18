@@ -1113,7 +1113,7 @@ public class EmailExportService
                     }
                 }
 
-                Log.Information("Generated {Count} DocumentTemplate attachments for profile {ProfileId}",
+                Log.Information("Generating {Count} DocumentTemplate attachments completed for profile {ProfileId}",
                     attachments.Count, profile.Id);
             }
             else
@@ -1295,8 +1295,103 @@ public class EmailExportService
                 return (renderedEmails, errors);
             }
 
-            // Render each row as an email
-            foreach (var row in queryResults)
+            // If EmailGroupBySplitKey is enabled: group by split key and render one email per group
+            // Otherwise: render one email per row (original behavior)
+            if (profile.EmailGroupBySplitKey && !string.IsNullOrEmpty(profile.SplitKeyColumn))
+            {
+                // Group results by split key
+                var groupedResults = queryResults
+                    .GroupBy(r => SafeGetValue(r, profile.SplitKeyColumn)?.ToString() ?? "unknown")
+                    .ToList();
+
+                Log.Information("Rendering {Count} emails for approval (grouped by split key '{SplitKey}') from profile {ProfileId}",
+                    groupedResults.Count, profile.SplitKeyColumn, profile.Id);
+
+                foreach (var group in groupedResults)
+                {
+                    try
+                    {
+                        var groupRows = group.ToList();
+                        var firstRow = groupRows[0];
+
+                        // Extract recipients from first row (all rows in group should have same recipient)
+                        var recipients = profile.UseHardcodedRecipients
+                            ? profile.EmailRecipientsHardcoded
+                            : (string.IsNullOrEmpty(profile.EmailRecipientsColumn) ? null : SafeGetValue(firstRow, profile.EmailRecipientsColumn)?.ToString());
+
+                        if (string.IsNullOrEmpty(recipients))
+                        {
+                            Log.Warning("No recipients found for group with split key '{SplitKey}' in profile {ProfileId}", group.Key, profile.Id);
+                            continue;
+                        }
+
+                        // Extract CC addresses
+                        var ccAddresses = profile.UseHardcodedCc
+                            ? profile.EmailCcHardcoded
+                            : (string.IsNullOrEmpty(profile.EmailCcColumn) ? null : SafeGetValue(firstRow, profile.EmailCcColumn)?.ToString());
+
+                        // Extract and process subject
+                        string? subject = null;
+                        if (profile.UseHardcodedSubject && !string.IsNullOrEmpty(profile.EmailSubjectHardcoded))
+                        {
+                            // Process hardcoded subject through Scriban template engine to support variables
+                            try
+                            {
+                                subject = await _templateEngine.TransformAsync(groupRows, profile.EmailSubjectHardcoded);
+                                subject = subject?.Trim();
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "Failed to process hardcoded subject template for approval: {Subject}", profile.EmailSubjectHardcoded);
+                                subject = profile.EmailSubjectHardcoded?.Trim();
+                            }
+                        }
+                        else if (!string.IsNullOrEmpty(profile.EmailSubjectColumn))
+                        {
+                            subject = SafeGetValue(firstRow, profile.EmailSubjectColumn)?.ToString()?.Trim();
+                        }
+
+                        if (string.IsNullOrEmpty(subject))
+                        {
+                            subject = "[No Subject]";
+                        }
+
+                        // Render HTML body using Scriban template with ALL rows in the group
+                        var htmlBody = await _templateEngine.TransformAsync(groupRows, emailTemplate.Template);
+
+                        // Serialize attachment config
+                        var attachmentConfigJson = attachmentConfig != null
+                            ? JsonSerializer.Serialize(attachmentConfig)
+                            : null;
+
+                        // For grouped emails, use the split key as the ReefId
+                        var reefId = group.Key;
+                        var reefIdNormalized = NormalizeReefId(reefId, profile.DeltaSyncReefIdNormalization ?? "Trim");
+
+                        // Get delta sync hash (not typically used for grouped emails, but included for consistency)
+                        string? deltaSyncHash = null;
+                        if (!string.IsNullOrEmpty(reefIdNormalized) && deltaSyncHashes != null)
+                        {
+                            deltaSyncHashes.TryGetValue(reefIdNormalized, out deltaSyncHash);
+                        }
+
+                        renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefIdNormalized, deltaSyncHash));
+
+                        Log.Debug("Rendered grouped email for approval with subject: {Subject}, SplitKey: {SplitKey}, RowCount: {RowCount}",
+                            subject, group.Key, groupRows.Count);
+                    }
+                    catch (Exception ex)
+                    {
+                        var errorMsg = $"Failed to render grouped email for split key '{group.Key}': {ex.Message}";
+                        errors.Add(errorMsg);
+                        Log.Error(ex, errorMsg);
+                    }
+                }
+            }
+            else
+            {
+                // Original behavior: Render each row as an email
+                foreach (var row in queryResults)
             {
                 try
                 {
@@ -1316,10 +1411,26 @@ public class EmailExportService
                         ? profile.EmailCcHardcoded
                         : (string.IsNullOrEmpty(profile.EmailCcColumn) ? null : SafeGetValue(row, profile.EmailCcColumn)?.ToString());
 
-                    // Extract subject
-                    var subject = (profile.UseHardcodedSubject
-                        ? profile.EmailSubjectHardcoded
-                        : (string.IsNullOrEmpty(profile.EmailSubjectColumn) ? "[No Subject]" : SafeGetValue(row, profile.EmailSubjectColumn)?.ToString() ?? "[No Subject]")) ?? "[No Subject]";
+                    // Extract subject and parse if hardcoded (may contain Scriban variables)
+                    string subject;
+                    if (profile.UseHardcodedSubject)
+                    {
+                        try
+                        {
+                            subject = await _templateEngine.TransformAsync(new List<Dictionary<string, object>> { row }, profile.EmailSubjectHardcoded);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "Failed to parse hardcoded subject template in approval flow (per-row), using raw value");
+                            subject = profile.EmailSubjectHardcoded ?? "[No Subject]";
+                        }
+                    }
+                    else
+                    {
+                        subject = string.IsNullOrEmpty(profile.EmailSubjectColumn)
+                            ? "[No Subject]"
+                            : SafeGetValue(row, profile.EmailSubjectColumn)?.ToString() ?? "[No Subject]";
+                    }
 
                     // Render HTML body using Scriban template
                     var htmlBody = await _templateEngine.TransformAsync(
@@ -1365,6 +1476,7 @@ public class EmailExportService
                     errors.Add(errorMsg);
                     Log.Error(ex, errorMsg);
                 }
+            }
             }
 
             return (renderedEmails, errors);

@@ -760,9 +760,13 @@
                                         </span>
                                     </div>
                                     ${template.description ? `<p class="text-sm text-gray-600 mb-2 disable-select">${escapeHtml(template.description)}</p>` : ''}
-                                    <div class="flex items-center space-x-4 text-xs text-gray-500 mb-2">
-                                        <span><i data-lucide="tag" class="h-3 w-3 inline mr-1"></i>${typeLabel}</span>
-                                        <span><i data-lucide="file-output" class="h-3 w-3 inline mr-1"></i>${outputFormat}</span>
+                                    <div class="flex items-center space-x-2 text-xs mb-2">
+                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                                            <i data-lucide="tag" class="h-3 w-3 mr-1"></i>${typeLabel}
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                            <i data-lucide="file-output" class="h-3 w-3 mr-1"></i>${outputFormat}
+                                        </span>
                                     </div>
                                     ${template.tags ? `<div class="flex flex-wrap gap-1">
                                         ${template.tags.split(',').map(tag => `

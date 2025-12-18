@@ -293,7 +293,7 @@ ORDER BY u.Email, inv.Priority, inv.InvoiceDate;
    - **Email Group By Split Key**: ✓ Enable
 6. Configure email recipients:
    - **Recipients**: Use column `approver_email`
-   - **Subject**: Use column or hardcoded: `Invoice Approval Required - {invoice_count} invoices pending`
+   - **Subject**: Use hardcoded: `Invoice Approval Required - {{ rows.size }} invoice(s) pending`
 7. Configure attachments:
    - **Enable Attachments**: ✓
    - **Mode**: DocumentTemplate

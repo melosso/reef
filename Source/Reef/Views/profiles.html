@@ -1144,7 +1144,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <div id="emailGroupingHint" class="hidden mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p class="text-xs text-blue-800">
                                     <i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>
-                                    <strong>Tip for invoice approvals:</strong> Also enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Enable Email Attachments → DocumentTemplate mode</strong> (scroll down) to create separate PDFs for each invoice.
+                                    <strong>Pro tip:</strong> For workflows requiring multiple documents per email (e.g., invoice approvals), enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Attachments → DocumentTemplate</strong> below to create separate PDFs for each row.
                                 </p>
                             </div>
                         </div>
@@ -1428,7 +1428,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 
                                 <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
                                     <p class="text-xs text-blue-700">
-                                        <strong>How it works:</strong> Your query data will be passed to the document template, which generates a PDF/DOCX file dynamically. This file is then attached to the email. Works with SplitKeyColumn for one attachment per email.
+                                        <strong>How it works:</strong> Your query data will be passed to the document template, which generates a PDF/DOCX file dynamically. This file is then attached to the email.
                                     </p>
                                 </div>
 
@@ -1443,8 +1443,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                         </span>
                                     </label>
                                     <p class="ml-6 mt-2 text-xs text-gray-600">
-                                        <strong>Use case:</strong> Invoice approvals where each approver receives multiple PDF attachments (one per invoice).<br>
-                                        <strong>Combine with:</strong> "Group rows by split key" to send one email per approver with their specific invoices.
+                                        <strong>When to use:</strong> Generate separate documents for each data row instead of one combined document.<br>
+                                        <strong>Example:</strong> Send invoice approvals with multiple PDFs (one per invoice) rather than one PDF containing all invoices.<br>
+                                        <strong>Tip:</strong> Combine with "Group rows by split key" to control email distribution (e.g., one email per approver with their specific documents).
                                     </p>
                                 </div>
                             </div>

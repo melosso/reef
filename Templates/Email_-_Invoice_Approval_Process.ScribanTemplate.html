@@ -1,4 +1,3 @@
-{{~ for row in rows ~}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,61 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Invoice Approval Request</title>
     <style>
+        /* Google UI Technical Styles */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
+            font-family: 'Google Sans', Roboto, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.5;
+            color: #3c4043;
+            background-color: #f1f3f4;
+            margin: 0;
+            padding: 40px 10px;
         }
         .email-container {
-            background: white;
+            max-width: 600px;
+            background-color: #ffffff;
+            margin: 0 auto;
+            border: 1px solid #dadce0;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
+            padding: 32px 40px 24px 40px;
+            text-align: left;
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            font-weight: 600;
+            font-size: 22px;
+            font-weight: 500;
+            color: #1a73e8;
+            letter-spacing: -0.5px;
         }
         .header p {
-            margin: 10px 0 0 0;
-            opacity: 0.95;
-            font-size: 16px;
+            margin: 8px 0 0 0;
+            color: #70757a;
+            font-size: 14px;
         }
         .content {
-            padding: 40px 30px;
+            padding: 0 40px 40px 40px;
         }
         .greeting {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #202124;
         }
         .message {
-            margin-bottom: 30px;
-            color: #555;
-            font-size: 15px;
+            margin-bottom: 24px;
+            color: #5f6368;
+            font-size: 14px;
         }
-        .invoice-summary {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            padding: 20px;
-            margin: 30px 0;
-            border-radius: 4px;
+        /* Data Table Implementation */
+        .invoice-summary-card {
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            margin: 24px 0;
+            overflow: hidden;
         }
-        .invoice-summary h2 {
-            margin: 0 0 15px 0;
-            font-size: 18px;
-            color: #333;
+        .summary-header {
+            background-color: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e8eaed;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #5f6368;
         }
         .invoice-list {
             list-style: none;
@@ -68,8 +75,8 @@
             margin: 0;
         }
         .invoice-item {
-            padding: 12px 0;
-            border-bottom: 1px solid #e0e0e0;
+            padding: 16px;
+            border-bottom: 1px solid #f1f3f4;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -81,128 +88,97 @@
             flex: 1;
         }
         .invoice-number {
-            font-weight: 600;
-            color: #667eea;
-            font-size: 15px;
+            font-weight: 500;
+            color: #202124;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
         }
         .invoice-meta {
-            font-size: 13px;
-            color: #666;
+            font-size: 12px;
+            color: #70757a;
             margin-top: 4px;
         }
         .invoice-amount {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
             text-align: right;
         }
-        .priority-badge {
+        /* Chip/Badge Components */
+        .priority-chip {
             display: inline-block;
-            padding: 2px 8px;
+            padding: 2px 10px;
             border-radius: 12px;
             font-size: 11px;
-            font-weight: 600;
-            margin-left: 8px;
-            text-transform: uppercase;
+            font-weight: 500;
+            margin-left: 12px;
         }
-        .priority-1 { background: #fee; color: #c33; }
-        .priority-2 { background: #ffeaa7; color: #d63031; }
-        .priority-3 { background: #e3f2fd; color: #1976d2; }
+        .priority-1 { background: #fce8e6; color: #d93025; } /* High */
+        .priority-2 { background: #fef7e0; color: #af5d00; } /* Medium */
+        .priority-3 { background: #e8f0fe; color: #1a73e8; } /* Normal */
+
         .total-row {
-            background: #667eea;
-            color: white;
-            padding: 15px 20px;
-            margin: 20px -20px -20px -20px;
+            background: #ffffff;
+            border-top: 2px solid #f1f3f4;
+            padding: 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .attachment-notice {
-            background: #e8f4f8;
-            border: 1px solid #b3d9e8;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 25px 0;
-            font-size: 14px;
-            color: #0c5460;
-        }
-        .attachment-notice strong {
-            display: block;
-            margin-bottom: 8px;
             font-size: 15px;
+            font-weight: 500;
+            color: #202124;
         }
-        .action-section {
-            text-align: center;
-            margin: 35px 0;
-        }
-        .action-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            padding: 14px 40px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            transition: transform 0.2s;
-        }
-        .action-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-        }
-        .instructions {
-            background: #fffbf0;
-            border-left: 4px solid #ffa726;
-            padding: 15px 20px;
-            margin: 25px 0;
+        .notice-box {
+            background: #f8f9fa;
             border-radius: 4px;
+            padding: 16px;
+            margin: 24px 0;
+            font-size: 13px;
+            color: #5f6368;
+            border-left: 4px solid #bdc1c6;
         }
-        .instructions h3 {
-            margin: 0 0 10px 0;
-            font-size: 15px;
-            color: #e65100;
+        /* Primary Action Component */
+        .action-section {
+            text-align: left;
+            margin: 32px 0;
         }
-        .instructions ol {
-            margin: 0;
-            padding-left: 20px;
-            color: #666;
+        .google-button {
+            display: inline-block;
+            background-color: #1a73e8;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-weight: 500;
             font-size: 14px;
+            transition: background-color 0.2s, box-shadow 0.2s;
         }
-        .instructions li {
-            margin: 6px 0;
+        .google-button:hover {
+            background-color: #1765cc;
+            box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
         }
         .footer {
-            background: #f8f9fa;
-            padding: 25px 30px;
-            text-align: center;
-            color: #666;
-            font-size: 13px;
-            border-top: 1px solid #e0e0e0;
-        }
-        .footer p {
-            margin: 5px 0;
+            padding: 32px 40px;
+            background-color: #f8f9fa;
+            color: #70757a;
+            font-size: 12px;
+            border-top: 1px solid #dadce0;
         }
         .footer a {
-            color: #667eea;
+            color: #1a73e8;
             text-decoration: none;
         }
-        .company-info {
-            font-size: 13px;
-            color: #888;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
+        .footer p {
+            margin: 8px 0;
         }
     </style>
 </head>
 <body>
     <div class="email-container">
         <div class="header">
-            <h1>📋 Invoice Approval Required</h1>
-            <p>Action needed on {{ array.size rows }} invoice{{ if array.size rows > 1 }}s{{ end }}</p>
+            <h1>Invoice Approval Required</h1>
+            <p>Action requested for {{ rows | array.size }} pending document{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</p>
         </div>
         
         <div class="content">
@@ -211,11 +187,11 @@
             </div>
             
             <div class="message">
-                <p>You have <strong>{{ array.size rows }} invoice{{ if array.size rows > 1 }}s{{ end }}</strong> awaiting your approval. Please review the attached PDF{{ if array.size rows > 1 }}s{{ end }} and take appropriate action.</p>
+                Review is required for <strong>{{ rows | array.size }} invoice{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</strong>. Please verify the associated documentation and execute the necessary approval workflow.
             </div>
             
-            <div class="invoice-summary">
-                <h2>📊 Invoices Pending Approval</h2>
+            <div class="invoice-summary-card">
+                <div class="summary-header">Invoice Details</div>
                 <ul class="invoice-list">
                     {{~ for invoice in rows ~}}
                     <li class="invoice-item">
@@ -223,75 +199,65 @@
                             <div class="invoice-number">
                                 {{ invoice.invoice_number }}
                                 {{~ if invoice.priority == 1 ~}}
-                                <span class="priority-badge priority-1">High Priority</span>
+                                <span class="priority-chip priority-1">High Priority</span>
                                 {{~ else if invoice.priority == 2 ~}}
-                                <span class="priority-badge priority-2">Medium</span>
+                                <span class="priority-chip priority-2">Medium</span>
                                 {{~ else ~}}
-                                <span class="priority-badge priority-3">Normal</span>
+                                <span class="priority-chip priority-3">Normal</span>
                                 {{~ end ~}}
                             </div>
                             <div class="invoice-meta">
-                                {{ invoice.vendor_name }} • {{ invoice.category }} • Due: {{ date.to_string invoice.due_date "%B %d, %Y" }}
+                                {{ invoice.vendor_name }} | {{ invoice.category }}<br>
+                                Due: {{ date.to_string invoice.due_date "%b %d, %Y" }}
                             </div>
                         </div>
                         <div class="invoice-amount">
-                            ${{ math.format "{0:N2}" invoice.total_amount }}
+                            ${{ invoice.total_amount | math.format '0.00' }}
                         </div>
                     </li>
                     {{~ end ~}}
                 </ul>
+                {{~ 
+                total = 0
+                for invoice in rows
+                    total = total + invoice.total_amount
+                end
+                ~}}
                 <div class="total-row">
-                    <span>Total Amount Pending</span>
-                    <span>${{ math.format "{0:N2}" (rows | array.map "total_amount" | math.sum) }}</span>
+                    <span>Aggregate Total</span>
+                    <span>${{ total | math.format '0.00' }}</span>
                 </div>
             </div>
             
-            <div class="attachment-notice">
-                <strong>📎 Attachments Included</strong>
-                Each invoice is attached as a separate PDF document. Please review all attachments before approving or rejecting.
-            </div>
-            
-            <div class="instructions">
-                <h3>⚡ Quick Actions</h3>
-                <ol>
-                    <li>Review each attached invoice PDF for accuracy</li>
-                    <li>Verify vendor details and payment terms</li>
-                    <li>Check against purchase orders and budgets</li>
-                    <li>Approve or reject via your approval system</li>
-                    <li>Add comments if clarification is needed</li>
-                </ol>
+            <div class="notice-box">
+                <strong>Attachments</strong><br>
+                Digital copies are appended to this transmission in PDF format. Compliance review is mandatory prior to authorization.
             </div>
             
             <div class="action-section">
-                <a href="https://yourcompany.com/approvals" class="action-button">
-                    Review & Approve Invoices
+                <a href="https://yourcompany.com/approvals" class="google-button">
+                    View and Approve
                 </a>
             </div>
             
-            <div class="message">
-                <p><strong>Need help?</strong> Contact the Accounts Payable team at <a href="mailto:ap@company.com" style="color: #667eea;">ap@company.com</a> or call ext. 1234.</p>
-            </div>
-            
-            <div class="company-info">
-                <strong>{{ rows[0].company_name }}</strong><br>
-                {{ rows[0].company_address }}<br>
-                Finance Department
+            <div class="message" style="border-top: 1px solid #f1f3f4; padding-top: 20px;">
+                <strong>Support Resources</strong><br>
+                For technical assistance, contact the Finance Operations team at <a href="mailto:ap@company.com" style="color: #1a73e8;">ap@company.com</a>.
             </div>
         </div>
         
         <div class="footer">
-            <p><strong>This is an automated notification</strong></p>
-            <p>You are receiving this because you are listed as the approver for these invoices.</p>
-            <p style="margin-top: 15px;">
-                <a href="#">View in Browser</a> | 
-                <a href="#">Approval Policy</a> | 
-                <a href="#">Contact Support</a>
+            <p><strong>{{ rows[0].company_name }}</strong></p>
+            <p>{{ rows[0].company_address }}</p>
+            <p>This is a system-generated notification regarding your assigned administrative responsibilities.</p>
+            <p style="margin-top: 16px;">
+                <a href="#">Visit Dashboard</a> &nbsp;•&nbsp; 
+                <a href="#">Preferences</a>
             </p>
-            <p style="margin-top: 15px; font-size: 12px; color: #999;">
-                © {{ date.now.year }} {{ rows[0].company_name }}. All rights reserved.
+            <p style="color: #9aa0a6; font-size: 11px;">
+                © {{ date.now.year }} {{ rows[0].company_name }}. Data Classification: Internal.
             </p>
         </div>
     </div>
 </body>
 </html>
-{{~ end ~}}

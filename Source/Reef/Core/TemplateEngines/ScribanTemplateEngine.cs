@@ -109,6 +109,19 @@ public class ScribanTemplateEngine : ITemplateEngine
             // Import helpers
             scriptObject.Import(new TemplateHelpers());
 
+            // Add first row's columns directly to root context for convenience
+            // This allows {{ column_name }} syntax in addition to {{ rows[0].column_name }}
+            if (cleanData.Count > 0)
+            {
+                foreach (var kvp in cleanData[0])
+                {
+                    // Only add if not already in scriptObject (avoid conflicts with built-in properties)
+                    if (!scriptObject.ContainsKey(kvp.Key))
+                    {
+                        scriptObject.Add(kvp.Key, kvp.Value);
+                    }
+                }
+            }
 
             // Add any additional context
             if (context != null)
