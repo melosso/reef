@@ -45,10 +45,13 @@ window.editConnection = function(id) {
         
         // Update modal title to "Edit Connection"
         document.getElementById('connection-modal-title').textContent = 'Edit Connection';
-        
+
         // Show the more options menu
         document.getElementById('connection-more-options').classList.remove('hidden');
-        
+
+        // Hide the generate connection string button when editing
+        document.getElementById('generate-connection-string-btn').classList.add('hidden');
+
         // Update the toggle text based on current status
         const toggleText = document.getElementById('connection-toggle-text');
         toggleText.textContent = conn.isActive ? 'Disable' : 'Enable';

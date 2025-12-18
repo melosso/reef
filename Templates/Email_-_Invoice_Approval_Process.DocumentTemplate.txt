@@ -1,0 +1,166 @@
+{{! format: pdf }}
+{{! page-size: A4 }}
+{{! orientation: portrait }}
+{{! margin-top: 15mm }}
+{{! margin-bottom: 15mm }}
+{{! margin-left: 20mm }}
+{{! margin-right: 20mm }}
+
+{{# style }}
+.header-title { 
+    font-size: 32px; 
+    color: #667eea; 
+    font-weight: 700; 
+    margin: 0; 
+}
+.header-subtitle { 
+    font-size: 14px; 
+    color: #666; 
+    text-transform: uppercase; 
+    margin-top: 5px; 
+}
+.info-box { 
+    background: #f8f9fa; 
+    padding: 15px; 
+    border-radius: 6px; 
+    margin-bottom: 20px; 
+}
+.info-label { 
+    font-size: 11px; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+    color: #667eea; 
+}
+.info-value { 
+    font-size: 15px; 
+    font-weight: 700; 
+    color: #333; 
+}
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+th { 
+    background: #667eea; 
+    color: white; 
+    padding: 12px; 
+    text-align: left; 
+    font-size: 11px; 
+    text-transform: uppercase; 
+}
+td { 
+    padding: 12px; 
+    border-bottom: 1px solid #e0e0e0; 
+}
+.amount { 
+    text-align: right; 
+    font-weight: 600; 
+}
+.total { 
+    font-size: 18px; 
+    font-weight: 700; 
+    color: #667eea; 
+}
+.badge-high { 
+    background: #ff6b6b; 
+    color: white; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+}
+.badge-medium { 
+    background: #ffa726; 
+    color: white; 
+    padding: 8px 16px; 
+    border-radius: 4px; 
+}
+{{/ style }}
+
+{{# header }}
+<h1 class="header-title">INVOICE</h1>
+<p style="text-align: right;">
+<strong>{{ rows[0].invoice_number }}</strong><br/>
+Invoice Date: {{ rows[0].invoice_date | date.to_string "%B %d, %Y" }}
+Due Date: {{ rows[0].due_date | date.to_string "%B %d, %Y" }}
+<br>&nbsp;
+</p>
+
+<div class="info-box">
+  <p class="info-label"><strong>Invoiced To</strong></p>
+  <p class="info-value">{{ rows[0].company_name }}</p>
+  <p>{{ rows[0].company_address }}</p>
+  <p><u>Department:</u> {{ rows[0].department }}</p>
+  <p><u>Reference:</u> {{ rows[0].reference }}</p>
+</div>
+
+<div class="info-box">
+  <br>&nbsp;
+  <p class="info-label"><strong>Vendor Details</strong></p>
+  <p class="info-value">{{ rows[0].vendor_name }}</p>
+  <p>{{ rows[0].vendor_address }}</p>
+  <p>{{ rows[0].vendor_email }}</p>
+  <p>{{ rows[0].vendor_phone }}</p>
+</div>
+{{/ header }}
+
+{{# content }}
+<h4>Invoice Details</h4>
+
+<table>
+  <tr>
+    <th>Description</th>
+    <th>Category</th>
+    <th class="amount">Amount</th>
+  </tr>
+  <tr>
+    <td>{{ rows[0].description }}</td>
+    <td>{{ rows[0].category }}</td>
+    <td class="amount">€ {{ rows[0].subtotal | math.format '0.00' }}</td>
+  </tr>
+</table>
+
+<p style="text-align: right;">
+  <strong>Subtotal:</strong> € {{ rows[0].subtotal | math.format '0.00' }}<br/>
+  <strong>Tax:</strong> € {{ rows[0].tax_amount | math.format '0.00' }}<br/>
+  <span class="total">Total Due: € {{ rows[0].total_amount | math.format '0.00' }}</span>
+</p>
+
+<br>&nbsp;
+
+<div class="info-box">
+<p class="info-label"><strong>Payment Terms</strong></p>
+<p class="info-value">{{ rows[0].payment_terms }} - {{ rows[0].payment_details }}</p>
+<br>&nbsp;
+</div>
+
+<div class="info-box">
+  <p class="info-value"><strong>Status:</strong> {{ rows[0].invoice_status }}</p>
+  <p><strong>Approver:</strong> {{ rows[0].approver_name }}</p>
+  <p><strong>Title:</strong> {{ rows[0].approver_title }}</p>
+  <br>&nbsp;
+</div>
+
+{{~ if rows[0].priority == 1 ~}}
+<p class="badge-high">
+  <strong>Immediate Attention Required</strong><br>
+</p>
+{{~ else if rows[0].priority == 2 ~}}
+<p class="badge-medium">
+  Please Review <br>
+</p>
+{{~ end ~}}
+
+<div class="info-box">
+  <p><u>Approval Instructions</u></p>
+  <p>1. Verify invoice details match the purchase order or contract terms</p>
+  <p>2. Confirm vendor information is accurate and authorized</p>
+  <p>3. Check amounts against budget allocations for {{ rows[0].department }}</p>
+  <p>4. Review payment terms and due date</p>
+  <p>5. Approve or reject via the approval system or reply to this notification</p>
+</div>
+{{/ content }}
+
+{{# footer }}
+<p style="text-align: center; font-size: 10px; color: #999;"><strong>
+  {{ rows[0].company_name }}</strong> - Finance Department. This invoice {{ rows[0].invoice_number }} was generated on {{ date.now | date.to_string "%B %d, %Y %I:%M %p" }} and may require approval before payment can be processed.
+</p>
+{{/ footer }}

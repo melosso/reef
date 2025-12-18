@@ -1,0 +1,43 @@
+{{! format: pdf }}
+{{! pageSize: A4 }}
+{{! orientation: Portrait }}
+
+{{# header }}
+{{ rows[0].company_name }}
+{{ rows[0].company_address }} | {{ rows[0].company_phone }}
+{{/ header }}
+
+{{# content }}
+<h2>Invoice {{ rows[0].invoice_number }}</h2>
+
+<p><strong>Date:</strong> {{ rows[0].invoice_date | date.to_string '%d-%m-%Y' }}<br/>
+<strong>Customer:</strong> {{ rows[0].customer_name }}<br/>
+{{ rows[0].customer_address }}</p>
+
+<table>
+  <tr>
+    <th>Description</th>
+    <th>Qty</th>
+    <th>Unit Price</th>
+    <th>Total</th>
+  </tr>
+  {{~ for row in rows ~}}
+  <tr>
+    <td>{{ row.item_description }}</td>
+    <td>{{ row.quantity }}</td>
+    <td>€{{ row.unit_price | math.format '0.00' }}</td>
+    <td>€{{ row.line_total | math.format '0.00' }}</td>
+  </tr>
+  {{~ end ~}}
+</table>
+
+<p>
+<strong>Subtotal:</strong> €{{ rows[0].subtotal | math.format '0.00' }}<br/>
+<strong>Taxes:</strong> €{{ rows[0].tax_amount | math.format '0.00' }}<br/>
+<strong>Total:</strong> €{{ rows[0].total_amount | math.format '0.00' }}
+</p>
+{{/ content }}
+
+{{# footer }}
+{{ rows[0].company_terms }}
+{{/ footer }}

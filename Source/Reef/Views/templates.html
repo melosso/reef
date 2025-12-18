@@ -204,6 +204,10 @@
                             <option value="">Select type...</option>
                             <option value="ScribanTemplate">Scriban Template (CSV, XML, JSON, EDI, etc.)</option>
                             
+                            <!-- Document Generation -->
+                            <option disabled style="color: #cbd5e0;">──────────</option>
+                            <option value="DocumentTemplate">Document Template (PDF, DOCX, ODT)</option>
+                            
                             <!-- Built-in SQL Server Transforms -->
                             <option disabled style="color: #cbd5e0;">──────────</option>
                             <option value="XsltTransform">XSLT Transform</option>
@@ -283,6 +287,51 @@
                         <input type="checkbox" id="template-active" checked
                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <label for="template-active" class="ml-2 block text-sm text-gray-900">Active</label>
+                    </div>
+                </div>
+
+                <!-- Document Generation Options (shown when type=DocumentTemplate) -->
+                <div id="document-options-panel" class="hidden border-t border-gray-200 pt-4 mt-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                        <i data-lucide="file-text" class="h-4 w-4 mr-2"></i>
+                        Document Options
+                    </h4>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Page Size</label>
+                            <select id="doc-page-size" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="A4">A4 (210 × 297 mm)</option>
+                                <option value="Letter">Letter (8.5 × 11 in)</option>
+                                <option value="Legal">Legal (8.5 × 14 in)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
+                            <select id="doc-orientation" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Portrait">Portrait</option>
+                                <option value="Landscape">Landscape</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="doc-page-numbers" checked 
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">Include page numbers (Page X of Y)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Watermark (optional)</label>
+                        <input type="text" id="doc-watermark" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
+                               placeholder="e.g., DRAFT, CONFIDENTIAL">
+                        <span class="text-xs text-gray-400 mt-1 block">Displayed diagonally across each page</span>
                     </div>
                 </div>
                 
@@ -588,6 +637,15 @@
             document.getElementById('preview-btn').classList.add('hidden');
             document.getElementById('validation-status').classList.add('hidden');
 
+            // Hide document options panel
+            document.getElementById('document-options-panel').classList.add('hidden');
+            
+            // Reset document options to defaults
+            document.getElementById('doc-page-size').value = 'A4';
+            document.getElementById('doc-orientation').value = 'Portrait';
+            document.getElementById('doc-page-numbers').checked = true;
+            document.getElementById('doc-watermark').value = '';
+
             // Initialize output format dropdown with default options
             // (when no template type is selected, show all basic options)
             const formatSelect = document.getElementById('template-outputFormat');
@@ -702,9 +760,13 @@
                                         </span>
                                     </div>
                                     ${template.description ? `<p class="text-sm text-gray-600 mb-2 disable-select">${escapeHtml(template.description)}</p>` : ''}
-                                    <div class="flex items-center space-x-4 text-xs text-gray-500 mb-2">
-                                        <span><i data-lucide="tag" class="h-3 w-3 inline mr-1"></i>${typeLabel}</span>
-                                        <span><i data-lucide="file-output" class="h-3 w-3 inline mr-1"></i>${outputFormat}</span>
+                                    <div class="flex items-center space-x-2 text-xs mb-2">
+                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded cursor-pointer hover:bg-gray-200 transition" data-type-filter="${escapeHtml(typeLabel)}">
+                                            <i data-lucide="tag" class="h-3 w-3 mr-1"></i>${typeLabel}
+                                        </span>
+                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-output-filter="${escapeHtml(outputFormat)}">
+                                            <i data-lucide="file-output" class="h-3 w-3 mr-1"></i>${outputFormat}
+                                        </span>
                                     </div>
                                     ${template.tags ? `<div class="flex flex-wrap gap-1">
                                         ${template.tags.split(',').map(tag => `
@@ -730,10 +792,68 @@
                     `;
                 }).join('');
 
-                // Setup tag click handlers
-                templateFilter.setupTagClickHandlers('[data-tag-filter]');
+                // Setup custom tag click handlers that add to search bar
+                setupTemplateTagClickHandlers();
             }
             queueLucideRender();
+        }
+
+        function setupTemplateTagClickHandlers() {
+            // Helper function to add term to search
+            const addToSearch = (term) => {
+                const searchInput = document.getElementById('search-input');
+                if (!searchInput) return;
+
+                const currentSearch = searchInput.value.toLowerCase();
+                const termLower = term.toLowerCase();
+
+                // Only add if not already in search
+                if (!currentSearch.includes(termLower)) {
+                    // Add term to search (append with space if search is not empty)
+                    const newSearch = currentSearch ? `${searchInput.value} ${term}` : term;
+                    searchInput.value = newSearch;
+
+                    // Briefly flash the search input to indicate the change
+                    searchInput.classList.add('ring-2', 'ring-blue-400');
+                    setTimeout(() => {
+                        searchInput.classList.remove('ring-2', 'ring-blue-400');
+                    }, 500);
+
+                    // Trigger the filter update
+                    templateFilter.setSearchTerm(newSearch);
+                    window.dispatchEvent(new CustomEvent('filterChange', { detail: templateFilter }));
+                }
+            };
+
+            // Handle tag clicks
+            document.querySelectorAll('[data-tag-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const tag = element.getAttribute('data-tag-filter');
+                    if (tag) addToSearch(tag);
+                });
+            });
+
+            // Handle type badge clicks
+            document.querySelectorAll('[data-type-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const type = element.getAttribute('data-type-filter');
+                    if (type) addToSearch(type);
+                });
+            });
+
+            // Handle output format badge clicks
+            document.querySelectorAll('[data-output-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const output = element.getAttribute('data-output-filter');
+                    if (output) addToSearch(output);
+                });
+            });
         }
 
         async function editTemplate(id) {
@@ -770,10 +890,22 @@
                         typeSelect.value = template.type;
                         // Update output format options based on template type
                         updateOutputFormatOptions(template.type);
+                        
+                        // Show/hide document options panel
+                        const documentOptionsPanel = document.getElementById('document-options-panel');
+                        if (template.type === 'DocumentTemplate') {
+                            documentOptionsPanel.classList.remove('hidden');
+                            
+                            // Parse directives from template content
+                            const templateContent = template.template || '';
+                            parseAndPopulateDocumentOptions(templateContent);
+                        } else {
+                            documentOptionsPanel.classList.add('hidden');
+                        }
                     }
 
                     // Initialize validation state for the loaded template
-                    isValidationRequired = isScribanTemplate(template.type);
+                    isValidationRequired = isScribanTemplate(template.type) || template.type === 'DocumentTemplate';
                     if (isValidationRequired) {
                         // For existing templates, consider them validated since they were saved before
                         isValidated = true;
@@ -1191,6 +1323,11 @@
                 defaultFormat: 'CSV',
                 description: 'Supports any output format'
             },
+            'DocumentTemplate': {
+                formats: ['PDF', 'DOCX', 'ODT'],
+                defaultFormat: 'PDF',
+                description: 'Generate documents with page layout'
+            },
             'XsltTransform': {
                 formats: ['XML'],
                 defaultFormat: 'XML',
@@ -1260,18 +1397,69 @@
             formatSelect.value = config.defaultFormat;
         }
 
+        /**
+         * Parse document directives from template content and populate UI fields
+         * Extracts {{! directive: value }} patterns and sets corresponding form values
+         */
+        function parseAndPopulateDocumentOptions(templateContent) {
+            // Default values
+            let pageSize = 'A4';
+            let orientation = 'Portrait';
+            let includePageNumbers = true;
+            let watermark = '';
+            
+            // Parse directives using regex
+            const directiveRegex = /\{\{!\s*(\w+):\s*([^\}]+)\}\}/g;
+            let match;
+            
+            while ((match = directiveRegex.exec(templateContent)) !== null) {
+                const key = match[1].toLowerCase();
+                const value = match[2].trim();
+                
+                switch (key) {
+                    case 'pagesize':
+                        pageSize = value;
+                        break;
+                    case 'orientation':
+                        orientation = value;
+                        break;
+                    case 'includepagenumbers':
+                        includePageNumbers = value.toLowerCase() !== 'false';
+                        break;
+                    case 'watermark':
+                        watermark = value;
+                        break;
+                }
+            }
+            
+            // Populate form fields
+            document.getElementById('doc-page-size').value = pageSize;
+            document.getElementById('doc-orientation').value = orientation;
+            document.getElementById('doc-page-numbers').checked = includePageNumbers;
+            document.getElementById('doc-watermark').value = watermark;
+        }
+
         function onTemplateTypeChange() {
             const type = document.getElementById('template-type').value;
             const validateBtn = document.getElementById('validate-btn');
             const previewBtn = document.getElementById('preview-btn');
             const validationStatus = document.getElementById('validation-status');
+            const documentOptionsPanel = document.getElementById('document-options-panel');
 
             // Update output format options based on template type
             if (type) {
                 updateOutputFormatOptions(type);
             }
 
-            isValidationRequired = isScribanTemplate(type);
+            // Show/hide document options panel
+            if (type === 'DocumentTemplate') {
+                documentOptionsPanel.classList.remove('hidden');
+            } else {
+                documentOptionsPanel.classList.add('hidden');
+            }
+
+            // Enable validation for both Scriban and DocumentTemplate types
+            isValidationRequired = isScribanTemplate(type) || type === 'DocumentTemplate';
 
             if (isValidationRequired) {
                 validateBtn.classList.remove('hidden');
@@ -1284,7 +1472,7 @@
                 validateBtn.classList.add('hidden');
                 previewBtn.classList.add('hidden');
                 validationStatus.classList.add('hidden');
-                isValidated = true; // Non-Scriban templates don't need validation
+                isValidated = true; // Non-Scriban/non-Document templates don't need validation
             }
 
             queueLucideRender();
@@ -1329,7 +1517,8 @@
             const type = document.getElementById('template-type').value;
             const content = document.getElementById('template-content').value;
             
-            if (!isScribanTemplate(type)) {
+            // Support both Scriban and DocumentTemplate validation
+            if (!isScribanTemplate(type) && type !== 'DocumentTemplate') {
                 return;
             }
             
@@ -1360,7 +1549,7 @@
                     isValidated = true;
                     lastValidatedContent = content;
                     updateValidationStatus('valid');
-                    showToast('Template is valid!', 'success');
+                    showToast(result.message || 'Template is valid!', 'success');
                 } else {
                     isValidated = false;
                     updateValidationStatus('invalid');
@@ -1726,18 +1915,50 @@
                 return;
             }
 
-            // Check if Scriban template validation is required and completed
-            if (isScribanTemplate(type) && !isValidated) {
-                showToast('Please validate the Scriban template before saving', 'error');
+            // Check if validation is required and completed (for both Scriban and DocumentTemplate)
+            if ((isScribanTemplate(type) || type === 'DocumentTemplate') && !isValidated) {
+                showToast('Please validate the template before saving', 'error');
                 updateValidationStatus('pending');
                 return;
+            }
+
+            let templateContent = document.getElementById('template-content').value;
+
+            // If DocumentTemplate, inject directives at the top of the template
+            if (type === 'DocumentTemplate') {
+                const pageSize = document.getElementById('doc-page-size').value;
+                const orientation = document.getElementById('doc-orientation').value;
+                const includePageNumbers = document.getElementById('doc-page-numbers').checked;
+                const watermark = document.getElementById('doc-watermark').value.trim();
+                const outputFormat = document.getElementById('template-outputFormat').value;
+
+                // Build directives section
+                let directives = `{{! format: ${outputFormat.toLowerCase()} }}\n`;
+                directives += `{{! pageSize: ${pageSize} }}\n`;
+                directives += `{{! orientation: ${orientation} }}\n`;
+                
+                if (!includePageNumbers) {
+                    directives += `{{! includePageNumbers: false }}\n`;
+                }
+                
+                if (watermark) {
+                    directives += `{{! watermark: ${watermark} }}\n`;
+                }
+                
+                directives += '\n';
+
+                // Remove existing directives if present (for updates)
+                templateContent = templateContent.replace(/\{\{!\s*\w+:.*?\}\}\n*/g, '');
+                
+                // Prepend directives to template content
+                templateContent = directives + templateContent.trim();
             }
 
             const template = {
                 name: document.getElementById('template-name').value,
                 description: document.getElementById('template-description').value,
                 type: type,
-                template: document.getElementById('template-content').value,
+                template: templateContent,
                 outputFormat: document.getElementById('template-outputFormat').value,
                 tags: document.getElementById('template-tags').value,
                 isActive: document.getElementById('template-active').checked
@@ -1997,7 +2218,7 @@
             // Handles files with version numbers like: ERP_Example_2.1_ScribanTemplate.xml
 
             const validTypes = [
-                'ScribanTemplate', 'XsltTransform', 'ForXmlRaw', 'ForXmlAuto',
+                'ScribanTemplate', 'DocumentTemplate', 'XsltTransform', 'ForXmlRaw', 'ForXmlAuto',
                 'ForXmlPath', 'ForXmlExplicit', 'ForJson', 'ForJsonPath'
             ];
 
@@ -2009,7 +2230,10 @@
                 'txt': 'Text',
                 'text': 'Text',
                 'html': 'HTML',
-                'htm': 'HTML'
+                'htm': 'HTML',
+                'pdf': 'PDF',
+                'docx': 'DOCX',
+                'odt': 'ODT'
             };
 
             // Get extension from end of filename

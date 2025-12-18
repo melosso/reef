@@ -1,0 +1,42 @@
+{{! format: pdf }}
+{{! pageSize: A4 }}
+{{! orientation: Landscape }}
+
+{{# header }}
+<strong>Picking List</strong>
+Order: {{ rows[0].order_number }} | Date: {{ rows[0].pick_date | date.to_string "%d-%m-%Y" }}
+{{/ header }}
+
+{{# content }}
+<p><strong>Ship To:</strong>
+{{ rows[0].customer_name }}
+{{ rows[0].ship_address }}</p>
+
+<table>
+  <tr>
+    <th>Picked?</th>
+    <th>Item code</th>
+    <th>Description</th>
+    <th>Location</th>
+    <th>Quantity</th>
+  </tr>
+  {{~ for row in rows ~}}
+  <tr>
+    <td>___</td>
+    <td>{{ row.sku }}</td>
+    <td>{{ row.description }}</td>
+    <td>{{ row.warehouse_location }}</td>
+    <td>{{ row.quantity }}</td>
+  </tr>
+  {{~ end ~}}
+</table>
+
+<p>
+Picker:          __________________________<br/>
+Checked by:  __________________________<br/>
+Date:            __________________________</p>
+{{/ content }}
+
+{{# footer }}
+Ensure all items are verified before shipping. This page is for <strong>internal usage only</strong>.
+{{/ footer }}

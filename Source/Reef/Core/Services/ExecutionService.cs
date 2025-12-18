@@ -4,6 +4,7 @@ using Reef.Core.Formatters;
 using Reef.Core.Destinations;
 using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
+using Reef.Core.DocumentGeneration;
 using Serilog;
 using System.Diagnostics;
 
@@ -23,6 +24,7 @@ public class ExecutionService
     private readonly AuditService _auditService;
     private readonly QueryTemplateService _templateService;
     private readonly ITemplateEngine _templateEngine;
+    private readonly DocumentTemplateEngine _documentEngine;
     private readonly DeltaSyncService _deltaSyncService;
     private readonly EmailExportService _emailExportService;
     private readonly EmailApprovalService _emailApprovalService;
@@ -38,6 +40,7 @@ public class ExecutionService
         ConnectionService connectionService,
         AuditService auditService,
         QueryTemplateService templateService,
+        DocumentTemplateEngine documentEngine,
         DeltaSyncService deltaSyncService,
         EmailExportService emailExportService,
         EmailApprovalService emailApprovalService,
@@ -53,6 +56,7 @@ public class ExecutionService
         _templateService = templateService;
         _configuration = configuration;
         _templateEngine = new ScribanTemplateEngine(_configuration);
+        _documentEngine = documentEngine;
         _deltaSyncService = deltaSyncService;
         _emailExportService = emailExportService;
         _emailApprovalService = emailApprovalService;
@@ -797,6 +801,31 @@ public class ExecutionService
                             Log.Debug("Native template transformation completed. Output length: {Length} chars, Row count: {RowCount}", 
                                 transformedContent?.Length ?? 0, transformResult.RowCount);
                         }
+                        else if (template.Type == QueryTemplateType.DocumentTemplate)
+                        {
+                            // Document Template (PDF, DOCX, ODT) - Use DocumentTemplateEngine
+                            Log.Information("Applying document template '{TemplateName}' ({OutputFormat})", 
+                                template.Name, template.OutputFormat);
+                            
+                            // Build context for filename template resolution
+                            var documentContext = new Dictionary<string, object>
+                            {
+                                { "profile_name", profile.Name },
+                                { "profile_id", profile.Id.ToString() },
+                                { "execution_id", executionId.ToString() }
+                            };
+                            
+                            // DocumentTemplateEngine returns file path directly - store in transformedContent as marker
+                            var documentPath = await _documentEngine.TransformAsync(
+                                rows, 
+                                template.Template, 
+                                documentContext, 
+                                profile.FilenameTemplate);
+                            transformedContent = $"__DOCUMENT_PATH__:{documentPath}";
+                            actualOutputFormat = template.OutputFormat; // PDF, DOCX, or ODT
+                            
+                            Log.Debug("Document generation completed. File: {FilePath}", documentPath);
+                        }
                         else
                         {
                             // Custom Template (Scriban) - Use TemplateEngine
@@ -835,8 +864,40 @@ public class ExecutionService
                 long fileSize;
                 if (!string.IsNullOrEmpty(transformedContent))
                 {
+                    // Check if this is a document template (file path marker)
+                    if (transformedContent.StartsWith("__DOCUMENT_PATH__:"))
+                    {
+                        // Document already generated - extract path and use it
+                        var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
+                        
+                        // Copy the document to temp to avoid file locking issues with the original
+                        // This allows the original file to be locked by viewers/antivirus while we upload the copy
+                        var tempCopyPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(documentPath));
+                        
+                        // Retry copy operation in case of temporary lock
+                        int copyRetries = 5;
+                        while (copyRetries > 0)
+                        {
+                            try
+                            {
+                                File.Copy(documentPath, tempCopyPath, overwrite: true);
+                                break;
+                            }
+                            catch (IOException) when (copyRetries > 1)
+                            {
+                                Log.Debug("File copy locked, waiting 200ms before retry (retries left: {Retries})", copyRetries - 1);
+                                await Task.Delay(200);
+                                copyRetries--;
+                            }
+                        }
+                        
+                        tempFilePath = tempCopyPath;
+                        fileSize = new FileInfo(tempFilePath).Length;
+                        finalPath = tempFilePath;
+                        Log.Debug("Copied document to temp: {TempPath}, Size: {FileSize} bytes", tempFilePath, fileSize);
+                    }
                     // Template was applied - check if this is email test mode with multiple documents
-                    if (profile.IsEmailExport && destinationOverrideId.HasValue)
+                    else if (profile.IsEmailExport && destinationOverrideId.HasValue)
                     {
                         // Split HTML documents and save separately
                         var htmlDocs = SplitHtmlDocuments(transformedContent);
@@ -2202,9 +2263,35 @@ public class ExecutionService
             
             if (!string.IsNullOrEmpty(transformedContent))
             {
-                // Template was applied, write directly
-                await File.WriteAllTextAsync(tempFilePath, transformedContent);
-                fileSizeBytes = new FileInfo(tempFilePath).Length;
+                // Check if this is a document template (file path marker)
+                if (transformedContent.StartsWith("__DOCUMENT_PATH__:"))
+                {
+                    // Document already generated - extract path and use it
+                    var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
+                    
+                    // Copy document to split temp location with correct filename
+                    File.Copy(documentPath, tempFilePath, overwrite: true);
+                    fileSizeBytes = new FileInfo(tempFilePath).Length;
+                    
+                    // Clean up the original generated document
+                    try
+                    {
+                        File.Delete(documentPath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "Failed to delete original document: {DocumentPath}", documentPath);
+                    }
+                    
+                    Log.Debug("Split '{SplitKey}' document copied to {FilePath} ({FileSize} bytes)",
+                        splitKey, tempFilePath, fileSizeBytes);
+                }
+                else
+                {
+                    // Template was applied, write directly
+                    await File.WriteAllTextAsync(tempFilePath, transformedContent);
+                    fileSizeBytes = new FileInfo(tempFilePath).Length;
+                }
             }
             else
             {
@@ -2329,7 +2416,22 @@ public class ExecutionService
             throw new InvalidOperationException($"Template {profile.TemplateId} not found");
         }
         
-        // Use the template engine's TransformAsync method
+        // Check if this is a DocumentTemplate (PDF, DOCX, ODT)
+        if (template.Type == QueryTemplateType.DocumentTemplate)
+        {
+            Log.Information("Applying document template '{TemplateName}' to split '{SplitKey}' ({OutputFormat})", 
+                template.Name, splitKey, template.OutputFormat);
+            
+            // DocumentTemplateEngine returns file path directly - use marker format
+            var documentPath = await _documentEngine.TransformAsync(splitRows, template.Template);
+            
+            Log.Information("Document generation completed for split '{SplitKey}'. File: {FilePath}", 
+                splitKey, documentPath);
+            
+            return $"__DOCUMENT_PATH__:{documentPath}";
+        }
+        
+        // Use the template engine's TransformAsync method for Scriban templates
         return await _templateEngine.TransformAsync(splitRows, template.Template);
     }
 
@@ -2623,6 +2725,9 @@ public class ExecutionService
             "xml" => "xml",
             "csv" => "csv",
             "yaml" => "yaml",
+            "pdf" => "pdf",
+            "docx" => "docx",
+            "odt" => "odt",
             _ => "txt"
         };
     }

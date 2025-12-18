@@ -218,9 +218,12 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
                         Connection String
-                        <a href="https://www.connectionstrings.com/" target="_blank" class="ml-1 text-gray-400 cursor-help" data-tooltip="If you don't know how to build the connection string, click here!" data-tooltip-position="bottom">
+                        <a href="https://www.connectionstrings.com/" target="_blank" class="ml-1 text-gray-400 cursor-help transition duration-200 ease-in-out active:scale-95" data-tooltip="If you don't know how to build the connection string, click here!" data-tooltip-position="bottom">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                         </a>
+                        <button type="button" id="generate-connection-string-btn" onclick="generateConnectionStringExample()" class="ml-1 text-gray-400 hover:text-blue-600 cursor-pointer transition duration-200 ease-in-out active:scale-95" data-tooltip="Generate connection string example" data-tooltip-position="bottom">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="plus" class="lucide lucide-plus w-4 h-4"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+                        </button>
                     </label>
                     <textarea id="connection-string" required rows="3"
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -327,7 +330,32 @@
             document.getElementById('add-connection-modal').classList.remove('hidden');
             document.getElementById('connection-modal-title').textContent = 'Add New Connection';
             document.getElementById('connection-more-options').classList.add('hidden');
+            document.getElementById('generate-connection-string-btn').classList.remove('hidden');
             queueLucideRender();
+        }
+
+        function generateConnectionStringExample() {
+            const type = document.getElementById('connection-type').value;
+            const connectionStringField = document.getElementById('connection-string');
+
+            let exampleConnectionString = '';
+
+            switch(type) {
+                case 'SqlServer':
+                    exampleConnectionString = 'Server=localhost;Database=mydb;User Id=sa;Password=***;TrustServerCertificate=True;';
+                    break;
+                case 'MySQL':
+                    exampleConnectionString = 'Server=localhost;Port=3306;Database=mydb;User=root;Password=***;';
+                    break;
+                case 'PostgreSQL':
+                    exampleConnectionString = 'Host=localhost;Database=mydb;Username=postgres;Password=***;';
+                    break;
+                default:
+                    exampleConnectionString = 'Server=localhost;Database=mydb;User Id=user;Password=***;';
+            }
+
+            connectionStringField.value = exampleConnectionString;
+            showToast('Connection string example generated!', 'success');
         }
 
         function closeAddConnectionModal() {

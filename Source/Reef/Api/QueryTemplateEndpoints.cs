@@ -209,10 +209,32 @@ public static class QueryTemplatesEndpoints
         // POST: Validate Scriban template
         group.MapPost("/validate", (
             [FromBody] ValidateTemplateRequest request,
-            [FromServices] IConfiguration configuration) =>
+            [FromServices] IConfiguration configuration,
+            [FromServices] Reef.Core.DocumentGeneration.DocumentTemplateEngine? documentEngine) =>
         {
             try
             {
+                // Validate DocumentTemplate
+                if (request.Type == QueryTemplateType.DocumentTemplate)
+                {
+                    if (documentEngine == null)
+                    {
+                        return Results.Ok(new ValidateTemplateResponse
+                        {
+                            IsValid = false,
+                            ErrorMessage = "Document template engine not available"
+                        });
+                    }
+
+                    var (docIsValid, docErrorMessage) = documentEngine.ValidateTemplate(request.Template);
+                    return Results.Ok(new ValidateTemplateResponse
+                    {
+                        IsValid = docIsValid,
+                        ErrorMessage = docErrorMessage,
+                        Message = docIsValid ? "Document template is valid" : null
+                    });
+                }
+
                 // Only validate Scriban templates
                 if (request.Type != QueryTemplateType.XmlTemplate &&
                     request.Type != QueryTemplateType.JsonTemplate &&

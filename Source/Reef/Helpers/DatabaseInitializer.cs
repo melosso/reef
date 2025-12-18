@@ -224,6 +224,7 @@ public class DatabaseInitializer
                 SplitFilenameTemplate TEXT NULL DEFAULT '{profile}_{splitkey}_{timestamp}.{format}',
                 SplitBatchSize INTEGER NOT NULL DEFAULT 1,
                 PostProcessPerSplit INTEGER NOT NULL DEFAULT 0,
+                EmailGroupBySplitKey INTEGER NOT NULL DEFAULT 0,
 
                 -- Dependencies
                 DependsOnProfileIds TEXT NULL,
@@ -1398,10 +1399,10 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "NotificationEmailTemplate", "CTAButtonText", "TEXT NULL");
         await AddColumnIfNotExistsAsync(connection, "NotificationEmailTemplate", "CTAUrlOverride", "TEXT NULL");
 
-        // Legacy migrations removed: All columns are now defined in base table schemas
-        // since there are no production customers yet. All new installations start with the complete schema.
-        //
-        // If future migrations are needed for backward compatibility:
+        // Add EmailGroupBySplitKey for email export grouping
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailGroupBySplitKey", "INTEGER NOT NULL DEFAULT 0");
+
+        // If future migrations are needed for compatibility:
         // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
 
         Log.Debug("Database schema migrations completed");

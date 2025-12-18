@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Approval Request</title>
+    <style>
+        /* Google UI Technical Styles */
+        body {
+            font-family: 'Google Sans', Roboto, 'Segoe UI', Arial, sans-serif;
+            line-height: 1.5;
+            color: #3c4043;
+            background-color: #f1f3f4;
+            margin: 0;
+            padding: 40px 10px;
+        }
+        .email-container {
+            max-width: 600px;
+            background-color: #ffffff;
+            margin: 0 auto;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .header {
+            padding: 32px 40px 24px 40px;
+            text-align: left;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 500;
+            color: #1a73e8;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            color: #70757a;
+            font-size: 14px;
+        }
+        .content {
+            padding: 0 40px 40px 40px;
+        }
+        .greeting {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #202124;
+        }
+        .message {
+            margin-bottom: 24px;
+            color: #5f6368;
+            font-size: 14px;
+        }
+        /* Data Table Implementation */
+        .invoice-summary-card {
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            margin: 24px 0;
+            overflow: hidden;
+        }
+        .summary-header {
+            background-color: #f8f9fa;
+            padding: 12px 16px;
+            border-bottom: 1px solid #e8eaed;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #5f6368;
+        }
+        .invoice-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .invoice-item {
+            padding: 16px;
+            border-bottom: 1px solid #f1f3f4;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .invoice-item:last-child {
+            border-bottom: none;
+        }
+        .invoice-details {
+            flex: 1;
+        }
+        .invoice-number {
+            font-weight: 500;
+            color: #202124;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        .invoice-meta {
+            font-size: 12px;
+            color: #70757a;
+            margin-top: 4px;
+        }
+        .invoice-amount {
+            font-size: 14px;
+            font-weight: 500;
+            color: #202124;
+            text-align: right;
+        }
+        /* Chip/Badge Components */
+        .priority-chip {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-left: 12px;
+        }
+        .priority-1 { background: #fce8e6; color: #d93025; } /* High */
+        .priority-2 { background: #fef7e0; color: #af5d00; } /* Medium */
+        .priority-3 { background: #e8f0fe; color: #1a73e8; } /* Normal */
+
+        .total-row {
+            background: #ffffff;
+            border-top: 2px solid #f1f3f4;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            font-weight: 500;
+            color: #202124;
+        }
+        .notice-box {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 16px;
+            margin: 24px 0;
+            font-size: 13px;
+            color: #5f6368;
+            border-left: 4px solid #bdc1c6;
+        }
+        /* Primary Action Component */
+        .action-section {
+            text-align: left;
+            margin: 32px 0;
+        }
+        .google-button {
+            display: inline-block;
+            background-color: #1a73e8;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 10px 24px;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .google-button:hover {
+            background-color: #1765cc;
+            box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+        }
+        .footer {
+            padding: 32px 40px;
+            background-color: #f8f9fa;
+            color: #70757a;
+            font-size: 12px;
+            border-top: 1px solid #dadce0;
+        }
+        .footer a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .footer p {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>Invoice Approval Required</h1>
+            <p>Action requested for {{ rows | array.size }} pending document{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</p>
+        </div>
+        
+        <div class="content">
+            <div class="greeting">
+                Hello {{ rows[0].approver_name }},
+            </div>
+            
+            <div class="message">
+                Review is required for <strong>{{ rows | array.size }} invoice{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</strong>. Please verify the associated documentation and execute the necessary approval workflow.
+            </div>
+            
+            <div class="invoice-summary-card">
+                <div class="summary-header">Invoice Details</div>
+                <ul class="invoice-list">
+                    {{~ for invoice in rows ~}}
+                    <li class="invoice-item">
+                        <div class="invoice-details">
+                            <div class="invoice-number">
+                                {{ invoice.invoice_number }}
+                                {{~ if invoice.priority == 1 ~}}
+                                <span class="priority-chip priority-1">High Priority</span>
+                                {{~ else if invoice.priority == 2 ~}}
+                                <span class="priority-chip priority-2">Medium</span>
+                                {{~ else ~}}
+                                <span class="priority-chip priority-3">Normal</span>
+                                {{~ end ~}}
+                            </div>
+                            <div class="invoice-meta">
+                                {{ invoice.vendor_name }} | {{ invoice.category }}<br>
+                                Due: {{ date.to_string invoice.due_date "%b %d, %Y" }}
+                            </div>
+                        </div>
+                        <div class="invoice-amount">
+                            € {{ invoice.total_amount | math.format '0.00' }}
+                        </div>
+                    </li>
+                    {{~ end ~}}
+                </ul>
+                {{~ 
+                total = 0
+                for invoice in rows
+                    total = total + invoice.total_amount
+                end
+                ~}}
+                <div class="total-row">
+                    <span>Aggregate Total</span>
+                    <span>€ {{ total | math.format '0.00' }}</span>
+                </div>
+            </div>
+            
+            <div class="notice-box">
+                <strong>Attachments</strong><br>
+                Digital copies are appended to this transmission in PDF format. Compliance review is mandatory prior to authorization.
+            </div>
+            
+            <div class="action-section">
+                <a href="https://yourcompany.com/approvals" class="google-button">
+                    View and Approve
+                </a>
+            </div>
+            
+            <div class="message" style="border-top: 1px solid #f1f3f4; padding-top: 20px;">
+                <strong>Support Resources</strong><br>
+                For technical assistance, contact the Finance Operations team at <a href="mailto:ap@company.com" style="color: #1a73e8;">ap@company.com</a>.
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>{{ rows[0].company_name }}</strong></p>
+            <p>{{ rows[0].company_address }}</p>
+            <p>This is a system-generated notification regarding your assigned administrative responsibilities.</p>
+            <p style="margin-top: 16px;">
+                <a href="#">Visit Dashboard</a> &nbsp;•&nbsp; 
+                <a href="#">Preferences</a>
+            </p>
+            <p style="color: #9aa0a6; font-size: 11px;">
+                © {{ date.now.year }} {{ rows[0].company_name }}. Data Classification: Internal.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

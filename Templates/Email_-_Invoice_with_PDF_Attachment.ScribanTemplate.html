@@ -1,0 +1,81 @@
+{{~ for row in rows ~}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Invoice {{~ row.invoice_number | html.escape ~}}</title>
+    <style>
+        body { margin:0; padding:0; font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color:#f4f6f8; }
+        table { border-collapse:collapse; }
+        .email-wrapper { width:100%; background:#f4f6f8; padding:24px 12px; }
+        .email-content { max-width:680px; margin:0 auto; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+        .header { background: #0066cc; color: white; padding: 20px 28px; }
+        .header h1 { margin:0; font-size:22px; font-weight:500; }
+        .content { padding: 24px 28px; }
+        .content p { font-size:15px; margin:0 0 14px 0; line-height:1.45; }
+        .content h3 { font-size:18px; margin:20px 0 10px 0; color:#0066cc; }
+        .content ul { margin:0 0 14px 0; padding-left:20px; }
+        .content li { margin-bottom:8px; }
+        .footer { background: #f4f4f4; padding: 20px 28px; text-align: center; font-size: 13px; color:#5f6368; border-top:1px solid #e8eaed; }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <table role="presentation" width="100%">
+            <tr>
+                <td align="center">
+                    <table role="presentation" class="email-content" width="100%">
+                        <!-- Header -->
+                        <tr>
+                            <td class="header">
+                                <h1>{{~ row.company_name | html.escape ~}}</h1>
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td class="content">
+                                <p>Dear {{~ row.customer_name | html.escape ~}},</p>
+                                
+                                <p>Thank you for your business! Please find your invoice <strong>#{{~ row.invoice_number | html.escape ~}}</strong> attached to this email.</p>
+                                
+                                <h3>Invoice Summary:</h3>
+                                <ul>
+                                    <li><strong>Invoice Number:</strong> {{~ row.invoice_number | html.escape ~}}</li>
+                                    <li><strong>Invoice Date:</strong> {{~ row.invoice_date | date.to_string "%B %d, %Y" ~}}</li>
+                                    <li><strong>Due Date:</strong> {{~ row.due_date | date.to_string "%B %d, %Y" ~}}</li>
+                                    <li><strong>Total Amount:</strong> ${{~ row.total_amount | math.format "0.00" ~}}</li>
+                                    <li><strong>Amount Due:</strong> ${{~ row.amount_due | math.format "0.00" ~}}</li>
+                                </ul>
+                                
+                                {{~ if row.payment_terms ~}}
+                                <p><strong>Payment Terms:</strong> {{~ row.payment_terms | html.escape ~}}</p>
+                                {{~ end ~}}
+                                
+                                {{~ if row.notes ~}}
+                                <p><strong>Notes:</strong> {{~ row.notes | html.escape ~}}</p>
+                                {{~ end ~}}
+                                
+                                <p>If you have any questions about this invoice, please don't hesitate to contact us at {{~ row.company_email | html.escape ~}} or {{~ row.company_phone | html.escape ~}}.</p>
+                                
+                                <p>Best regards,<br>
+                                {{~ row.company_name | html.escape ~}} Accounts Team</p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td class="footer">
+                                <p>&copy; 2025 {{~ row.company_name | html.escape ~}}. All rights reserved.</p>
+                                <p>{{~ row.company_address | html.escape ~}}</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>
+{{~ end ~}}

@@ -26,7 +26,8 @@ public enum QueryTemplateType
     ForXmlExplicit = 7,   // FOR XML EXPLICIT
     ForJson = 8,          // FOR JSON AUTO
     ForJsonPath = 9,      // FOR JSON PATH
-    ScribanTemplate = 10  // Scriban template engine (supports any output format: CSV, XML, JSON, etc.)
+    ScribanTemplate = 10, // Scriban template engine (supports any output format: CSV, XML, JSON, etc.)
+    DocumentTemplate = 11 // Document generation (PDF, DOCX, ODT) using hybrid Scriban + layout templates
 }
 
 public class ProfileTransformation
