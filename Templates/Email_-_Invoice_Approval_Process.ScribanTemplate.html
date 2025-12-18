@@ -212,7 +212,7 @@
                             </div>
                         </div>
                         <div class="invoice-amount">
-                            ${{ invoice.total_amount | math.format '0.00' }}
+                            € {{ invoice.total_amount | math.format '0.00' }}
                         </div>
                     </li>
                     {{~ end ~}}
@@ -225,7 +225,7 @@
                 ~}}
                 <div class="total-row">
                     <span>Aggregate Total</span>
-                    <span>${{ total | math.format '0.00' }}</span>
+                    <span>€ {{ total | math.format '0.00' }}</span>
                 </div>
             </div>
             

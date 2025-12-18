@@ -1334,6 +1334,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </span>
                             </label>
                             <input type="text" id="attachmentContentColumn" placeholder="e.g., pdf_content, file_data"
+                                   onchange="saveAttachmentConfig()"
                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <p class="mt-1 text-xs text-gray-500">
                                 Name of the column with binary file content from your query
@@ -1348,6 +1349,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </span>
                             </label>
                             <input type="text" id="attachmentFilenameColumn" placeholder="e.g., filename, report_name"
+                                   onchange="saveAttachmentConfig()"
                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             <p class="mt-1 text-xs text-gray-500">
                                 Name of the column that returns the filename (e.g., "report.pdf", "invoice_2024.xlsx")
@@ -1359,7 +1361,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <label for="attachmentDeduplication" class="block text-sm font-medium text-gray-700 mb-1">
                                     Deduplication
                                 </label>
-                                <select id="attachmentDeduplication"
+                                <select id="attachmentDeduplication" onchange="saveAttachmentConfig()"
                                         class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="Auto">Auto (detect duplicates)</option>
                                     <option value="ByFilename">By Filename</option>
@@ -1376,6 +1378,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     Max Attachments per Email
                                 </label>
                                 <input type="number" id="attachmentMaxCount" value="50" min="1" max="100"
+                                       onchange="saveAttachmentConfig()"
                                        class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <p class="mt-1 text-xs text-gray-500">
                                     Default: 50
@@ -2792,12 +2795,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 try {
                     const attachmentConfig = JSON.parse(profile.emailAttachmentConfig);
                     
-                    // CRITICAL: Set the hidden field value from database
-                    const configField = document.getElementById('emailAttachmentConfig');
-                    if (configField) {
-                        configField.value = profile.emailAttachmentConfig;
-                    }
-                    
                     // Support both PascalCase (new) and camelCase (legacy) for backwards compatibility
                     const enabled = attachmentConfig.Enabled ?? attachmentConfig.enabled;
                     const mode = attachmentConfig.Mode ?? attachmentConfig.mode;
@@ -2810,7 +2807,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         const attachmentsEnabledCheckbox = document.getElementById('attachmentsEnabled');
                         if (attachmentsEnabledCheckbox) {
                             attachmentsEnabledCheckbox.checked = true;
-                            toggleAttachmentConfig();
+                            // Show/hide the config section without calling saveAttachmentConfig()
+                            const configDiv = document.getElementById('attachmentConfig');
+                            if (configDiv) {
+                                configDiv.classList.remove('hidden');
+                            }
                         }
 
                         if (mode === 'DocumentTemplate' && documentTemplate) {
@@ -2857,6 +2858,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         
                         if (dedupEl) dedupEl.value = deduplication || 'Auto';
                         if (maxCountEl) maxCountEl.value = maxAttachments || 50;
+                    }
+                    
+                    // CRITICAL: Set the hidden field value from database AFTER all UI fields are populated
+                    // This must be done LAST to prevent saveAttachmentConfig() from overwriting it
+                    const configField = document.getElementById('emailAttachmentConfig');
+                    if (configField) {
+                        configField.value = profile.emailAttachmentConfig;
                     }
                 } catch (e) {
                     console.error('Error parsing email attachment config:', e);

@@ -761,10 +761,10 @@
                                     </div>
                                     ${template.description ? `<p class="text-sm text-gray-600 mb-2 disable-select">${escapeHtml(template.description)}</p>` : ''}
                                     <div class="flex items-center space-x-2 text-xs mb-2">
-                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded">
+                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded cursor-pointer hover:bg-gray-200 transition" data-type-filter="${escapeHtml(typeLabel)}">
                                             <i data-lucide="tag" class="h-3 w-3 mr-1"></i>${typeLabel}
                                         </span>
-                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-output-filter="${escapeHtml(outputFormat)}">
                                             <i data-lucide="file-output" class="h-3 w-3 mr-1"></i>${outputFormat}
                                         </span>
                                     </div>
@@ -792,10 +792,68 @@
                     `;
                 }).join('');
 
-                // Setup tag click handlers
-                templateFilter.setupTagClickHandlers('[data-tag-filter]');
+                // Setup custom tag click handlers that add to search bar
+                setupTemplateTagClickHandlers();
             }
             queueLucideRender();
+        }
+
+        function setupTemplateTagClickHandlers() {
+            // Helper function to add term to search
+            const addToSearch = (term) => {
+                const searchInput = document.getElementById('search-input');
+                if (!searchInput) return;
+
+                const currentSearch = searchInput.value.toLowerCase();
+                const termLower = term.toLowerCase();
+
+                // Only add if not already in search
+                if (!currentSearch.includes(termLower)) {
+                    // Add term to search (append with space if search is not empty)
+                    const newSearch = currentSearch ? `${searchInput.value} ${term}` : term;
+                    searchInput.value = newSearch;
+
+                    // Briefly flash the search input to indicate the change
+                    searchInput.classList.add('ring-2', 'ring-blue-400');
+                    setTimeout(() => {
+                        searchInput.classList.remove('ring-2', 'ring-blue-400');
+                    }, 500);
+
+                    // Trigger the filter update
+                    templateFilter.setSearchTerm(newSearch);
+                    window.dispatchEvent(new CustomEvent('filterChange', { detail: templateFilter }));
+                }
+            };
+
+            // Handle tag clicks
+            document.querySelectorAll('[data-tag-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const tag = element.getAttribute('data-tag-filter');
+                    if (tag) addToSearch(tag);
+                });
+            });
+
+            // Handle type badge clicks
+            document.querySelectorAll('[data-type-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const type = element.getAttribute('data-type-filter');
+                    if (type) addToSearch(type);
+                });
+            });
+
+            // Handle output format badge clicks
+            document.querySelectorAll('[data-output-filter]').forEach(element => {
+                element.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const output = element.getAttribute('data-output-filter');
+                    if (output) addToSearch(output);
+                });
+            });
         }
 
         async function editTemplate(id) {
