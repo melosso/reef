@@ -462,6 +462,12 @@ public class NotificationService
     {
         try
         {
+            if (pendingCount == 0)
+            {
+                Log.Debug("Skipping email approval notification because there are no pending items.");
+                return;
+            }
+            
             var settings = await GetNotificationSettingsAsync();
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewEmailApproval)
             {
