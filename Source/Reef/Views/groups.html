@@ -266,7 +266,7 @@
         let profiles = [];
 
         async function init() {
-            await requireAuth();
+
             token = localStorage.getItem('reef_token');
             queueLucideRender();
             await loadGroups();

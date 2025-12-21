@@ -22,13 +22,13 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background-color: #111827; 
+            background-color: #111827;
         }
 
         .blob {
             position: absolute;
             border-radius: 50%;
-            filter: blur(250px); 
+            filter: blur(250px);
             opacity: 0.25;
             will-change: transform;
         }
@@ -52,7 +52,7 @@
             /* Slowed down animation */
             animation: move-blob-2 40s infinite alternate ease-in-out;
         }
-        
+
         .blob.color-3 {
             background: #312e81;
             width: 300px;
@@ -73,7 +73,7 @@
             from { transform: translate(0, 0) scale(1); }
             to { transform: translate(-200px, -100px) scale(0.9); }
         }
-        
+
         @keyframes move-blob-3 {
             from { transform: translate(-50%, -50%) scale(1.1); }
             to { transform: translate(-20px, -200px) scale(1); }
@@ -151,13 +151,13 @@
         <g>
             <rect width="200%" height="200%" fill="url(#hexPattern)"/>
         </g>
-    </svg>    
+    </svg>
     <div class="flex min-h-screen w-full flex-col items-center justify-center space-y-6 p-8">
-        
+
         <div class="fade-in flex flex-col items-center space-y-6 text-center">
-            
+
             <i data-lucide="loader-2" class="h-16 w-16 animate-spin text-blue-500"></i>
-            
+
             <h1 class="text-4xl font-bold tracking-tight text-white disable-select">
                 You've been logged out.
             </h1>
@@ -165,35 +165,50 @@
                 Thanks for the hard work. We're redirecting you back...
             </p>
         </div>
-        
+
     </div>
 
     <script>
         // 1. Initialize the Lucide icon so it renders
         queueLucideRender();
 
-        // 2. Perform the actual client-side logout by clearing session data
+        // 2. Call backend logout endpoint to clear cookie
+        (async function() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+            } catch (err) {
+                console.warn('Logout API call failed:', err);
+            }
+        })();
+
+        // 3. Perform the actual client-side logout by clearing session data
         localStorage.removeItem('reef_token');
         localStorage.removeItem('reef_username');
         localStorage.removeItem('reef_role');
+        localStorage.removeItem('reef_display_name');
 
-        // 3. Set the total time to show this page (e.g., 2.5 seconds)
+        // 4. Set the total time to show this page (e.g., 2.5 seconds)
         const redirectDelay = 2500;
         const fadeOutTime = 500; // 0.5s fade-out
 
-        // 3. Wait for the delay, then start the fade-out
+        // 5. Wait for the delay, then start the fade-out
         setTimeout(() => {
-            
+
             // Add a CSS transition for opacity
             document.body.style.transition = `opacity ${fadeOutTime}ms ease-in`;
             // Trigger the fade-out
             document.body.style.opacity = '0';
-            
+
             // Wait for the fade-out animation to finish, *then* redirect.
             // This prevents a jarring "snap" before the page changes.
             setTimeout(() => {
                 window.location.href = '/index';
-            }, fadeOutTime); 
+            }, fadeOutTime);
 
         }, redirectDelay - fadeOutTime); // Start fading out *before* the total delay is over
     </script>

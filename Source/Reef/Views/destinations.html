@@ -1319,8 +1319,7 @@
         let destinationFilter = null;
 
         function checkAuth() {
-            return requireAuth();
-        }
+                    }
 
         async function loadDestinations() {
             await checkAuth();
@@ -1828,7 +1827,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            await requireAuth();
+
             queueLucideRender();
             initializeDestinations();
         });

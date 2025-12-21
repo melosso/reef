@@ -457,6 +457,9 @@ public class Program
         app.UseCors();
         app.UseStaticFiles(); // Serve wwwroot static files
 
+        // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
+        app.UseMiddleware<AuthenticationMiddleware>();
+
         // Serve HTML views from Views folder
         var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
         if (!Directory.Exists(viewsFolder))

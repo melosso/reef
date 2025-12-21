@@ -4,6 +4,48 @@ let authCache = { token: null, valid: false };
 let refreshPromise = null;
 
 /**
+ * Fast synchronous auth check - prevents page flicker
+ * Returns true if we should show the page (either authenticated or cached valid session)
+ */
+function fastAuthCheck() {
+    const token = localStorage.getItem('reef_token');
+    if (!token) return false;
+
+    // Check session cache (valid for current browser session)
+    const sessionCache = sessionStorage.getItem('reef_auth_valid');
+    const sessionToken = sessionStorage.getItem('reef_auth_token');
+
+    if (sessionCache === 'true' && sessionToken === token) {
+        // Session cache is valid, show page immediately
+        authCache = { token, valid: true };
+        return true;
+    }
+
+    // Check if we have a valid cache from previous validation in this page load
+    if (authCache.token === token && authCache.valid) {
+        return true;
+    }
+
+    // Token exists but not validated yet - show page and validate async
+    // This prevents flicker while validation happens
+    return true;
+}
+
+/**
+ * Update session cache after successful validation
+ */
+function updateAuthCache(token, valid) {
+    authCache = { token, valid };
+    if (valid) {
+        sessionStorage.setItem('reef_auth_valid', 'true');
+        sessionStorage.setItem('reef_auth_token', token);
+    } else {
+        sessionStorage.removeItem('reef_auth_valid');
+        sessionStorage.removeItem('reef_auth_token');
+    }
+}
+
+/**
  * Lightweight API health check with timeout
  * @param {number} timeout in ms
  * @returns {Promise<boolean>}
@@ -46,7 +88,6 @@ async function refreshToken() {
 
             if (!res.ok) {
                 console.warn('Token refresh failed', res.status);
-                clearAuth();
                 return null;
             }
 
@@ -78,8 +119,8 @@ async function refreshToken() {
 
 /**
  * Require authentication for a page
- * - Checks API availability
- * - Uses cached token if offline
+ * - Checks for reef_token cookie (set by backend)
+ * - Validates token with backend
  */
 async function requireAuth() {
     const token = localStorage.getItem('reef_token');
@@ -150,7 +191,7 @@ async function requireAuth() {
 }
 
 /**
- * Clear local authentication
+ * Clear local authentication and server-side cookie
  */
 function clearAuth() {
     localStorage.removeItem('reef_token');
@@ -158,6 +199,9 @@ function clearAuth() {
     localStorage.removeItem('reef_role');
     localStorage.removeItem('reef_display_name');
     authCache = { token: null, valid: false };
+
+    // Clear the cookie by calling the backend
+    document.cookie = 'reef_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 }
 
 /**
@@ -175,7 +219,7 @@ async function redirectIfAuthenticated() {
     if (!token) return;
 
     if (authCache.token === token && authCache.valid) {
-        window.location.href = '/admin';
+        window.location.href = '/dashboard';
         return;
     }
 
@@ -192,7 +236,7 @@ async function redirectIfAuthenticated() {
         authCache = { token, valid: data.valid };
 
         if (data.valid) {
-            window.location.href = '/admin';
+            window.location.href = '/dashboard';
         }
     } catch (err) {
         console.warn('Network/auth error on redirect check', err);

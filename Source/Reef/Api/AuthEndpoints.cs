@@ -22,6 +22,7 @@ public static class AuthEndpoints
         authGroup.MapPost("/refresh", RefreshToken).RequireAuthorization();
         authGroup.MapPost("/validate", ValidateToken);
         authGroup.MapPost("/change-password", ChangePassword).RequireAuthorization();
+        authGroup.MapPost("/logout", Logout);
     }
 
     /// <summary>
@@ -85,6 +86,16 @@ public static class AuthEndpoints
             var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString();
             Log.Information("User {Username} logged in successfully from IP {IP}", user.Username, remoteIp);
 
+            // Set HTTP-only cookie with the JWT token
+            httpContext.Response.Cookies.Append("reef_token", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // Set to true in production with HTTPS
+                SameSite = SameSiteMode.Lax,
+                Expires = expiresAt,
+                Path = "/"
+            });
+
             return Results.Ok(new LoginResponse
             {
                 Token = token,
@@ -133,6 +144,16 @@ public static class AuthEndpoints
 
             var newToken = jwtService.GenerateToken(username, role, userId);
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
+
+            // Set HTTP-only cookie with the new JWT token
+            httpContext.Response.Cookies.Append("reef_token", newToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // Set to true in production with HTTPS
+                SameSite = SameSiteMode.Lax,
+                Expires = expiresAt,
+                Path = "/"
+            });
 
             return Results.Ok(new
             {
@@ -291,6 +312,34 @@ public static class AuthEndpoints
         {
             Log.Error(ex, "Error during password change");
             return Results.Problem("An error occurred during password change");
+        }
+    }
+
+    /// <summary>
+    /// Logout endpoint - clears the authentication cookie
+    /// POST /api/auth/logout
+    /// </summary>
+    private static IResult Logout(HttpContext httpContext)
+    {
+        try
+        {
+            // Clear the HTTP-only cookie
+            httpContext.Response.Cookies.Delete("reef_token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false,
+                SameSite = SameSiteMode.Lax,
+                Path = "/"
+            });
+
+            Log.Information("User logged out successfully");
+
+            return Results.Ok(new { success = true, message = "Logged out successfully" });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error during logout");
+            return Results.Problem("An error occurred during logout");
         }
     }
 }

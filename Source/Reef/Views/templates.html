@@ -701,8 +701,7 @@
         let templateFilter = null;
 
         function checkAuth() {
-            return requireAuth();
-        }
+                    }
 
         async function loadTemplates() {
             await checkAuth();
@@ -2047,7 +2046,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
-            await requireAuth();
+
             queueLucideRender();
             initializeTemplates();
         });
