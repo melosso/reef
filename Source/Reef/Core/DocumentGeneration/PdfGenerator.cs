@@ -8,7 +8,7 @@ namespace Reef.Core.DocumentGeneration;
 
 /// <summary>
 /// PDF document generator using QuestPDF Fluent API
-/// QuestPDF Community License: Valid for businesses with < $1M USD annual revenue
+/// Reef will be using QuestPDF Community License which is valid for businesses with < $1M USD annual revenue
 /// </summary>
 public class PdfGenerator : IDocumentGenerator
 {

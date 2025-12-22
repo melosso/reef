@@ -164,34 +164,6 @@ Reef includes built-in document generation capabilities for creating professiona
 {{/ footer }}
 ```
 
-**Sample templates available in `/Templates/` directory:**
-- `Document_Template_-_Invoice_PDF.DocumentTemplate.txt`
-- `Document_Template_-_Picklist_PDF.DocumentTemplate.txt`
-
-For detailed documentation and advanced features, see `/DESIGN_DOCUMENT_GENERATION.md` and `/IMPLEMENTATION_SUMMARY.md`.
-
-**⚠️ QuestPDF License Notice:**
-
-Reef uses [QuestPDF](https://www.questpdf.com/) (Community License) for PDF generation. This license is **free for organizations with annual gross revenue under $1M USD**.
-
-- **Community License**: Valid if your annual revenue < $1M USD
-- **No action required** if you meet this criteria
-- **Professional License required** if annual revenue ≥ $1M USD
-
-If you exceed this revenue threshold, you must:
-1. Purchase a QuestPDF Professional License from https://www.questpdf.com/license/
-2. Update the license configuration in `/Source/Reef/Core/DocumentGeneration/PdfGenerator.cs`
-
-```csharp
-// Change from:
-QuestPDF.Settings.License = LicenseType.Community;
-
-// To (after purchasing):
-QuestPDF.Settings.License = LicenseType.Professional;
-```
-
-For more information about QuestPDF licensing, visit: https://www.questpdf.com/license/
-
 #### Job Scheduling
 
 After creating a job, you can schedule it using various methods such as:
