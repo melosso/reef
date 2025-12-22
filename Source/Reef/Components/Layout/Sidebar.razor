@@ -1,0 +1,35 @@
+@inject NavigationManager Nav
+
+<aside class="w-64 border-r border-gray-200 bg-white flex flex-col z-20">
+    <!-- Logo/Brand -->
+    <div class="h-14 flex items-center px-5 border-b border-gray-100 space-x-2">
+        <div class="w-7 h-7 bg-blue-600 rounded-md flex items-center justify-center">
+            <span class="text-white font-bold text-xs">R</span>
+        </div>
+        <span class="font-semibold text-gray-800 tracking-tight">Reef Console</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto p-3 space-y-0.5">
+        <!-- Storage Section -->
+        <div class="text-[11px] font-bold text-gray-400 px-3 py-2 uppercase tracking-wider disable-select">Storage</div>
+        <NavLink href="/connections" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors" ActiveClass="sidebar-item-active" Match="NavLinkMatch.Prefix">
+            <i data-lucide="plug" class="h-[18px] w-[18px] mr-3"></i>
+            <span>Connections</span>
+        </NavLink>
+        <NavLink href="/destinations" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors" ActiveClass="sidebar-item-active" Match="NavLinkMatch.Prefix">
+            <i data-lucide="send" class="h-[18px] w-[18px] mr-3"></i>
+            <span>Destinations</span>
+        </NavLink>
+
+        <!-- Automations Section -->
+        <div class="pt-4 text-[11px] font-bold text-gray-400 px-3 py-2 uppercase tracking-wider disable-select">Automations</div>
+        <NavLink href="/jobs" class="flex items-center px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors" ActiveClass="sidebar-item-active" Match="NavLinkMatch.Prefix">
+            <i data-lucide="briefcase" class="h-[18px] w-[18px] mr-3"></i>
+            <span>Scheduled Jobs</span>
+        </NavLink>
+    </nav>
+
+    <!-- User Menu (Bottom) -->
+    <UserMenu />
+</aside>

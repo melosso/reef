@@ -2,6 +2,7 @@
 // Background service that monitors database file size and sends notifications
 
 using Microsoft.Extensions.Hosting;
+using Reef.Core.Models;
 using Serilog;
 
 namespace Reef.Core.Services;

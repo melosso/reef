@@ -1,0 +1,81 @@
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+@inject IJSRuntime JS
+
+<div class="surface-container p-4 mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0 md:space-x-4">
+        <!-- Search Input -->
+        <div class="flex-1 max-w-md">
+            <div class="relative">
+                <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"></i>
+                <input type="text"
+                       @bind="searchTerm"
+                       @bind:event="oninput"
+                       @bind:after="OnSearchChanged"
+                       placeholder="@SearchPlaceholder"
+                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="flex items-center space-x-3">
+            <!-- Status Filter -->
+            @if (ShowStatusFilter)
+            {
+                <select @bind="statusFilter" @bind:after="OnFilterChanged" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="All">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+            }
+
+            <!-- Type Filter (optional) -->
+            @if (TypeFilterOptions != null && TypeFilterOptions.Any())
+            {
+                <select @bind="typeFilter" @bind:after="OnFilterChanged" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Types</option>
+                    @foreach (var option in TypeFilterOptions)
+                    {
+                        <option value="@option.Value">@option.Label</option>
+                    }
+                </select>
+            }
+
+            <!-- Results Count -->
+            <span class="text-sm text-gray-500 whitespace-nowrap">
+                @ResultCount @(ResultCount == 1 ? "result" : "results")
+            </span>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public EventCallback<FilterState> OnFilterChange { get; set; }
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search...";
+    [Parameter] public bool ShowStatusFilter { get; set; } = true;
+    [Parameter] public List<FilterOption>? TypeFilterOptions { get; set; }
+    [Parameter] public int ResultCount { get; set; }
+
+    private string searchTerm = "";
+    private string statusFilter = "All";
+    private string typeFilter = "";
+
+    private async Task OnSearchChanged()
+    {
+        await OnFilterChange.InvokeAsync(new FilterState
+        {
+            SearchTerm = searchTerm,
+            Status = statusFilter,
+            Type = typeFilter
+        });
+    }
+
+    private async Task OnFilterChanged()
+    {
+        await OnSearchChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+}

@@ -1,0 +1,55 @@
+@if (Type == "table")
+{
+    <!-- Table Skeleton -->
+    <div class="surface-container overflow-hidden">
+        <div class="divide-y divide-gray-50">
+            @for (int i = 0; i < Rows; i++)
+            {
+                <div class="px-6 py-4 flex items-center space-x-4">
+                    <div class="skeleton h-4 w-1/4 rounded"></div>
+                    <div class="skeleton h-4 w-1/3 rounded"></div>
+                    <div class="skeleton h-4 w-1/6 rounded"></div>
+                    <div class="skeleton h-4 w-1/6 rounded ml-auto"></div>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (Type == "card")
+{
+    <!-- Card Skeleton -->
+    <div class="surface-container p-4 space-y-3">
+        <div class="skeleton h-3 w-1/4 rounded"></div>
+        <div class="skeleton h-8 w-1/2 rounded"></div>
+        <div class="skeleton h-2 w-full rounded"></div>
+    </div>
+}
+else if (Type == "text")
+{
+    <!-- Text Lines Skeleton -->
+    <div class="space-y-2">
+        @for (int i = 0; i < Rows; i++)
+        {
+            <div class="skeleton h-4 @GetRandomWidth() rounded"></div>
+        }
+    </div>
+}
+else
+{
+    <!-- Custom Skeleton -->
+    <div class="skeleton @CustomClass rounded"></div>
+}
+
+@code {
+    [Parameter] public string Type { get; set; } = "text"; // table, card, text, custom
+    [Parameter] public int Rows { get; set; } = 3;
+    [Parameter] public string CustomClass { get; set; } = "h-20 w-full";
+
+    private Random random = new Random();
+
+    private string GetRandomWidth()
+    {
+        var widths = new[] { "w-full", "w-11/12", "w-10/12", "w-9/12", "w-8/12" };
+        return widths[random.Next(widths.Length)];
+    }
+}

@@ -1,0 +1,53 @@
+@inject BlazorAuthService AuthService
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<div class="border-t border-gray-100">
+    <button @onclick="ToggleMenu" class="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 text-xs font-medium">
+                @AuthService.GetUserInitial()
+            </div>
+            <div class="text-left">
+                <div class="text-xs font-medium text-gray-900">@AuthService.GetCurrentUsername()</div>
+                <div class="text-[10px] text-gray-500">View menu</div>
+            </div>
+        </div>
+        <i data-lucide="chevron-up" class="h-4 w-4 text-gray-400 transition-transform @(menuExpanded ? "" : "rotate-180")"></i>
+    </button>
+
+    <!-- Expandable Menu -->
+    <div class="@(menuExpanded ? "user-menu-expanded" : "user-menu-collapsed")">
+        <div class="px-2 pb-2 space-y-1">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-300 hover:text-gray-900 transition-colors">
+                <i data-lucide="settings" class="h-4 w-4"></i>
+                <span class="ml-3 text-sm">Settings</span>
+            </a>
+            <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-300 hover:text-gray-900 transition-colors">
+                <i data-lucide="github" class="h-4 w-4"></i>
+                <span class="ml-3 text-sm">GitHub</span>
+                <i data-lucide="external-link" class="h-3 w-3 ml-auto"></i>
+            </a>
+            <button @onclick="Logout" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-gray-50 text-gray-300 hover:text-gray-900 transition-colors">
+                <i data-lucide="log-out" class="h-4 w-4"></i>
+                <span class="ml-3 text-sm">Logout</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool menuExpanded = false;
+
+    private void ToggleMenu()
+    {
+        menuExpanded = !menuExpanded;
+    }
+
+    private async Task Logout()
+    {
+        // Clear authentication cookie via JavaScript
+        await JS.InvokeVoidAsync("eval", "document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';");
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

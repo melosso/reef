@@ -1,0 +1,43 @@
+@typeparam TItem
+@inject IJSRuntime JS
+
+<div class="surface-container overflow-hidden">
+    @if (Items == null || !Items.Any())
+    {
+        <!-- Empty State -->
+        <div class="p-12 text-center">
+            <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-3"></i>
+            <p class="text-gray-500">@EmptyMessage</p>
+        </div>
+    }
+    else
+    {
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-50/50 border-b border-gray-100">
+                    @TableHeader
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-50">
+                @foreach (var item in Items)
+                {
+                    <tr class="hover:bg-blue-50/30 transition-colors group">
+                        @RowTemplate(item)
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Items { get; set; }
+    [Parameter] public RenderFragment? TableHeader { get; set; }
+    [Parameter] public RenderFragment<TItem>? RowTemplate { get; set; }
+    [Parameter] public string EmptyMessage { get; set; } = "No items found";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+}

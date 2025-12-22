@@ -1,0 +1,288 @@
+@page "/dashboard"
+@inject AdminService AdminService
+@inject ConnectionService ConnectionService
+@inject ExecutionService ExecutionService
+@inject IJSRuntime JS
+
+<PageTitle>Dashboard · Reef</PageTitle>
+
+<div>
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900 mb-1">Dashboard</h1>
+    <p class="text-sm text-gray-500 mb-6">System overview and recent activity.</p>
+
+    <!-- Metrics Grid (5 cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <MetricCard
+            Title="Users"
+            Value="@userCount.ToString()"
+            Icon="users"
+            OnClick="@(() => NavigateToPage("/admin"))" />
+
+        <MetricCard
+            Title="Connections"
+            Value="@connectionCount.ToString()"
+            Icon="plug"
+            OnClick="@(() => NavigateToPage("/connections"))" />
+
+        <MetricCard
+            Title="Profiles"
+            Value="@profileCount.ToString()"
+            Icon="file-code"
+            OnClick="@(() => NavigateToPage("/profiles"))" />
+
+        <MetricCard
+            Title="API Keys"
+            Value="@apiKeyCount.ToString()"
+            Icon="key"
+            OnClick="@(() => NavigateToPage("/admin"))" />
+
+        <MetricCard
+            Title="Storage"
+            Value="@storageSize"
+            Icon="database" />
+    </div>
+
+    <!-- Status Cards (3 cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <!-- Database Health -->
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Database Health</p>
+                <i data-lucide="database" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold @(isDatabaseHealthy ? "text-green-600" : "text-red-600")">
+                @(isDatabaseHealthy ? "Operational" : "Degraded")
+            </p>
+            <p class="text-xs text-gray-500 mt-2">@databaseInfo</p>
+        </div>
+
+        <!-- Notifications Status -->
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Notifications</p>
+                <i data-lucide="mail" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold @(isSmtpConfigured ? "text-green-600" : "text-orange-600")">
+                @(isSmtpConfigured ? "Configured" : "Not Configured")
+            </p>
+            <p class="text-xs text-gray-500 mt-2">@notificationInfo</p>
+        </div>
+
+        <!-- Executions Metric -->
+        <div class="surface-container p-4 cursor-pointer hover:shadow-md transition-shadow" @onclick="ToggleExecutionsMetric">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Executions</p>
+                <i data-lucide="activity" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold text-blue-600">@executionCount</p>
+            <p class="text-xs text-gray-500 mt-2">@executionPeriod (click to toggle)</p>
+        </div>
+    </div>
+
+    <!-- Connections Table -->
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">Recent Connections</h2>
+        <DataTable TItem="Connection" Items="recentConnections">
+            <TableHeader>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Name</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Type</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Last Tested</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Status</th>
+            </TableHeader>
+            <RowTemplate Context="connection">
+                <td class="px-6 py-4">
+                    <div class="font-medium text-gray-900">@connection.Name</div>
+                </td>
+                <td class="px-6 py-4">
+                    <StatusBadge Text="@connection.Type.ToString()" Color="blue" />
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    @(connection.LastTestedAt.HasValue ? FormatRelativeTime(connection.LastTestedAt.Value) : "Never")
+                </td>
+                <td class="px-6 py-4">
+                    <StatusBadge
+                        Text="@(connection.IsActive ? "Active" : "Inactive")"
+                        Color="@(connection.IsActive ? "green" : "gray")"
+                        ShowDot="true" />
+                </td>
+            </RowTemplate>
+        </DataTable>
+    </div>
+
+    <!-- Recent Executions Table -->
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-3">Recent Executions</h2>
+        <DataTable TItem="ProfileExecution" Items="recentExecutions">
+            <TableHeader>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">ID</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Profile</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Status</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Started</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Duration</th>
+                <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Actions</th>
+            </TableHeader>
+            <RowTemplate Context="execution">
+                <td class="px-6 py-4 font-mono text-xs text-gray-600">
+                    @execution.Id.ToString().Substring(0, 8)
+                </td>
+                <td class="px-6 py-4">
+                    <div class="font-medium text-gray-900">@execution.ProfileName</div>
+                </td>
+                <td class="px-6 py-4">
+                    @{
+                        var statusColor = execution.Status switch
+                        {
+                            "Success" => "green",
+                            "Failed" => "red",
+                            "Running" => "blue",
+                            _ => "gray"
+                        };
+                    }
+                    <StatusBadge Text="@execution.Status" Color="@statusColor" ShowDot="true" />
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    @FormatRelativeTime(execution.StartedAt)
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    @(execution.CompletedAt.HasValue ? FormatDuration(execution.StartedAt, execution.CompletedAt.Value) : "-")
+                </td>
+                <td class="px-6 py-4">
+                    <button @onclick="@(() => ViewExecution(execution.Id))"
+                            class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        View
+                    </button>
+                </td>
+            </RowTemplate>
+        </DataTable>
+    </div>
+</div>
+
+@code {
+    private int userCount = 0;
+    private int connectionCount = 0;
+    private int profileCount = 0;
+    private int apiKeyCount = 0;
+    private string storageSize = "0 MB";
+
+    private bool isDatabaseHealthy = true;
+    private string databaseInfo = "";
+
+    private bool isSmtpConfigured = false;
+    private string notificationInfo = "";
+
+    private int executionCount = 0;
+    private string executionPeriod = "Today";
+    private bool showingToday = true;
+
+    private List<Connection> recentConnections = new();
+    private List<ProfileExecution> recentExecutions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Load system metrics from AdminService
+            var metrics = await AdminService.GetSystemMetricsAsync();
+
+            // Extract metric values using dynamic object
+            dynamic metricsData = metrics;
+            userCount = (int)metricsData.users;
+            connectionCount = (int)metricsData.connections;
+            profileCount = (int)metricsData.profiles.total;
+            apiKeyCount = (int)metricsData.apikeys;
+
+            // Storage size
+            long storageMb = (long)metricsData.storage.exportsSize / (1024 * 1024);
+            storageSize = FormatStorageSize(storageMb);
+
+            // Database health (assume healthy if we got metrics successfully)
+            isDatabaseHealthy = true;
+            databaseInfo = "All systems operational";
+
+            // Check SMTP configuration (from metrics)
+            isSmtpConfigured = (bool)metricsData.notifications.enabled;
+            notificationInfo = isSmtpConfigured ? "Email notifications enabled" : "Configure in Admin settings";
+
+            // Execution count for today (from metrics or calculate)
+            executionCount = (int)metricsData.executions.total;
+            executionPeriod = "Last 7 Days";
+            showingToday = false;
+
+            // Load recent connections (get all and take first 5)
+            var allConnections = await ConnectionService.GetAllAsync();
+            recentConnections = allConnections
+                .OrderByDescending(c => c.LastTestedAt ?? DateTime.MinValue)
+                .Take(5)
+                .ToList();
+
+            // Load recent executions (last 10)
+            recentExecutions = await ExecutionService.GetRecentExecutionsAsync(10);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Dashboard initialization error: {ex.Message}");
+            isDatabaseHealthy = false;
+            databaseInfo = "Error loading metrics";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void ToggleExecutionsMetric()
+    {
+        // Toggle functionality to be implemented
+        // Will require adding GetExecutionCountAsync method to ExecutionService
+    }
+
+    private void NavigateToPage(string url)
+    {
+        // Navigation will be handled by Blazor's NavigationManager in future iterations
+        // For now, this is a placeholder for clickable metrics
+    }
+
+    private void ViewExecution(int executionId)
+    {
+        // Navigate to execution details page (to be implemented)
+    }
+
+    private string FormatRelativeTime(DateTime dateTime)
+    {
+        var timeSpan = DateTime.Now - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+
+        return dateTime.ToString("MMM d, yyyy");
+    }
+
+    private string FormatDuration(DateTime start, DateTime end)
+    {
+        var duration = end - start;
+
+        if (duration.TotalSeconds < 60)
+            return $"{(int)duration.TotalSeconds}s";
+        if (duration.TotalMinutes < 60)
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+
+        return $"{(int)duration.TotalHours}h {duration.Minutes}m";
+    }
+
+    private string FormatStorageSize(long sizeInMb)
+    {
+        if (sizeInMb < 1024)
+            return $"{sizeInMb} MB";
+        if (sizeInMb < 1024 * 1024)
+            return $"{sizeInMb / 1024.0:F2} GB";
+
+        return $"{sizeInMb / (1024.0 * 1024.0):F2} TB";
+    }
+}

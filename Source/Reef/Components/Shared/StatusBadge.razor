@@ -1,0 +1,58 @@
+@if (ShowDot)
+{
+    <!-- Status Dot Indicator -->
+    <span class="inline-flex items-center text-xs @TextColorClass">
+        <span class="w-2 h-2 rounded-full @DotColorClass mr-2"></span>
+        @Text
+    </span>
+}
+else
+{
+    <!-- Badge Style -->
+    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold @BadgeColorClass border">
+        @Text
+    </span>
+}
+
+@code {
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public string Status { get; set; } = "active"; // active, inactive, success, error, warning, info
+    [Parameter] public string? Color { get; set; } // Alternative to Status: green, blue, red, orange, gray
+    [Parameter] public bool ShowDot { get; set; } = true;
+
+    private string EffectiveStatus => !string.IsNullOrEmpty(Color) ? Color.ToLower() : Status.ToLower();
+
+    private string TextColorClass => EffectiveStatus switch
+    {
+        "active" or "success" or "green" => "text-gray-700",
+        "inactive" or "gray" => "text-gray-500",
+        "error" or "red" => "text-gray-700",
+        "warning" or "orange" => "text-gray-700",
+        "info" or "blue" => "text-gray-700",
+        _ => "text-gray-700"
+    };
+
+    private string DotColorClass => EffectiveStatus switch
+    {
+        "active" or "success" or "green" => "bg-green-500 status-dot-active",
+        "inactive" or "gray" => "bg-gray-400 status-dot-inactive",
+        "error" or "red" => "bg-red-500",
+        "warning" or "orange" => "bg-orange-500",
+        "info" or "blue" => "bg-blue-500",
+        _ => "bg-gray-400"
+    };
+
+    private string BadgeColorClass => EffectiveStatus switch
+    {
+        "active" or "success" or "green" => "bg-green-50 text-green-700 border-green-100",
+        "inactive" or "gray" => "bg-gray-50 text-gray-600 border-gray-100",
+        "error" or "red" => "bg-red-50 text-red-700 border-red-100",
+        "warning" or "orange" => "bg-orange-50 text-orange-700 border-orange-100",
+        "info" or "blue" => "bg-blue-50 text-blue-700 border-blue-100",
+        "aws_s3" => "bg-orange-50 text-orange-700 border-orange-100",
+        "azure" => "bg-blue-50 text-blue-700 border-blue-100",
+        "ftp" => "bg-purple-50 text-purple-700 border-purple-100",
+        "email" => "bg-pink-50 text-pink-700 border-pink-100",
+        _ => "bg-gray-50 text-gray-700 border-gray-100"
+    };
+}

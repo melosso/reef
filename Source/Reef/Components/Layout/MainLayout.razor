@@ -1,0 +1,29 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+<div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <Sidebar />
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- Header -->
+        <Header />
+
+        <!-- Page Content -->
+        <main class="flex-1 overflow-y-auto p-8 space-y-6">
+            @Body
+        </main>
+    </div>
+</div>
+
+<!-- Global Toast Notifications -->
+<Toast />
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Initialize Lucide icons after render
+        await JS.InvokeVoidAsync("initLucide");
+    }
+}

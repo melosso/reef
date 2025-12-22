@@ -1,0 +1,70 @@
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+@inject IJSRuntime JS
+
+@if (IsVisible)
+{
+    <div class="fixed inset-0 bg-black/50 backdrop-filter backdrop-blur-sm z-50 flex items-center justify-center modal-backdrop" @onclick="OnBackdropClick">
+        <div class="surface-container max-w-2xl w-full max-h-[90vh] overflow-y-auto m-4 @SizeClass" @onclick:stopPropagation>
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                <h2 class="text-xl font-bold text-gray-900">@Title</h2>
+                <button @onclick="Close" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-label="Close">
+                    <i data-lucide="x" class="h-5 w-5 text-gray-500"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6">
+                @ChildContent
+            </div>
+
+            <!-- Modal Footer (Optional) -->
+            @if (Footer != null)
+            {
+                <div class="sticky bottom-0 bg-gray-50 border-t border-gray-100 px-6 py-4 flex justify-end space-x-3 rounded-b-xl">
+                    @Footer
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = "Modal";
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment? Footer { get; set; }
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public bool CloseOnBackdropClick { get; set; } = true;
+    [Parameter] public string Size { get; set; } = "medium"; // small, medium, large, xlarge
+
+    private string SizeClass => Size switch
+    {
+        "small" => "max-w-md",
+        "medium" => "max-w-2xl",
+        "large" => "max-w-4xl",
+        "xlarge" => "max-w-6xl",
+        _ => "max-w-2xl"
+    };
+
+    private async Task Close()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task OnBackdropClick()
+    {
+        if (CloseOnBackdropClick)
+        {
+            await Close();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsVisible)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+}

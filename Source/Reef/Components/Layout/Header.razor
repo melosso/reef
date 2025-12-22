@@ -1,0 +1,27 @@
+<header class="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10">
+    <!-- Breadcrumb Navigation -->
+    <nav class="flex text-sm text-gray-500 items-center space-x-2">
+        <span>Console</span>
+        <span>/</span>
+        <span class="text-gray-900 font-medium">@CurrentPage</span>
+    </nav>
+
+    <!-- Right Side: Search & Notifications -->
+    <div class="flex items-center space-x-3">
+        <!-- CMD+K Placeholder (Phase 2) -->
+        <div class="command-bar flex items-center px-3 py-1.5 rounded-md text-xs text-gray-400 w-64 cursor-pointer">
+            <i data-lucide="search" class="h-[14px] w-[14px] mr-2"></i>
+            Search or command...
+            <span class="ml-auto border border-gray-200 px-1 rounded bg-gray-50">⌘K</span>
+        </div>
+
+        <!-- Notification Bell -->
+        <button class="p-2 text-gray-400 hover:text-gray-600">
+            <i data-lucide="bell" class="h-[20px] w-[20px]"></i>
+        </button>
+    </div>
+</header>
+
+@code {
+    [CascadingParameter] public string CurrentPage { get; set; } = "Dashboard";
+}

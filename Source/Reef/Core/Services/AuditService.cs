@@ -3,6 +3,7 @@
 
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Reef.Core.Models;
 using Serilog;
 using System.Text.Json;
 

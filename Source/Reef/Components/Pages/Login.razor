@@ -1,0 +1,228 @@
+@page "/"
+@page "/login"
+@page "/index"
+@layout LoginLayout
+@inject DatabaseConfig DbConfig
+@inject PasswordHasher PasswordHasher
+@inject JwtTokenService JwtService
+@inject AuditService AuditService
+@inject NavigationManager Nav
+@inject ToastService Toast
+@inject IJSRuntime JS
+@using Microsoft.Data.Sqlite
+@using Dapper
+
+<PageTitle>Login · Reef</PageTitle>
+
+<!-- Animated Blob Background -->
+<div class="background-container">
+    <div class="blob color-1"></div>
+    <div class="blob color-2"></div>
+    <div class="blob color-3"></div>
+</div>
+
+<!-- Hexagonal Overlay -->
+<svg class="hive-overlay" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <pattern id="hexPattern" x="0" y="0" width="100" height="86" patternUnits="userSpaceOnUse">
+            <polygon points="50,0 100,25 100,61 50,86 0,61 0,25"
+                     fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
+        </pattern>
+    </defs>
+    <g>
+        <rect width="200%" height="200%" fill="url(#hexPattern)"/>
+    </g>
+</svg>
+
+<!-- Login Form -->
+<div class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">
+    <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/30 backdrop-blur-xl border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+
+        <!-- Logo & Title -->
+        <div class="flex flex-col items-center">
+            <div class="p-3 bg-blue-500/10 rounded-full">
+                <i data-lucide="waves" class="h-10 w-10 text-blue-400"></i>
+            </div>
+            <h2 class="mt-4 text-3xl font-bold text-center text-white disable-select">
+                @greetingMessage
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-400 disable-select">
+                A Lightweight Data Export Service
+            </p>
+        </div>
+
+        <!-- Login Form -->
+        <EditForm Model="loginModel" OnValidSubmit="HandleLogin" FormName="login" class="space-y-6">
+            <DataAnnotationsValidator />
+
+            <!-- Username -->
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-300 disable-select">Username</label>
+                <div class="mt-1">
+                    <InputText @bind-Value="loginModel.Username"
+                               id="username"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="admin"
+                               autocomplete="username" />
+                </div>
+            </div>
+
+            <!-- Password -->
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-300 disable-select">Password</label>
+                <div class="mt-1">
+                    <InputText @bind-Value="loginModel.Password"
+                               id="password"
+                               type="password"
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="••••••••"
+                               autocomplete="current-password" />
+                </div>
+            </div>
+
+            <!-- Remember Me -->
+            <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
+                <label for="remember-me" class="text-sm font-medium text-gray-300">Remember me</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <InputCheckbox @bind-Value="loginModel.RememberMe" id="remember-me" class="sr-only peer" />
+                    <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+
+            <!-- Error Message -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="bg-red-500/10 border-l-4 border-red-500/50 text-red-400 p-4 rounded-md error-slide-in" role="alert">
+                    <div class="flex items-center">
+                        <i data-lucide="alert-circle" class="h-5 w-5 mr-3 flex-shrink-0"></i>
+                        <p class="text-sm font-medium">@errorMessage</p>
+                    </div>
+                </div>
+            }
+
+            <!-- Submit Button -->
+            <div>
+                <button type="submit"
+                        disabled="@isLoading"
+                        class="flex w-full justify-center items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-md transition-all duration-200 ease-in-out hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/50 hover:-translate-y-0.5 active:bg-blue-800 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500 disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md">
+
+                    @if (isLoading)
+                    {
+                        <i data-lucide="loader-2" class="h-5 w-5 animate-spin mr-2"></i>
+                        <span>Signing in...</span>
+                    }
+                    else
+                    {
+                        <span>Sign In</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private LoginModel loginModel = new();
+    private string errorMessage = "";
+    private bool isLoading = false;
+    private string greetingMessage = "Welcome to Reef";
+
+    private static readonly string[] greetings = new[]
+    {
+        "Welcome back to Reef", "Hello from Reef", "Good to see you again on Reef",
+        "Ready to dive into Reef?", "Let's get started with Reef", "This is Reef",
+        "Sign in to Reef", "Login to Reef", "Reef is Ready",
+        "Start your session on Reef", "Enter your Reef credentials"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Set random greeting
+        greetingMessage = greetings[new Random().Next(greetings.Length)];
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            await using var connection = new SqliteConnection(DbConfig.ConnectionString);
+            await connection.OpenAsync();
+
+            // Normalize username to lowercase for case-insensitive lookup
+            var normalizedUsername = loginModel.Username.ToLowerInvariant();
+
+            // Find user by username (case-insensitive)
+            const string sql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
+            var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new { Username = normalizedUsername });
+
+            if (user == null)
+            {
+                errorMessage = "Invalid username or password";
+                isLoading = false;
+                return;
+            }
+
+            // Verify password
+            if (!PasswordHasher.VerifyPassword(loginModel.Password, user.PasswordHash))
+            {
+                errorMessage = "Invalid username or password";
+                isLoading = false;
+                return;
+            }
+
+            // Generate JWT token
+            var token = JwtService.GenerateToken(user.Username, user.Role, user.Id);
+            var expiresAt = DateTime.UtcNow.AddMinutes(60);
+
+            // Update last login timestamp
+            const string updateSql = "UPDATE Users SET LastLoginAt = datetime('now') WHERE Id = @Id";
+            await connection.ExecuteAsync(updateSql, new { user.Id });
+
+            // Log audit event
+            await AuditService.LogAsync(
+                entityType: "User",
+                entityId: user.Id,
+                action: "Login",
+                performedBy: user.Username,
+                changesObject: null,
+                context: null
+            );
+
+            // Set cookie via JavaScript interop
+            await JS.InvokeVoidAsync("eval", $@"
+                document.cookie = 'reef_token={token}; expires={expiresAt:R}; path=/; SameSite=Lax';
+            ");
+
+            // Redirect to dashboard
+            Nav.NavigateTo("/dashboard", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "An error occurred during login. Please try again.";
+            isLoading = false;
+            Serilog.Log.Error(ex, "Login error for user {Username}", loginModel.Username);
+        }
+    }
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "Username is required")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "Password is required")]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
+    }
+}

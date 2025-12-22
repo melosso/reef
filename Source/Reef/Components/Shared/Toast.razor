@@ -1,0 +1,56 @@
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveServerRenderMode())
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="fixed top-4 right-4 z-[100] space-y-2">
+    @foreach (var toast in ToastService.Toasts)
+    {
+        <div class="surface-container px-4 py-3 shadow-lg min-w-[300px] max-w-md flex items-start space-x-3 toast @GetToastColorClass(toast.Type)">
+            <i data-lucide="@GetToastIcon(toast.Type)" class="h-5 w-5 mt-0.5 flex-shrink-0"></i>
+            <div class="flex-1">
+                <p class="text-sm font-medium">@toast.Message</p>
+            </div>
+            <button @onclick="() => ToastService.RemoveToast(toast.Id)" class="p-1 hover:bg-gray-100 rounded transition-colors">
+                <i data-lucide="x" class="h-4 w-4"></i>
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ToastService.OnToastAdded += StateHasChanged;
+        ToastService.OnToastRemoved += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private string GetToastColorClass(ToastType type) => type switch
+    {
+        ToastType.Success => "bg-green-50 border-l-4 border-green-500 text-green-800",
+        ToastType.Error => "bg-red-50 border-l-4 border-red-500 text-red-800",
+        ToastType.Warning => "bg-orange-50 border-l-4 border-orange-500 text-orange-800",
+        ToastType.Info => "bg-blue-50 border-l-4 border-blue-500 text-blue-800",
+        _ => "bg-gray-50 border-l-4 border-gray-500 text-gray-800"
+    };
+
+    private string GetToastIcon(ToastType type) => type switch
+    {
+        ToastType.Success => "check-circle",
+        ToastType.Error => "alert-circle",
+        ToastType.Warning => "alert-triangle",
+        ToastType.Info => "info",
+        _ => "bell"
+    };
+
+    public void Dispose()
+    {
+        ToastService.OnToastAdded -= StateHasChanged;
+        ToastService.OnToastRemoved -= StateHasChanged;
+    }
+}

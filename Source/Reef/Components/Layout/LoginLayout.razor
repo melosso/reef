@@ -1,0 +1,34 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JS
+
+@Body
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Initialize Lucide icons
+            await JS.InvokeVoidAsync("initLucide");
+
+            // Initialize parallax effect for hive overlay
+            await JS.InvokeVoidAsync("eval", @"
+                const hiveOverlay = document.querySelector('.hive-overlay');
+                if (hiveOverlay) {
+                    const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                    if (!isTouchDevice()) {
+                        window.addEventListener('mousemove', (e) => {
+                            const { clientX, clientY } = e;
+                            const { innerWidth, innerHeight } = window;
+                            const x = (clientX / innerWidth - 0.5) * 2;
+                            const y = (clientY / innerHeight - 0.5) * 2;
+                            const moveX = x * -15;
+                            const moveY = y * -15;
+                            hiveOverlay.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                        });
+                    }
+                }
+            ");
+        }
+    }
+}

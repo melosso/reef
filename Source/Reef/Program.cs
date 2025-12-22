@@ -5,6 +5,7 @@ using Reef.Core.Destinations;
 using Reef.Core.Security;
 using Reef.Core.Data;
 using Reef.Core.Database;
+using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
 using Reef.Api;
 using Reef.Helpers;
@@ -137,6 +138,13 @@ public class Program
             {
                 options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
             });
+
+            // Configure Blazor SSR with interactive server components
+            builder.Services.AddRazorComponents()
+                .AddInteractiveServerComponents();
+
+            // Add HttpContextAccessor for accessing authentication context in Blazor
+            builder.Services.AddHttpContextAccessor();
 
             // Configure JWT Authentication
             ConfigureAuthentication(builder.Services, builder.Configuration);
@@ -301,6 +309,8 @@ public class Program
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
+        services.AddScoped<BlazorAuthService>();
+        services.AddScoped<ToastService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
 
@@ -457,72 +467,21 @@ public class Program
         app.UseCors();
         app.UseStaticFiles(); // Serve wwwroot static files
 
+        app.UseAuthentication();
+        app.UseAuthorization();
+
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
-
-        // Serve HTML views from Views folder
-        var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-        if (!Directory.Exists(viewsFolder))
-        {
-            var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-            var projectRoot = parentDir?.Parent?.Parent?.FullName;
-            if (projectRoot != null)
-            {
-                viewsFolder = Path.Combine(projectRoot, "views");
-            }
-        }
-
-        if (Directory.Exists(viewsFolder))
-        {
-            Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
-
-            var htmlFiles = new[]
-            {
-                "index.html",
-                "dashboard.html",
-                "connections.html",
-                "documentation.html",
-                "email-approvals.html",
-                "jobs.html",
-                "admin.html",
-                "destinations.html",
-                "executions.html",
-                "groups.html",
-                "logoff.html",
-                "profiles.html",
-                "templates.html",
-                "404.html"
-            };
-
-            var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var fileName in htmlFiles)
-            {
-                var filePath = Path.Combine(viewsFolder, fileName);
-                if (File.Exists(filePath))
-                {
-                    var route = "/" + Path.GetFileNameWithoutExtension(fileName);
-                    if (mappedRoutes.Add(route))
-                    {
-                        app.MapGet(route, async context =>
-                        {
-                            Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
-                            context.Response.ContentType = "text/html";
-                            await context.Response.SendFileAsync(filePath);
-                        });
-                    }
-                }
-            }
-
-            // Redirect root "/" to "/index"
-            if (mappedRoutes.Contains("/index"))
-            {
-                app.MapGet("/", () => Results.Redirect("/index"));
-            }
-        }
-
-        app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
-        app.UseAuthorization();
+
+        // Anti-forgery middleware for Blazor forms
+        app.UseAntiforgery();
+
+        // Configure Blazor Server-Side Rendering with interactive components
+        app.MapRazorComponents<Reef.Components.App>()
+            .AddInteractiveServerRenderMode();
+
+        Log.Debug("Blazor SSR configured with interactive server components");
 
         Log.Debug("Middleware configured");
     }
@@ -620,12 +579,4 @@ public class Program
             return null;
         }
     }
-}
-
-/// <summary>
-/// Database configuration - used by all services
-/// </summary>
-public class DatabaseConfig
-{
-    public required string ConnectionString { get; init; }
 }

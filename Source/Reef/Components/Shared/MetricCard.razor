@@ -1,0 +1,60 @@
+@inject IJSRuntime JS
+
+<div class="surface-container p-4 @(OnClick.HasDelegate ? "cursor-pointer hover:shadow-md transition-all" : "")"
+     @onclick="OnClick">
+    <!-- Title -->
+    <div class="flex items-center justify-between mb-1">
+        <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest">@Title</p>
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <i data-lucide="@Icon" class="h-4 w-4 text-gray-400"></i>
+        }
+    </div>
+
+    <!-- Value -->
+    <p class="text-2xl font-semibold mt-1 text-gray-900">@Value</p>
+
+    <!-- Subtitle/Trend (optional) -->
+    @if (!string.IsNullOrEmpty(Subtitle))
+    {
+        <p class="text-xs @SubtitleColorClass mt-2">@Subtitle</p>
+    }
+
+    <!-- Progress Bar (optional) -->
+    @if (ShowProgressBar && ProgressPercentage.HasValue)
+    {
+        <div class="w-full bg-gray-100 h-1 mt-3 rounded-full overflow-hidden">
+            <div class="@ProgressBarColorClass h-full" style="width: @ProgressPercentage%"></div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool ShowProgressBar { get; set; } = false;
+    [Parameter] public double? ProgressPercentage { get; set; }
+    [Parameter] public string TrendType { get; set; } = "neutral"; // up, down, neutral
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private string SubtitleColorClass => TrendType switch
+    {
+        "up" => "text-green-600",
+        "down" => "text-red-600",
+        _ => "text-gray-500"
+    };
+
+    private string ProgressBarColorClass => TrendType switch
+    {
+        "up" => "bg-green-500",
+        "down" => "bg-red-500",
+        _ => "bg-blue-500"
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+}

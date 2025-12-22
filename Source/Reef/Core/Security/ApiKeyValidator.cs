@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Security;
+using Reef.Core.Models;
 
 namespace Reef.Core.Security;
 

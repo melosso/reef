@@ -3,6 +3,7 @@
 
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Hosting;
+using Reef.Core.Models;
 using Serilog;
 using System.Diagnostics;
 
