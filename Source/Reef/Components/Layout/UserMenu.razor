@@ -44,10 +44,8 @@
         menuExpanded = !menuExpanded;
     }
 
-    private async Task Logout()
+    private void Logout()
     {
-        // Clear authentication cookie via JavaScript
-        await JS.InvokeVoidAsync("eval", "document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';");
-        Nav.NavigateTo("/login", forceLoad: true);
+        Nav.NavigateTo("/logout", forceLoad: true);
     }
 }
