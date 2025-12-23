@@ -6,9 +6,8 @@
 @inject PasswordHasher PasswordHasher
 @inject JwtTokenService JwtService
 @inject AuditService AuditService
-@inject NavigationManager Nav
-@inject ToastService Toast
 @inject IJSRuntime JS
+@inject IHttpContextAccessor HttpContextAccessor
 @using Microsoft.Data.Sqlite
 @using Dapper
 
@@ -122,7 +121,9 @@
 </div>
 
 @code {
-    private LoginModel loginModel = new();
+    [SupplyParameterFromForm]
+    private LoginModel loginModel { get; set; } = new();
+
     private string errorMessage = "";
     private bool isLoading = false;
     private string greetingMessage = "Welcome to Reef";
@@ -189,6 +190,21 @@
             const string updateSql = "UPDATE Users SET LastLoginAt = datetime('now') WHERE Id = @Id";
             await connection.ExecuteAsync(updateSql, new { user.Id });
 
+            // Get HttpContext to set cookie server-side
+            var httpContext = HttpContextAccessor.HttpContext;
+            if (httpContext != null)
+            {
+                // Set HTTP-only cookie with the JWT token
+                httpContext.Response.Cookies.Append("reef_token", token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production with HTTPS
+                    SameSite = SameSiteMode.Lax,
+                    Expires = expiresAt,
+                    Path = "/"
+                });
+            }
+
             // Log audit event
             await AuditService.LogAsync(
                 entityType: "User",
@@ -196,16 +212,14 @@
                 action: "Login",
                 performedBy: user.Username,
                 changesObject: null,
-                context: null
+                context: httpContext
             );
 
-            // Set cookie via JavaScript interop
-            await JS.InvokeVoidAsync("eval", $@"
-                document.cookie = 'reef_token={token}; expires={expiresAt:R}; path=/; SameSite=Lax';
-            ");
-
-            // Redirect to dashboard
-            Nav.NavigateTo("/dashboard", forceLoad: true);
+            // Redirect to dashboard using HttpContext (for SSR)
+            if (httpContext != null)
+            {
+                httpContext.Response.Redirect("/dashboard", permanent: false);
+            }
         }
         catch (Exception ex)
         {
