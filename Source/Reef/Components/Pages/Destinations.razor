@@ -1,0 +1,374 @@
+@page "/destinations"
+@attribute [StreamRendering]
+@inject DestinationService DestinationService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Destinations · Reef</PageTitle>
+
+<div>
+    <div class="flex items-end justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Destinations</h1>
+            <p class="text-sm text-gray-500 mt-1">Unified egress control for cloud storage and notification services.</p>
+        </div>
+        <div class="flex space-x-2">
+            <button @onclick="OpenHelpModal"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center">
+                <i data-lucide="help-circle" class="h-4 w-4 mr-2"></i>
+                Help
+            </button>
+            <button @onclick="OpenAddDestinationModal"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center">
+                <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                Add Destination
+            </button>
+        </div>
+    </div>
+
+    <!-- Metrics Grid (2 cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Total Destinations</p>
+                <i data-lucide="send" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold text-gray-900">@destinations.Count</p>
+            <p class="text-xs text-gray-500 mt-2">@activeCount active</p>
+        </div>
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Active Handlers</p>
+                <i data-lucide="check-circle" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold text-green-600">@activeCount</p>
+            <p class="text-xs text-gray-500 mt-2">Ready for export</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="mb-6">
+        <FilterBar OnFilterChange="HandleFilterChange"
+                   SearchPlaceholder="Search destinations by name, type, or tags..."
+                   ShowStatusFilter="true"
+                   ResultCount="filteredDestinations.Count" />
+    </div>
+
+    <!-- Destinations Table -->
+    <div class="surface-container overflow-hidden">
+        @if (filteredDestinations.Count == 0)
+        {
+            <div class="p-12 text-center">
+                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500 text-sm">
+                    @if (string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>No destinations found. Click "Add Destination" to create one.</text>
+                    }
+                    else
+                    {
+                        <text>No destinations match your search.</text>
+                    }
+                </p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Name & Description</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Type</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Tags</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Status</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var destination in filteredDestinations)
+                    {
+                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">@destination.Name</div>
+                                @if (!string.IsNullOrWhiteSpace(destination.Description))
+                                {
+                                    <div class="text-xs text-gray-500 mt-0.5">@destination.Description</div>
+                                }
+                            </td>
+                            <td class="px-6 py-4">
+                                <StatusBadge Text="@GetDestinationTypeDisplay(destination.Type)" Color="@GetDestinationTypeColor(destination.Type)" />
+                            </td>
+                            <td class="px-6 py-4">
+                                @if (!string.IsNullOrWhiteSpace(destination.Tags))
+                                {
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach (var tag in destination.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(3))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700">
+                                                @tag
+                                            </span>
+                                        }
+                                        @if (destination.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 3)
+                                        {
+                                            <span class="text-xs text-gray-400">+@(destination.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Length - 3)</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-gray-400">—</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4">
+                                <StatusBadge
+                                    Text="@(destination.IsActive ? "Active" : "Inactive")"
+                                    Color="@(destination.IsActive ? "green" : "gray")"
+                                    ShowDot="true" />
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end space-x-2">
+                                    <button @onclick="() => EditDestination(destination)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-blue-600"
+                                            title="Edit">
+                                        <i data-lucide="edit-2" class="h-4 w-4"></i>
+                                    </button>
+                                    <button @onclick="() => DeleteDestination(destination)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-red-600"
+                                            title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Modals -->
+<Modal Title="@(editingDestination == null ? "Add New Destination" : "Edit Destination")"
+       IsVisible="showDestinationModal"
+       OnClose="CloseDestinationModal"
+       Size="large">
+    <DestinationForm Destination="editingDestination" OnSave="HandleDestinationSaved" OnCancel="CloseDestinationModal" />
+</Modal>
+
+<Modal Title="How to use Destinations" IsVisible="showHelpModal" OnClose="CloseHelpModal">
+    <div class="space-y-4 text-gray-700 text-sm">
+        <p>The <b>Destinations</b> page allows you to configure your destinations. In other words, your profiles will retrieve data and send it to a destination. The target where you'll be exporting the data to, that's what you're configuring here.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mt-4">Things to know:</h4>
+        <ul class="list-disc list-inside space-y-2 ml-4">
+            <li><b>Add Destination:</b> Click the <b>"Add Destination"</b> button to create a new destination by specifying its type, configuration, and details.</li>
+            <li><b>Edit/Delete:</b> Use the Edit and Delete icons that appear when hovering over a row to modify or remove existing destinations.</li>
+            <li><b>Status:</b> Each destination shows whether it is <span class="bg-green-100 text-green-800 px-1 rounded text-xs">Active</span> or <span class="bg-gray-200 text-gray-500 px-1 rounded text-xs">Inactive</span>.</li>
+            <li><b>Test Connection:</b> Use the <b>Test Connection</b> button in the add/edit form to verify your configuration before saving.</li>
+            <li><b>Tags:</b> You can add comma-separated tags to help organize and filter your destinations.</li>
+        </ul>
+
+        <div class="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 rounded-r-md pr-2">
+            <p class="text-blue-800"><strong>Tip:</strong> Reef supports various destination types, including File System, FTP/SFTP, Azure Blob, AWS S3, HTTP/HTTPS REST APIs, and SMB. Choose the one that fits your export needs.</p>
+        </div>
+    </div>
+</Modal>
+
+<Modal Title="Confirm Delete" IsVisible="@(showDeleteConfirm && deletingDestination != null)" OnClose="CancelDelete">
+    <div class="space-y-4">
+        <p class="text-gray-700">Are you sure you want to delete the destination <b>"@(deletingDestination?.Name)"</b>?</p>
+        <p class="text-sm text-gray-500">This action cannot be undone.</p>
+
+        <div class="flex justify-end space-x-3 pt-4 border-t">
+            <button @onclick="CancelDelete"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button @onclick="ConfirmDelete"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                Delete
+            </button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private List<Destination> destinations = new();
+    private List<Destination> filteredDestinations = new();
+    private int activeCount = 0;
+    private string searchQuery = "";
+    private string statusFilter = "All";
+
+    private bool showDestinationModal = false;
+    private bool showHelpModal = false;
+    private bool showDeleteConfirm = false;
+    private Destination? editingDestination = null;
+    private Destination? deletingDestination = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDestinations();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private async Task LoadDestinations()
+    {
+        try
+        {
+            var allDestinations = await DestinationService.GetAllAsync();
+            destinations = allDestinations.ToList();
+            activeCount = destinations.Count(d => d.IsActive);
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load destinations");
+            ToastService.ShowError("Failed to load destinations");
+        }
+    }
+
+    private void HandleFilterChange(FilterState filterState)
+    {
+        searchQuery = filterState.SearchTerm;
+        statusFilter = filterState.Status;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredDestinations = destinations.Where(d =>
+        {
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.ToLower();
+                var matchesName = d.Name.ToLower().Contains(query);
+                var matchesDescription = d.Description.ToLower().Contains(query);
+                var matchesType = d.Type.ToString().ToLower().Contains(query);
+                var matchesTags = d.Tags.ToLower().Contains(query);
+
+                if (!matchesName && !matchesDescription && !matchesType && !matchesTags)
+                    return false;
+            }
+
+            // Status filter (note: FilterBar uses "Active", "Inactive", "All")
+            if (statusFilter == "Active" && !d.IsActive)
+                return false;
+            if (statusFilter == "Inactive" && d.IsActive)
+                return false;
+
+            return true;
+        }).ToList();
+    }
+
+    private void OpenAddDestinationModal()
+    {
+        editingDestination = null;
+        showDestinationModal = true;
+    }
+
+    private void EditDestination(Destination destination)
+    {
+        editingDestination = destination;
+        showDestinationModal = true;
+    }
+
+    private void CloseDestinationModal()
+    {
+        showDestinationModal = false;
+        editingDestination = null;
+    }
+
+    private async Task HandleDestinationSaved()
+    {
+        showDestinationModal = false;
+        editingDestination = null;
+        await LoadDestinations();
+        ToastService.ShowSuccess("Destination saved successfully");
+    }
+
+    private void DeleteDestination(Destination destination)
+    {
+        deletingDestination = destination;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+        deletingDestination = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deletingDestination == null) return;
+
+        try
+        {
+            var success = await DestinationService.DeleteAsync(deletingDestination.Id);
+            if (success)
+            {
+                ToastService.ShowSuccess($"Destination '{deletingDestination.Name}' deleted successfully");
+                showDeleteConfirm = false;
+                deletingDestination = null;
+                await LoadDestinations();
+            }
+            else
+            {
+                ToastService.ShowError("Failed to delete destination");
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to delete destination {DestinationId}", deletingDestination.Id);
+            ToastService.ShowError("An error occurred while deleting the destination");
+        }
+    }
+
+    private void OpenHelpModal()
+    {
+        showHelpModal = true;
+    }
+
+    private void CloseHelpModal()
+    {
+        showHelpModal = false;
+    }
+
+    private string GetDestinationTypeDisplay(DestinationType type)
+    {
+        return type switch
+        {
+            DestinationType.Local => "File System",
+            DestinationType.Ftp => "FTP/FTPS",
+            DestinationType.Sftp => "SFTP",
+            DestinationType.S3 => "AWS S3",
+            DestinationType.AzureBlob => "Azure Blob",
+            DestinationType.Email => "Email",
+            DestinationType.Http => "HTTP/REST",
+            DestinationType.NetworkShare => "SMB/CIFS",
+            _ => type.ToString()
+        };
+    }
+
+    private string GetDestinationTypeColor(DestinationType type)
+    {
+        return type switch
+        {
+            DestinationType.Local => "gray",
+            DestinationType.Ftp => "blue",
+            DestinationType.Sftp => "indigo",
+            DestinationType.S3 => "orange",
+            DestinationType.AzureBlob => "cyan",
+            DestinationType.Email => "green",
+            DestinationType.Http => "purple",
+            DestinationType.NetworkShare => "yellow",
+            _ => "gray"
+        };
+    }
+}

@@ -2,6 +2,7 @@
 @inject AdminService AdminService
 @inject ConnectionService ConnectionService
 @inject ExecutionService ExecutionService
+@inject NavigationManager Nav
 @inject IJSRuntime JS
 
 <PageTitle>Dashboard · Reef</PageTitle>
@@ -239,13 +240,12 @@
 
     private void NavigateToPage(string url)
     {
-        // Navigation will be handled by Blazor's NavigationManager in future iterations
-        // For now, this is a placeholder for clickable metrics
+        Nav.NavigateTo(url);
     }
 
     private void ViewExecution(int executionId)
     {
-        // Navigate to execution details page (to be implemented)
+        Nav.NavigateTo($"/executions?id={executionId}");
     }
 
     private string FormatRelativeTime(DateTime dateTime)

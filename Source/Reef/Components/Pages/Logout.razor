@@ -1,0 +1,58 @@
+@page "/logout"
+@page "/logoff"
+@inject IHttpContextAccessor HttpContextAccessor
+@inject NavigationManager Nav
+@inject AuditService AuditService
+
+<PageTitle>Logging out...</PageTitle>
+
+<div class="flex items-center justify-center min-h-screen bg-gray-50">
+    <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p class="text-gray-600">Logging out...</p>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+
+        if (httpContext != null)
+        {
+            // Get username before clearing cookie
+            var username = httpContext.User?.Identity?.Name ?? "Unknown";
+
+            // Delete the authentication cookie
+            httpContext.Response.Cookies.Delete("reef_token", new CookieOptions
+            {
+                Path = "/"
+            });
+
+            // Log the logout event
+            try
+            {
+                await AuditService.LogAsync(
+                    entityType: "User",
+                    entityId: 0,
+                    action: "Logout",
+                    performedBy: username,
+                    changesObject: null,
+                    context: httpContext
+                );
+            }
+            catch
+            {
+                // Ignore audit errors during logout
+            }
+
+            // Redirect to login
+            httpContext.Response.Redirect("/login", permanent: false);
+        }
+        else
+        {
+            // Fallback if HttpContext is not available
+            Nav.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}

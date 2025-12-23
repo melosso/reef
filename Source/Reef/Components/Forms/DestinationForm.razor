@@ -1,0 +1,313 @@
+@rendermode InteractiveServer
+@inject DestinationService DestinationService
+@inject DatabaseConfig DbConfig
+@inject IJSRuntime JS
+@using Microsoft.Data.Sqlite
+@using Dapper
+@using System.Text.Json
+
+<EditForm Model="model" OnValidSubmit="HandleSubmit" FormName="@formId" class="space-y-4">
+    <DataAnnotationsValidator />
+
+    <!-- Name -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+        <InputText @bind-Value="model.Name"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Production S3 Bucket" />
+        <ValidationMessage For="@(() => model.Name)" class="text-red-500 text-xs mt-1" />
+    </div>
+
+    <!-- Type -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+        <InputSelect @bind-Value="model.Type"
+                     @bind-Value:after="OnTypeChanged"
+                     disabled="@(Destination != null)"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+            <option value="">Select type...</option>
+            <option value="@DestinationType.Local">File System</option>
+            <option value="@DestinationType.Ftp">FTP/FTPS</option>
+            <option value="@DestinationType.Sftp">SFTP</option>
+            <option value="@DestinationType.AzureBlob">Azure Blob Storage</option>
+            <option value="@DestinationType.S3">AWS S3</option>
+            <option value="@DestinationType.Email">Email</option>
+            <option value="@DestinationType.Http">HTTP/HTTPS REST API</option>
+            <option value="@DestinationType.NetworkShare">SMB/CIFS</option>
+        </InputSelect>
+        <ValidationMessage For="@(() => model.Type)" class="text-red-500 text-xs mt-1" />
+        @if (Destination != null)
+        {
+            <p class="text-xs text-gray-500 mt-1">Type cannot be changed after creation</p>
+        }
+    </div>
+
+    <!-- Description -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <InputTextArea @bind-Value="model.Description" rows="2"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Optional description" />
+    </div>
+
+    <!-- Dynamic Configuration Fields -->
+    <div class="space-y-4">
+        @if (!string.IsNullOrEmpty(model.Type.ToString()) && model.Type.ToString() != "0")
+        {
+            @switch (model.Type)
+            {
+                case DestinationType.Local:
+                    <LocalConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.Ftp:
+                    <FtpConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.Sftp:
+                    <SftpConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.S3:
+                    <S3ConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.AzureBlob:
+                    <AzureBlobConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.Email:
+                    <EmailConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.Http:
+                    <HttpConfigFields @bind-Config="config" />
+                    break;
+                case DestinationType.NetworkShare:
+                    <NetworkShareConfigFields @bind-Config="config" />
+                    break;
+            }
+        }
+    </div>
+
+    <!-- Tags -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+        <InputText @bind-Value="model.Tags"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="production, aws" />
+        <p class="text-xs text-gray-500 mt-1">Comma-separated tags</p>
+    </div>
+
+    <!-- Status Toggle (only when editing) -->
+    @if (Destination != null)
+    {
+        <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+            <label for="is-active" class="text-sm font-medium text-gray-700 flex-1">Active Status</label>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <InputCheckbox @bind-Value="model.IsActive" id="is-active" class="sr-only peer" />
+                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+            </label>
+        </div>
+    }
+
+    <!-- Test Result -->
+    @if (!string.IsNullOrEmpty(testResult))
+    {
+        <div class="@(testSuccess ? "bg-green-50 border-l-4 border-green-500 text-green-800" : "bg-red-50 border-l-4 border-red-500 text-red-800") p-4 rounded-md">
+            <div class="flex items-center">
+                <i data-lucide="@(testSuccess ? "check-circle" : "alert-circle")" class="h-5 w-5 mr-3 flex-shrink-0"></i>
+                <p class="text-sm font-medium">@testResult</p>
+            </div>
+        </div>
+    }
+
+    <!-- Actions -->
+    <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button type="button" @onclick="TestConnection" disabled="@isTesting"
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isTesting)
+            {
+                <i data-lucide="loader-2" class="h-4 w-4 mr-2 animate-spin"></i>
+                <span>Testing...</span>
+            }
+            else
+            {
+                <i data-lucide="zap" class="h-4 w-4 mr-2"></i>
+                <span>Test Connection</span>
+            }
+        </button>
+        <button type="button" @onclick="OnCancel"
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            Cancel
+        </button>
+        <button type="submit" disabled="@isSaving"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+            @if (isSaving)
+            {
+                <i data-lucide="loader-2" class="h-4 w-4 mr-2 animate-spin"></i>
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>@(Destination == null ? "Create" : "Update") Destination</span>
+            }
+        </button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public Destination? Destination { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private DestinationFormModel model = new();
+    private DestinationConfiguration config = new();
+    private string formId = Guid.NewGuid().ToString();
+
+    private bool isSaving = false;
+    private bool isTesting = false;
+    private string testResult = "";
+    private bool testSuccess = false;
+
+    protected override void OnInitialized()
+    {
+        if (Destination != null)
+        {
+            // Load existing destination
+            model.Name = Destination.Name;
+            model.Description = Destination.Description;
+            model.Type = Destination.Type;
+            model.Tags = Destination.Tags;
+            model.IsActive = Destination.IsActive;
+
+            // Deserialize configuration (will need to be decrypted first)
+            try
+            {
+                config = JsonSerializer.Deserialize<DestinationConfiguration>(Destination.ConfigurationJson) ?? new DestinationConfiguration();
+            }
+            catch
+            {
+                config = new DestinationConfiguration();
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void OnTypeChanged()
+    {
+        // Reset configuration when type changes
+        config = new DestinationConfiguration();
+        testResult = "";
+    }
+
+    private async Task TestConnection()
+    {
+        isTesting = true;
+        testResult = "";
+        StateHasChanged();
+
+        try
+        {
+            var configJson = JsonSerializer.Serialize(config);
+            var testRequest = new DestinationTestConfigRequest
+            {
+                Type = model.Type,
+                ConfigurationJson = configJson,
+                TestFileName = $"reef-test-{DateTime.Now:yyyyMMddHHmmss}.txt",
+                TestContent = "This is a test file from Reef. If you see this, the connection is working!"
+            };
+
+            var result = await DestinationService.TestDestinationConfigurationAsync(
+                testRequest.Type,
+                testRequest.ConfigurationJson,
+                testRequest.TestFileName,
+                testRequest.TestContent
+            );
+
+            testSuccess = result.Success;
+            testResult = result.Message ?? (result.Success ? "Connection test successful!" : "Connection test failed");
+        }
+        catch (Exception ex)
+        {
+            testSuccess = false;
+            testResult = $"Test failed: {ex.Message}";
+            Serilog.Log.Error(ex, "Destination test connection failed");
+        }
+        finally
+        {
+            isTesting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var configJson = JsonSerializer.Serialize(config);
+
+            if (Destination == null)
+            {
+                // Create new
+                var newDestination = new Destination
+                {
+                    Name = model.Name,
+                    Description = model.Description,
+                    Type = model.Type,
+                    Tags = model.Tags,
+                    ConfigurationJson = configJson,
+                    IsActive = true
+                };
+
+                await DestinationService.CreateAsync(newDestination);
+            }
+            else
+            {
+                // Update existing
+                Destination.Name = model.Name;
+                Destination.Description = model.Description;
+                Destination.Tags = model.Tags;
+                Destination.IsActive = model.IsActive;
+                Destination.ConfigurationJson = configJson;
+
+                await DestinationService.UpdateAsync(Destination);
+            }
+
+            await OnSave.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to save destination");
+            testSuccess = false;
+            testResult = $"Failed to save: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    public class DestinationFormModel
+    {
+        [Required(ErrorMessage = "Name is required")]
+        public string Name { get; set; } = "";
+
+        public string Description { get; set; } = "";
+
+        [Required(ErrorMessage = "Type is required")]
+        public DestinationType Type { get; set; }
+
+        public string Tags { get; set; } = "";
+
+        public bool IsActive { get; set; } = true;
+    }
+}
+
+@* Configuration Field Components *@
+@code {
+    // These will be separate components in separate files for better organization
+    // For now, we'll create placeholder render fragments
+}
