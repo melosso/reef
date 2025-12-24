@@ -63,24 +63,40 @@ public class DestinationConfiguration
     public string? BlobPrefix { get; set; }
     
     // Email
+    public string? EmailProvider { get; set; } = "Smtp"; // Smtp, Resend, SendGrid
+    // SMTP-specific
     public string? SmtpServer { get; set; }
     public int? SmtpPort { get; set; }
     public string? SmtpUsername { get; set; }
     public string? SmtpPassword { get; set; }
+    public string? SmtpAuthType { get; set; } = "Basic"; // Basic, OAuth2, None
+    public string? SecurityMode { get; set; } = "StartTls"; // None, Auto, StartTls, StartTlsWhenAvailable, SslOnConnect
+    public string? OauthToken { get; set; }
+    public string? OauthUsername { get; set; }
+    // API-based email providers
+    public string? ResendApiKey { get; set; }
+    public string? SendGridApiKey { get; set; }
+    // Common email fields
     public string? FromAddress { get; set; }
     public string? ToAddresses { get; set; }
     public string? Subject { get; set; }
     public bool EnableSsl { get; set; } = true;
-    public string? SmtpAuthType { get; set; } = "Basic"; // Basic, OAuth2, None
-    public string? OauthToken { get; set; }
-    public string? OauthUsername { get; set; }
     
     // HTTP
     public string? Url { get; set; }
-    public string? Method { get; set; }
+    public string? Method { get; set; } = "POST";
+    public string? UploadFormat { get; set; } = "multipart"; // raw, multipart, json
+    public string? FileFieldName { get; set; } = "file"; // For multipart uploads
     public Dictionary<string, string>? Headers { get; set; }
-    public string? AuthType { get; set; }
+    public string? AuthType { get; set; } // bearer, basic, apikey, token, none
+    // Bearer/Token auth
     public string? AuthToken { get; set; }
+    // Basic auth
+    public string? BasicAuthUsername { get; set; }
+    public string? BasicAuthPassword { get; set; }
+    // API Key auth
+    public string? ApiKeyHeader { get; set; }
+    public string? ApiKeyValue { get; set; }
     
     // Network Share
     public string? UncPath { get; set; }

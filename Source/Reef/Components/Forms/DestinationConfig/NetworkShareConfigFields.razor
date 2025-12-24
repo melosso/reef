@@ -1,0 +1,60 @@
+@using Reef.Core.Models
+
+<div class="space-y-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">UNC Path *</label>
+        <InputText @bind-Value="Config.UncPath"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="\\server\share or \\192.168.1.100\share" />
+        <p class="text-xs text-gray-500 mt-1">Network share UNC path</p>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Sub Folder</label>
+        <InputText @bind-Value="Config.SubFolder"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="exports/data" />
+        <p class="text-xs text-gray-500 mt-1">Optional subfolder within the share (can be relative path)</p>
+    </div>
+
+    <div class="flex items-center">
+        <InputCheckbox @bind-Value="Config.UseRelativePath" id="network-use-relative-path"
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+        <label for="network-use-relative-path" class="ml-2 block text-sm text-gray-700">
+            Sub Folder is Relative Path
+        </label>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <InputText @bind-Value="Config.Username"
+                       type="text"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="domain\username" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <InputText @bind-Value="Config.Password"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="••••••••" />
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
+        <InputText @bind-Value="Config.Domain"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="WORKGROUP or DOMAIN" />
+        <p class="text-xs text-gray-500 mt-1">Optional Windows domain (leave blank for local authentication)</p>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DestinationConfiguration Config { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DestinationConfiguration> ConfigChanged { get; set; }
+}

@@ -1,4 +1,5 @@
 @page "/dashboard"
+@rendermode InteractiveServer
 @inject AdminService AdminService
 @inject ConnectionService ConnectionService
 @inject ExecutionService ExecutionService
@@ -173,7 +174,6 @@
 
     private int executionCount = 0;
     private string executionPeriod = "Today";
-    private bool showingToday = true;
 
     private List<Connection> recentConnections = new();
     private List<ProfileExecution> recentExecutions = new();
@@ -192,22 +192,21 @@
             profileCount = (int)metricsData.profiles.total;
             apiKeyCount = (int)metricsData.apikeys;
 
-            // Storage size
-            long storageMb = (long)metricsData.storage.exportsSize / (1024 * 1024);
-            storageSize = FormatStorageSize(storageMb);
+            // Storage size (already in MB from the service)
+            double storageMb = (double)metricsData.system.exportsSizeMb;
+            storageSize = FormatStorageSize((long)storageMb);
 
             // Database health (assume healthy if we got metrics successfully)
             isDatabaseHealthy = true;
             databaseInfo = "All systems operational";
 
             // Check SMTP configuration (from metrics)
-            isSmtpConfigured = (bool)metricsData.notifications.enabled;
+            isSmtpConfigured = (bool)metricsData.notifications.isEnabled;
             notificationInfo = isSmtpConfigured ? "Email notifications enabled" : "Configure in Admin settings";
 
             // Execution count for today (from metrics or calculate)
             executionCount = (int)metricsData.executions.total;
             executionPeriod = "Last 7 Days";
-            showingToday = false;
 
             // Load recent connections (get all and take first 5)
             var allConnections = await ConnectionService.GetAllAsync();

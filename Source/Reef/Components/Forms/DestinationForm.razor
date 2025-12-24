@@ -5,6 +5,7 @@
 @using Microsoft.Data.Sqlite
 @using Dapper
 @using System.Text.Json
+@using Reef.Components.Forms.DestinationConfig
 
 <EditForm Model="model" OnValidSubmit="HandleSubmit" FormName="@formId" class="space-y-4">
     <DataAnnotationsValidator />
@@ -57,28 +58,28 @@
             @switch (model.Type)
             {
                 case DestinationType.Local:
-                    <LocalConfigFields @bind-Config="config" />
+                    <LocalConfigFields Config="@config" />
                     break;
                 case DestinationType.Ftp:
-                    <FtpConfigFields @bind-Config="config" />
+                    <FtpConfigFields Config="@config" />
                     break;
                 case DestinationType.Sftp:
-                    <SftpConfigFields @bind-Config="config" />
+                    <SftpConfigFields Config="@config" />
                     break;
                 case DestinationType.S3:
-                    <S3ConfigFields @bind-Config="config" />
+                    <S3ConfigFields Config="@config" />
                     break;
                 case DestinationType.AzureBlob:
-                    <AzureBlobConfigFields @bind-Config="config" />
+                    <AzureBlobConfigFields Config="@config" />
                     break;
                 case DestinationType.Email:
-                    <EmailConfigFields @bind-Config="config" />
+                    <EmailConfigFields Config="@config" />
                     break;
                 case DestinationType.Http:
-                    <HttpConfigFields @bind-Config="config" />
+                    <HttpConfigFields Config="@config" />
                     break;
                 case DestinationType.NetworkShare:
-                    <NetworkShareConfigFields @bind-Config="config" />
+                    <NetworkShareConfigFields Config="@config" />
                     break;
             }
         }
@@ -306,8 +307,3 @@
     }
 }
 
-@* Configuration Field Components *@
-@code {
-    // These will be separate components in separate files for better organization
-    // For now, we'll create placeholder render fragments
-}

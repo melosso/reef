@@ -1,0 +1,289 @@
+@using Reef.Core.Models
+@inject IJSRuntime JS
+
+<div class="space-y-4">
+    <!-- Email Provider Selector -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Email Provider *</label>
+        <InputSelect @bind-Value="Config.EmailProvider"
+                     @bind-Value:after="OnProviderChanged"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <option value="">Select provider...</option>
+            <option value="Smtp">SMTP</option>
+            <option value="Resend">Resend</option>
+            <option value="SendGrid">SendGrid</option>
+        </InputSelect>
+        <p class="text-xs text-gray-500 mt-1">Choose your email service provider</p>
+    </div>
+
+    <!-- SMTP Provider Fields -->
+    @if (Config.EmailProvider == "Smtp")
+    {
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Host *</label>
+                    <InputText @bind-Value="Config.SmtpServer"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="smtp.gmail.com" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Port</label>
+                    <InputNumber @bind-Value="smtpPortValue"
+                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+            </div>
+
+            <!-- Advanced SMTP Settings Accordion -->
+            <div class="border border-gray-200 rounded-lg">
+                <button type="button" @onclick="ToggleSmtpAdvanced"
+                        class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-gray-600"></i>
+                        <span class="text-sm font-medium text-gray-700">SMTP Advanced Settings</span>
+                    </div>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform @(showSmtpAdvanced ? "rotate-180" : "")"></i>
+                </button>
+                @if (showSmtpAdvanced)
+                {
+                    <div class="px-4 pb-4 space-y-4 border-t border-gray-200 pt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Authentication Type</label>
+                            <InputSelect @bind-Value="Config.SmtpAuthType"
+                                         @bind-Value:after="OnSmtpAuthTypeChanged"
+                                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="Basic">Basic (Username & Password)</option>
+                                <option value="OAuth2">OAuth 2.0 (Access Token)</option>
+                                <option value="None">No Authentication</option>
+                            </InputSelect>
+                        </div>
+
+                        <!-- Basic Auth Fields -->
+                        @if (Config.SmtpAuthType == "Basic")
+                        {
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                    <InputText @bind-Value="Config.SmtpUsername"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="your-email@gmail.com" />
+                                    <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Password / App Password</label>
+                                    <InputText @bind-Value="Config.SmtpPassword"
+                                               type="password"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="••••••••" />
+                                    <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- OAuth2 Auth Fields -->
+                        @if (Config.SmtpAuthType == "OAuth2")
+                        {
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">OAuth2 Access Token</label>
+                                    <InputText @bind-Value="Config.OauthToken"
+                                               type="password"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="OAuth2 access token" />
+                                    <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Username (for OAuth2)</label>
+                                    <InputText @bind-Value="Config.OauthUsername"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="your-email@gmail.com" />
+                                    <p class="text-xs text-gray-500 mt-1">Usually your email address</p>
+                                </div>
+                            </div>
+                        }
+
+                        <!-- Connection Settings -->
+                        <div class="border-t border-gray-200 pt-4 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Security</label>
+                                <InputSelect @bind-Value="Config.SecurityMode"
+                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="StartTls">STARTTLS (Recommended - Port 587)</option>
+                                    <option value="SslOnConnect">SSL/TLS (Port 465)</option>
+                                    <option value="Auto">Auto (Negotiate TLS if available)</option>
+                                    <option value="None">None (Insecure - Port 25/2525)</option>
+                                </InputSelect>
+                                <p class="text-xs text-gray-500 mt-1">STARTTLS: Secure, standard for most SMTP servers. None: For mock servers or local testing</p>
+                            </div>
+
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <div class="flex items-start">
+                                    <i data-lucide="info" class="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0"></i>
+                                    <div class="text-xs text-blue-800">
+                                        <strong>Common SMTP Settings:</strong>
+                                        <ul class="list-disc ml-4 mt-1 space-y-0.5">
+                                            <li>Gmail: smtp.gmail.com:587 (STARTTLS, App Password required)</li>
+                                            <li>Outlook: smtp.office365.com:587 (STARTTLS)</li>
+                                            <li>Yahoo: smtp.mail.yahoo.com:587 (STARTTLS)</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <!-- Resend Provider Fields -->
+    @if (Config.EmailProvider == "Resend")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Resend API Key *</label>
+            <InputText @bind-Value="Config.ResendApiKey"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="re_..." />
+            <p class="text-xs text-gray-500 mt-1">Get your API key from <a href="https://resend.com/api-keys" target="_blank" class="text-blue-600 hover:underline">resend.com/api-keys</a></p>
+        </div>
+    }
+
+    <!-- SendGrid Provider Fields -->
+    @if (Config.EmailProvider == "SendGrid")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">SendGrid API Key *</label>
+            <InputText @bind-Value="Config.SendGridApiKey"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="SG..." />
+            <p class="text-xs text-gray-500 mt-1">Get your API key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" class="text-blue-600 hover:underline">SendGrid Settings</a></p>
+        </div>
+    }
+
+    <!-- Common Email Fields (for all providers) -->
+    @if (!string.IsNullOrEmpty(Config.EmailProvider))
+    {
+        <div class="border-t border-gray-200 pt-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">From Address *</label>
+                <InputText @bind-Value="Config.FromAddress"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="noreply@yourcompany.com" />
+                <p class="text-xs text-gray-500 mt-1">Sender email address</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">To Email Address(es) *</label>
+                <InputText @bind-Value="Config.ToAddresses"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="recipient@example.com, another@example.com" />
+                <p class="text-xs text-gray-500 mt-1">Comma-separated email addresses</p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                <InputText @bind-Value="Config.Subject"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Export Report - {date}" />
+                <p class="text-xs text-gray-500 mt-1">Email subject line (supports variables like {date}, {filename})</p>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public DestinationConfiguration Config { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DestinationConfiguration> ConfigChanged { get; set; }
+
+    private bool showSmtpAdvanced = false;
+    private int smtpPortValue = 587;
+
+    protected override void OnInitialized()
+    {
+        // Set default provider if not set
+        if (string.IsNullOrEmpty(Config.EmailProvider))
+        {
+            Config.EmailProvider = "Smtp";
+        }
+
+        // Set default SMTP port
+        smtpPortValue = Config.SmtpPort ?? 587;
+
+        // Set default subject if empty
+        if (string.IsNullOrEmpty(Config.Subject))
+        {
+            Config.Subject = "Reef Export - {date}";
+        }
+
+        // Set default auth type
+        if (string.IsNullOrEmpty(Config.SmtpAuthType))
+        {
+            Config.SmtpAuthType = "Basic";
+        }
+
+        // Set default security mode
+        if (string.IsNullOrEmpty(Config.SecurityMode))
+        {
+            Config.SecurityMode = "StartTls";
+        }
+
+        // Update port value when changing
+        Config.SmtpPort = smtpPortValue;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void ToggleSmtpAdvanced()
+    {
+        showSmtpAdvanced = !showSmtpAdvanced;
+        StateHasChanged();
+    }
+
+    private void OnProviderChanged()
+    {
+        // Clear provider-specific fields when switching
+        if (Config.EmailProvider != "Smtp")
+        {
+            Config.SmtpServer = null;
+            Config.SmtpUsername = null;
+            Config.SmtpPassword = null;
+            Config.OauthToken = null;
+            Config.OauthUsername = null;
+        }
+        if (Config.EmailProvider != "Resend")
+        {
+            Config.ResendApiKey = null;
+        }
+        if (Config.EmailProvider != "SendGrid")
+        {
+            Config.SendGridApiKey = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnSmtpAuthTypeChanged()
+    {
+        // Clear auth-specific fields when switching
+        if (Config.SmtpAuthType != "Basic")
+        {
+            Config.SmtpUsername = null;
+            Config.SmtpPassword = null;
+        }
+        if (Config.SmtpAuthType != "OAuth2")
+        {
+            Config.OauthToken = null;
+            Config.OauthUsername = null;
+        }
+
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,225 @@
+@using Reef.Core.Models
+@inject IJSRuntime JS
+
+<div class="space-y-4">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">URL *</label>
+        <InputText @bind-Value="Config.Url"
+                   type="url"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="https://api.example.com/upload" />
+        <p class="text-xs text-gray-500 mt-1">Target endpoint for HTTP request</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">HTTP Method</label>
+            <InputSelect @bind-Value="Config.Method"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+            </InputSelect>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Upload Format</label>
+            <InputSelect @bind-Value="Config.UploadFormat"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="raw">Raw/Binary</option>
+                <option value="multipart">Multipart Form Data</option>
+                <option value="json">JSON Payload</option>
+            </InputSelect>
+            <p class="text-xs text-gray-500 mt-1">How the file is sent to the API</p>
+        </div>
+    </div>
+
+    @if (Config.UploadFormat == "multipart")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">File Field Name</label>
+            <InputText @bind-Value="Config.FileFieldName"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="file" />
+            <p class="text-xs text-gray-500 mt-1">Form field name for the uploaded file</p>
+        </div>
+    }
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Authentication Type</label>
+        <InputSelect @bind-Value="Config.AuthType"
+                     @bind-Value:after="OnAuthTypeChanged"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <option value="">None</option>
+            <option value="bearer">Bearer Token</option>
+            <option value="token">Token</option>
+            <option value="basic">Basic Auth</option>
+            <option value="apikey">API Key</option>
+        </InputSelect>
+    </div>
+
+    <!-- Bearer / Token Auth Fields -->
+    @if (Config.AuthType == "bearer" || Config.AuthType == "token")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                @(Config.AuthType == "bearer" ? "Bearer Token" : "Token") *
+            </label>
+            <InputText @bind-Value="Config.AuthToken"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="your-token-here" />
+            <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+        </div>
+    }
+
+    <!-- Basic Auth Fields -->
+    @if (Config.AuthType == "basic")
+    {
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+                <InputText @bind-Value="Config.BasicAuthUsername"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="api_user" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <InputText @bind-Value="Config.BasicAuthPassword"
+                           type="password"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="••••••••" />
+                <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+            </div>
+        </div>
+    }
+
+    <!-- API Key Auth Fields -->
+    @if (Config.AuthType == "apikey")
+    {
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API Key Header Name *</label>
+                <InputText @bind-Value="Config.ApiKeyHeader"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="X-API-Key" />
+                <p class="text-xs text-gray-500 mt-1">HTTP header name for the API key</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">API Key Value *</label>
+                <InputText @bind-Value="Config.ApiKeyValue"
+                           type="password"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="your-api-key" />
+                <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+            </div>
+        </div>
+    }
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+        <InputNumber @bind-Value="timeoutValue"
+                     min="30" max="600"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+        <p class="text-xs text-gray-500 mt-1">Request timeout</p>
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div class="flex items-start">
+            <i data-lucide="info" class="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0"></i>
+            <div class="text-xs text-blue-800">
+                <strong>Upload Format Details:</strong>
+                <ul class="list-disc ml-4 mt-1 space-y-0.5">
+                    <li><strong>Raw/Binary:</strong> File sent as request body (Content-Type: application/octet-stream)</li>
+                    <li><strong>Multipart:</strong> File sent as multipart/form-data with configurable field name</li>
+                    <li><strong>JSON:</strong> File content sent as Base64 in JSON payload</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    @if (Config.AuthType == "bearer")
+    {
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div class="flex items-start">
+                <i data-lucide="info" class="w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0"></i>
+                <div class="text-xs text-yellow-800">
+                    <strong>Bearer Token:</strong> Sent as <code class="bg-white px-1 rounded">Authorization: Bearer YOUR_TOKEN</code>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Config.AuthType == "basic")
+    {
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <div class="flex items-start">
+                <i data-lucide="info" class="w-4 h-4 text-yellow-600 mt-0.5 mr-2 flex-shrink-0"></i>
+                <div class="text-xs text-yellow-800">
+                    <strong>Basic Auth:</strong> Credentials sent as Base64-encoded <code class="bg-white px-1 rounded">Authorization: Basic ...</code>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public DestinationConfiguration Config { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DestinationConfiguration> ConfigChanged { get; set; }
+
+    private int timeoutValue = 300;
+
+    protected override void OnInitialized()
+    {
+        timeoutValue = Config.TimeoutSeconds > 0 ? Config.TimeoutSeconds : 300;
+
+        // Set default method
+        if (string.IsNullOrEmpty(Config.Method))
+        {
+            Config.Method = "POST";
+        }
+
+        // Set default upload format
+        if (string.IsNullOrEmpty(Config.UploadFormat))
+        {
+            Config.UploadFormat = "multipart";
+        }
+
+        // Set default file field name
+        if (string.IsNullOrEmpty(Config.FileFieldName))
+        {
+            Config.FileFieldName = "file";
+        }
+
+        // Update timeout
+        Config.TimeoutSeconds = timeoutValue;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void OnAuthTypeChanged()
+    {
+        // Clear auth-specific fields when switching
+        if (Config.AuthType != "bearer" && Config.AuthType != "token")
+        {
+            Config.AuthToken = null;
+        }
+        if (Config.AuthType != "basic")
+        {
+            Config.BasicAuthUsername = null;
+            Config.BasicAuthPassword = null;
+        }
+        if (Config.AuthType != "apikey")
+        {
+            Config.ApiKeyHeader = null;
+            Config.ApiKeyValue = null;
+        }
+
+        StateHasChanged();
+    }
+}

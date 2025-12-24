@@ -1,0 +1,163 @@
+@using Reef.Core.Models
+@inject IJSRuntime JS
+
+<div class="space-y-4">
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Host *</label>
+            <InputText @bind-Value="Config.Host"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="sftp.example.com" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+            <InputNumber @bind-Value="portValue"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+        <InputText @bind-Value="Config.Username"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="sftpuser" />
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Authentication Type</label>
+        <InputSelect @bind-Value="authType"
+                     @bind-Value:after="OnAuthTypeChanged"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <option value="password">Password</option>
+            <option value="privatekey">Private Key (SSH)</option>
+        </InputSelect>
+    </div>
+
+    <!-- Password Auth Fields -->
+    @if (authType == "password")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+            <InputText @bind-Value="Config.Password"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="••••••••" />
+        </div>
+    }
+
+    <!-- Private Key Auth Fields -->
+    @if (authType == "privatekey")
+    {
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Private Key (PEM format) *</label>
+            <InputTextArea @bind-Value="Config.PrivateKey" rows="8"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;MIIEpAIBAAKCAQEA...&#10;-----END RSA PRIVATE KEY-----" />
+            <p class="text-xs text-gray-500 mt-1">Paste your private key content (supports RSA, DSA, ECDSA, ED25519)</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Passphrase (if encrypted)</label>
+            <InputText @bind-Value="Config.PrivateKeyPassphrase"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Leave blank if key is not encrypted" />
+            <p class="text-xs text-gray-500 mt-1">Only required if your private key is password-protected</p>
+        </div>
+    }
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Remote Path</label>
+        <InputText @bind-Value="Config.RemotePath"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="/uploads" />
+    </div>
+
+    <!-- Advanced Settings Accordion -->
+    <div class="border border-gray-200 rounded-lg">
+        <button type="button" @onclick="ToggleAdvanced"
+                class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-gray-600"></i>
+                <span class="text-sm font-medium text-gray-700">Advanced Settings</span>
+            </div>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform @(showAdvanced ? "rotate-180" : "")"></i>
+        </button>
+        @if (showAdvanced)
+        {
+            <div class="px-4 pb-4 space-y-4 border-t border-gray-200 pt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                    <InputNumber @bind-Value="timeoutValue"
+                                 min="10" max="300"
+                                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+                    <p class="text-xs text-gray-500 mt-1">Connection timeout</p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div class="flex items-start">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0"></i>
+                        <div class="text-xs text-blue-800">
+                            <strong>SSH Key Generation:</strong> Generate a key pair on Linux/Mac with:
+                            <code class="block bg-white px-2 py-1 rounded mt-1 text-gray-900">ssh-keygen -t rsa -b 4096 -f reef_sftp_key</code>
+                            Then copy the private key content (reef_sftp_key) to the Private Key field above, and add the public key (reef_sftp_key.pub) to your SFTP server's authorized_keys.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DestinationConfiguration Config { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DestinationConfiguration> ConfigChanged { get; set; }
+
+    private bool showAdvanced = false;
+    private string authType = "password";
+    private int portValue = 22;
+    private int timeoutValue = 60;
+
+    protected override void OnInitialized()
+    {
+        portValue = Config.Port ?? 22;
+        timeoutValue = Config.TimeoutSeconds > 0 ? Config.TimeoutSeconds : 60;
+
+        // Detect auth type from existing config
+        if (!string.IsNullOrEmpty(Config.PrivateKey))
+        {
+            authType = "privatekey";
+        }
+        else
+        {
+            authType = "password";
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void ToggleAdvanced()
+    {
+        showAdvanced = !showAdvanced;
+        StateHasChanged();
+    }
+
+    private void OnAuthTypeChanged()
+    {
+        // Clear the alternate auth fields when switching
+        if (authType == "password")
+        {
+            Config.PrivateKey = null;
+            Config.PrivateKeyPassphrase = null;
+        }
+        else
+        {
+            Config.Password = null;
+        }
+    }
+}

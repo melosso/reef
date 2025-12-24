@@ -1,0 +1,149 @@
+@using Reef.Core.Models
+@inject IJSRuntime JS
+
+<div class="space-y-4">
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Host *</label>
+            <InputText @bind-Value="Config.Host"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="ftp.example.com" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+            <InputNumber @bind-Value="portValue"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <InputText @bind-Value="Config.Username"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="ftpuser" />
+            <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <InputText @bind-Value="Config.Password"
+                       type="password"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="••••••••" />
+            <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Remote Path</label>
+        <InputText @bind-Value="Config.RemotePath"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="/uploads" />
+    </div>
+
+    <!-- Advanced Settings Accordion -->
+    <div class="border border-gray-200 rounded-lg">
+        <button type="button" @onclick="ToggleAdvanced"
+                class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg">
+            <div class="flex items-center space-x-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-gray-600"></i>
+                <span class="text-sm font-medium text-gray-700">Advanced Settings</span>
+            </div>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform @(showAdvanced ? "rotate-180" : "")"></i>
+        </button>
+        @if (showAdvanced)
+        {
+            <div class="px-4 pb-4 space-y-4 border-t border-gray-200 pt-4">
+                <div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <InputCheckbox @bind-Value="Config.UsePassiveMode" id="ftp-passive-mode"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                        </div>
+                        <div class="ml-3">
+                            <label for="ftp-passive-mode" class="text-sm font-medium text-gray-700">Use Passive Mode</label>
+                            <p class="text-xs text-gray-500 mt-1">Enable passive mode (PASV/EPSV). Required for servers behind NAT/firewalls. Disable if your network requires active mode.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <InputCheckbox @bind-Value="Config.UseSsl" id="ftp-use-ssl"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" />
+                        </div>
+                        <div class="ml-3">
+                            <label for="ftp-use-ssl" class="text-sm font-medium text-gray-700">Use SSL/TLS (FTPS)</label>
+                            <p class="text-xs text-gray-500 mt-1">Enable explicit FTPS encryption for secure file transfers</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                    <InputNumber @bind-Value="timeoutValue"
+                                 min="10" max="300"
+                                 class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+                    <p class="text-xs text-gray-500 mt-1">Connection and data transfer timeout</p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div class="flex items-start">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600 mt-0.5 mr-2 flex-shrink-0"></i>
+                        <div class="text-xs text-blue-800">
+                            <strong>Troubleshooting:</strong> If uploads fail with "connection refused", try:
+                            <ul class="list-disc ml-4 mt-1 space-y-0.5">
+                                <li>Ensure Passive Mode is enabled (recommended for most servers)</li>
+                                <li>Check that your FTP server's passive port range is accessible</li>
+                                <li>For Docker/containerized FTP servers, configure PASV_ADDRESS with external IP</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DestinationConfiguration Config { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<DestinationConfiguration> ConfigChanged { get; set; }
+
+    private bool showAdvanced = false;
+    private int portValue = 21;
+    private int timeoutValue = 60;
+
+    protected override void OnInitialized()
+    {
+        portValue = Config.Port ?? 21;
+        timeoutValue = Config.TimeoutSeconds > 0 ? Config.TimeoutSeconds : 60;
+        Config.UsePassiveMode = Config.UsePassiveMode; // Ensure default is set
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void ToggleAdvanced()
+    {
+        showAdvanced = !showAdvanced;
+        StateHasChanged();
+    }
+
+    private async Task UpdatePortValue()
+    {
+        Config.Port = portValue;
+        await ConfigChanged.InvokeAsync(Config);
+    }
+
+    private async Task UpdateTimeoutValue()
+    {
+        Config.TimeoutSeconds = timeoutValue;
+        await ConfigChanged.InvokeAsync(Config);
+    }
+}
