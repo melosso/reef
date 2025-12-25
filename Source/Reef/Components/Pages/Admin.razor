@@ -1,9 +1,8 @@
 @page "/admin"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AdminService AdminService
 @inject NotificationService NotificationService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @attribute [Authorize(Roles = "Admin")]
 
 <PageTitle>Admin · Reef</PageTitle>
@@ -46,14 +45,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadSystemInfo();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadSystemInfo()

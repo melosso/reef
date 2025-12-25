@@ -1,10 +1,9 @@
 @page "/dashboard"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AdminService AdminService
 @inject ConnectionService ConnectionService
 @inject ExecutionService ExecutionService
 @inject NavigationManager Nav
-@inject IJSRuntime JS
 
 <PageTitle>Dashboard · Reef</PageTitle>
 
@@ -227,14 +226,6 @@
             Console.WriteLine($"Dashboard initialization error: {ex.Message}");
             isDatabaseHealthy = false;
             databaseInfo = "Error loading metrics";
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
         }
     }
 

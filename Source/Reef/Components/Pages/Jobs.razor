@@ -1,9 +1,8 @@
 @page "/jobs"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject JobService JobService
 @inject ProfileService ProfileService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Jobs · Reef</PageTitle>
@@ -150,14 +149,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadJobs();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadJobs()

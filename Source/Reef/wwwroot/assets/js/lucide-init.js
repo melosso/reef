@@ -1,30 +1,32 @@
 /**
- * Lucide Icon Initialization for Blazor Components
- * This script initializes Lucide icons after Blazor renders components
+ * Lucide Icon Initialization for Blazor Enhanced Navigation (2025)
+ * Uses Blazor 8+ official navigation events
  */
 
 window.initLucide = () => {
     if (typeof lucide !== 'undefined') {
-        // Double requestAnimationFrame ensures DOM is fully stable
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                try {
-                    lucide.createIcons();
-                } catch (e) {
-                    // Silently ignore all errors during Blazor navigation
-                    // DOM manipulation conflicts are expected and harmless
-                }
-            });
-        });
+        try {
+            lucide.createIcons();
+        } catch (e) {
+            // Silently ignore - element may have been removed during navigation
+        }
     }
 };
 
-// Auto-initialize on DOM content loaded
+// Initial page load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.initLucide();
     });
 } else {
-    // DOM already loaded
     window.initLucide();
 }
+
+// Blazor Enhanced Navigation - reinitialize after each page update
+// This is the official 2025 pattern from Microsoft
+Blazor.addEventListener('enhancedload', () => {
+    // Wait for DOM to stabilize after Blazor's update
+    requestAnimationFrame(() => {
+        window.initLucide();
+    });
+});

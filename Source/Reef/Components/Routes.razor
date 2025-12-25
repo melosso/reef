@@ -1,5 +1,5 @@
-@* Router in static SSR mode - pages declare their own render modes *@
-@* This allows mixed-mode: static Login + interactive Dashboard/Destinations *@
+@* 2025 Blazor Pattern: Per-page render modes with static router *@
+@* Login uses LoginLayout (static), all other pages use MainLayout (becomes interactive when needed) *@
 
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">

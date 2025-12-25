@@ -1,8 +1,7 @@
 @page "/destinations"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject DestinationService DestinationService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Destinations · Reef</PageTitle>
@@ -209,14 +208,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadDestinations();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadDestinations()

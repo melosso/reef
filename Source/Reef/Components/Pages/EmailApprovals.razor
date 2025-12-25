@@ -1,8 +1,7 @@
 @page "/email-approvals"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject EmailApprovalService EmailApprovalService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 
 <PageTitle>Email Approvals · Reef</PageTitle>
 
@@ -85,14 +84,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadData()

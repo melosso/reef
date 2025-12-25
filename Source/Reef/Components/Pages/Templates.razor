@@ -1,8 +1,7 @@
 @page "/templates"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject QueryTemplateService TemplateService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Templates · Reef</PageTitle>
@@ -227,14 +226,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadTemplates();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadTemplates()

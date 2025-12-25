@@ -1,8 +1,7 @@
 @page "/profiles"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ProfileService ProfileService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Profiles · Reef</PageTitle>
@@ -153,14 +152,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadProfiles();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadProfiles()

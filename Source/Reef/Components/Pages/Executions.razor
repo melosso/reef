@@ -1,8 +1,7 @@
 @page "/executions"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject ExecutionService ExecutionService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Executions · Reef</PageTitle>
@@ -176,14 +175,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadData()

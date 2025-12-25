@@ -1,9 +1,8 @@
 @page "/groups"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject GroupService GroupService
 @inject ProfileService ProfileService
 @inject ToastService ToastService
-@inject IJSRuntime JS
 @inject NavigationManager Nav
 
 <PageTitle>Groups · Reef</PageTitle>
@@ -215,14 +214,6 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadGroups();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("initLucide");
-        }
     }
 
     private async Task LoadGroups()
