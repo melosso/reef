@@ -1,5 +1,5 @@
-@* Router needs to be InteractiveServer to handle SPA navigation between pages *@
-@rendermode InteractiveServer
+@* Router in static SSR mode - pages declare their own render modes *@
+@* This allows mixed-mode: static Login + interactive Dashboard/Destinations *@
 
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">

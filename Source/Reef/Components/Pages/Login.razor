@@ -147,31 +147,29 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Input ??= new();
-
         // Set random greeting
         greetingMessage = greetings[new Random().Next(greetings.Length)];
 
-        // If this is a form POST, process the login BEFORE rendering
-        var httpContext = HttpContextAccessor.HttpContext;
-
-        Serilog.Log.Information("Login page initialized. Method: {Method}, Username: {Username}",
-            httpContext?.Request.Method, Input?.Username);
-
-        if (httpContext?.Request.Method == "POST")
+        // For Blazor SSR forms with @formname, Input is populated by [SupplyParameterFromForm] on POST
+        // On GET requests, Input will be null
+        if (Input is not null && !string.IsNullOrEmpty(Input.Username))
         {
-            Serilog.Log.Information("Processing login POST for user: {Username}", Input?.Username);
+            // Form was submitted - process login
+            Serilog.Log.Information("Processing login for user: {Username}", Input.Username);
 
-            // Validate the model
-            if (!string.IsNullOrEmpty(Input.Username) && !string.IsNullOrEmpty(Input.Password))
+            if (!string.IsNullOrEmpty(Input.Password))
             {
                 await ProcessLogin();
             }
             else
             {
-                errorMessage = "Please enter username and password";
-                Serilog.Log.Warning("Login validation failed - empty credentials");
+                errorMessage = "Please enter your password";
             }
+        }
+        else
+        {
+            // GET request - initialize empty Input for form binding
+            Input ??= new();
         }
     }
 
