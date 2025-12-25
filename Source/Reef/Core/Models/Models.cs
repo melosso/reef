@@ -490,6 +490,18 @@ public class PendingEmailApproval
     public required string Hash { get; set; } // SHA256 for integrity checking
 }
 
+/// <summary>
+/// Email approval statistics for dashboard display
+/// </summary>
+public class EmailApprovalStatistics
+{
+    public int PendingCount { get; set; }
+    public int ApprovedCount { get; set; }
+    public int SentThisWeek { get; set; }
+    public int SkippedCount { get; set; }
+    public int RejectedCount { get; set; }
+}
+
 // ===== API Request/Response Models =====
 
 /// <summary>

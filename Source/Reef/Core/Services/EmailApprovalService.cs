@@ -606,7 +606,7 @@ public class EmailApprovalService
 
                 RejectedCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Rejected'"),
-                
+
                 SkippedCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Skipped'"),
 
@@ -634,6 +634,54 @@ public class EmailApprovalService
             Log.Error(ex, "Failed to retrieve approval statistics");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Get typed approval statistics for UI display
+    /// </summary>
+    public async Task<EmailApprovalStatistics> GetStatisticsAsync()
+    {
+        await using var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync();
+
+        try
+        {
+            var now = DateTime.UtcNow;
+            var weekAgo = now.AddDays(-7);
+
+            return new EmailApprovalStatistics
+            {
+                PendingCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Pending'"),
+
+                ApprovedCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Approved'"),
+
+                RejectedCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Rejected'"),
+
+                SkippedCount = await connection.ExecuteScalarAsync<int>(
+                    "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Skipped'"),
+
+                SentThisWeek = await connection.ExecuteScalarAsync<int>(
+                    @"SELECT COUNT(*) FROM PendingEmailApprovals
+                      WHERE Status = 'Sent' AND SentAt >= @WeekAgo",
+                    new { WeekAgo = weekAgo.ToString("o") })
+            };
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Failed to retrieve approval statistics");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get email preview for display in modal (alias for GetApprovalByGuidAsync)
+    /// </summary>
+    public async Task<PendingEmailApproval?> GetPreviewAsync(string guid)
+    {
+        return await GetApprovalByGuidAsync(guid);
     }
 
     /// <summary>
