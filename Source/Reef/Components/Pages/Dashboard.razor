@@ -125,7 +125,11 @@
             </TableHeader>
             <RowTemplate Context="execution">
                 <td class="px-6 py-4 font-mono text-xs text-gray-600">
-                    @execution.Id.ToString().Substring(0, 8)
+                    @{
+                        var idStr = execution.Id.ToString();
+                        var displayId = idStr.Length > 8 ? idStr.Substring(0, 8) : idStr;
+                    }
+                    @displayId
                 </td>
                 <td class="px-6 py-4">
                     <div class="font-medium text-gray-900">@execution.ProfileName</div>

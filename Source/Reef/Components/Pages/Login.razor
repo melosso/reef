@@ -2,14 +2,12 @@
 @page "/login"
 @page "/index"
 @layout LoginLayout
-@attribute [StreamRendering(false)]
 @inject DatabaseConfig DbConfig
 @inject PasswordHasher PasswordHasher
 @inject JwtTokenService JwtService
 @inject AuditService AuditService
 @inject IJSRuntime JS
 @inject IHttpContextAccessor HttpContextAccessor
-@inject NavigationManager Navigation
 @using Microsoft.Data.Sqlite
 @using Dapper
 
@@ -247,8 +245,9 @@
                 context: httpContext
             );
 
-            // Redirect to dashboard using NavigationManager (for SSR)
-            Navigation.NavigateTo("/dashboard", forceLoad: true);
+            // Redirect to dashboard using HttpContext.Response.Redirect (for static SSR)
+            // NavigationManager.NavigateTo() throws NavigationException in static SSR mode
+            httpContext.Response.Redirect("/dashboard", permanent: false);
         }
         catch (Exception ex)
         {

@@ -477,17 +477,18 @@ public class Program
         // Anti-forgery middleware for Blazor forms
         app.UseAntiforgery();
 
-        // Configure Blazor Server-Side Rendering with interactive components
-        app.MapRazorComponents<Reef.Components.App>()
-            .AddInteractiveServerRenderMode();
-
-        Log.Debug("Blazor SSR configured with interactive server components");
-
         Log.Debug("Middleware configured");
     }
 
     private static void MapEndpoints(WebApplication app)
     {
+        // Configure Blazor Server-Side Rendering with interactive components
+        // MUST be mapped BEFORE MapFallback to handle Razor component routes
+        app.MapRazorComponents<Reef.Components.App>()
+            .AddInteractiveServerRenderMode();
+
+        Log.Debug("Blazor SSR endpoints configured");
+
         // Health check
         app.MapGet("/health", () => Results.Ok(new
         {
@@ -512,36 +513,8 @@ public class Program
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
 
-        // Fallback handler for unmapped routes (404)
-        app.MapFallback(async context =>
-        {
-            var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-            if (!Directory.Exists(viewsFolder))
-            {
-                var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-                var projectRoot = parentDir?.Parent?.Parent?.FullName;
-                if (projectRoot != null)
-                {
-                    viewsFolder = Path.Combine(projectRoot, "views");
-                }
-            }
-
-            var notFoundPath = Path.Combine(viewsFolder, "404.html");
-            if (File.Exists(notFoundPath))
-            {
-                Log.Debug("Serving 404 page for unmapped route: {Route}", context.Request.Path);
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "text/html";
-                await context.Response.SendFileAsync(notFoundPath);
-            }
-            else
-            {
-                // Fallback JSON response if 404.html doesn't exist
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
-            }
-        });
+        // NOTE: 404 handling is done by Blazor's <NotFound> component in Routes.razor
+        // No need for MapFallback - Blazor router handles unmapped routes
 
         Log.Debug("Endpoints mapped");
     }
