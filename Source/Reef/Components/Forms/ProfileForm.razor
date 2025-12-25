@@ -1,0 +1,389 @@
+@inject ProfileService ProfileService
+@inject ConnectionService ConnectionService
+@inject GroupService GroupService
+@inject DestinationService DestinationService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<form @onsubmit="HandleSubmit" class="space-y-4">
+    <!-- Basic Information -->
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Profile Name
+                    <span class="text-red-500 ml-1">*</span>
+                </label>
+                <input type="text" @bind="name" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Monthly Sales Report">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Connection
+                    <span class="text-red-500 ml-1">*</span>
+                </label>
+                <select @bind="connectionId" required
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="0">Select connection...</option>
+                    @foreach (var connection in connections)
+                    {
+                        <option value="@connection.Id">@connection.Name (@connection.Type)</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Group (Optional)</label>
+                <select @bind="groupId"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">No group</option>
+                    @foreach (var group in groups)
+                    {
+                        <option value="@group.Id">@group.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+                <select @bind="outputFormat"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="JSON">JSON</option>
+                    <option value="XML">XML</option>
+                    <option value="CSV">CSV</option>
+                    <option value="TAB">TAB (TSV)</option>
+                    <option value="YAML">YAML</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Query -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                SQL Query
+                <span class="text-red-500 ml-1">*</span>
+            </label>
+            <textarea @bind="query" rows="6" required
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="SELECT * FROM Sales WHERE Date >= DATEADD(month, -1, GETDATE())"></textarea>
+        </div>
+
+        <!-- Output Destination -->
+        <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Output Destination</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Destination Type</label>
+                    <select @bind="outputDestinationType"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Local">Local File System</option>
+                        <option value="FTP">FTP</option>
+                        <option value="SFTP">SFTP</option>
+                        <option value="S3">AWS S3</option>
+                        <option value="Azure">Azure Blob</option>
+                        <option value="Email">Email</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Destination (Optional)</label>
+                    <select @bind="outputDestinationId"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Use default settings</option>
+                        @foreach (var dest in destinations)
+                        {
+                            <option value="@dest.Id">@dest.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Filename Template</label>
+                <input type="text" @bind="filenameTemplate"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                       placeholder="{profile}_{timestamp}.{format}">
+                <p class="text-xs text-gray-500 mt-1">
+                    Variables: {profile}, {timestamp}, {format}, {date}, {time}
+                </p>
+            </div>
+        </div>
+
+        <!-- Email Export Options -->
+        @if (outputDestinationType == "Email")
+        {
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Email Configuration</h3>
+
+                <div class="mb-3">
+                    <label class="flex items-center">
+                        <input type="checkbox" @bind="isEmailExport"
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm text-gray-700">Enable email export</span>
+                    </label>
+                </div>
+
+                @if (isEmailExport)
+                {
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Recipients</label>
+                            <input type="text" @bind="emailRecipientsHardcoded"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                   placeholder="recipient@example.com">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                            <input type="text" @bind="emailSubjectHardcoded"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                   placeholder="Monthly Sales Report">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center">
+                                <input type="checkbox" @bind="emailApprovalRequired"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-700">Require approval before sending</span>
+                            </label>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Split Configuration -->
+        <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Split Output (Optional)</h3>
+
+            <div class="mb-3">
+                <label class="flex items-center">
+                    <input type="checkbox" @bind="splitEnabled"
+                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Split output by column value</span>
+                </label>
+            </div>
+
+            @if (splitEnabled)
+            {
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Split Key Column</label>
+                        <input type="text" @bind="splitKeyColumn"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="CustomerId">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Split Filename Template</label>
+                        <input type="text" @bind="splitFilenameTemplate"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="{profile}_{splitkey}_{timestamp}.{format}">
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Enable/Disable -->
+        @if (Profile != null && Profile.Id > 0)
+        {
+            <div class="flex items-center">
+                <input type="checkbox" @bind="isEnabled"
+                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <span class="ml-2 text-sm font-medium text-gray-700">Profile is enabled</span>
+            </div>
+        }
+    </div>
+
+    <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button type="button" @onclick="OnCancel"
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            Cancel
+        </button>
+        <button type="submit" disabled="@isSaving"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isSaving)
+            {
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Profile</span>
+            }
+        </button>
+    </div>
+</form>
+
+@code {
+    [Parameter]
+    public ProfileWithConnection? Profile { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private List<Connection> connections = new();
+    private List<ProfileGroup> groups = new();
+    private List<Destination> destinations = new();
+
+    // Basic fields
+    private string name = "";
+    private int connectionId = 0;
+    private int? groupId = null;
+    private string query = "";
+    private string outputFormat = "JSON";
+    private string outputDestinationType = "Local";
+    private int? outputDestinationId = null;
+    private string? filenameTemplate = "{profile}_{timestamp}.{format}";
+
+    // Email fields
+    private bool isEmailExport = false;
+    private string? emailRecipientsHardcoded = null;
+    private string? emailSubjectHardcoded = null;
+    private bool emailApprovalRequired = false;
+
+    // Split fields
+    private bool splitEnabled = false;
+    private string? splitKeyColumn = null;
+    private string? splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
+
+    private bool isEnabled = true;
+    private bool isSaving = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load dropdown data
+        try
+        {
+            connections = (await ConnectionService.GetAllAsync()).ToList();
+            groups = (await GroupService.GetAllAsync()).ToList();
+            destinations = (await DestinationService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load form data");
+        }
+
+        if (Profile != null)
+        {
+            name = Profile.Name;
+            connectionId = Profile.ConnectionId;
+            groupId = Profile.GroupId;
+            query = Profile.Query;
+            outputFormat = Profile.OutputFormat;
+            outputDestinationType = Profile.OutputDestinationType;
+            outputDestinationId = Profile.OutputDestinationId;
+            filenameTemplate = Profile.FilenameTemplate;
+            isEmailExport = Profile.IsEmailExport;
+            emailRecipientsHardcoded = Profile.EmailRecipientsHardcoded;
+            emailSubjectHardcoded = Profile.EmailSubjectHardcoded;
+            emailApprovalRequired = Profile.EmailApprovalRequired;
+            splitEnabled = Profile.SplitEnabled;
+            splitKeyColumn = Profile.SplitKeyColumn;
+            splitFilenameTemplate = Profile.SplitFilenameTemplate;
+            isEnabled = Profile.IsEnabled;
+        }
+        else
+        {
+            // Reset form for new profile
+            name = "";
+            connectionId = 0;
+            groupId = null;
+            query = "";
+            outputFormat = "JSON";
+            outputDestinationType = "Local";
+            outputDestinationId = null;
+            filenameTemplate = "{profile}_{timestamp}.{format}";
+            isEmailExport = false;
+            emailRecipientsHardcoded = null;
+            emailSubjectHardcoded = null;
+            emailApprovalRequired = false;
+            splitEnabled = false;
+            splitKeyColumn = null;
+            splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
+            isEnabled = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ToastService.ShowError("Please enter a profile name");
+            return;
+        }
+
+        if (connectionId == 0)
+        {
+            ToastService.ShowError("Please select a connection");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            ToastService.ShowError("Please enter a SQL query");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var profile = new Profile
+            {
+                Id = Profile?.Id ?? 0,
+                Name = name,
+                ConnectionId = connectionId,
+                GroupId = groupId,
+                Query = query,
+                OutputFormat = outputFormat,
+                OutputDestinationType = outputDestinationType,
+                OutputDestinationId = outputDestinationId,
+                FilenameTemplate = filenameTemplate,
+                IsEmailExport = isEmailExport,
+                EmailRecipientsHardcoded = emailRecipientsHardcoded,
+                EmailSubjectHardcoded = emailSubjectHardcoded,
+                EmailApprovalRequired = emailApprovalRequired,
+                SplitEnabled = splitEnabled,
+                SplitKeyColumn = splitKeyColumn,
+                SplitFilenameTemplate = splitFilenameTemplate,
+                IsEnabled = isEnabled,
+                Hash = "" // Will be generated by service
+            };
+
+            if (profile.Id > 0)
+            {
+                await ProfileService.UpdateAsync(profile);
+            }
+            else
+            {
+                await ProfileService.CreateAsync(profile, createdByUserId: null);
+            }
+
+            await OnSave.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to save profile");
+            ToastService.ShowError("Failed to save profile");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

@@ -155,7 +155,7 @@
         if (Input is not null && !string.IsNullOrEmpty(Input.Username))
         {
             // Form was submitted - process login
-            Serilog.Log.Information("Processing login for user: {Username}", Input.Username);
+            Serilog.Log.Debug("Processing login for user: {Username}", Input.Username);
 
             if (!string.IsNullOrEmpty(Input.Password))
             {
@@ -242,6 +242,8 @@
                 changesObject: null,
                 context: httpContext
             );
+
+            Serilog.Log.Information("User `{Username}` logged in successfully", user.Username);
 
             // Redirect to dashboard using HttpContext.Response.Redirect (for static SSR)
             // NavigationManager.NavigateTo() throws NavigationException in static SSR mode

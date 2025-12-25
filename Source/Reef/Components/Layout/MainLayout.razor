@@ -23,7 +23,10 @@
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Initialize Lucide icons after render
-        await JS.InvokeVoidAsync("initLucide");
+        if (firstRender)
+        {
+            // Initialize Lucide icons after first render only
+            await JS.InvokeVoidAsync("initLucide");
+        }
     }
 }

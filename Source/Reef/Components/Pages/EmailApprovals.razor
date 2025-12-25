@@ -1,0 +1,148 @@
+@page "/email-approvals"
+@rendermode InteractiveServer
+@inject EmailApprovalService EmailApprovalService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<PageTitle>Email Approvals · Reef</PageTitle>
+
+<div>
+    <div class="flex items-end justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Email Approvals</h1>
+            <p class="text-sm text-gray-500 mt-1">Review and approve pending email exports.</p>
+        </div>
+        <button @onclick="RefreshData"
+                class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center">
+            <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+            Refresh
+        </button>
+    </div>
+
+    <!-- Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="surface-container p-4">
+            <p class="text-[11px] font-bold text-gray-400 uppercase">Pending</p>
+            <p class="text-2xl font-semibold text-orange-600">@pendingCount</p>
+        </div>
+    </div>
+
+    <!-- Approvals Table -->
+    <div class="surface-container overflow-hidden">
+        @if (approvals.Count == 0)
+        {
+            <div class="p-12 text-center">
+                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500 text-sm">No pending approvals</p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Recipients</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Subject</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Created</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var approval in approvals.Take(50))
+                    {
+                        <tr class="hover:bg-blue-50/30 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-900">
+                                @approval.Recipients
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                                @approval.Subject
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                @approval.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button @onclick="() => ApproveEmail(approval)"
+                                        class="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 mr-2">
+                                    Approve
+                                </button>
+                                <button @onclick="() => RejectEmail(approval)"
+                                        class="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                                    Reject
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private List<PendingEmailApproval> approvals = new();
+    private int pendingCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var result = await EmailApprovalService.GetPendingApprovalsAsync(1, 100);
+            approvals = result.Item1;
+            pendingCount = result.totalCount;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load email approvals");
+            ToastService.ShowError("Failed to load email approvals");
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        ToastService.ShowSuccess("Approvals refreshed");
+    }
+
+    private async Task ApproveEmail(PendingEmailApproval approval)
+    {
+        try
+        {
+            await EmailApprovalService.ApprovePendingEmailAsync(approval.Guid, userId: 1, approvalNotes: null);
+            ToastService.ShowSuccess("Email approved");
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to approve email");
+            ToastService.ShowError("Failed to approve email");
+        }
+    }
+
+    private async Task RejectEmail(PendingEmailApproval approval)
+    {
+        try
+        {
+            await EmailApprovalService.RejectPendingEmailAsync(approval.Guid, userId: 1, rejectionReason: "Rejected via UI");
+            ToastService.ShowSuccess("Email rejected");
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to reject email");
+            ToastService.ShowError("Failed to reject email");
+        }
+    }
+}

@@ -1,0 +1,261 @@
+@page "/executions"
+@rendermode InteractiveServer
+@inject ExecutionService ExecutionService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Executions · Reef</PageTitle>
+
+<div>
+    <div class="flex items-end justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Execution History</h1>
+            <p class="text-sm text-gray-500 mt-1">View and monitor profile execution history and status.</p>
+        </div>
+        <div class="flex space-x-2">
+            <button @onclick="RefreshData"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center">
+                <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="mb-6">
+        <FilterBar OnFilterChange="HandleFilterChange"
+                   SearchPlaceholder="Search executions by profile name..."
+                   ShowStatusFilter="true"
+                   ResultCount="filteredExecutions.Count" />
+    </div>
+
+    <!-- Executions Table -->
+    <div class="surface-container overflow-hidden">
+        @if (filteredExecutions.Count == 0)
+        {
+            <div class="p-12 text-center">
+                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500 text-sm">
+                    @if (string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>No executions found.</text>
+                    }
+                    else
+                    {
+                        <text>No executions match your search.</text>
+                    }
+                </p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Profile</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Started</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Duration</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Rows</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Status</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var execution in filteredExecutions.Take(100))
+                    {
+                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">@(execution.ProfileName ?? "Unknown")</div>
+                                <div class="text-xs text-gray-500">ID: @execution.Id</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                @execution.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                @if (execution.ExecutionTimeMs.HasValue)
+                                {
+                                    <text>@(execution.ExecutionTimeMs.Value)ms</text>
+                                }
+                                else
+                                {
+                                    <text>—</text>
+                                }
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                @(execution.RowCount?.ToString() ?? "—")
+                            </td>
+                            <td class="px-6 py-4">
+                                <StatusBadge Text="@execution.Status"
+                                             Color="@GetStatusColor(execution.Status)"
+                                             ShowDot="true" />
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button @onclick="() => ViewDetails(execution)"
+                                        class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-blue-600"
+                                        title="View Details">
+                                    <i data-lucide="eye" class="h-4 w-4"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Details Modal -->
+<Modal Title="Execution Details" IsVisible="showDetailsModal" OnClose="CloseDetailsModal" Size="large">
+    @if (selectedExecution != null)
+    {
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Profile</label>
+                    <p class="text-sm font-medium text-gray-900">@(selectedExecution.ProfileName ?? "Unknown")</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Status</label>
+                    <StatusBadge Text="@selectedExecution.Status" Color="@GetStatusColor(selectedExecution.Status)" />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Started At</label>
+                    <p class="text-sm text-gray-900">@selectedExecution.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Completed At</label>
+                    <p class="text-sm text-gray-900">@(selectedExecution.CompletedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "—")</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Duration</label>
+                    <p class="text-sm text-gray-900">@(selectedExecution.ExecutionTimeMs?.ToString() ?? "—") ms</p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Rows Processed</label>
+                    <p class="text-sm text-gray-900">@(selectedExecution.RowCount?.ToString() ?? "—")</p>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(selectedExecution.ErrorMessage))
+            {
+                <div class="bg-red-50 border-l-4 border-red-400 p-3 rounded-r-md">
+                    <p class="text-sm font-medium text-red-800">Error Message:</p>
+                    <p class="text-sm text-red-700 mt-1 font-mono">@selectedExecution.ErrorMessage</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(selectedExecution.OutputMessage))
+            {
+                <div class="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-md">
+                    <p class="text-sm font-medium text-green-800">Output Message:</p>
+                    <p class="text-sm text-green-700 mt-1 font-mono">@selectedExecution.OutputMessage</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(selectedExecution.OutputPath))
+            {
+                <div>
+                    <label class="block text-xs font-medium text-gray-500">Output Path</label>
+                    <p class="text-sm text-gray-900 font-mono">@selectedExecution.OutputPath</p>
+                </div>
+            }
+        </div>
+    }
+</Modal>
+
+@code {
+    private List<ProfileExecution> executions = new();
+    private List<ProfileExecution> filteredExecutions = new();
+    private string searchQuery = "";
+    private string statusFilter = "All";
+
+    private bool showDetailsModal = false;
+    private ProfileExecution? selectedExecution = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            executions = await ExecutionService.GetRecentExecutionsAsync(500);
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load executions");
+            ToastService.ShowError("Failed to load executions");
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        ToastService.ShowSuccess("Executions refreshed");
+    }
+
+    private void HandleFilterChange(FilterState filterState)
+    {
+        searchQuery = filterState.SearchTerm;
+        statusFilter = filterState.Status;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredExecutions = executions.Where(e =>
+        {
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.ToLower();
+                var matchesProfile = (e.ProfileName ?? "").ToLower().Contains(query);
+                var matchesId = e.Id.ToString().Contains(query);
+
+                if (!matchesProfile && !matchesId)
+                    return false;
+            }
+
+            // Status filter
+            if (statusFilter != "All" && e.Status != statusFilter)
+                return false;
+
+            return true;
+        }).OrderByDescending(e => e.StartedAt).ToList();
+    }
+
+    private void ViewDetails(ProfileExecution execution)
+    {
+        selectedExecution = execution;
+        showDetailsModal = true;
+    }
+
+    private void CloseDetailsModal()
+    {
+        showDetailsModal = false;
+        selectedExecution = null;
+    }
+
+    private string GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Success" => "green",
+            "Failed" => "red",
+            "Running" => "blue",
+            _ => "gray"
+        };
+    }
+}

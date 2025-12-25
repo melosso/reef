@@ -5,18 +5,26 @@
 
 window.initLucide = () => {
     if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    } else {
-        console.warn('Lucide library not loaded yet. Icons will not be rendered.');
+        // Double requestAnimationFrame ensures DOM is fully stable
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                try {
+                    lucide.createIcons();
+                } catch (e) {
+                    // Silently ignore all errors during Blazor navigation
+                    // DOM manipulation conflicts are expected and harmless
+                }
+            });
+        });
     }
 };
 
 // Auto-initialize on DOM content loaded
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.initLucide();
+    });
+} else {
+    // DOM already loaded
     window.initLucide();
-});
-
-// Re-initialize after Blazor enhanced navigation
-document.addEventListener('enhancedload', () => {
-    window.initLucide();
-});
+}

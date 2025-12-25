@@ -1,0 +1,306 @@
+@inject JobService JobService
+@inject ProfileService ProfileService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<form @onsubmit="HandleSubmit" class="space-y-4">
+    <!-- General Tab -->
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Name
+                    <span class="text-red-500 ml-1">*</span>
+                </label>
+                <input type="text" @bind="name" required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Daily Export Job">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <select @bind="selectedType"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="@JobType.ProfileExecution">Profile Execution</option>
+                    <option value="@JobType.DataTransfer">Data Transfer</option>
+                    <option value="@JobType.Cleanup">Cleanup</option>
+                    <option value="@JobType.HealthCheck">Health Check</option>
+                    <option value="@JobType.BackupDatabase">Backup Database</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea @bind="description" rows="2"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Optional description"></textarea>
+        </div>
+
+        @if (selectedType == JobType.ProfileExecution)
+        {
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Profile</label>
+                <select @bind="profileId"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Select profile...</option>
+                    @foreach (var profile in profiles)
+                    {
+                        <option value="@profile.Id">@profile.Name</option>
+                    }
+                </select>
+            </div>
+        }
+
+        <!-- Schedule Configuration -->
+        <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Schedule</h3>
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Schedule Type</label>
+                <select @bind="scheduleType"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <option value="@ScheduleType.Manual">Manual</option>
+                    <option value="@ScheduleType.Cron">Cron Expression</option>
+                    <option value="@ScheduleType.Interval">Interval (Minutes)</option>
+                    <option value="@ScheduleType.Daily">Daily</option>
+                    <option value="@ScheduleType.Weekly">Weekly</option>
+                    <option value="@ScheduleType.Monthly">Monthly</option>
+                </select>
+            </div>
+
+            @if (scheduleType == ScheduleType.Cron)
+            {
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Cron Expression
+                        <a href="https://crontab.guru/" target="_blank" class="ml-1 text-blue-600 text-xs">(Helper)</a>
+                    </label>
+                    <input type="text" @bind="cronExpression"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                           placeholder="0 0 * * *">
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <button type="button" @onclick='() => cronExpression = "0 * * * *"'
+                                class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Hourly</button>
+                        <button type="button" @onclick='() => cronExpression = "0 0 * * *"'
+                                class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Daily</button>
+                        <button type="button" @onclick='() => cronExpression = "0 0 * * 1"'
+                                class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded">Weekly</button>
+                    </div>
+                </div>
+            }
+
+            @if (scheduleType == ScheduleType.Interval)
+            {
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Interval (Minutes)</label>
+                    <input type="number" @bind="intervalMinutes"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           placeholder="60">
+                </div>
+            }
+        </div>
+
+        <!-- Execution Settings -->
+        <div class="border-t pt-4">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Execution Settings</h3>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Max Retries</label>
+                    <input type="number" @bind="maxRetries"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           placeholder="3">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (Minutes)</label>
+                    <input type="number" @bind="timeoutMinutes"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           placeholder="60">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Priority (1-10)</label>
+                    <input type="number" @bind="priority" min="1" max="10"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           placeholder="5">
+                </div>
+            </div>
+
+            <div class="mt-3 space-y-2">
+                <label class="flex items-center">
+                    <input type="checkbox" @bind="allowConcurrent"
+                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Allow concurrent execution</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" @bind="autoPauseEnabled"
+                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <span class="ml-2 text-sm text-gray-700">Auto-pause after consecutive failures</span>
+                </label>
+            </div>
+        </div>
+
+        @if (Job != null && Job.Id > 0)
+        {
+            <div class="flex items-center">
+                <input type="checkbox" @bind="isEnabled"
+                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <span class="ml-2 text-sm font-medium text-gray-700">Job is enabled</span>
+            </div>
+        }
+    </div>
+
+    <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button type="button" @onclick="OnCancel"
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            Cancel
+        </button>
+        <button type="submit" disabled="@isSaving"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isSaving)
+            {
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Job</span>
+            }
+        </button>
+    </div>
+</form>
+
+@code {
+    [Parameter]
+    public Job? Job { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private List<ProfileWithConnection> profiles = new();
+
+    private string name = "";
+    private JobType selectedType = JobType.ProfileExecution;
+    private string description = "";
+    private int? profileId = null;
+    private ScheduleType scheduleType = ScheduleType.Manual;
+    private string? cronExpression = null;
+    private int? intervalMinutes = null;
+    private int maxRetries = 3;
+    private int timeoutMinutes = 60;
+    private int priority = 5;
+    private bool allowConcurrent = false;
+    private bool autoPauseEnabled = true;
+    private bool isEnabled = true;
+    private bool isSaving = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load profiles for dropdown
+        try
+        {
+            profiles = (await ProfileService.GetAllAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load profiles");
+        }
+
+        if (Job != null)
+        {
+            name = Job.Name;
+            selectedType = Job.Type;
+            description = Job.Description ?? "";
+            profileId = Job.ProfileId;
+            scheduleType = Job.ScheduleType;
+            cronExpression = Job.CronExpression;
+            intervalMinutes = Job.IntervalMinutes;
+            maxRetries = Job.MaxRetries;
+            timeoutMinutes = Job.TimeoutMinutes;
+            priority = Job.Priority;
+            allowConcurrent = Job.AllowConcurrent;
+            autoPauseEnabled = Job.AutoPauseEnabled;
+            isEnabled = Job.IsEnabled;
+        }
+        else
+        {
+            // Reset form for new job
+            name = "";
+            selectedType = JobType.ProfileExecution;
+            description = "";
+            profileId = null;
+            scheduleType = ScheduleType.Manual;
+            cronExpression = null;
+            intervalMinutes = null;
+            maxRetries = 3;
+            timeoutMinutes = 60;
+            priority = 5;
+            allowConcurrent = false;
+            autoPauseEnabled = true;
+            isEnabled = true;
+        }
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            ToastService.ShowError("Please enter a job name");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var job = new Job
+            {
+                Id = Job?.Id ?? 0,
+                Name = name,
+                Description = description,
+                Type = selectedType,
+                ProfileId = profileId,
+                ScheduleType = scheduleType,
+                CronExpression = cronExpression,
+                IntervalMinutes = intervalMinutes,
+                MaxRetries = maxRetries,
+                TimeoutMinutes = timeoutMinutes,
+                Priority = priority,
+                AllowConcurrent = allowConcurrent,
+                AutoPauseEnabled = autoPauseEnabled,
+                IsEnabled = isEnabled,
+                Hash = "" // Will be generated by service
+            };
+
+            if (job.Id > 0)
+            {
+                await JobService.UpdateAsync(job);
+            }
+            else
+            {
+                await JobService.CreateAsync(job);
+            }
+
+            await OnSave.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to save job");
+            ToastService.ShowError("Failed to save job");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

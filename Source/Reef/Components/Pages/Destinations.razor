@@ -213,7 +213,10 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await JS.InvokeVoidAsync("initLucide");
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
     }
 
     private async Task LoadDestinations()

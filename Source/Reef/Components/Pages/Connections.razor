@@ -1,0 +1,385 @@
+@page "/connections"
+@rendermode InteractiveServer
+@inject ConnectionService ConnectionService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<PageTitle>Connections · Reef</PageTitle>
+
+<div>
+    <div class="flex items-end justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Connections</h1>
+            <p class="text-sm text-gray-500 mt-1">Manage and configure your database and data source connections.</p>
+        </div>
+        <div class="flex space-x-2">
+            <button @onclick="OpenHelpModal"
+                    class="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all flex items-center">
+                <i data-lucide="help-circle" class="h-4 w-4 mr-2"></i>
+                Help
+            </button>
+            <button @onclick="OpenAddConnectionModal"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all flex items-center">
+                <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                Add Connection
+            </button>
+        </div>
+    </div>
+
+    <!-- Metrics Grid (2 cards) -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Total Connections</p>
+                <i data-lucide="plug" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold text-gray-900">@connections.Count</p>
+            <p class="text-xs text-gray-500 mt-2">@activeCount active</p>
+        </div>
+        <div class="surface-container p-4">
+            <div class="flex items-center justify-between mb-2">
+                <p class="text-[11px] font-bold text-gray-400 uppercase">Active Connections</p>
+                <i data-lucide="check-circle" class="h-4 w-4 text-gray-400"></i>
+            </div>
+            <p class="text-2xl font-semibold text-green-600">@activeCount</p>
+            <p class="text-xs text-gray-500 mt-2">Ready for use</p>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="mb-6">
+        <FilterBar OnFilterChange="HandleFilterChange"
+                   SearchPlaceholder="Search connections by name, type, or tags..."
+                   ShowStatusFilter="true"
+                   ResultCount="filteredConnections.Count" />
+    </div>
+
+    <!-- Connections Table -->
+    <div class="surface-container overflow-hidden">
+        @if (filteredConnections.Count == 0)
+        {
+            <div class="p-12 text-center">
+                <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
+                <p class="text-gray-500 text-sm">
+                    @if (string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>No connections found. Click "Add Connection" to create one.</text>
+                    }
+                    else
+                    {
+                        <text>No connections match your search.</text>
+                    }
+                </p>
+            </div>
+        }
+        else
+        {
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50/50 border-b border-gray-100">
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Name</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Type</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Last Tested</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Tags</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase">Status</th>
+                        <th class="px-6 py-4 text-[11px] font-bold text-gray-400 uppercase text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @foreach (var connection in filteredConnections)
+                    {
+                        <tr class="hover:bg-blue-50/30 transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900">@connection.Name</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <StatusBadge Text="@GetConnectionTypeDisplay(connection.Type)" Color="@GetConnectionTypeColor(connection.Type)" />
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                @(connection.LastTestedAt.HasValue ? FormatRelativeTime(connection.LastTestedAt.Value) : "Never")
+                            </td>
+                            <td class="px-6 py-4">
+                                @if (!string.IsNullOrWhiteSpace(connection.Tags))
+                                {
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach (var tag in connection.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(3))
+                                        {
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700">
+                                                @tag
+                                            </span>
+                                        }
+                                        @if (connection.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Length > 3)
+                                        {
+                                            <span class="text-xs text-gray-400">+@(connection.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Length - 3)</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-gray-400">—</span>
+                                }
+                            </td>
+                            <td class="px-6 py-4">
+                                <StatusBadge
+                                    Text="@(connection.IsActive ? "Active" : "Inactive")"
+                                    Color="@(connection.IsActive ? "green" : "gray")"
+                                    ShowDot="true" />
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end space-x-2">
+                                    <button @onclick="() => EditConnection(connection)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-blue-600"
+                                            title="Edit">
+                                        <i data-lucide="edit-2" class="h-4 w-4"></i>
+                                    </button>
+                                    <button @onclick="() => DeleteConnection(connection)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-red-600"
+                                            title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- Connection Modal -->
+<Modal Title="@(editingConnection == null ? "Add New Connection" : "Edit Connection")"
+       IsVisible="showConnectionModal"
+       OnClose="CloseConnectionModal"
+       Size="large">
+    <ConnectionForm Connection="editingConnection" OnSave="HandleConnectionSaved" OnCancel="CloseConnectionModal" />
+</Modal>
+
+<!-- Help Modal -->
+<Modal Title="How to use Connections" IsVisible="showHelpModal" OnClose="CloseHelpModal">
+    <div class="space-y-4 text-gray-700 text-sm">
+        <p>The <b>Connections</b> page lets you manage and configure your database and data source connections. These connections are used by profiles and jobs to access data for processing and export.</p>
+
+        <h4 class="text-base font-semibold text-gray-800 mt-4">Things to know:</h4>
+        <ul class="list-disc list-inside space-y-2 ml-4">
+            <li><b>Add Connection:</b> Click the <b>"Add Connection"</b> button to create a new connection by specifying its name, type (such as SQL Server, MySQL, or PostgreSQL), and connection string.</li>
+            <li><b>Edit/Delete:</b> Use the Edit and Delete icons that appear when hovering over a row to modify or remove existing connections.</li>
+            <li><b>Status:</b> Each connection displays whether it is <span class="bg-green-100 text-green-800 px-1 rounded text-xs">Active</span> or <span class="bg-gray-200 text-gray-500 px-1 rounded text-xs">Inactive</span>, and shows the last time it was tested.</li>
+            <li><b>Test Connection:</b> Use the <b>Test Connection</b> button in the add/edit form to verify your connection details before saving.</li>
+            <li><b>Tags:</b> Optionally, add comma-separated tags to help organize and filter your connections.</li>
+            <li><b>Security:</b> Connection strings are encrypted automatically for your security.</li>
+        </ul>
+
+        <div class="border-l-4 border-blue-500 pl-4 py-2 bg-blue-50 rounded-r-md pr-2">
+            <p class="text-blue-800"><strong>Tip:</strong> Reef supports multiple connection types. Make sure your connection string is correct and has the necessary permissions for data access.</p>
+        </div>
+    </div>
+</Modal>
+
+<!-- Delete Confirmation Modal -->
+<Modal Title="Confirm Delete" IsVisible="@(showDeleteConfirm && deletingConnection != null)" OnClose="CancelDelete">
+    <div class="space-y-4">
+        <p class="text-gray-700">Are you sure you want to delete the connection <b>"@(deletingConnection?.Name)"</b>?</p>
+        <p class="text-sm text-gray-500">This action cannot be undone. Any profiles or jobs using this connection will fail to execute.</p>
+
+        <div class="flex justify-end space-x-3 pt-4 border-t">
+            <button @onclick="CancelDelete"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button @onclick="ConfirmDelete"
+                    class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                Delete
+            </button>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    private List<Connection> connections = new();
+    private List<Connection> filteredConnections = new();
+    private int activeCount = 0;
+    private string searchQuery = "";
+    private string statusFilter = "All";
+
+    private bool showConnectionModal = false;
+    private bool showHelpModal = false;
+    private bool showDeleteConfirm = false;
+    private Connection? editingConnection = null;
+    private Connection? deletingConnection = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConnections();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task LoadConnections()
+    {
+        try
+        {
+            var allConnections = await ConnectionService.GetAllAsync();
+            connections = allConnections.ToList();
+            activeCount = connections.Count(c => c.IsActive);
+            ApplyFilters();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load connections");
+            ToastService.ShowError("Failed to load connections");
+        }
+    }
+
+    private void HandleFilterChange(FilterState filterState)
+    {
+        searchQuery = filterState.SearchTerm;
+        statusFilter = filterState.Status;
+        ApplyFilters();
+    }
+
+    private void ApplyFilters()
+    {
+        filteredConnections = connections.Where(c =>
+        {
+            // Search filter
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.ToLower();
+                var matchesName = c.Name.ToLower().Contains(query);
+                var matchesType = c.Type.ToString().ToLower().Contains(query);
+                var matchesTags = (c.Tags ?? "").ToLower().Contains(query);
+
+                if (!matchesName && !matchesType && !matchesTags)
+                    return false;
+            }
+
+            // Status filter
+            if (statusFilter == "Active" && !c.IsActive)
+                return false;
+            if (statusFilter == "Inactive" && c.IsActive)
+                return false;
+
+            return true;
+        }).ToList();
+    }
+
+    private void OpenAddConnectionModal()
+    {
+        editingConnection = null;
+        showConnectionModal = true;
+    }
+
+    private void EditConnection(Connection connection)
+    {
+        editingConnection = connection;
+        showConnectionModal = true;
+    }
+
+    private void CloseConnectionModal()
+    {
+        showConnectionModal = false;
+        editingConnection = null;
+    }
+
+    private async Task HandleConnectionSaved()
+    {
+        showConnectionModal = false;
+        editingConnection = null;
+        await LoadConnections();
+        ToastService.ShowSuccess("Connection saved successfully");
+    }
+
+    private void DeleteConnection(Connection connection)
+    {
+        deletingConnection = connection;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+        deletingConnection = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (deletingConnection == null) return;
+
+        try
+        {
+            var success = await ConnectionService.DeleteAsync(deletingConnection.Id);
+            if (success)
+            {
+                ToastService.ShowSuccess($"Connection '{deletingConnection.Name}' deleted successfully");
+                showDeleteConfirm = false;
+                deletingConnection = null;
+                await LoadConnections();
+            }
+            else
+            {
+                ToastService.ShowError("Failed to delete connection");
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to delete connection {ConnectionId}", deletingConnection.Id);
+            ToastService.ShowError("An error occurred while deleting the connection");
+        }
+    }
+
+    private void OpenHelpModal()
+    {
+        showHelpModal = true;
+    }
+
+    private void CloseHelpModal()
+    {
+        showHelpModal = false;
+    }
+
+    private string GetConnectionTypeDisplay(string type)
+    {
+        return type switch
+        {
+            "SqlServer" => "SQL Server",
+            "MySQL" => "MySQL",
+            "PostgreSQL" => "PostgreSQL",
+            _ => type
+        };
+    }
+
+    private string GetConnectionTypeColor(string type)
+    {
+        return type switch
+        {
+            "SqlServer" => "blue",
+            "MySQL" => "orange",
+            "PostgreSQL" => "indigo",
+            _ => "gray"
+        };
+    }
+
+    private string FormatRelativeTime(DateTime dateTime)
+    {
+        var timeSpan = DateTime.Now - dateTime;
+
+        if (timeSpan.TotalMinutes < 1)
+            return "Just now";
+        if (timeSpan.TotalMinutes < 60)
+            return $"{(int)timeSpan.TotalMinutes}m ago";
+        if (timeSpan.TotalHours < 24)
+            return $"{(int)timeSpan.TotalHours}h ago";
+        if (timeSpan.TotalDays < 7)
+            return $"{(int)timeSpan.TotalDays}d ago";
+
+        return dateTime.ToString("MMM d, yyyy");
+    }
+}

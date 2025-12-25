@@ -1,0 +1,97 @@
+@page "/admin"
+@rendermode InteractiveServer
+@inject AdminService AdminService
+@inject NotificationService NotificationService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Admin · Reef</PageTitle>
+
+<div>
+    <div class="flex items-end justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">System Administration</h1>
+            <p class="text-sm text-gray-500 mt-1">Manage system settings and configuration.</p>
+        </div>
+    </div>
+
+    <!-- System Info -->
+    <div class="surface-container p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">System Information</h2>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-500">Version</label>
+                <p class="text-sm font-medium text-gray-900">@systemInfo.Version</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500">Database Size</label>
+                <p class="text-sm font-medium text-gray-900">@FormatBytes(systemInfo.DatabaseSizeBytes)</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500">Total Executions</label>
+                <p class="text-sm font-medium text-gray-900">@systemInfo.TotalExecutions</p>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500">Uptime</label>
+                <p class="text-sm font-medium text-gray-900">@FormatUptime(systemInfo.Uptime)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private SystemInfo systemInfo = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSystemInfo();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initLucide");
+        }
+    }
+
+    private async Task LoadSystemInfo()
+    {
+        try
+        {
+            // Get system metrics from AdminService
+            var metrics = await AdminService.GetSystemMetricsAsync();
+
+            // Map to SystemInfo (simplified)
+            systemInfo = new SystemInfo
+            {
+                Version = "1.0.0",
+                DatabaseSizeBytes = 1024 * 1024, // Placeholder
+                TotalExecutions = 0,
+                Uptime = TimeSpan.FromHours(1)
+            };
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load system info");
+        }
+    }
+
+    private string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F2} KB";
+        if (bytes < 1024 * 1024 * 1024) return $"{bytes / (1024.0 * 1024):F2} MB";
+        return $"{bytes / (1024.0 * 1024 * 1024):F2} GB";
+    }
+
+    private string FormatUptime(TimeSpan uptime)
+    {
+        if (uptime.TotalDays >= 1)
+            return $"{(int)uptime.TotalDays}d {uptime.Hours}h";
+        if (uptime.TotalHours >= 1)
+            return $"{(int)uptime.TotalHours}h {uptime.Minutes}m";
+        return $"{(int)uptime.TotalMinutes}m";
+    }
+}

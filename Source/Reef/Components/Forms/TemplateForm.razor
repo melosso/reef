@@ -1,0 +1,240 @@
+@inject QueryTemplateService TemplateService
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<form @onsubmit="HandleSubmit" class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Name
+                <span class="text-red-500 ml-1">*</span>
+            </label>
+            <input type="text" @bind="name" required
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="Customer Export Template">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Type
+                <span class="text-red-500 ml-1">*</span>
+            </label>
+            <select @bind="selectedType" required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="@QueryTemplateType.ScribanTemplate">Scriban Template (CSV, XML, JSON, EDI, etc.)</option>
+                <optgroup label="Document Generation">
+                    <option value="@QueryTemplateType.DocumentTemplate">Document Template (PDF, DOCX, ODT)</option>
+                </optgroup>
+                <optgroup label="SQL Server Transforms">
+                    <option value="@QueryTemplateType.XsltTransform">XSLT Transform</option>
+                    <option value="@QueryTemplateType.ForXmlRaw">FOR XML RAW</option>
+                    <option value="@QueryTemplateType.ForXmlAuto">FOR XML AUTO</option>
+                    <option value="@QueryTemplateType.ForXmlPath">FOR XML PATH</option>
+                    <option value="@QueryTemplateType.ForXmlExplicit">FOR XML EXPLICIT</option>
+                    <option value="@QueryTemplateType.ForJson">FOR JSON AUTO</option>
+                    <option value="@QueryTemplateType.ForJsonPath">FOR JSON PATH</option>
+                </optgroup>
+            </select>
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea @bind="description" rows="2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Optional description"></textarea>
+    </div>
+
+    <div>
+        <label class="flex items-center text-sm font-medium text-gray-700 mb-1">
+            <span>Template Content</span>
+            <span class="text-red-500 ml-1">*</span>
+            <span class="ml-2 text-gray-400 cursor-help inline-flex" title="Enter the content of the template using Scriban syntax.">
+                <i data-lucide="info" class="w-4 h-4"></i>
+            </span>
+            <span class="ml-1 text-gray-400 cursor-help inline-flex" title="Scriban variables are case sensitive (e.g., ItemCode ≠ itemcode)">
+                <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            </span>
+        </label>
+        <textarea @bind="templateContent" rows="12" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  placeholder="Enter template content..."></textarea>
+        <div class="flex items-center mt-1 space-x-2">
+            @if (selectedType == QueryTemplateType.ScribanTemplate)
+            {
+                <button type="button" @onclick="ValidateTemplate"
+                        class="px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition">
+                    <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
+                    Validate
+                </button>
+            }
+            <span class="text-xs text-gray-400">Use <code class="bg-gray-100 px-1 rounded">{{"{{"}}column_name{{"}}"}}</code> for placeholders</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
+            <select @bind="outputFormat"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="XML">XML</option>
+                <option value="JSON">JSON</option>
+                <option value="CSV">CSV</option>
+                <option value="Text">Text</option>
+                <option value="YAML">YAML</option>
+                <option value="HTML">HTML</option>
+                <option value="EDI">EDI</option>
+                <option value="PDF">PDF</option>
+                <option value="DOCX">DOCX</option>
+                <option value="ODT">ODT</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <input type="text" @bind="tags"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                   placeholder="xml, transformation">
+            <span class="text-xs text-gray-400 mt-1 block">Comma-separated</span>
+        </div>
+    </div>
+
+    @if (Template != null && Template.Id > 0)
+    {
+        <div class="flex items-center p-3 bg-gray-50 rounded-md">
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" @bind="isActive"
+                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                <span class="ml-2 text-sm font-medium text-gray-700">Template is active</span>
+            </label>
+        </div>
+    }
+
+    <div class="flex justify-end space-x-3 pt-4 border-t">
+        <button type="button" @onclick="OnCancel"
+                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+            Cancel
+        </button>
+        <button type="submit" disabled="@isSaving"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            @if (isSaving)
+            {
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save Template</span>
+            }
+        </button>
+    </div>
+</form>
+
+@code {
+    [Parameter]
+    public QueryTemplate? Template { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private string name = "";
+    private QueryTemplateType selectedType = QueryTemplateType.ScribanTemplate;
+    private string description = "";
+    private string templateContent = "";
+    private string outputFormat = "XML";
+    private string tags = "";
+    private bool isActive = true;
+    private bool isSaving = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Template != null)
+        {
+            name = Template.Name;
+            selectedType = Template.Type;
+            description = Template.Description ?? "";
+            templateContent = Template.Template ?? "";
+            outputFormat = Template.OutputFormat ?? "XML";
+            tags = Template.Tags ?? "";
+            isActive = Template.IsActive;
+        }
+        else
+        {
+            // Reset form for new template
+            name = "";
+            selectedType = QueryTemplateType.ScribanTemplate;
+            description = "";
+            templateContent = "";
+            outputFormat = "XML";
+            tags = "";
+            isActive = true;
+        }
+
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await JS.InvokeVoidAsync("initLucide");
+    }
+
+    private void ValidateTemplate()
+    {
+        if (string.IsNullOrWhiteSpace(templateContent))
+        {
+            ToastService.ShowError("Please enter template content first");
+            return;
+        }
+
+        // Basic validation for now
+        ToastService.ShowInfo("Template validation feature coming soon");
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(templateContent))
+        {
+            ToastService.ShowError("Please fill in all required fields");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var template = new QueryTemplate
+            {
+                Id = Template?.Id ?? 0,
+                Name = name,
+                Type = selectedType,
+                Description = description,
+                Template = templateContent,
+                OutputFormat = outputFormat,
+                Tags = tags,
+                IsActive = isActive,
+                Hash = "" // Will be generated by service
+            };
+
+            if (template.Id > 0)
+            {
+                await TemplateService.UpdateAsync(template);
+            }
+            else
+            {
+                await TemplateService.CreateAsync(template);
+            }
+
+            await OnSave.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to save template");
+            ToastService.ShowError("Failed to save template");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
