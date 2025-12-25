@@ -1,23 +1,42 @@
 @* 2025 Blazor Pattern: Per-page render modes with static router *@
 @* Login uses LoginLayout (static), all other pages use MainLayout (becomes interactive when needed) *@
+@using Microsoft.AspNetCore.Components.Authorization
 
-<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-    <NotFound>
-        <PageTitle>Not Found</PageTitle>
-        <LayoutView Layout="typeof(Layout.MainLayout)">
-            <div class="flex items-center justify-center h-screen">
-                <div class="text-center">
-                    <h1 class="text-6xl font-bold text-gray-900">404</h1>
-                    <p class="mt-4 text-xl text-gray-600">Page not found</p>
-                    <a href="/" class="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Go to Dashboard
-                    </a>
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <PageTitle>Access Denied</PageTitle>
+                    <LayoutView Layout="typeof(Layout.MainLayout)">
+                        <div class="flex items-center justify-center h-screen">
+                            <div class="text-center">
+                                <h1 class="text-6xl font-bold text-red-600">401</h1>
+                                <p class="mt-4 text-xl text-gray-600">Access Denied</p>
+                                <p class="mt-2 text-sm text-gray-500">You don't have permission to access this page.</p>
+                                <a href="/dashboard" class="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                    Go to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                    </LayoutView>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not Found</PageTitle>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <div class="flex items-center justify-center h-screen">
+                    <div class="text-center">
+                        <h1 class="text-6xl font-bold text-gray-900">404</h1>
+                        <p class="mt-4 text-xl text-gray-600">Page not found</p>
+                        <a href="/" class="mt-6 inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Go to Dashboard
+                        </a>
+                    </div>
                 </div>
-            </div>
-        </LayoutView>
-    </NotFound>
-</Router>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

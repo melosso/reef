@@ -32,7 +32,7 @@ public class JobsMigration
         await AddAutoPauseEnabledColumnAsync(conn);
         await FixExistingJobsAsync(conn);
         await AddMissingIndexesAsync(conn);
-        
+
         Log.Debug("✓ Jobs migrations completed");
     }
     

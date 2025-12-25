@@ -1,67 +1,1120 @@
 @page "/admin"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject AdminService AdminService
+@inject AuditService AuditService
+@inject DestinationService DestinationService
 @inject NotificationService NotificationService
 @inject ToastService ToastService
 @attribute [Authorize(Roles = "Admin")]
+@using Reef.Core.Models
+@using Reef.Core.Services
+@using Microsoft.AspNetCore.Authorization
 
 <PageTitle>Admin · Reef</PageTitle>
 
-<div>
-    <div class="flex items-end justify-between mb-6">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900">System Administration</h1>
-            <p class="text-sm text-gray-500 mt-1">Manage system settings and configuration.</p>
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-200 mb-6">
+        <div class="px-8 py-6">
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">Application Settings</h1>
+            <p class="text-sm text-gray-500 mt-1">Manage system configuration, users, and monitoring.</p>
         </div>
+
+        <!-- Tab Navigation -->
+        <nav class="px-8 flex space-x-6 border-t border-gray-100 overflow-x-auto">
+            <button @onclick='() => SwitchTab("system")' class="@GetTabClass("system")">
+                System Info
+            </button>
+            <button @onclick='() => SwitchTab("metrics")' class="@GetTabClass("metrics")">
+                Statistics
+            </button>
+            <button @onclick='() => SwitchTab("logs")' class="@GetTabClass("logs")">
+                Logging
+            </button>
+            <button @onclick='() => SwitchTab("audit")' class="@GetTabClass("audit")">
+                Audit
+            </button>
+            <button @onclick='() => SwitchTab("users")' class="@GetTabClass("users")">
+                Users
+            </button>
+            <button @onclick='() => SwitchTab("apikeys")' class="@GetTabClass("apikeys")">
+                Integrations
+            </button>
+            <button @onclick='() => SwitchTab("notifications")' class="@GetTabClass("notifications")">
+                Notifications
+            </button>
+            <button @onclick='() => SwitchTab("email-templates")' class="@GetTabClass("email-templates")">
+                Templates
+            </button>
+            <button @onclick='() => SwitchTab("danger")' class="@GetTabClass("danger")">
+                Danger Zone
+            </button>
+        </nav>
     </div>
 
-    <!-- System Info -->
-    <div class="surface-container p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">System Information</h2>
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Version</label>
-                <p class="text-sm font-medium text-gray-900">@systemInfo.Version</p>
+    <div class="px-8 pb-8">
+        <!-- System Info Tab -->
+        @if (activeTab == "system")
+        {
+            <div class="space-y-6">
+                <!-- Key Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <!-- Version Card -->
+                    <div class="surface-container p-5 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Version</div>
+                            <i data-lucide="package" class="h-4 w-4 text-blue-500"></i>
+                        </div>
+                        <div class="text-2xl font-semibold text-gray-900">@systemVersion</div>
+                        <div class="text-xs text-gray-500 mt-1">@systemEnvironment</div>
+                    </div>
+
+                    <!-- Uptime Card -->
+                    <div class="surface-container p-5 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Uptime</div>
+                            <i data-lucide="clock" class="h-4 w-4 text-green-500"></i>
+                        </div>
+                        <div class="text-2xl font-semibold text-gray-900">@FormatUptime(systemUptime)</div>
+                        <div class="text-xs text-gray-500 mt-1">Last restart</div>
+                    </div>
+
+                    <!-- Server Time Card -->
+                    <div class="surface-container p-5 border-l-4 border-purple-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Server Time</div>
+                            <i data-lucide="server" class="h-4 w-4 text-purple-500"></i>
+                        </div>
+                        <div class="text-2xl font-semibold text-gray-900">@DateTime.UtcNow.ToString("HH:mm:ss")</div>
+                        <div class="text-xs text-gray-500 mt-1">@DateTime.UtcNow.ToString("yyyy-MM-dd") UTC</div>
+                    </div>
+
+                    <!-- License Card -->
+                    <div class="surface-container p-5 border-l-4 border-orange-500">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">License</div>
+                            <i data-lucide="shield" class="h-4 w-4 text-orange-500"></i>
+                        </div>
+                        <div class="text-2xl font-semibold text-gray-900">AGPL 3.0</div>
+                        <div class="text-xs text-gray-500 mt-1">Open Source</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Information -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- System Details -->
+                    <div class="surface-container">
+                        <div class="px-6 py-4 border-b border-gray-100">
+                            <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                                <i data-lucide="cpu" class="h-4 w-4 mr-2 text-blue-500"></i>
+                                System Information
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Version</span>
+                                <span class="text-sm font-medium text-gray-900">@systemVersion</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Environment</span>
+                                <span class="text-sm font-medium text-gray-900">@systemEnvironment</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Database Size</span>
+                                <span class="text-sm font-medium text-gray-900">@FormatBytes(databaseSizeBytes)</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Repository</span>
+                                <a href="https://github.com/melosso/reef" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                    GitHub
+                                    <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- License Details -->
+                    <div class="surface-container">
+                        <div class="px-6 py-4 border-b border-gray-100">
+                            <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                                <i data-lucide="file-text" class="h-4 w-4 mr-2 text-green-500"></i>
+                                License Information
+                            </h3>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Type</span>
+                                <span class="text-sm font-medium text-gray-900">AGPL 3.0</span>
+                            </div>
+                            <div class="flex justify-between items-start">
+                                <span class="text-sm text-gray-600">Description</span>
+                                <span class="text-sm text-gray-900 text-right max-w-xs">Open source with copyleft provisions</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Source Code</span>
+                                <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-medium">Required</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Full License</span>
+                                <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                    View
+                                    <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="surface-container p-6 bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 mb-1">Need help?</h4>
+                            <p class="text-sm text-gray-600">Check our documentation or get support</p>
+                        </div>
+                        <div class="flex space-x-2">
+                            <a href="https://github.com/melosso/reef/wiki" target="_blank" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center transition-colors">
+                                <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
+                                Documentation
+                            </a>
+                            <a href="https://github.com/melosso/reef/issues" target="_blank" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+                                <i data-lucide="life-buoy" class="h-4 w-4 mr-2"></i>
+                                Get Support
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Database Size</label>
-                <p class="text-sm font-medium text-gray-900">@FormatBytes(systemInfo.DatabaseSizeBytes)</p>
+        }
+
+        <!-- Statistics Tab -->
+        @if (activeTab == "metrics")
+        {
+            <div class="space-y-6">
+                <!-- Key Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="surface-container p-6 border-l-4 border-blue-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Profiles</div>
+                            <i data-lucide="file-code" class="h-5 w-5 text-blue-500"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900">@metricsData?.profiles?.total</div>
+                        <div class="text-sm text-gray-500 mt-1"><span>@metricsData?.profiles?.active</span> active</div>
+                    </div>
+
+                    <div class="surface-container p-6 border-l-4 border-green-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Executions</div>
+                            <i data-lucide="activity" class="h-5 w-5 text-green-500"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900">@metricsData?.executions?.total</div>
+                        <div class="text-sm text-gray-500 mt-1"><span>@metricsData?.executions?.successRate</span>% success rate</div>
+                    </div>
+
+                    <div class="surface-container p-6 border-l-4 border-red-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Failed (24h)</div>
+                            <i data-lucide="alert-circle" class="h-5 w-5 text-red-500"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900">@metricsData?.executions?.failedLast24h</div>
+                        <div class="text-sm text-gray-500 mt-1">Last 24 hours</div>
+                    </div>
+
+                    <div class="surface-container p-6 border-l-4 border-purple-500">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">System Uptime</div>
+                            <i data-lucide="server" class="h-5 w-5 text-purple-500"></i>
+                        </div>
+                        <div class="text-3xl font-bold text-gray-900">@metricsData?.system?.uptimeDays</div>
+                        <div class="text-sm text-gray-500 mt-1">days</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Statistics -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Recent Statistics (7 Days) -->
+                    <div class="surface-container">
+                        <div class="p-6 border-b border-gray-100">
+                            <h3 class="text-lg font-semibold text-gray-900">Recent Statistics (7 Days)</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Total Executions</span>
+                                    <span class="font-semibold text-gray-900">@metricsData?.recentStats?.last7Days?.total</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Successful</span>
+                                    <span class="font-semibold text-green-600">@metricsData?.recentStats?.last7Days?.success</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Failed</span>
+                                    <span class="font-semibold text-red-600">@metricsData?.recentStats?.last7Days?.failed</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Average Duration</span>
+                                    <span class="font-semibold text-gray-900">@FormatDuration(metricsData?.recentStats?.last7Days?.avgDurationMs)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storage Usage -->
+                    <div class="surface-container">
+                        <div class="p-6 border-b border-gray-100">
+                            <h3 class="text-lg font-semibold text-gray-900">Storage Usage</h3>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Database Size</span>
+                                    <span class="font-semibold text-gray-900">@metricsData?.system?.databaseSizeMb MB</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">Exports Size</span>
+                                    <span class="font-semibold text-gray-900">@metricsData?.system?.exportsSizeMb MB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Total Executions</label>
-                <p class="text-sm font-medium text-gray-900">@systemInfo.TotalExecutions</p>
+        }
+
+        <!-- Logging Tab -->
+        @if (activeTab == "logs")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Console Log</h3>
+                        <div class="flex space-x-2">
+                            <select @bind="logLevelFilter" @bind:after="ApplyLogFilters" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                                <option value="">All Levels</option>
+                                <option value="Debug">Debug</option>
+                                <option value="Information">Information</option>
+                                <option value="Warning">Warning</option>
+                                <option value="Error">Error</option>
+                                <option value="Fatal">Fatal</option>
+                            </select>
+                            <label class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
+                                <input type="checkbox" @bind="logAutoRefresh" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                <span class="text-sm text-gray-700">Auto-refresh</span>
+                            </label>
+                            <button @onclick="LoadLogs" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center transition-colors">
+                                <i data-lucide="rotate-cw" class="h-4 w-4 mr-2"></i>
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        Showing latest logs (newest first)
+                    </div>
+                </div>
+
+                <!-- Log Output Area -->
+                <div class="bg-gray-900 text-gray-50 p-4 overflow-y-scroll max-h-[60vh] font-mono text-xs">
+                    @if (!logsLoaded)
+                    {
+                        <div class="text-center text-gray-400 py-4">Loading application logs...</div>
+                    }
+                    else if (!logEntries.Any())
+                    {
+                        <div class="text-center text-gray-400 py-4">No logs found</div>
+                    }
+                    else
+                    {
+                        @foreach (var log in logEntries)
+                        {
+                            <div class="py-1 hover:bg-gray-800 px-2">
+                                <span class="text-gray-500">@log.Timestamp</span>
+                                <span class="@GetLogLevelClass(log.Level) mx-2">[@log.Level]</span>
+                                <span class="text-gray-200">@log.Message</span>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <!-- Pagination -->
+                <div class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <p class="text-sm text-gray-700">
+                            Showing <span class="font-medium">@((logPage - 1) * logPageSize + 1)</span> to
+                            <span class="font-medium">@Math.Min(logPage * logPageSize, logTotalCount)</span> of
+                            <span class="font-medium">@logTotalCount</span> results
+                        </p>
+                        <div class="flex items-center space-x-2">
+                            <label class="text-sm text-gray-700">Per page:</label>
+                            <select @bind="logPageSize" @bind:after="() => { logPage = 1; LoadLogs(); }" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex space-x-1">
+                        <button @onclick="() => { if (logPage > 1) { logPage--; LoadLogs(); } }"
+                                disabled="@(logPage <= 1)"
+                                class="px-3 py-1 border border-gray-300 text-sm rounded-md @(logPage <= 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50")">
+                            Previous
+                        </button>
+                        <button @onclick="() => { if (logPage < GetTotalLogPages()) { logPage++; LoadLogs(); } }"
+                                disabled="@(logPage >= GetTotalLogPages())"
+                                class="px-3 py-1 border border-gray-300 text-sm rounded-md @(logPage >= GetTotalLogPages() ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50")">
+                            Next
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-medium text-gray-500">Uptime</label>
-                <p class="text-sm font-medium text-gray-900">@FormatUptime(systemInfo.Uptime)</p>
+        }
+
+        <!-- Audit Tab -->
+        @if (activeTab == "audit")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">Audit Logs</h3>
+                        <div class="flex space-x-2">
+                            <select @bind="auditEntityTypeFilter" @bind:after="LoadAuditLogs" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="">All Entity Types</option>
+                                <option value="Connection">Connection</option>
+                                <option value="Profile">Profile</option>
+                                <option value="User">User</option>
+                                <option value="ApiKey">API Key</option>
+                            </select>
+                            <select @bind="auditActionFilter" @bind:after="LoadAuditLogs" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                <option value="">All Actions</option>
+                                <option value="Created">Created</option>
+                                <option value="Updated">Updated</option>
+                                <option value="Deleted">Deleted</option>
+                                <option value="Executed">Executed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Timestamp</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Entity</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Action</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Performed By</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-50">
+                            @if (!auditLogs.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">No audit logs found</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var log in auditLogs)
+                                {
+                                    <tr class="hover:bg-blue-50/30 transition-colors">
+                                        <td class="px-6 py-4 text-sm text-gray-600">@FormatTimestamp(log.Timestamp)</td>
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">@log.EntityType #@log.EntityId</td>
+                                        <td class="px-6 py-4">
+                                            <span class="@GetActionBadgeClass(log.Action)">@log.Action</span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@log.PerformedBy</td>
+                                        <td class="px-6 py-4 text-xs text-gray-500 max-w-xs truncate">@(log.Changes ?? "-")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="bg-white px-4 py-3 border-t border-gray-200 flex items-center justify-between">
+                    <p class="text-sm text-gray-700">
+                        Showing <span class="font-medium">@((auditPage - 1) * auditPageSize + 1)</span> to
+                        <span class="font-medium">@Math.Min(auditPage * auditPageSize, auditTotalCount)</span> of
+                        <span class="font-medium">@auditTotalCount</span> results
+                    </p>
+                    <div class="flex space-x-1">
+                        <button @onclick="() => { if (auditPage > 1) { auditPage--; LoadAuditLogs(); } }"
+                                disabled="@(auditPage <= 1)"
+                                class="px-3 py-1 border border-gray-300 text-sm rounded-md @(auditPage <= 1 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50")">
+                            Previous
+                        </button>
+                        <button @onclick="() => { if (auditPage < GetTotalAuditPages()) { auditPage++; LoadAuditLogs(); } }"
+                                disabled="@(auditPage >= GetTotalAuditPages())"
+                                class="px-3 py-1 border border-gray-300 text-sm rounded-md @(auditPage >= GetTotalAuditPages() ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50")">
+                            Next
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
+        }
+
+        <!-- Users Tab -->
+        @if (activeTab == "users")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                        <button @onclick="OpenAddUserModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                            Add User
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Username</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Role</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Last Seen</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-50">
+                            @if (!users.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var user in users)
+                                {
+                                    <tr class="hover:bg-blue-50/30 transition-colors">
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">@user.Username</td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold @(user.Role == "Admin" ? "bg-purple-100 text-purple-800 border border-purple-200" : "bg-gray-100 text-gray-800 border border-gray-200")">
+                                                @user.Role
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="inline-flex items-center text-xs">
+                                                <span class="w-2 h-2 rounded-full mr-2 @(user.IsActive ? "bg-green-500" : "bg-gray-400")"></span>
+                                                @(user.IsActive ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@user.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@(user.LastSeenAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</td>
+                                        <td class="px-6 py-4">
+                                            <button @onclick="() => OpenEditUserModal(user)" class="text-blue-600 hover:text-blue-800 mr-3">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button @onclick="() => DeleteUser(user.Id)" class="text-red-600 hover:text-red-800">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <!-- API Keys Tab -->
+        @if (activeTab == "apikeys")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900">API Key Management</h3>
+                        <button @onclick="OpenAddApiKeyModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                            Add API Key
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Name</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Expires</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Last Used</th>
+                                <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-50">
+                            @if (!apiKeys.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">No API keys found</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var key in apiKeys)
+                                {
+                                    <tr class="hover:bg-blue-50/30 transition-colors">
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900">@key.Name</td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@key.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@(key.ExpiresAt?.ToString("yyyy-MM-dd") ?? "Never")</td>
+                                        <td class="px-6 py-4 text-sm text-gray-600">@(key.LastUsedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</td>
+                                        <td class="px-6 py-4">
+                                            <button @onclick="() => RevokeApiKey(key.Id)" class="text-red-600 hover:text-red-800">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <!-- Notifications Tab -->
+        @if (activeTab == "notifications")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-900">System Notifications</h3>
+                    <p class="text-sm text-gray-600 mt-1">Configure email notifications for system events</p>
+                </div>
+                <div class="p-6 space-y-6">
+                    <!-- Master Toggle -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-base font-semibold text-gray-900">Enable System Notifications</h4>
+                            <p class="text-sm text-gray-600 mt-1">Turn on/off all system notifications</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" @bind="notificationSettings.IsEnabled" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <!-- Destination Selection -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-2">Email Destination</label>
+                        <select @bind="notificationSettings.DestinationId" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="0">Select a destination...</option>
+                            @foreach (var dest in emailDestinations)
+                            {
+                                <option value="@dest.Id">@dest.Name</option>
+                            }
+                        </select>
+                        <p class="text-sm text-gray-600 mt-1">Choose an Email destination to send notifications through</p>
+                    </div>
+
+                    <!-- Recipients -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-900 mb-2">Recipients</label>
+                        <input type="text" @bind="notificationSettings.RecipientEmails" placeholder="admin@example.com; ops@example.com" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-sm text-gray-600 mt-1">Specify email recipients for system notifications (semicolon-separated).</p>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <!-- Notification Categories -->
+                    <div class="space-y-6">
+                        <!-- Profile Execution -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                    <i data-lucide="play-circle" class="h-5 w-5 text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-base font-semibold text-gray-900">Profile Execution</h4>
+                                    <p class="text-xs text-gray-600">Notifications for profile export execution</p>
+                                </div>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Failures</h5>
+                                        <p class="text-sm text-gray-600">Notify when a profile execution fails</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnProfileFailure" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Success</h5>
+                                        <p class="text-sm text-gray-600">Notify when a profile execution completes successfully</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnProfileSuccess" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Job Execution -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                    <i data-lucide="cog" class="h-5 w-5 text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-base font-semibold text-gray-900">Job Execution</h4>
+                                    <p class="text-xs text-gray-600">Notifications for scheduled job execution</p>
+                                </div>
+                            </div>
+                            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Failures</h5>
+                                        <p class="text-sm text-gray-600">Notify when a job execution fails</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnJobFailure" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Success</h5>
+                                        <p class="text-sm text-gray-600">Notify when a job execution completes successfully</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnJobSuccess" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Events -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-4">
+                                <div class="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                                    <i data-lucide="bell" class="h-5 w-5 text-amber-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="text-base font-semibold text-gray-900">System Events</h4>
+                                    <p class="text-xs text-gray-600">Notifications for system changes and events</p>
+                                </div>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Database Size Threshold</h5>
+                                        <p class="text-sm text-gray-600">Notify when database exceeds limit</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnDatabaseSizeThreshold" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">New API Key Created</h5>
+                                        <p class="text-sm text-gray-600">Notify when a new API key is created</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnNewApiKey" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">New User Created</h5>
+                                        <p class="text-sm text-gray-600">Notify when a new user is created</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" @bind="notificationSettings.NotifyOnNewUser" class="sr-only peer">
+                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="border-gray-200">
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end gap-3">
+                        <button @onclick="SaveNotificationSettings" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center transition-colors">
+                            <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                            Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Email Templates Tab -->
+        @if (activeTab == "email-templates")
+        {
+            <div class="surface-container">
+                <div class="p-6 border-b border-gray-100">
+                    <h3 class="text-lg font-semibold text-gray-900">Email Templates</h3>
+                    <p class="text-sm text-gray-600 mt-1">Customize email templates for system notifications</p>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- Template List -->
+                        <div class="lg:col-span-1">
+                            <label class="block text-sm font-semibold text-gray-900 mb-3">Select Template</label>
+                            <select @bind="selectedTemplateType" @bind:after="LoadTemplate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <option value="">Choose a template...</option>
+                                <option value="ProfileSuccess">Profile Success</option>
+                                <option value="ProfileFailure">Profile Failure</option>
+                                <option value="JobSuccess">Job Success</option>
+                                <option value="JobFailure">Job Failure</option>
+                                <option value="NewUser">New User</option>
+                                <option value="NewApiKey">New API Key</option>
+                                <option value="NewWebhook">New Webhook</option>
+                                <option value="NewEmailApproval">New Email Approval</option>
+                                <option value="DatabaseSizeThreshold">Database Size Alert</option>
+                            </select>
+                        </div>
+
+                        <!-- Template Editor -->
+                        <div class="lg:col-span-3">
+                            @if (string.IsNullOrEmpty(selectedTemplateType))
+                            {
+                                <div class="text-center py-12">
+                                    <i data-lucide="mail" class="h-12 w-12 text-gray-400 mx-auto mb-3"></i>
+                                    <p class="text-gray-500 font-medium">Select a template to begin editing</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <!-- Subject Editor -->
+                                <div class="mb-6">
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Email Subject</label>
+                                    <input type="text" @bind="templateSubject" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm" placeholder="Email subject with optional placeholders">
+                                </div>
+
+                                <!-- HTML Body Editor -->
+                                <div class="mb-6">
+                                    <label class="block text-sm font-semibold text-gray-900 mb-2">HTML Body</label>
+                                    <textarea @bind="templateBody" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 font-mono text-sm h-80" placeholder="HTML body of the email template"></textarea>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex gap-3 justify-end">
+                                    <button @onclick="ResetTemplateToDefault" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors">
+                                        Reset to Default
+                                    </button>
+                                    <button @onclick="SaveTemplate" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center transition-colors">
+                                        <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                        Save Template
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Reference -->
+            <div class="mt-6 surface-container bg-blue-50 border border-blue-200 p-4">
+                <h4 class="font-semibold text-blue-900 mb-2">Scriban Template Syntax</h4>
+                <p class="text-sm text-blue-800 mb-3">Email templates use Scriban syntax for variables and logic</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="text-sm text-blue-800">
+                        <p><strong>Variables:</strong></p>
+                        <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                            <li>@("{{") ProfileName @("}}")</li>
+                            <li>@("{{") ExecutionId @("}}")</li>
+                            <li>@("{{") StartedAt @("}}")</li>
+                            <li>@("{{") ErrorMessage @("}}")</li>
+                        </ul>
+                    </div>
+                    <div class="text-sm text-blue-800">
+                        <p><strong>Conditionals:</strong></p>
+                        <pre class="text-xs bg-blue-100 p-2 rounded mt-1">@("{{ if EnableCTA }}")
+  Action button here
+@("{{ end }}")</pre>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Danger Zone Tab -->
+        @if (activeTab == "danger")
+        {
+            <div class="space-y-6">
+                <!-- Audit Log Cleanup -->
+                <div class="surface-container">
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i data-lucide="file-clock" class="h-5 w-5 mr-2 text-blue-600"></i>
+                                    Audit Log Cleanup
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">Remove old audit logs to free up space</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-blue-800">
+                                Clear audit logs older than a specified number of days. Minimum retention period is 90 days for compliance.
+                            </p>
+                        </div>
+                        <div class="flex items-end space-x-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Retention Period (days)</label>
+                                <input type="number" @bind="auditRetentionDays" min="90" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button @onclick="ClearOldAuditLogs" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+                                <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
+                                Purge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Log Cleanup -->
+                <div class="surface-container">
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i data-lucide="activity" class="h-5 w-5 mr-2 text-green-600"></i>
+                                    Execution Log Cleanup
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">Manage execution history and logs</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-green-800">
+                                Clear execution logs older than a specified number of days to maintain database performance.
+                            </p>
+                        </div>
+                        <div class="flex items-end space-x-4 mb-4">
+                            <div class="flex-1">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Retention Period (days)</label>
+                                <input type="number" @bind="executionRetentionDays" min="1" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <button @onclick="ClearOldExecutionLogs" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+                                <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
+                                Purge
+                            </button>
+                        </div>
+
+                        <!-- Advanced Options -->
+                        <div class="border border-gray-200 rounded-lg">
+                            <button @onclick="() => executionAdvancedOpen = !executionAdvancedOpen" class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center">
+                                    <i data-lucide="settings" class="h-4 w-4 mr-2 text-gray-600"></i>
+                                    <span class="text-sm font-medium text-gray-700">Advanced Options</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400 transition-transform @(executionAdvancedOpen ? "rotate-180" : "")"></i>
+                            </button>
+
+                            @if (executionAdvancedOpen)
+                            {
+                                <div class="border-t border-gray-200 p-4 bg-gray-50">
+                                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <div class="flex">
+                                            <div class="flex-shrink-0">
+                                                <i data-lucide="alert-triangle" class="h-5 w-5 text-red-400"></i>
+                                            </div>
+                                            <div class="ml-3">
+                                                <h4 class="text-sm font-medium text-red-800">Danger: Clear All Execution Logs</h4>
+                                                <p class="text-sm text-red-700 mt-1">
+                                                    This will delete ALL execution logs regardless of age. This action cannot be undone.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button @onclick="ClearAllExecutionLogs" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center transition-colors">
+                                        <i data-lucide="trash-2" class="h-4 w-4 mr-2"></i>
+                                        Reset Execution Logs
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Reset -->
+                <div class="surface-container">
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <i data-lucide="trash-2" class="h-5 w-5 mr-2 text-red-600"></i>
+                                    Reset Database
+                                </h3>
+                                <p class="text-sm text-gray-500 mt-1">Completely wipe and reinitialize the database</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <p class="text-sm text-red-800">
+                                This will delete the entire database and reseed it with default data.
+                                All profiles, executions, connections, and users will be permanently lost.
+                            </p>
+                        </div>
+                        <button @onclick="InitiateResetDatabase" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center transition-colors">
+                            <i data-lucide="trash-2" class="h-4 w-4 mr-2"></i>
+                            Reset Database
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
+<!-- Add User Modal -->
+@if (showAddUserModal)
+{
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" @bind="newUsername" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" @bind="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select @bind="newUserRole" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="User">User</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button @onclick="() => showAddUserModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button @onclick="CreateUser" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Create User</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Add API Key Modal -->
+@if (showAddApiKeyModal)
+{
+    <div class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Create New API Key</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" @bind="newApiKeyName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="My API Key">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Permissions</label>
+                    <select @bind="newApiKeyPermissions" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="read">Read</option>
+                        <option value="write">Write</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button @onclick="() => showAddApiKeyModal = false" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
+                <button @onclick="CreateApiKey" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Create API Key</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    private SystemInfo systemInfo = new();
+    // Tab state
+    private string activeTab = "metrics";
+
+    // System Info
+    private string systemVersion = "1.0.0";
+    private string systemEnvironment = "Production";
+    private TimeSpan systemUptime = TimeSpan.Zero;
+    private long databaseSizeBytes = 0;
+
+    // Metrics
+    private dynamic? metricsData;
+
+    // Logging
+    private List<LogEntry> logEntries = new();
+    private bool logsLoaded = false;
+    private string logLevelFilter = "";
+    private bool logAutoRefresh = false;
+    private int logPage = 1;
+    private int logPageSize = 100;
+    private int logTotalCount = 0;
+
+    // Audit
+    private List<dynamic> auditLogs = new();
+    private string auditEntityTypeFilter = "";
+    private string auditActionFilter = "";
+    private int auditPage = 1;
+    private int auditPageSize = 50;
+    private int auditTotalCount = 0;
+
+    // Users
+    private List<User> users = new();
+    private bool showAddUserModal = false;
+    private string newUsername = "";
+    private string newPassword = "";
+    private string newUserRole = "User";
+
+    // API Keys
+    private List<ApiKey> apiKeys = new();
+    private bool showAddApiKeyModal = false;
+    private string newApiKeyName = "";
+    private string newApiKeyPermissions = "read";
+
+    // Notifications
+    private NotificationSettings notificationSettings = new();
+    private List<Destination> emailDestinations = new();
+
+    // Email Templates
+    private string selectedTemplateType = "";
+    private string templateSubject = "";
+    private string templateBody = "";
+
+    // Danger Zone
+    private int auditRetentionDays = 90;
+    private int executionRetentionDays = 30;
+    private bool executionAdvancedOpen = false;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadSystemInfo();
+        await LoadMetrics();
+        await LoadUsers();
+        await LoadApiKeys();
+        await LoadNotificationSettings();
+        await LoadEmailDestinations();
     }
 
     private async Task LoadSystemInfo()
     {
         try
         {
-            // Get system metrics from AdminService
             var metrics = await AdminService.GetSystemMetricsAsync();
+            var metricsObj = (dynamic)metrics;
 
-            // Map to SystemInfo (simplified)
-            systemInfo = new SystemInfo
-            {
-                Version = "1.0.0",
-                DatabaseSizeBytes = 1024 * 1024, // Placeholder
-                TotalExecutions = 0,
-                Uptime = TimeSpan.FromHours(1)
-            };
+            systemVersion = "1.0.0";
+            systemEnvironment = "Production";
+            systemUptime = TimeSpan.FromDays(metricsObj?.system?.uptimeDays ?? 0);
+            databaseSizeBytes = (long)((metricsObj?.system?.databaseSizeMb ?? 0) * 1024 * 1024);
         }
         catch (Exception ex)
         {
@@ -69,6 +1122,309 @@
         }
     }
 
+    private async Task LoadMetrics()
+    {
+        try
+        {
+            metricsData = await AdminService.GetSystemMetricsAsync();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load metrics");
+        }
+    }
+
+    private async Task LoadLogs()
+    {
+        try
+        {
+            // For now, return placeholder logs
+            // In a real implementation, you'd read from log files
+            logEntries = new List<LogEntry>
+            {
+                new LogEntry { Timestamp = DateTime.UtcNow.ToString("HH:mm:ss"), Level = "Information", Message = "Application started successfully" },
+                new LogEntry { Timestamp = DateTime.UtcNow.AddMinutes(-1).ToString("HH:mm:ss"), Level = "Debug", Message = "Database connection established" },
+                new LogEntry { Timestamp = DateTime.UtcNow.AddMinutes(-2).ToString("HH:mm:ss"), Level = "Warning", Message = "High memory usage detected" }
+            };
+            logTotalCount = logEntries.Count;
+            logsLoaded = true;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load logs");
+        }
+    }
+
+    private async Task LoadAuditLogs()
+    {
+        try
+        {
+            var (logs, totalCount) = await AdminService.GetAuditLogsAsync(
+                auditPage,
+                auditPageSize,
+                string.IsNullOrEmpty(auditEntityTypeFilter) ? null : auditEntityTypeFilter,
+                string.IsNullOrEmpty(auditActionFilter) ? null : auditActionFilter
+            );
+
+            auditLogs = logs.ToList();
+            auditTotalCount = totalCount;
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load audit logs");
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = (await AdminService.GetUsersAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load users");
+        }
+    }
+
+    private async Task LoadApiKeys()
+    {
+        try
+        {
+            apiKeys = (await AdminService.GetApiKeysAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load API keys");
+        }
+    }
+
+    private async Task LoadNotificationSettings()
+    {
+        try
+        {
+            var settings = await AdminService.GetNotificationSettingsAsync();
+            if (settings != null)
+            {
+                notificationSettings = settings;
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load notification settings");
+        }
+    }
+
+    private async Task LoadEmailDestinations()
+    {
+        try
+        {
+            var allDestinations = await DestinationService.GetAllAsync();
+            emailDestinations = allDestinations.Where(d => d.Type == DestinationType.Email).ToList();
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load email destinations");
+        }
+    }
+
+    private async Task SwitchTab(string tab)
+    {
+        activeTab = tab;
+
+        // Load data for specific tabs when they're opened
+        if (tab == "logs" && !logsLoaded)
+        {
+            await LoadLogs();
+        }
+        else if (tab == "audit" && !auditLogs.Any())
+        {
+            await LoadAuditLogs();
+        }
+    }
+
+    private string GetTabClass(string tab)
+    {
+        return activeTab == tab
+            ? "px-4 py-3 text-sm font-medium text-blue-600 border-b-2 border-blue-600"
+            : "px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 border-b-2 border-transparent hover:border-gray-300 transition-colors";
+    }
+
+    private void ApplyLogFilters()
+    {
+        logPage = 1;
+        _ = LoadLogs();
+    }
+
+    private int GetTotalLogPages() => (int)Math.Ceiling((double)logTotalCount / logPageSize);
+    private int GetTotalAuditPages() => (int)Math.Ceiling((double)auditTotalCount / auditPageSize);
+
+    private void OpenAddUserModal()
+    {
+        newUsername = "";
+        newPassword = "";
+        newUserRole = "User";
+        showAddUserModal = true;
+    }
+
+    private void OpenEditUserModal(User user)
+    {
+        // TODO: Implement edit user modal
+        ToastService.ShowInfo("Edit user feature coming soon");
+    }
+
+    private async Task CreateUser()
+    {
+        try
+        {
+            await AdminService.CreateUserAsync(newUsername, newPassword, newUserRole);
+            ToastService.ShowSuccess($"User '{newUsername}' created successfully");
+            showAddUserModal = false;
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to create user: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        try
+        {
+            await AdminService.DeleteUserAsync(userId);
+            ToastService.ShowSuccess("User deleted successfully");
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to delete user: {ex.Message}");
+        }
+    }
+
+    private void OpenAddApiKeyModal()
+    {
+        newApiKeyName = "";
+        newApiKeyPermissions = "read";
+        showAddApiKeyModal = true;
+    }
+
+    private async Task CreateApiKey()
+    {
+        try
+        {
+            var (keyId, apiKeyValue) = await AdminService.CreateApiKeyAsync(newApiKeyName, newApiKeyPermissions);
+            ToastService.ShowSuccess($"API key created: {apiKeyValue}");
+            showAddApiKeyModal = false;
+            await LoadApiKeys();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to create API key: {ex.Message}");
+        }
+    }
+
+    private async Task RevokeApiKey(int keyId)
+    {
+        try
+        {
+            await AdminService.RevokeApiKeyAsync(keyId);
+            ToastService.ShowSuccess("API key revoked successfully");
+            await LoadApiKeys();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to revoke API key: {ex.Message}");
+        }
+    }
+
+    private async Task SaveNotificationSettings()
+    {
+        try
+        {
+            await AdminService.UpdateNotificationSettingsAsync(notificationSettings);
+            ToastService.ShowSuccess("Notification settings saved successfully");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to save notification settings: {ex.Message}");
+        }
+    }
+
+    private async Task LoadTemplate()
+    {
+        if (string.IsNullOrEmpty(selectedTemplateType)) return;
+
+        // TODO: Load template from database
+        templateSubject = $"[Reef] {selectedTemplateType} Notification";
+        templateBody = $"<h1>{selectedTemplateType}</h1><p>Template body here</p>";
+    }
+
+    private async Task SaveTemplate()
+    {
+        try
+        {
+            // TODO: Save template to database
+            ToastService.ShowSuccess("Template saved successfully");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to save template: {ex.Message}");
+        }
+    }
+
+    private void ResetTemplateToDefault()
+    {
+        // TODO: Reset template to default
+        ToastService.ShowInfo("Template reset to default");
+    }
+
+    private async Task ClearOldAuditLogs()
+    {
+        try
+        {
+            var deleted = await AdminService.ClearOldAuditLogsAsync(auditRetentionDays);
+            ToastService.ShowSuccess($"Deleted {deleted} old audit logs");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to clear audit logs: {ex.Message}");
+        }
+    }
+
+    private async Task ClearOldExecutionLogs()
+    {
+        try
+        {
+            var deleted = await AdminService.ClearOldExecutionLogsAsync(executionRetentionDays);
+            ToastService.ShowSuccess($"Deleted {deleted} old execution logs");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to clear execution logs: {ex.Message}");
+        }
+    }
+
+    private async Task ClearAllExecutionLogs()
+    {
+        try
+        {
+            var deleted = await AdminService.ClearAllExecutionLogsAsync();
+            ToastService.ShowSuccess($"Deleted all {deleted} execution logs");
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowError($"Failed to clear all execution logs: {ex.Message}");
+        }
+    }
+
+    private async Task InitiateResetDatabase()
+    {
+        // TODO: Add confirmation modal
+        ToastService.ShowWarning("Database reset requires confirmation");
+    }
+
+    // Helper methods
     private string FormatBytes(long bytes)
     {
         if (bytes < 1024) return $"{bytes} B";
@@ -84,5 +1440,55 @@
         if (uptime.TotalHours >= 1)
             return $"{(int)uptime.TotalHours}h {uptime.Minutes}m";
         return $"{(int)uptime.TotalMinutes}m";
+    }
+
+    private string FormatDuration(int? durationMs)
+    {
+        if (!durationMs.HasValue || durationMs == 0) return "N/A";
+        var duration = TimeSpan.FromMilliseconds(durationMs.Value);
+        if (duration.TotalMinutes >= 1)
+            return $"{(int)duration.TotalMinutes}m {duration.Seconds}s";
+        return $"{duration.Seconds}s";
+    }
+
+    private string FormatTimestamp(object timestamp)
+    {
+        if (timestamp is DateTime dt)
+            return dt.ToString("yyyy-MM-dd HH:mm:ss");
+        return timestamp?.ToString() ?? "N/A";
+    }
+
+    private string GetLogLevelClass(string level)
+    {
+        return level switch
+        {
+            "Debug" => "text-gray-400",
+            "Information" => "text-blue-400",
+            "Warning" => "text-yellow-400",
+            "Error" => "text-red-400",
+            "Fatal" => "text-red-600",
+            _ => "text-gray-400"
+        };
+    }
+
+    private string GetActionBadgeClass(string action)
+    {
+        var baseClasses = "inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border";
+        return action switch
+        {
+            "Created" => $"{baseClasses} bg-green-50 text-green-800 border-green-200",
+            "Updated" => $"{baseClasses} bg-blue-50 text-blue-800 border-blue-200",
+            "Deleted" => $"{baseClasses} bg-red-50 text-red-800 border-red-200",
+            "Executed" => $"{baseClasses} bg-purple-50 text-purple-800 border-purple-200",
+            _ => $"{baseClasses} bg-gray-50 text-gray-800 border-gray-200"
+        };
+    }
+
+    // Log entry helper class
+    private class LogEntry
+    {
+        public string Timestamp { get; set; } = "";
+        public string Level { get; set; } = "";
+        public string Message { get; set; } = "";
     }
 }

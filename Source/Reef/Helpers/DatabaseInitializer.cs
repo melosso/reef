@@ -1402,6 +1402,12 @@ public class DatabaseInitializer
         // Add EmailGroupBySplitKey for email export grouping
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailGroupBySplitKey", "INTEGER NOT NULL DEFAULT 0");
 
+        // Add Job health monitoring columns for Jobs page UI
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "IsAutoPaused", "INTEGER NOT NULL DEFAULT 0");
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "LastExecutionTime", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "LastExecutionStatus", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "GroupId", "INTEGER NULL");
+
         // If future migrations are needed for compatibility:
         // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
 

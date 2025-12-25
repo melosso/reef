@@ -1297,6 +1297,87 @@ public class JobService
             Log.Information("Fixed {Count} jobs with corrupted/null NextRunTime", corruptedJobs.Count());
         }
     }
-    
+
+    /// <summary>
+    /// Get job statistics for dashboard display
+    /// </summary>
+    public async Task<JobStatistics> GetStatisticsAsync()
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        var stats = new JobStatistics
+        {
+            TotalJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs"),
+            RunningJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Running }),
+            QueuedJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Scheduled }),
+            IdleJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Idle }),
+            FailedJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Failed }),
+            AutoPausedJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE IsAutoPaused = 1")
+        };
+
+        return stats;
+    }
+
+    /// <summary>
+    /// Get queue metrics for monitoring job execution capacity
+    /// </summary>
+    public async Task<QueueMetrics> GetQueueMetricsAsync()
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        var today = DateTime.UtcNow.Date;
+
+        var metrics = new QueueMetrics
+        {
+            QueueDepth = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Scheduled }),
+            ActiveJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE Status = @Status", new { Status = JobStatus.Running }),
+            MaxSlots = 10, // This could be configurable
+            ProcessedToday = await conn.ExecuteScalarAsync<int>(
+                @"SELECT COUNT(*) FROM JobExecutions
+                  WHERE DATE(StartedAt) = DATE(@Today) AND Status IN (@Completed, @Failed)",
+                new { Today = today, Completed = JobStatus.Completed, Failed = JobStatus.Failed })
+        };
+
+        metrics.AvailableSlots = Math.Max(0, metrics.MaxSlots - metrics.ActiveJobs);
+
+        return metrics;
+    }
+
+    /// <summary>
+    /// Trigger manual execution of a job
+    /// </summary>
+    public async Task TriggerManualExecutionAsync(int jobId)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        var job = await GetByIdAsync(jobId);
+        if (job == null)
+            throw new InvalidOperationException($"Job {jobId} not found");
+
+        if (!job.IsEnabled)
+            throw new InvalidOperationException($"Job {jobId} is disabled and cannot be run");
+
+        // Create a job execution
+        var execution = new JobExecution
+        {
+            JobId = jobId,
+            StartedAt = DateTime.UtcNow,
+            Status = JobStatus.Scheduled,
+            AttemptNumber = 1,
+            TriggeredBy = "Manual",
+            ServerNode = Environment.MachineName
+        };
+
+        var executionId = await CreateExecutionAsync(execution);
+
+        // Update job status
+        await UpdateStatusAsync(jobId, JobStatus.Scheduled);
+
+        Log.Information("Manually triggered job {JobId} with execution {ExecutionId}", jobId, executionId);
+    }
+
     #endregion
 }

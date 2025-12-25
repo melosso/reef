@@ -32,10 +32,12 @@ public class JobStatistics
 
 public class QueueMetrics
 {
-    public int PendingTasks { get; set; }
-    public int RunningTasks { get; set; }
-    public int CompletedToday { get; set; }
-    public double AverageExecutionTimeMs { get; set; }
+    public int QueueDepth { get; set; }
+    public int ActiveJobs { get; set; }
+    public int AvailableSlots { get; set; }
+    public int MaxSlots { get; set; } = 10;
+    public int ProcessedToday { get; set; }
+    public int UsagePercent => MaxSlots > 0 ? (int)((ActiveJobs / (double)MaxSlots) * 100) : 0;
 }
 
 public class ApprovalStatistics

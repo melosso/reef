@@ -387,11 +387,20 @@ public class Program
                 ValidateAudience = true,
                 ValidAudience = configuration["Reef:Jwt:Audience"],
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.Zero,
+                RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+                NameClaimType = System.Security.Claims.ClaimTypes.Name
             };
         });
 
         services.AddAuthorization();
+
+        // Add Blazor authentication state provider (uses HttpContextAccessor which is already registered)
+        services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider,
+            Reef.Core.Services.HttpContextAuthenticationStateProvider>();
+
+        // Add cascading authentication state for Blazor
+        services.AddCascadingAuthenticationState();
 
         Log.Debug("Authentication configured");
     }

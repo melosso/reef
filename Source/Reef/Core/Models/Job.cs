@@ -37,9 +37,13 @@ public class Job
     public DateTime? LastSuccessTime { get; set; }
     public DateTime? LastFailureTime { get; set; }
     public int ConsecutiveFailures { get; set; }
-    
+    public bool IsAutoPaused { get; set; } = false; // Auto-paused due to repeated failures
+    public DateTime? LastExecutionTime { get; set; } // Last time any execution started
+    public int? LastExecutionStatus { get; set; } // Last execution status (JobStatus enum value)
+
     // Metadata
     public string Tags { get; set; } = string.Empty;
+    public int? GroupId { get; set; } // Optional: organize jobs into groups
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ModifiedAt { get; set; }
     public string? CreatedBy { get; set; }
