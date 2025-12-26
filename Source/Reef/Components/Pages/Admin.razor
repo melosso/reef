@@ -5,14 +5,18 @@
 @inject DestinationService DestinationService
 @inject NotificationService NotificationService
 @inject ToastService ToastService
-@attribute [Authorize(Roles = "Admin")]
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @using Reef.Core.Models
 @using Reef.Core.Services
-@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Admin · Reef</PageTitle>
 
-<div class="min-h-screen bg-gray-50">
+<AuthorizeView>
+    <Authorized>
+        @if (isAdmin)
+        {
+            <div class="min-h-screen bg-gray-50">
     <!-- Header -->
     <div class="bg-white border-b border-gray-200 mb-6">
         <div class="px-8 py-6">
@@ -973,6 +977,34 @@
         }
     </div>
 </div>
+        }
+        else
+        {
+            <!-- No Permission Message -->
+            <div class="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+                <div class="surface-container max-w-md w-full p-8 text-center">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="shield-alert" class="h-8 w-8 text-red-600"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
+                    <p class="text-gray-600 mb-6">
+                        You don't have permission to access this page. Administrator privileges are required.
+                    </p>
+                    <a href="/dashboard" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i data-lucide="arrow-left" class="h-4 w-4 mr-2"></i>
+                        Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <!-- User not logged in - redirect handled by middleware -->
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <p class="text-gray-600">Redirecting to login...</p>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
 <!-- Add User Modal -->
 @if (showAddUserModal)
@@ -1038,6 +1070,9 @@
 }
 
 @code {
+    // Authorization
+    private bool isAdmin = false;
+
     // Tab state
     private string activeTab = "metrics";
 
@@ -1096,12 +1131,21 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadSystemInfo();
-        await LoadMetrics();
-        await LoadUsers();
-        await LoadApiKeys();
-        await LoadNotificationSettings();
-        await LoadEmailDestinations();
+        // Check if user is an admin
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        isAdmin = user.IsInRole("Admin");
+
+        // Only load data if user is admin
+        if (isAdmin)
+        {
+            await LoadSystemInfo();
+            await LoadMetrics();
+            await LoadUsers();
+            await LoadApiKeys();
+            await LoadNotificationSettings();
+            await LoadEmailDestinations();
+        }
     }
 
     private async Task LoadSystemInfo()

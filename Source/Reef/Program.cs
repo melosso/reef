@@ -399,6 +399,10 @@ public class Program
         services.AddScoped<Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider,
             Reef.Core.Services.HttpContextAuthenticationStateProvider>();
 
+        // Add circuit handler to capture auth state during circuit initialization
+        services.AddScoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler,
+            Reef.Core.Services.AuthenticationCircuitHandler>();
+
         // Add cascading authentication state for Blazor
         services.AddCascadingAuthenticationState();
 
