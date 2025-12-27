@@ -890,14 +890,14 @@
                         <div class="flex items-center justify-center space-x-3">
                             <input type="checkbox" @bind="dangerZoneConfirmation" id="danger-confirm" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
                             <label for="danger-confirm" class="text-sm text-gray-700">
-                                    I understand the risks and want to proceed
+                                    I'm aware of the risks associated with accessing the Danger Zone
                             </label>
                         </div>
                         <button
                             @onclick="UnlockDangerZone"
                             disabled="@(!dangerZoneConfirmation)"
                             class="mt-6 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
-                            I'm aware of the risks
+                            Yes, I'd like to continue
                         </button>
                     </div>
                 </div>
@@ -909,7 +909,7 @@
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
                         <div class="flex items-center">
                             <i data-lucide="unlock" class="h-5 w-5 text-red-600 mr-3"></i>
-                            <span class="text-sm text-red-800 font-medium">Danger Zone Unlocked - Destructive operations are enabled</span>
+                            <span class="text-sm text-red-800 font-medium">You've unlocked the administrative area of Reef. You can lock it again at any time.</span>
                         </div>
                         <button @onclick="LockDangerZone" class="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
                             Lock

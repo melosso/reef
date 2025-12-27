@@ -3,6 +3,7 @@
 @inject GroupService GroupService
 @inject DestinationService DestinationService
 @inject NotificationTemplateService NotificationTemplateService
+@inject QueryTemplateService QueryTemplateService
 @inject ToastService ToastService
 @inject IJSRuntime JS
 
@@ -14,7 +15,7 @@
             <label class="block text-sm font-medium text-gray-900 mb-3">Profile Type</label>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="flex items-center p-3 bg-white border-2 rounded-lg cursor-pointer @(isEmailExport ? "border-gray-300" : "border-blue-500 bg-blue-50")">
-                    <input type="radio" name="profileType" checked="@(!isEmailExport)" @onchange="() => { isEmailExport = false; outputDestinationType = \"Local\"; }"
+                    <input type="radio" name="profileType" checked="@(!isEmailExport)" @onchange='() => { isEmailExport = false; outputDestinationType = "Local"; }'
                            class="h-4 w-4 text-blue-600">
                     <div class="ml-3">
                         <div class="text-sm font-medium text-gray-900">File Export Profile</div>
@@ -22,7 +23,7 @@
                     </div>
                 </label>
                 <label class="flex items-center p-3 bg-white border-2 rounded-lg cursor-pointer @(isEmailExport ? "border-blue-500 bg-blue-50" : "border-gray-300")">
-                    <input type="radio" name="profileType" checked="@isEmailExport" @onchange="() => { isEmailExport = true; outputDestinationType = \"Email\"; }"
+                    <input type="radio" name="profileType" checked="@isEmailExport" @onchange='() => { isEmailExport = true; outputDestinationType = "Email"; }'
                            class="h-4 w-4 text-blue-600">
                     <div class="ml-3">
                         <div class="text-sm font-medium text-gray-900">Email Export Profile</div>
@@ -117,10 +118,10 @@
                         <select @bind="outputDestinationType" @bind:after="FilterDestinations"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                             <option value="Local">Local File System</option>
-                            <option value="FTP">FTP</option>
-                            <option value="SFTP">SFTP</option>
+                            <option value="Ftp">FTP</option>
+                            <option value="Sftp">SFTP</option>
                             <option value="S3">AWS S3</option>
-                            <option value="Azure">Azure Blob</option>
+                            <option value="AzureBlob">Azure Blob</option>
                         </select>
                     </div>
                 }
@@ -157,178 +158,440 @@
                 </div>
             }
         </div>
+    </div>
 
-        <!-- Email Export Configuration -->
-        @if (isEmailExport)
+    <!-- Tabs for Advanced Configuration -->
+    <div class="border-t pt-4">
+        <div class="border-b border-gray-200 mb-4">
+            <nav class="-mb-px flex space-x-4 overflow-x-auto">
+                @if (isEmailExport)
+                {
+                    <button type="button" @onclick='() => activeTab = "email"'
+                            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "email" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                        <i data-lucide="mail" class="h-4 w-4 inline mr-1"></i>
+                        Email Config
+                    </button>
+                }
+                <button type="button" @onclick='() => activeTab = "preprocessing"'
+                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "preprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="play" class="h-4 w-4 inline mr-1"></i>
+                    Pre-Process
+                </button>
+                <button type="button" @onclick='() => activeTab = "postprocessing"'
+                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "postprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="check-circle" class="h-4 w-4 inline mr-1"></i>
+                    Post-Process
+                </button>
+                <button type="button" @onclick='() => activeTab = "deltasync"'
+                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "deltasync" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="refresh-cw" class="h-4 w-4 inline mr-1"></i>
+                    Smart Sync
+                </button>
+                <button type="button" @onclick='() => activeTab = "split"'
+                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "split" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="scissors" class="h-4 w-4 inline mr-1"></i>
+                    Split Output
+                </button>
+                <button type="button" @onclick='() => activeTab = "advanced"'
+                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "advanced" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="settings" class="h-4 w-4 inline mr-1"></i>
+                    Advanced
+                </button>
+            </nav>
+        </div>
+
+        <!-- Email Configuration Tab -->
+        @if (activeTab == "email" && isEmailExport)
         {
-            <div class="border-t pt-4">
-                <h3 class="text-sm font-medium text-gray-900 mb-3">Email Configuration</h3>
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Configure email-specific settings. Each row from your query can generate a separate email using the template and recipient configuration below.
+                    </p>
+                </div>
 
-                <div class="space-y-4">
-                    <!-- Email Body Template -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Email Body Template
-                            <span class="text-red-500 ml-1">*</span>
-                        </label>
-                        <select @bind="emailTemplateId" required
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                            <option value="0">Select template...</option>
-                            @foreach (var template in emailTemplates)
-                            {
-                                <option value="@template.Id">@template.TemplateType</option>
-                            }
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Scriban HTML template for email body</p>
+                <!-- Email Body Template -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Email Body Template
+                        <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <select @bind="emailTemplateId" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="0">Select template...</option>
+                        @foreach (var template in emailTemplates)
+                        {
+                            <option value="@template.Id">@template.TemplateType</option>
+                        }
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Scriban HTML template for email body</p>
+                </div>
+
+                <!-- Recipients -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Recipients
+                        <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <div class="flex space-x-2 mb-2">
+                        <button type="button" @onclick='() => emailRecipientsMode = "column"'
+                                class="px-3 py-1 text-sm rounded @(emailRecipientsMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            From Column
+                        </button>
+                        <button type="button" @onclick='() => emailRecipientsMode = "hardcoded"'
+                                class="px-3 py-1 text-sm rounded @(emailRecipientsMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            Hardcoded
+                        </button>
                     </div>
+                    @if (emailRecipientsMode == "column")
+                    {
+                        <input type="text" @bind="emailRecipientsColumn" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="EmailAddress">
+                        <p class="text-xs text-gray-500 mt-1">Column name containing email addresses</p>
+                    }
+                    else
+                    {
+                        <input type="email" @bind="emailRecipientsHardcoded" required
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                               placeholder="recipient@example.com">
+                        <p class="text-xs text-gray-500 mt-1">One email address or multiple separated by semicolons</p>
+                    }
+                </div>
 
-                    <!-- Recipients -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Recipients
-                            <span class="text-red-500 ml-1">*</span>
-                        </label>
-                        <div class="flex space-x-2 mb-2">
-                            <button type="button" @onclick="() => emailRecipientsMode = \"column\""
-                                    class="px-3 py-1 text-sm rounded @(emailRecipientsMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                From Column
-                            </button>
-                            <button type="button" @onclick="() => emailRecipientsMode = \"hardcoded\""
-                                    class="px-3 py-1 text-sm rounded @(emailRecipientsMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                Hardcoded
-                            </button>
+                <!-- CC (Optional) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">CC (Optional)</label>
+                    <div class="flex space-x-2 mb-2">
+                        <button type="button" @onclick='() => emailCcMode = "column"'
+                                class="px-3 py-1 text-sm rounded @(emailCcMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            From Column
+                        </button>
+                        <button type="button" @onclick='() => emailCcMode = "hardcoded"'
+                                class="px-3 py-1 text-sm rounded @(emailCcMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            Hardcoded
+                        </button>
+                    </div>
+                    @if (emailCcMode == "column")
+                    {
+                        <input type="text" @bind="emailCcColumn"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="CcEmail">
+                    }
+                    else
+                    {
+                        <input type="email" @bind="emailCcHardcoded"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                               placeholder="cc@example.com">
+                    }
+                </div>
+
+                <!-- Subject -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                    <div class="flex space-x-2 mb-2">
+                        <button type="button" @onclick='() => emailSubjectMode = "column"'
+                                class="px-3 py-1 text-sm rounded @(emailSubjectMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            From Column
+                        </button>
+                        <button type="button" @onclick='() => emailSubjectMode = "hardcoded"'
+                                class="px-3 py-1 text-sm rounded @(emailSubjectMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
+                            Hardcoded
+                        </button>
+                    </div>
+                    @if (emailSubjectMode == "column")
+                    {
+                        <input type="text" @bind="emailSubjectColumn"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="Subject">
+                    }
+                    else
+                    {
+                        <input type="text" @bind="emailSubjectHardcoded"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                               placeholder="Monthly Sales Report">
+                        <p class="text-xs text-gray-500 mt-1">Supports Scriban variables like {{"{{"}} ProfileName {{"}}"}}</p>
+                    }
+                </div>
+
+                <!-- Success Threshold -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Success Threshold (%)</label>
+                    <input type="number" @bind="emailSuccessThresholdPercent" min="0" max="100"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                           placeholder="60">
+                    <p class="text-xs text-gray-500 mt-1">Minimum percentage of emails that must send successfully (default: 60%)</p>
+                </div>
+
+                <!-- Email Approval -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <label class="flex items-center mb-2">
+                        <input type="checkbox" @bind="emailApprovalRequired"
+                               class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                        <span class="ml-2 text-sm font-medium text-gray-900">Require Manual Approval</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mb-3">Emails will be queued for manual approval before sending</p>
+
+                    @if (emailApprovalRequired)
+                    {
+                        <div class="space-y-2">
+                            <p class="text-xs font-medium text-gray-700">Roles allowed to approve:</p>
+                            <label class="flex items-center">
+                                <input type="checkbox" @bind="emailApprovalRoleAdmin"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">Admin</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" @bind="emailApprovalRoleUser"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                <span class="ml-2 text-sm text-gray-700">User</span>
+                            </label>
                         </div>
-                        @if (emailRecipientsMode == \"column\")
-                        {
-                            <input type="text" @bind="emailRecipientsColumn" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                   placeholder="EmailAddress">
-                            <p class="text-xs text-gray-500 mt-1">Column name containing email addresses</p>
-                        }
-                        else
-                        {
-                            <input type="email" @bind="emailRecipientsHardcoded" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                   placeholder="recipient@example.com">
-                            <p class="text-xs text-gray-500 mt-1">One email address or multiple separated by semicolons</p>
-                        }
-                    </div>
+                    }
+                </div>
 
-                    <!-- CC (Optional) -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">CC (Optional)</label>
-                        <div class="flex space-x-2 mb-2">
-                            <button type="button" @onclick="() => emailCcMode = \"column\""
-                                    class="px-3 py-1 text-sm rounded @(emailCcMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                From Column
-                            </button>
-                            <button type="button" @onclick="() => emailCcMode = \"hardcoded\""
-                                    class="px-3 py-1 text-sm rounded @(emailCcMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                Hardcoded
-                            </button>
-                        </div>
-                        @if (emailCcMode == \"column\")
-                        {
-                            <input type="text" @bind="emailCcColumn"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                   placeholder="CcEmail">
-                        }
-                        else
-                        {
-                            <input type="email" @bind="emailCcHardcoded"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                   placeholder="cc@example.com">
-                        }
-                    </div>
-
-                    <!-- Subject -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                        <div class="flex space-x-2 mb-2">
-                            <button type="button" @onclick="() => emailSubjectMode = \"column\""
-                                    class="px-3 py-1 text-sm rounded @(emailSubjectMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                From Column
-                            </button>
-                            <button type="button" @onclick="() => emailSubjectMode = \"hardcoded\""
-                                    class="px-3 py-1 text-sm rounded @(emailSubjectMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
-                                Hardcoded
-                            </button>
-                        </div>
-                        @if (emailSubjectMode == \"column\")
-                        {
-                            <input type="text" @bind="emailSubjectColumn"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                   placeholder="Subject">
-                        }
-                        else
-                        {
-                            <input type="text" @bind="emailSubjectHardcoded"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                   placeholder="Monthly Sales Report">
-                            <p class="text-xs text-gray-500 mt-1">Supports Scriban variables like {{"{{"}} ProfileName {{"}}"}}</p>
-                        }
-                    </div>
-
-                    <!-- Success Threshold -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Success Threshold (%)</label>
-                        <input type="number" @bind="emailSuccessThresholdPercent" min="0" max="100"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                               placeholder="60">
-                        <p class="text-xs text-gray-500 mt-1">Minimum percentage of emails that must send successfully (default: 60%)</p>
-                    </div>
-
-                    <!-- Email Approval -->
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <label class="flex items-center mb-2">
-                            <input type="checkbox" @bind="emailApprovalRequired"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                            <span class="ml-2 text-sm font-medium text-gray-900">Require Manual Approval</span>
-                        </label>
-                        @if (emailApprovalRequired)
-                        {
-                            <p class="text-xs text-gray-600 mb-2">Emails will be held in "Pending" status until approved</p>
-                            <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Roles Allowed to Approve</label>
-                                <div class="space-y-1">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" @bind="emailApprovalRoleAdmin"
-                                               class="h-3 w-3 text-blue-600 border-gray-300 rounded">
-                                        <span class="ml-2 text-xs text-gray-700">Admin</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" @bind="emailApprovalRoleUser"
-                                               class="h-3 w-3 text-blue-600 border-gray-300 rounded">
-                                        <span class="ml-2 text-xs text-gray-700">User</span>
-                                    </label>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                <!-- Email Attachments -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Attachment Configuration (Optional)</label>
+                    <textarea @bind="emailAttachmentConfig" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                              placeholder='{"AttachQueryResults": true, "ResultsFormat": "CSV"}'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">JSON configuration for email attachments</p>
                 </div>
             </div>
         }
 
-        <!-- Split Configuration -->
-        <div class="border-t pt-4">
-            <h3 class="text-sm font-medium text-gray-900 mb-3">Split Output (Optional)</h3>
+        <!-- Pre-Processing Tab -->
+        @if (activeTab == "preprocessing")
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Execute SQL queries or stored procedures <strong>before</strong> the main query runs. Useful for setting up temporary tables, variables, or data cleanup.
+                    </p>
+                </div>
 
-            <div class="mb-3">
-                <label class="flex items-center">
-                    <input type="checkbox" @bind="splitEnabled"
-                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                    <span class="ml-2 text-sm text-gray-700">Split output by column value</span>
-                </label>
-            </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Pre-Process Type</label>
+                    <select @bind="preProcessType"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">None</option>
+                        <option value="Query">SQL Query</option>
+                        <option value="StoredProcedure">Stored Procedure</option>
+                    </select>
+                </div>
 
-            @if (splitEnabled)
-            {
-                <div class="space-y-3">
+                @if (!string.IsNullOrEmpty(preProcessType))
+                {
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Split Key Column</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Configuration (JSON)
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <textarea @bind="preProcessConfig" rows="4"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                  placeholder='{"Query": "DELETE FROM TempTable WHERE Date < GETDATE()"}'></textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if (preProcessType == "Query")
+                            {
+                                <text>Example: @("{\"Query\": \"DELETE FROM TempTable WHERE Date < GETDATE()\", \"Timeout\": 30}")</text>
+                            }
+                            else
+                            {
+                                <text>Example: {"ProcedureName": "usp_PrepareData", "Parameters": {}}</text>
+                            }
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" @bind="preProcessRollbackOnFailure"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Rollback if main query fails</span>
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">Undo pre-processing changes if the main query fails</p>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Post-Processing Tab -->
+        @if (activeTab == "postprocessing")
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Execute SQL queries, stored procedures, or webhooks <strong>after</strong> the main query completes. Useful for cleanup, logging, or triggering external systems.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Post-Process Type</label>
+                    <select @bind="postProcessType"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">None</option>
+                        <option value="Query">SQL Query</option>
+                        <option value="StoredProcedure">Stored Procedure</option>
+                        <option value="Webhook">Webhook</option>
+                    </select>
+                </div>
+
+                @if (!string.IsNullOrEmpty(postProcessType))
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Configuration (JSON)
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <textarea @bind="postProcessConfig" rows="4"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                  placeholder='{"Query": "UPDATE Stats SET LastRun = GETDATE()"}'></textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if (postProcessType == "Query")
+                            {
+                                <text>Example: @("{\"Query\": \"UPDATE Stats SET LastRun = GETDATE()\", \"Timeout\": 30}")</text>
+                            }
+                            else if (postProcessType == "StoredProcedure")
+                            {
+                                <text>Example: {"ProcedureName": "usp_LogExecution", "Parameters": {}}</text>
+                            }
+                            else
+                            {
+                                <text>Example: {"Url": "https://api.example.com/notify", "Method": "POST"}</text>
+                            }
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <label class="flex items-center">
+                            <input type="checkbox" @bind="postProcessSkipOnFailure"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Skip post-processing if main query fails</span>
+                        </label>
+
+                        <label class="flex items-center">
+                            <input type="checkbox" @bind="postProcessRollbackOnFailure"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Rollback post-processing on its own failure</span>
+                        </label>
+
+                        <label class="flex items-center">
+                            <input type="checkbox" @bind="postProcessOnZeroRows"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            <span class="ml-2 text-sm text-gray-700">Run even when query returns 0 rows</span>
+                        </label>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Delta Sync Tab -->
+        @if (activeTab == "deltasync")
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        <strong>Smart Sync</strong> tracks changes and only exports rows that have been added, updated, or removed since the last execution.
+                        Your query must include a unique ID column called <code class="px-1 bg-blue-100 rounded">ReefId</code>.
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <label class="text-sm font-medium text-gray-900">Enable Smart Sync</label>
+                        <p class="text-xs text-gray-500">Track and export only changes between executions</p>
+                    </div>
+                    <input type="checkbox" @bind="deltaSyncEnabled"
+                           class="h-5 w-5 text-blue-600 border-gray-300 rounded">
+                </div>
+
+                @if (deltaSyncEnabled)
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Primary Key Column (ReefId)
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <input type="text" @bind="deltaSyncReefIdColumn"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="e.g., UserId, OrderId, RecordId">
+                        <p class="text-xs text-gray-500 mt-1">Column name that uniquely identifies each row</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hash Algorithm</label>
+                        <select @bind="deltaSyncHashAlgorithm"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="MD5">MD5 (Fastest)</option>
+                            <option value="SHA256">SHA256 (Recommended)</option>
+                            <option value="SHA512">SHA512 (Most Secure)</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Algorithm used to detect row changes</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Hash Columns (Optional)</label>
+                        <input type="text" @bind="deltaSyncHashColumns"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                               placeholder="Column1,Column2,Column3">
+                        <p class="text-xs text-gray-500 mt-1">Specific columns to hash (leave empty to hash all columns)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Deleted Detection Method</label>
+                        <select @bind="deltaSyncDeletedDetectionMethod"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <option value="MissingFromQuery">Missing from query results</option>
+                            <option value="DeletedFlagColumn">Deleted flag column</option>
+                        </select>
+                    </div>
+
+                    @if (deltaSyncDeletedDetectionMethod == "DeletedFlagColumn")
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Deleted Flag Column
+                                <span class="text-red-500 ml-1">*</span>
+                            </label>
+                            <input type="text" @bind="deltaSyncDeletedFlagColumn"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                   placeholder="IsDeleted">
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        <!-- Split Output Tab -->
+        @if (activeTab == "split")
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Split your query results into separate files based on a column value. For example, create one file per customer, department, or region.
+                    </p>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                        <label class="text-sm font-medium text-gray-900">Enable Split Output</label>
+                        <p class="text-xs text-gray-500">Generate separate files based on column value</p>
+                    </div>
+                    <input type="checkbox" @bind="splitEnabled"
+                           class="h-5 w-5 text-blue-600 border-gray-300 rounded">
+                </div>
+
+                @if (splitEnabled)
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Split Key Column
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
                         <input type="text" @bind="splitKeyColumn"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
                                placeholder="CustomerId">
+                        <p class="text-xs text-gray-500 mt-1">Column to split by (one file per unique value)</p>
                     </div>
 
                     <div>
@@ -336,21 +599,68 @@
                         <input type="text" @bind="splitFilenameTemplate"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
                                placeholder="{profile}_{splitkey}_{timestamp}.{format}">
+                        <p class="text-xs text-gray-500 mt-1">
+                            Variables: {profile}, {splitkey}, {timestamp}, {format}, {date}, {time}, {guid}
+                        </p>
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
+        }
 
-        <!-- Enable/Disable -->
-        @if (Profile != null && Profile.Id > 0)
+        <!-- Advanced Tab -->
+        @if (activeTab == "advanced")
         {
-            <div class="flex items-center">
-                <input type="checkbox" @bind="isEnabled"
-                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                <span class="ml-2 text-sm font-medium text-gray-700">Profile is enabled</span>
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Advanced configuration including custom transformations, templates, and notification settings.
+                    </p>
+                </div>
+
+                <!-- Query Template -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Query Template (Optional)</label>
+                    <select @bind="templateId"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                        <option value="">None - Use raw query results</option>
+                        @foreach (var template in queryTemplates)
+                        {
+                            <option value="@template.Id">@template.Name</option>
+                        }
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1">Scriban template for custom data transformation</p>
+                </div>
+
+                <!-- Transformation Options -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Transformation Options (JSON)</label>
+                    <textarea @bind="transformationOptionsJson" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                              placeholder='{"ForJsonOptions": "AUTO", "ForXmlOptions": "RAW"}'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">SQL Server native transformation options (FOR JSON, FOR XML)</p>
+                </div>
+
+                <!-- Notification Config -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Notification Configuration (JSON)</label>
+                    <textarea @bind="notificationConfig" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                              placeholder='{"OnSuccess": true, "OnFailure": true, "Recipients": ["admin@example.com"]}'></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Configure notifications for execution status</p>
+                </div>
             </div>
         }
     </div>
+
+    <!-- Enable/Disable -->
+    @if (Profile != null && Profile.Id > 0)
+    {
+        <div class="flex items-center border-t pt-4">
+            <input type="checkbox" @bind="isEnabled"
+                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <span class="ml-2 text-sm font-medium text-gray-700">Profile is enabled</span>
+        </div>
+    }
 
     <div class="flex justify-end space-x-3 pt-4 border-t">
         <button type="button" @onclick="OnCancel"
@@ -386,6 +696,10 @@
     private List<Destination> destinations = new();
     private List<Destination> filteredDestinations = new();
     private List<NotificationEmailTemplate> emailTemplates = new();
+    private List<QueryTemplate> queryTemplates = new();
+
+    // Tab state
+    private string activeTab = "email";
 
     // Basic fields
     private string name = "";
@@ -399,33 +713,51 @@
 
     // Email fields
     private bool isEmailExport = false;
-    private int emailTemplateId = 0; // Changed from emailBodyTemplateId
-
-    // Recipients configuration
-    private string emailRecipientsMode = "hardcoded"; // "column" or "hardcoded"
+    private int emailTemplateId = 0;
+    private string emailRecipientsMode = "hardcoded";
     private string? emailRecipientsColumn = null;
     private string? emailRecipientsHardcoded = null;
-
-    // CC configuration
     private string emailCcMode = "hardcoded";
     private string? emailCcColumn = null;
     private string? emailCcHardcoded = null;
-
-    // Subject configuration
     private string emailSubjectMode = "hardcoded";
     private string? emailSubjectColumn = null;
     private string? emailSubjectHardcoded = null;
-
-    // Email settings
-    private int emailSuccessThresholdPercent = 60; // Changed from emailSuccessThreshold
+    private int emailSuccessThresholdPercent = 60;
     private bool emailApprovalRequired = false;
     private bool emailApprovalRoleAdmin = true;
     private bool emailApprovalRoleUser = false;
+    private string? emailAttachmentConfig = null;
+
+    // Pre-Processing fields
+    private string? preProcessType = null;
+    private string? preProcessConfig = null;
+    private bool preProcessRollbackOnFailure = true;
+
+    // Post-Processing fields
+    private string? postProcessType = null;
+    private string? postProcessConfig = null;
+    private bool postProcessSkipOnFailure = true;
+    private bool postProcessRollbackOnFailure = false;
+    private bool postProcessOnZeroRows = false;
+
+    // Delta Sync fields
+    private bool deltaSyncEnabled = false;
+    private string? deltaSyncReefIdColumn = null;
+    private string deltaSyncHashAlgorithm = "SHA256";
+    private string? deltaSyncHashColumns = null;
+    private string deltaSyncDeletedDetectionMethod = "MissingFromQuery";
+    private string? deltaSyncDeletedFlagColumn = null;
 
     // Split fields
     private bool splitEnabled = false;
     private string? splitKeyColumn = null;
     private string? splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
+
+    // Advanced fields
+    private int? templateId = null;
+    private string? transformationOptionsJson = null;
+    private string? notificationConfig = null;
 
     private bool isEnabled = true;
     private bool isSaving = false;
@@ -439,11 +771,15 @@
             groups = (await GroupService.GetAllAsync()).ToList();
             destinations = (await DestinationService.GetAllAsync()).ToList();
             emailTemplates = (await NotificationTemplateService.GetAllAsync()).ToList();
+            queryTemplates = (await QueryTemplateService.GetAllAsync()).ToList();
         }
         catch (Exception ex)
         {
             Serilog.Log.Error(ex, "Failed to load form data");
         }
+
+        // Set default active tab
+        activeTab = isEmailExport ? "email" : "preprocessing";
 
         if (Profile != null)
         {
@@ -470,6 +806,7 @@
             emailSubjectHardcoded = Profile.EmailSubjectHardcoded;
             emailSuccessThresholdPercent = Profile.EmailSuccessThresholdPercent;
             emailApprovalRequired = Profile.EmailApprovalRequired;
+            emailAttachmentConfig = Profile.EmailAttachmentConfig;
 
             // Parse EmailApprovalRoles from JSON
             if (!string.IsNullOrEmpty(Profile.EmailApprovalRoles))
@@ -487,41 +824,51 @@
                 }
             }
 
+            // Pre-Processing
+            preProcessType = Profile.PreProcessType;
+            preProcessConfig = Profile.PreProcessConfig;
+            preProcessRollbackOnFailure = Profile.PreProcessRollbackOnFailure;
+
+            // Post-Processing
+            postProcessType = Profile.PostProcessType;
+            postProcessConfig = Profile.PostProcessConfig;
+            postProcessSkipOnFailure = Profile.PostProcessSkipOnFailure;
+            postProcessRollbackOnFailure = Profile.PostProcessRollbackOnFailure;
+            postProcessOnZeroRows = Profile.PostProcessOnZeroRows;
+
+            // Delta Sync (parse from OutputPropertiesJson if exists)
+            if (!string.IsNullOrEmpty(Profile.OutputPropertiesJson))
+            {
+                try
+                {
+                    var props = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(Profile.OutputPropertiesJson);
+                    if (props.TryGetProperty("DeltaSyncEnabled", out var enabled))
+                        deltaSyncEnabled = enabled.GetBoolean();
+                    if (props.TryGetProperty("ReefIdColumn", out var reefId))
+                        deltaSyncReefIdColumn = reefId.GetString();
+                    if (props.TryGetProperty("HashAlgorithm", out var hashAlg))
+                        deltaSyncHashAlgorithm = hashAlg.GetString() ?? "SHA256";
+                    if (props.TryGetProperty("HashColumns", out var hashCols))
+                        deltaSyncHashColumns = hashCols.GetString();
+                    if (props.TryGetProperty("DeletedDetectionMethod", out var delMethod))
+                        deltaSyncDeletedDetectionMethod = delMethod.GetString() ?? "MissingFromQuery";
+                    if (props.TryGetProperty("DeletedFlagColumn", out var delCol))
+                        deltaSyncDeletedFlagColumn = delCol.GetString();
+                }
+                catch { }
+            }
+
+            // Split
             splitEnabled = Profile.SplitEnabled;
             splitKeyColumn = Profile.SplitKeyColumn;
             splitFilenameTemplate = Profile.SplitFilenameTemplate;
+
+            // Advanced
+            templateId = Profile.TemplateId;
+            transformationOptionsJson = Profile.TransformationOptionsJson;
+            notificationConfig = Profile.NotificationConfig;
+
             isEnabled = Profile.IsEnabled;
-        }
-        else
-        {
-            // Reset form for new profile
-            name = "";
-            connectionId = 0;
-            groupId = null;
-            query = "";
-            outputFormat = "JSON";
-            outputDestinationType = "Local";
-            outputDestinationId = null;
-            filenameTemplate = "{profile}_{timestamp}.{format}";
-            isEmailExport = false;
-            emailTemplateId = 0;
-            emailRecipientsMode = "hardcoded";
-            emailRecipientsColumn = null;
-            emailRecipientsHardcoded = null;
-            emailCcMode = "hardcoded";
-            emailCcColumn = null;
-            emailCcHardcoded = null;
-            emailSubjectMode = "hardcoded";
-            emailSubjectColumn = null;
-            emailSubjectHardcoded = null;
-            emailSuccessThresholdPercent = 60;
-            emailApprovalRequired = false;
-            emailApprovalRoleAdmin = true;
-            emailApprovalRoleUser = false;
-            splitEnabled = false;
-            splitKeyColumn = null;
-            splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
-            isEnabled = true;
         }
 
         FilterDestinations();
@@ -531,11 +878,18 @@
     {
         if (isEmailExport)
         {
-            filteredDestinations = destinations.Where(d => d.Type == "Email").ToList();
+            filteredDestinations = destinations.Where(d => d.Type == DestinationType.Email).ToList();
         }
         else
         {
-            filteredDestinations = destinations.Where(d => d.Type == outputDestinationType).ToList();
+            if (Enum.TryParse<DestinationType>(outputDestinationType, out var destType))
+            {
+                filteredDestinations = destinations.Where(d => d.Type == destType).ToList();
+            }
+            else
+            {
+                filteredDestinations = destinations.ToList();
+            }
         }
     }
 
@@ -544,15 +898,39 @@
         var roles = new List<string>();
         if (emailApprovalRoleAdmin) roles.Add("Admin");
         if (emailApprovalRoleUser) roles.Add("User");
-
         return roles.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(roles) : null;
+    }
+
+    private string? SerializeDeltaSyncConfig()
+    {
+        if (!deltaSyncEnabled) return null;
+
+        var config = new Dictionary<string, object>
+        {
+            ["DeltaSyncEnabled"] = deltaSyncEnabled,
+            ["ReefIdColumn"] = deltaSyncReefIdColumn ?? "",
+            ["HashAlgorithm"] = deltaSyncHashAlgorithm,
+            ["DeletedDetectionMethod"] = deltaSyncDeletedDetectionMethod
+        };
+
+        if (!string.IsNullOrEmpty(deltaSyncHashColumns))
+            config["HashColumns"] = deltaSyncHashColumns;
+
+        if (deltaSyncDeletedDetectionMethod == "DeletedFlagColumn" && !string.IsNullOrEmpty(deltaSyncDeletedFlagColumn))
+            config["DeletedFlagColumn"] = deltaSyncDeletedFlagColumn;
+
+        return System.Text.Json.JsonSerializer.Serialize(config);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("initLucide");
+            try
+            {
+                await JS.InvokeVoidAsync("lucide.createIcons");
+            }
+            catch { }
         }
     }
 
@@ -604,6 +982,18 @@
             }
         }
 
+        if (deltaSyncEnabled && string.IsNullOrWhiteSpace(deltaSyncReefIdColumn))
+        {
+            ToastService.ShowError("Please enter the ReefId column name for Smart Sync");
+            return;
+        }
+
+        if (splitEnabled && string.IsNullOrWhiteSpace(splitKeyColumn))
+        {
+            ToastService.ShowError("Please enter the split key column name");
+            return;
+        }
+
         isSaving = true;
         try
         {
@@ -615,12 +1005,12 @@
                 GroupId = groupId,
                 Query = query,
                 OutputFormat = outputFormat,
-                OutputDestinationType = isEmailExport ? "Email" : outputDestinationType,
+                OutputDestinationType = outputDestinationType,
                 OutputDestinationId = outputDestinationId,
                 FilenameTemplate = filenameTemplate,
                 IsEmailExport = isEmailExport,
 
-                // Email configuration
+                // Email fields
                 EmailTemplateId = isEmailExport ? emailTemplateId : null,
                 EmailRecipientsColumn = isEmailExport && emailRecipientsMode == "column" ? emailRecipientsColumn : null,
                 EmailRecipientsHardcoded = isEmailExport && emailRecipientsMode == "hardcoded" ? emailRecipientsHardcoded : null,
@@ -631,31 +1021,61 @@
                 EmailSuccessThresholdPercent = isEmailExport ? emailSuccessThresholdPercent : 60,
                 EmailApprovalRequired = isEmailExport && emailApprovalRequired,
                 EmailApprovalRoles = (isEmailExport && emailApprovalRequired) ? SerializeApprovalRoles() : null,
+                EmailAttachmentConfig = isEmailExport ? emailAttachmentConfig : null,
 
-                // Split configuration
+                // Pre-Processing
+                PreProcessType = preProcessType,
+                PreProcessConfig = !string.IsNullOrEmpty(preProcessType) ? preProcessConfig : null,
+                PreProcessRollbackOnFailure = preProcessRollbackOnFailure,
+
+                // Post-Processing
+                PostProcessType = postProcessType,
+                PostProcessConfig = !string.IsNullOrEmpty(postProcessType) ? postProcessConfig : null,
+                PostProcessSkipOnFailure = postProcessSkipOnFailure,
+                PostProcessRollbackOnFailure = postProcessRollbackOnFailure,
+                PostProcessOnZeroRows = postProcessOnZeroRows,
+
+                // Delta Sync via OutputPropertiesJson
+                OutputPropertiesJson = SerializeDeltaSyncConfig(),
+
+                // Split
                 SplitEnabled = splitEnabled,
-                SplitKeyColumn = splitKeyColumn,
-                SplitFilenameTemplate = splitFilenameTemplate,
+                SplitKeyColumn = splitEnabled ? splitKeyColumn : null,
+                SplitFilenameTemplate = splitEnabled ? splitFilenameTemplate : null,
+
+                // Advanced
+                TemplateId = templateId,
+                TransformationOptionsJson = transformationOptionsJson,
+                NotificationConfig = notificationConfig,
 
                 IsEnabled = isEnabled,
-                Hash = "" // Will be generated by service
+                Hash = Profile?.Hash ?? ""
             };
 
-            if (profile.Id > 0)
+            bool success;
+            if (profile.Id == 0)
             {
-                await ProfileService.UpdateAsync(profile);
+                var newId = await ProfileService.CreateAsync(profile, null);
+                success = newId > 0;
             }
             else
             {
-                await ProfileService.CreateAsync(profile, createdByUserId: null);
+                success = await ProfileService.UpdateAsync(profile);
             }
 
-            await OnSave.InvokeAsync();
+            if (success)
+            {
+                await OnSave.InvokeAsync();
+            }
+            else
+            {
+                ToastService.ShowError("Failed to save profile");
+            }
         }
         catch (Exception ex)
         {
-            Serilog.Log.Error(ex, "Failed to save profile");
-            ToastService.ShowError("Failed to save profile");
+            Serilog.Log.Error(ex, "Error saving profile");
+            ToastService.ShowError($"Error: {ex.Message}");
         }
         finally
         {

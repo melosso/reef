@@ -41,7 +41,24 @@ public class Program
 
         bool useEventLog = tempConfig.GetValue<bool>("Windows:UseEventLog", false);
 
-        var logDirectory = Path.Combine(AppContext.BaseDirectory, "log");
+        // Determine log directory based on environment
+        string logDirectory;
+        var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+            ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+            ?? "Production";
+
+        if (environment == "Development")
+        {
+            // In development, use project root /log directory for easier access
+            var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+            logDirectory = Path.Combine(projectDir, "log");
+        }
+        else
+        {
+            // In production, use AppContext.BaseDirectory/log
+            logDirectory = Path.Combine(AppContext.BaseDirectory, "log");
+        }
+
         if (!Directory.Exists(logDirectory))
         {
             Directory.CreateDirectory(logDirectory);
