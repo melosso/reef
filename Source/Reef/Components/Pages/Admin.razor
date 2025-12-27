@@ -73,7 +73,9 @@
                             <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">Version</div>
                             <i data-lucide="package" class="h-4 w-4 text-blue-500"></i>
                         </div>
-                        <div class="text-2xl font-semibold text-gray-900">@systemVersion</div>
+                        <div class="text-2xl font-semibold text-gray-900">
+                            @(systemVersion != null && systemVersion.Length > 20 ? systemVersion.Substring(0, 19) + "…" : systemVersion)
+                        </div>
                         <div class="text-xs text-gray-500 mt-1">@systemEnvironment</div>
                     </div>
 
@@ -882,20 +884,20 @@
                         <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
                             <p class="text-sm text-red-800 font-medium">
                                 <i data-lucide="shield-alert" class="h-4 w-4 inline mr-1"></i>
-                                These operations cannot be undone. Proceed with extreme caution.
+                                Any actions made here are irreversible and cannot be undone.
                             </p>
                         </div>
                         <div class="flex items-center justify-center space-x-3">
                             <input type="checkbox" @bind="dangerZoneConfirmation" id="danger-confirm" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
                             <label for="danger-confirm" class="text-sm text-gray-700">
-                                I understand the risks and want to proceed
+                                    I understand the risks and want to proceed
                             </label>
                         </div>
                         <button
                             @onclick="UnlockDangerZone"
                             disabled="@(!dangerZoneConfirmation)"
                             class="mt-6 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
-                            Unlock Danger Zone
+                            I'm aware of the risks
                         </button>
                     </div>
                 </div>
@@ -1140,7 +1142,7 @@
     private bool isAdmin = false;
 
     // Tab state
-    private string activeTab = "metrics";
+    private string activeTab = "system";
 
     // System Info
     private string systemVersion = "1.0.0";
@@ -1744,7 +1746,6 @@
         if (dangerZoneConfirmation)
         {
             dangerZoneUnlocked = true;
-            ToastService.ShowWarning("Danger Zone unlocked. Destructive operations are now enabled.");
         }
     }
 
@@ -1752,7 +1753,6 @@
     {
         dangerZoneUnlocked = false;
         dangerZoneConfirmation = false;
-        ToastService.ShowInfo("Danger Zone locked for safety.");
     }
 
     // Helper methods

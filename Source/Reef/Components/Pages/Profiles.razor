@@ -3,6 +3,8 @@
 @inject ProfileService ProfileService
 @inject ToastService ToastService
 @inject NavigationManager Nav
+@inject IJSRuntime JSRuntime
+@using Reef.Core.Models
 
 <PageTitle>Profiles · Reef</PageTitle>
 
@@ -95,16 +97,52 @@
                                              ShowDot="true" />
                             </td>
                             <td class="px-6 py-4 text-right">
-                                <button @onclick="() => EditProfile(profile)"
-                                        class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-blue-600 mr-2"
-                                        title="Edit">
-                                    <i data-lucide="edit-2" class="h-4 w-4"></i>
-                                </button>
-                                <button @onclick="() => DeleteProfile(profile)"
-                                        class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-red-600"
-                                        title="Delete">
-                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
-                                </button>
+                                <div class="flex items-center justify-end space-x-1">
+                                    <!-- Execute Button -->
+                                    @if (profile.IsEnabled)
+                                    {
+                                        <button @onclick="() => ExecuteProfile(profile)"
+                                                class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-green-600"
+                                                title="Execute Profile">
+                                            <i data-lucide="play-circle" class="h-4 w-4"></i>
+                                        </button>
+                                    }
+
+                                    <!-- Toggle Enable/Disable Button -->
+                                    <button @onclick="() => ToggleProfile(profile)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-gray-700"
+                                            title="@(profile.IsEnabled ? "Disable Profile" : "Enable Profile")">
+                                        @if (profile.IsEnabled)
+                                        {
+                                            <i data-lucide="pause" class="h-4 w-4"></i>
+                                        }
+                                        else
+                                        {
+                                            <i data-lucide="play" class="h-4 w-4"></i>
+                                        }
+                                    </button>
+
+                                    <!-- Export to TOML Button -->
+                                    <button @onclick="() => ExportToToml(profile)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-purple-600"
+                                            title="Export to TOML">
+                                        <i data-lucide="download" class="h-4 w-4"></i>
+                                    </button>
+
+                                    <!-- Edit Button -->
+                                    <button @onclick="() => EditProfile(profile)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-blue-600"
+                                            title="Edit">
+                                        <i data-lucide="edit-2" class="h-4 w-4"></i>
+                                    </button>
+
+                                    <!-- Delete Button -->
+                                    <button @onclick="() => DeleteProfile(profile)"
+                                            class="opacity-0 group-hover:opacity-100 p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-gray-400 hover:text-red-600"
+                                            title="Delete">
+                                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     }
@@ -263,5 +301,96 @@
 
         var preview = query.Replace("\n", " ").Replace("\r", " ").Trim();
         return preview.Length > 60 ? preview.Substring(0, 60) + "..." : preview;
+    }
+
+    private async Task ExecuteProfile(ProfileWithConnection profile)
+    {
+        try
+        {
+            // Call the API endpoint via fetch
+            var response = await JSRuntime.InvokeAsync<object>("fetch", $"/api/executions/execute/{profile.Id}", new
+            {
+                method = "POST",
+                headers = new Dictionary<string, string>
+                {
+                    { "Content-Type", "application/json" }
+                }
+            });
+
+            ToastService.ShowSuccess($"Profile '{profile.Name}' execution started");
+
+            // Navigate to executions page to see results
+            await Task.Delay(300);
+            Nav.NavigateTo("/executions");
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to execute profile {ProfileId}", profile.Id);
+            ToastService.ShowError($"Failed to execute profile: {ex.Message}");
+        }
+    }
+
+    private async Task ToggleProfile(ProfileWithConnection profile)
+    {
+        try
+        {
+            var newState = !profile.IsEnabled;
+
+            // Get full profile and update just the IsEnabled flag
+            var fullProfile = await ProfileService.GetByIdAsync(profile.Id);
+            if (fullProfile == null)
+            {
+                ToastService.ShowError("Profile not found");
+                return;
+            }
+
+            var profileToUpdate = new Profile
+            {
+                Id = fullProfile.Id,
+                Name = fullProfile.Name,
+                ConnectionId = fullProfile.ConnectionId,
+                Query = fullProfile.Query,
+                OutputFormat = fullProfile.OutputFormat,
+                IsEnabled = newState,
+                Hash = fullProfile.Hash ?? ""
+            };
+
+            var success = await ProfileService.UpdateAsync(profileToUpdate);
+
+            if (success)
+            {
+                ToastService.ShowSuccess($"Profile '{profile.Name}' {(newState ? "enabled" : "disabled")}");
+                StateHasChanged();
+            }
+            else
+            {
+                // Revert on failure
+                profile.IsEnabled = !newState;
+                ToastService.ShowError("Failed to toggle profile status");
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to toggle profile {ProfileId}", profile.Id);
+            ToastService.ShowError($"Failed to toggle profile: {ex.Message}");
+        }
+    }
+
+    private async Task ExportToToml(ProfileWithConnection profile)
+    {
+        try
+        {
+            // Download via navigation (API endpoint should return file)
+            var downloadUrl = $"/api/profiles/{profile.Id}/export";
+            await JSRuntime.InvokeVoidAsync("open", downloadUrl, "_blank");
+
+            ToastService.ShowSuccess($"Profile '{profile.Name}' export started");
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to export profile {ProfileId} to TOML", profile.Id);
+            ToastService.ShowError($"Failed to export profile: {ex.Message}");
+        }
     }
 }
