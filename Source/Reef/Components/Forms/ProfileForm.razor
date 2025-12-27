@@ -2,10 +2,37 @@
 @inject ConnectionService ConnectionService
 @inject GroupService GroupService
 @inject DestinationService DestinationService
+@inject NotificationTemplateService NotificationTemplateService
 @inject ToastService ToastService
 @inject IJSRuntime JS
 
 <form @onsubmit="HandleSubmit" class="space-y-4">
+    <!-- Profile Type Selection -->
+    @if (Profile == null || Profile.Id == 0)
+    {
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <label class="block text-sm font-medium text-gray-900 mb-3">Profile Type</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="flex items-center p-3 bg-white border-2 rounded-lg cursor-pointer @(isEmailExport ? "border-gray-300" : "border-blue-500 bg-blue-50")">
+                    <input type="radio" name="profileType" checked="@(!isEmailExport)" @onchange="() => { isEmailExport = false; outputDestinationType = \"Local\"; }"
+                           class="h-4 w-4 text-blue-600">
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900">File Export Profile</div>
+                        <div class="text-xs text-gray-500">Export query results to files (JSON, CSV, XML, etc.)</div>
+                    </div>
+                </label>
+                <label class="flex items-center p-3 bg-white border-2 rounded-lg cursor-pointer @(isEmailExport ? "border-blue-500 bg-blue-50" : "border-gray-300")">
+                    <input type="radio" name="profileType" checked="@isEmailExport" @onchange="() => { isEmailExport = true; outputDestinationType = \"Email\"; }"
+                           class="h-4 w-4 text-blue-600">
+                    <div class="ml-3">
+                        <div class="text-sm font-medium text-gray-900">Email Export Profile</div>
+                        <div class="text-xs text-gray-500">Send query results as emails with templates</div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    }
+
     <!-- Basic Information -->
     <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -48,17 +75,23 @@
                 </select>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
-                <select @bind="outputFormat"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                    <option value="JSON">JSON</option>
-                    <option value="XML">XML</option>
-                    <option value="CSV">CSV</option>
-                    <option value="TAB">TAB (TSV)</option>
-                    <option value="YAML">YAML</option>
-                </select>
-            </div>
+            @if (!isEmailExport)
+            {
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Output Format
+                        <span class="text-red-500 ml-1">*</span>
+                    </label>
+                    <select @bind="outputFormat"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="JSON">JSON</option>
+                        <option value="XML">XML</option>
+                        <option value="CSV">CSV</option>
+                        <option value="TAB">TAB (TSV)</option>
+                        <option value="YAML">YAML</option>
+                    </select>
+                </div>
+            }
         </div>
 
         <!-- Query -->
@@ -77,25 +110,33 @@
             <h3 class="text-sm font-medium text-gray-900 mb-3">Output Destination</h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Destination Type</label>
-                    <select @bind="outputDestinationType"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="Local">Local File System</option>
-                        <option value="FTP">FTP</option>
-                        <option value="SFTP">SFTP</option>
-                        <option value="S3">AWS S3</option>
-                        <option value="Azure">Azure Blob</option>
-                        <option value="Email">Email</option>
-                    </select>
-                </div>
+                @if (!isEmailExport)
+                {
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Destination Type</label>
+                        <select @bind="outputDestinationType" @bind:after="FilterDestinations"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Local">Local File System</option>
+                            <option value="FTP">FTP</option>
+                            <option value="SFTP">SFTP</option>
+                            <option value="S3">AWS S3</option>
+                            <option value="Azure">Azure Blob</option>
+                        </select>
+                    </div>
+                }
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Destination (Optional)</label>
-                    <select @bind="outputDestinationId"
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        Destination @(isEmailExport ? "(Email)" : "")
+                        @if (isEmailExport)
+                        {
+                            <span class="text-red-500 ml-1">*</span>
+                        }
+                    </label>
+                    <select @bind="outputDestinationId" required="@isEmailExport"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">Use default settings</option>
-                        @foreach (var dest in destinations)
+                        <option value="">@(isEmailExport ? "Select email destination..." : "Use default settings")</option>
+                        @foreach (var dest in filteredDestinations)
                         {
                             <option value="@dest.Id">@dest.Name</option>
                         }
@@ -103,57 +144,168 @@
                 </div>
             </div>
 
-            <div class="mt-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Filename Template</label>
-                <input type="text" @bind="filenameTemplate"
-                       class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                       placeholder="{profile}_{timestamp}.{format}">
-                <p class="text-xs text-gray-500 mt-1">
-                    Variables: {profile}, {timestamp}, {format}, {date}, {time}
-                </p>
-            </div>
+            @if (!isEmailExport)
+            {
+                <div class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Filename Template</label>
+                    <input type="text" @bind="filenameTemplate"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                           placeholder="{profile}_{timestamp}.{format}">
+                    <p class="text-xs text-gray-500 mt-1">
+                        Variables: {profile}, {timestamp}, {format}, {date}, {time}, {guid}
+                    </p>
+                </div>
+            }
         </div>
 
-        <!-- Email Export Options -->
-        @if (outputDestinationType == "Email")
+        <!-- Email Export Configuration -->
+        @if (isEmailExport)
         {
             <div class="border-t pt-4">
                 <h3 class="text-sm font-medium text-gray-900 mb-3">Email Configuration</h3>
 
-                <div class="mb-3">
-                    <label class="flex items-center">
-                        <input type="checkbox" @bind="isEmailExport"
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <span class="ml-2 text-sm text-gray-700">Enable email export</span>
-                    </label>
-                </div>
+                <div class="space-y-4">
+                    <!-- Email Body Template -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Email Body Template
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <select @bind="emailTemplateId" required
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="0">Select template...</option>
+                            @foreach (var template in emailTemplates)
+                            {
+                                <option value="@template.Id">@template.TemplateType</option>
+                            }
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Scriban HTML template for email body</p>
+                    </div>
 
-                @if (isEmailExport)
-                {
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Recipients</label>
-                            <input type="text" @bind="emailRecipientsHardcoded"
+                    <!-- Recipients -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Recipients
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <div class="flex space-x-2 mb-2">
+                            <button type="button" @onclick="() => emailRecipientsMode = \"column\""
+                                    class="px-3 py-1 text-sm rounded @(emailRecipientsMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                From Column
+                            </button>
+                            <button type="button" @onclick="() => emailRecipientsMode = \"hardcoded\""
+                                    class="px-3 py-1 text-sm rounded @(emailRecipientsMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                Hardcoded
+                            </button>
+                        </div>
+                        @if (emailRecipientsMode == \"column\")
+                        {
+                            <input type="text" @bind="emailRecipientsColumn" required
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                   placeholder="EmailAddress">
+                            <p class="text-xs text-gray-500 mt-1">Column name containing email addresses</p>
+                        }
+                        else
+                        {
+                            <input type="email" @bind="emailRecipientsHardcoded" required
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                                    placeholder="recipient@example.com">
-                        </div>
+                            <p class="text-xs text-gray-500 mt-1">One email address or multiple separated by semicolons</p>
+                        }
+                    </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                    <!-- CC (Optional) -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">CC (Optional)</label>
+                        <div class="flex space-x-2 mb-2">
+                            <button type="button" @onclick="() => emailCcMode = \"column\""
+                                    class="px-3 py-1 text-sm rounded @(emailCcMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                From Column
+                            </button>
+                            <button type="button" @onclick="() => emailCcMode = \"hardcoded\""
+                                    class="px-3 py-1 text-sm rounded @(emailCcMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                Hardcoded
+                            </button>
+                        </div>
+                        @if (emailCcMode == \"column\")
+                        {
+                            <input type="text" @bind="emailCcColumn"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                   placeholder="CcEmail">
+                        }
+                        else
+                        {
+                            <input type="email" @bind="emailCcHardcoded"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                   placeholder="cc@example.com">
+                        }
+                    </div>
+
+                    <!-- Subject -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+                        <div class="flex space-x-2 mb-2">
+                            <button type="button" @onclick="() => emailSubjectMode = \"column\""
+                                    class="px-3 py-1 text-sm rounded @(emailSubjectMode == \"column\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                From Column
+                            </button>
+                            <button type="button" @onclick="() => emailSubjectMode = \"hardcoded\""
+                                    class="px-3 py-1 text-sm rounded @(emailSubjectMode == \"hardcoded\" ? \"bg-blue-600 text-white\" : \"bg-gray-200 text-gray-700\")">
+                                Hardcoded
+                            </button>
+                        </div>
+                        @if (emailSubjectMode == \"column\")
+                        {
+                            <input type="text" @bind="emailSubjectColumn"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                   placeholder="Subject">
+                        }
+                        else
+                        {
                             <input type="text" @bind="emailSubjectHardcoded"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                                    placeholder="Monthly Sales Report">
-                        </div>
-
-                        <div>
-                            <label class="flex items-center">
-                                <input type="checkbox" @bind="emailApprovalRequired"
-                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                <span class="ml-2 text-sm text-gray-700">Require approval before sending</span>
-                            </label>
-                        </div>
+                            <p class="text-xs text-gray-500 mt-1">Supports Scriban variables like {{"{{"}} ProfileName {{"}}"}}</p>
+                        }
                     </div>
-                }
+
+                    <!-- Success Threshold -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Success Threshold (%)</label>
+                        <input type="number" @bind="emailSuccessThresholdPercent" min="0" max="100"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                               placeholder="60">
+                        <p class="text-xs text-gray-500 mt-1">Minimum percentage of emails that must send successfully (default: 60%)</p>
+                    </div>
+
+                    <!-- Email Approval -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <label class="flex items-center mb-2">
+                            <input type="checkbox" @bind="emailApprovalRequired"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="ml-2 text-sm font-medium text-gray-900">Require Manual Approval</span>
+                        </label>
+                        @if (emailApprovalRequired)
+                        {
+                            <p class="text-xs text-gray-600 mb-2">Emails will be held in "Pending" status until approved</p>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Roles Allowed to Approve</label>
+                                <div class="space-y-1">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" @bind="emailApprovalRoleAdmin"
+                                               class="h-3 w-3 text-blue-600 border-gray-300 rounded">
+                                        <span class="ml-2 text-xs text-gray-700">Admin</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" @bind="emailApprovalRoleUser"
+                                               class="h-3 w-3 text-blue-600 border-gray-300 rounded">
+                                        <span class="ml-2 text-xs text-gray-700">User</span>
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
         }
 
@@ -232,6 +384,8 @@
     private List<Connection> connections = new();
     private List<ProfileGroup> groups = new();
     private List<Destination> destinations = new();
+    private List<Destination> filteredDestinations = new();
+    private List<NotificationEmailTemplate> emailTemplates = new();
 
     // Basic fields
     private string name = "";
@@ -245,9 +399,28 @@
 
     // Email fields
     private bool isEmailExport = false;
+    private int emailTemplateId = 0; // Changed from emailBodyTemplateId
+
+    // Recipients configuration
+    private string emailRecipientsMode = "hardcoded"; // "column" or "hardcoded"
+    private string? emailRecipientsColumn = null;
     private string? emailRecipientsHardcoded = null;
+
+    // CC configuration
+    private string emailCcMode = "hardcoded";
+    private string? emailCcColumn = null;
+    private string? emailCcHardcoded = null;
+
+    // Subject configuration
+    private string emailSubjectMode = "hardcoded";
+    private string? emailSubjectColumn = null;
     private string? emailSubjectHardcoded = null;
+
+    // Email settings
+    private int emailSuccessThresholdPercent = 60; // Changed from emailSuccessThreshold
     private bool emailApprovalRequired = false;
+    private bool emailApprovalRoleAdmin = true;
+    private bool emailApprovalRoleUser = false;
 
     // Split fields
     private bool splitEnabled = false;
@@ -265,6 +438,7 @@
             connections = (await ConnectionService.GetAllAsync()).ToList();
             groups = (await GroupService.GetAllAsync()).ToList();
             destinations = (await DestinationService.GetAllAsync()).ToList();
+            emailTemplates = (await NotificationTemplateService.GetAllAsync()).ToList();
         }
         catch (Exception ex)
         {
@@ -282,9 +456,37 @@
             outputDestinationId = Profile.OutputDestinationId;
             filenameTemplate = Profile.FilenameTemplate;
             isEmailExport = Profile.IsEmailExport;
+
+            // Email configuration
+            emailTemplateId = Profile.EmailTemplateId ?? 0;
+            emailRecipientsMode = !string.IsNullOrEmpty(Profile.EmailRecipientsColumn) ? "column" : "hardcoded";
+            emailRecipientsColumn = Profile.EmailRecipientsColumn;
             emailRecipientsHardcoded = Profile.EmailRecipientsHardcoded;
+            emailCcMode = !string.IsNullOrEmpty(Profile.EmailCcColumn) ? "column" : "hardcoded";
+            emailCcColumn = Profile.EmailCcColumn;
+            emailCcHardcoded = Profile.EmailCcHardcoded;
+            emailSubjectMode = !string.IsNullOrEmpty(Profile.EmailSubjectColumn) ? "column" : "hardcoded";
+            emailSubjectColumn = Profile.EmailSubjectColumn;
             emailSubjectHardcoded = Profile.EmailSubjectHardcoded;
+            emailSuccessThresholdPercent = Profile.EmailSuccessThresholdPercent;
             emailApprovalRequired = Profile.EmailApprovalRequired;
+
+            // Parse EmailApprovalRoles from JSON
+            if (!string.IsNullOrEmpty(Profile.EmailApprovalRoles))
+            {
+                try
+                {
+                    var roles = System.Text.Json.JsonSerializer.Deserialize<List<string>>(Profile.EmailApprovalRoles);
+                    emailApprovalRoleAdmin = roles?.Contains("Admin") ?? false;
+                    emailApprovalRoleUser = roles?.Contains("User") ?? false;
+                }
+                catch
+                {
+                    emailApprovalRoleAdmin = true;
+                    emailApprovalRoleUser = false;
+                }
+            }
+
             splitEnabled = Profile.SplitEnabled;
             splitKeyColumn = Profile.SplitKeyColumn;
             splitFilenameTemplate = Profile.SplitFilenameTemplate;
@@ -302,14 +504,48 @@
             outputDestinationId = null;
             filenameTemplate = "{profile}_{timestamp}.{format}";
             isEmailExport = false;
+            emailTemplateId = 0;
+            emailRecipientsMode = "hardcoded";
+            emailRecipientsColumn = null;
             emailRecipientsHardcoded = null;
+            emailCcMode = "hardcoded";
+            emailCcColumn = null;
+            emailCcHardcoded = null;
+            emailSubjectMode = "hardcoded";
+            emailSubjectColumn = null;
             emailSubjectHardcoded = null;
+            emailSuccessThresholdPercent = 60;
             emailApprovalRequired = false;
+            emailApprovalRoleAdmin = true;
+            emailApprovalRoleUser = false;
             splitEnabled = false;
             splitKeyColumn = null;
             splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
             isEnabled = true;
         }
+
+        FilterDestinations();
+    }
+
+    private void FilterDestinations()
+    {
+        if (isEmailExport)
+        {
+            filteredDestinations = destinations.Where(d => d.Type == "Email").ToList();
+        }
+        else
+        {
+            filteredDestinations = destinations.Where(d => d.Type == outputDestinationType).ToList();
+        }
+    }
+
+    private string? SerializeApprovalRoles()
+    {
+        var roles = new List<string>();
+        if (emailApprovalRoleAdmin) roles.Add("Admin");
+        if (emailApprovalRoleUser) roles.Add("User");
+
+        return roles.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(roles) : null;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -322,6 +558,7 @@
 
     private async Task HandleSubmit()
     {
+        // Validation
         if (string.IsNullOrWhiteSpace(name))
         {
             ToastService.ShowError("Please enter a profile name");
@@ -340,6 +577,33 @@
             return;
         }
 
+        if (isEmailExport)
+        {
+            if (outputDestinationId == null || outputDestinationId == 0)
+            {
+                ToastService.ShowError("Please select an email destination");
+                return;
+            }
+
+            if (emailTemplateId == 0)
+            {
+                ToastService.ShowError("Please select an email body template");
+                return;
+            }
+
+            if (emailRecipientsMode == "column" && string.IsNullOrWhiteSpace(emailRecipientsColumn))
+            {
+                ToastService.ShowError("Please enter a recipients column name");
+                return;
+            }
+
+            if (emailRecipientsMode == "hardcoded" && string.IsNullOrWhiteSpace(emailRecipientsHardcoded))
+            {
+                ToastService.ShowError("Please enter recipient email addresses");
+                return;
+            }
+        }
+
         isSaving = true;
         try
         {
@@ -351,16 +615,28 @@
                 GroupId = groupId,
                 Query = query,
                 OutputFormat = outputFormat,
-                OutputDestinationType = outputDestinationType,
+                OutputDestinationType = isEmailExport ? "Email" : outputDestinationType,
                 OutputDestinationId = outputDestinationId,
                 FilenameTemplate = filenameTemplate,
                 IsEmailExport = isEmailExport,
-                EmailRecipientsHardcoded = emailRecipientsHardcoded,
-                EmailSubjectHardcoded = emailSubjectHardcoded,
-                EmailApprovalRequired = emailApprovalRequired,
+
+                // Email configuration
+                EmailTemplateId = isEmailExport ? emailTemplateId : null,
+                EmailRecipientsColumn = isEmailExport && emailRecipientsMode == "column" ? emailRecipientsColumn : null,
+                EmailRecipientsHardcoded = isEmailExport && emailRecipientsMode == "hardcoded" ? emailRecipientsHardcoded : null,
+                EmailCcColumn = isEmailExport && emailCcMode == "column" ? emailCcColumn : null,
+                EmailCcHardcoded = isEmailExport && emailCcMode == "hardcoded" ? emailCcHardcoded : null,
+                EmailSubjectColumn = isEmailExport && emailSubjectMode == "column" ? emailSubjectColumn : null,
+                EmailSubjectHardcoded = isEmailExport && emailSubjectMode == "hardcoded" ? emailSubjectHardcoded : null,
+                EmailSuccessThresholdPercent = isEmailExport ? emailSuccessThresholdPercent : 60,
+                EmailApprovalRequired = isEmailExport && emailApprovalRequired,
+                EmailApprovalRoles = (isEmailExport && emailApprovalRequired) ? SerializeApprovalRoles() : null,
+
+                // Split configuration
                 SplitEnabled = splitEnabled,
                 SplitKeyColumn = splitKeyColumn,
                 SplitFilenameTemplate = splitFilenameTemplate,
+
                 IsEnabled = isEnabled,
                 Hash = "" // Will be generated by service
             };
