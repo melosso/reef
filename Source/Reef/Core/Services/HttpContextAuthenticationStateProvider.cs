@@ -14,6 +14,7 @@ public class HttpContextAuthenticationStateProvider : RevalidatingServerAuthenti
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly JwtTokenService _jwtTokenService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private Task<AuthenticationState>? _cachedAuthenticationState;
 
     public HttpContextAuthenticationStateProvider(
         IHttpContextAccessor httpContextAccessor,
@@ -36,35 +37,27 @@ public class HttpContextAuthenticationStateProvider : RevalidatingServerAuthenti
         return Task.FromResult(authenticationState.User.Identity?.IsAuthenticated ?? false);
     }
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        try
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        // If we have HttpContext with authenticated user, cache and return it
+        if (httpContext?.User?.Identity?.IsAuthenticated == true)
         {
-            var httpContext = _httpContextAccessor.HttpContext;
-
-            // If we have HttpContext (initial request), use it
-            if (httpContext?.User?.Identity?.IsAuthenticated == true)
-            {
-                return new AuthenticationState(httpContext.User);
-            }
-
-            // If no HttpContext (SignalR circuit), try to get token from cookies
-            if (httpContext?.Request?.Cookies != null &&
-                httpContext.Request.Cookies.TryGetValue("reef_token", out var token) &&
-                !string.IsNullOrEmpty(token))
-            {
-                var principal = _jwtTokenService.ValidateToken(token);
-                if (principal != null)
-                {
-                    return new AuthenticationState(principal);
-                }
-            }
-
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            var authState = new AuthenticationState(httpContext.User);
+            _cachedAuthenticationState = Task.FromResult(authState);
+            return _cachedAuthenticationState;
         }
-        catch
+
+        // If we have a cached state (from previous HTTP request), use it
+        // This is for SignalR circuits where HttpContext may not be available
+        if (_cachedAuthenticationState != null)
         {
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            return _cachedAuthenticationState;
         }
+
+        // No authentication available - return unauthenticated user
+        var unauthenticatedState = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+        return Task.FromResult(unauthenticatedState);
     }
 }

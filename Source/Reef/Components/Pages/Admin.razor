@@ -1,14 +1,18 @@
 @page "/admin"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
 @inject AdminService AdminService
 @inject AuditService AuditService
 @inject DestinationService DestinationService
 @inject NotificationService NotificationService
+@inject NotificationTemplateService NotificationTemplateService
 @inject ToastService ToastService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @using Reef.Core.Models
 @using Reef.Core.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
 
 <PageTitle>Admin · Reef</PageTitle>
 
@@ -746,6 +750,21 @@
 
                     <!-- Action Buttons -->
                     <div class="flex justify-end gap-3">
+                        <button @onclick="SendTestNotification" disabled="@(notificationSettings.DestinationId == 0 || isSendingTestNotification)" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center">
+                            @if (isSendingTestNotification)
+                            {
+                                <svg class="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span>Sending...</span>
+                            }
+                            else
+                            {
+                                <i data-lucide="send" class="h-4 w-4 mr-2"></i>
+                                <span>Test Notification</span>
+                            }
+                        </button>
                         <button @onclick="SaveNotificationSettings" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center transition-colors">
                             <i data-lucide="save" class="h-4 w-4 mr-2"></i>
                             Save Changes
@@ -848,8 +867,54 @@
         <!-- Danger Zone Tab -->
         @if (activeTab == "danger")
         {
-            <div class="space-y-6">
-                <!-- Audit Log Cleanup -->
+            @if (!dangerZoneUnlocked)
+            {
+                <!-- Safety Overlay -->
+                <div class="surface-container">
+                    <div class="p-12 text-center">
+                        <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <i data-lucide="alert-triangle" class="h-10 w-10 text-red-600"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-900 mb-3">Danger Zone</h2>
+                        <p class="text-gray-600 mb-6 max-w-md mx-auto">
+                            This section contains destructive operations that can permanently delete data or reset your database.
+                        </p>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 max-w-md mx-auto">
+                            <p class="text-sm text-red-800 font-medium">
+                                <i data-lucide="shield-alert" class="h-4 w-4 inline mr-1"></i>
+                                These operations cannot be undone. Proceed with extreme caution.
+                            </p>
+                        </div>
+                        <div class="flex items-center justify-center space-x-3">
+                            <input type="checkbox" @bind="dangerZoneConfirmation" id="danger-confirm" class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <label for="danger-confirm" class="text-sm text-gray-700">
+                                I understand the risks and want to proceed
+                            </label>
+                        </div>
+                        <button
+                            @onclick="UnlockDangerZone"
+                            disabled="@(!dangerZoneConfirmation)"
+                            class="mt-6 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors">
+                            Unlock Danger Zone
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="space-y-6">
+                    <!-- Safety Notice -->
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i data-lucide="unlock" class="h-5 w-5 text-red-600 mr-3"></i>
+                            <span class="text-sm text-red-800 font-medium">Danger Zone Unlocked - Destructive operations are enabled</span>
+                        </div>
+                        <button @onclick="LockDangerZone" class="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                            Lock
+                        </button>
+                    </div>
+
+                    <!-- Audit Log Cleanup -->
                 <div class="surface-container">
                     <div class="p-6 border-b border-gray-100">
                         <div class="flex items-center justify-between">
@@ -973,7 +1038,8 @@
                         </button>
                     </div>
                 </div>
-            </div>
+                </div>
+            }
         }
     </div>
 </div>
@@ -1118,16 +1184,21 @@
     // Notifications
     private NotificationSettings notificationSettings = new();
     private List<Destination> emailDestinations = new();
+    private bool isSendingTestNotification = false;
 
     // Email Templates
     private string selectedTemplateType = "";
+    private int currentTemplateId = 0;
     private string templateSubject = "";
     private string templateBody = "";
+    private bool isLoadingTemplate = false;
 
     // Danger Zone
     private int auditRetentionDays = 90;
     private int executionRetentionDays = 30;
     private bool executionAdvancedOpen = false;
+    private bool dangerZoneUnlocked = false;
+    private bool dangerZoneConfirmation = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -1148,15 +1219,40 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Initialize Lucide icons after every render (needed for interactive mode)
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("lucide.createIcons");
+        }
+        catch
+        {
+            // Ignore errors if Lucide is not loaded yet
+        }
+    }
+
     private async Task LoadSystemInfo()
     {
         try
         {
+            // Get version from assembly
+            var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+            var informationalVersion = assembly
+                .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+                .FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute;
+            systemVersion = informationalVersion?.InformationalVersion
+                ?? assembly.GetName().Version?.ToString()
+                ?? "Unknown";
+
+            // Get environment
+            systemEnvironment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                ?? "Production";
+
+            // Get metrics
             var metrics = await AdminService.GetSystemMetricsAsync();
             var metricsObj = (dynamic)metrics;
-
-            systemVersion = "1.0.0";
-            systemEnvironment = "Production";
             systemUptime = TimeSpan.FromDays(metricsObj?.system?.uptimeDays ?? 0);
             databaseSizeBytes = (long)((metricsObj?.system?.databaseSizeMb ?? 0) * 1024 * 1024);
         }
@@ -1182,20 +1278,37 @@
     {
         try
         {
-            // For now, return placeholder logs
-            // In a real implementation, you'd read from log files
-            logEntries = new List<LogEntry>
+            // Call the API endpoint to get real logs
+            var url = $"/api/admin/logs?page={logPage}&pageSize={logPageSize}";
+            if (!string.IsNullOrEmpty(logLevelFilter))
             {
-                new LogEntry { Timestamp = DateTime.UtcNow.ToString("HH:mm:ss"), Level = "Information", Message = "Application started successfully" },
-                new LogEntry { Timestamp = DateTime.UtcNow.AddMinutes(-1).ToString("HH:mm:ss"), Level = "Debug", Message = "Database connection established" },
-                new LogEntry { Timestamp = DateTime.UtcNow.AddMinutes(-2).ToString("HH:mm:ss"), Level = "Warning", Message = "High memory usage detected" }
-            };
-            logTotalCount = logEntries.Count;
-            logsLoaded = true;
+                url += $"&minimumLevel={logLevelFilter}";
+            }
+
+            var response = await JSRuntime.InvokeAsync<JsonElement>("fetch", url);
+            var json = response.ToString();
+            var result = JsonSerializer.Deserialize<LogResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (result?.Data != null)
+            {
+                logEntries = result.Data.Select(log => new LogEntry
+                {
+                    Timestamp = log.Timestamp ?? "Unknown",
+                    Level = log.Level ?? "Info",
+                    Message = log.Message ?? ""
+                }).ToList();
+
+                logTotalCount = result.TotalCount;
+                logsLoaded = true;
+            }
         }
         catch (Exception ex)
         {
             Serilog.Log.Error(ex, "Failed to load logs");
+            ToastService.ShowError("Failed to load logs");
         }
     }
 
@@ -1395,32 +1508,190 @@
         }
     }
 
+    private async Task SendTestNotification()
+    {
+        if (notificationSettings.DestinationId == 0)
+        {
+            ToastService.ShowWarning("Please select an email destination first");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(notificationSettings.RecipientEmails))
+        {
+            ToastService.ShowWarning("Please enter recipient email addresses");
+            return;
+        }
+
+        try
+        {
+            isSendingTestNotification = true;
+            StateHasChanged();
+
+            // Use JS to call the API endpoint
+            var testRequest = new
+            {
+                destinationId = notificationSettings.DestinationId,
+                recipientEmails = notificationSettings.RecipientEmails
+            };
+
+            var json = JsonSerializer.Serialize(testRequest);
+            var result = await JSRuntime.InvokeAsync<string>("fetch", "/api/admin/notifications/test", new
+            {
+                method = "POST",
+                headers = new Dictionary<string, string>
+                {
+                    { "Content-Type", "application/json" }
+                },
+                body = json
+            });
+
+            ToastService.ShowSuccess("Test notification queued for sending. Check your email.");
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to send test notification");
+            ToastService.ShowError($"Failed to send test notification: {ex.Message}");
+        }
+        finally
+        {
+            isSendingTestNotification = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task LoadTemplate()
     {
-        if (string.IsNullOrEmpty(selectedTemplateType)) return;
+        if (string.IsNullOrEmpty(selectedTemplateType))
+        {
+            currentTemplateId = 0;
+            templateSubject = "";
+            templateBody = "";
+            return;
+        }
 
-        // TODO: Load template from database
-        templateSubject = $"[Reef] {selectedTemplateType} Notification";
-        templateBody = $"<h1>{selectedTemplateType}</h1><p>Template body here</p>";
+        try
+        {
+            isLoadingTemplate = true;
+            StateHasChanged();
+
+            var template = await NotificationTemplateService.GetByTypeAsync(selectedTemplateType);
+
+            if (template != null)
+            {
+                currentTemplateId = template.Id;
+                templateSubject = template.Subject;
+                templateBody = template.HtmlBody;
+            }
+            else
+            {
+                // Template doesn't exist yet, use empty values
+                currentTemplateId = 0;
+                templateSubject = $"[Reef] {selectedTemplateType} Notification";
+                templateBody = "";
+                ToastService.ShowInfo($"Template '{selectedTemplateType}' not found. Create a new one or reset to default.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to load template {Type}", selectedTemplateType);
+            ToastService.ShowError($"Failed to load template: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingTemplate = false;
+            StateHasChanged();
+        }
     }
 
     private async Task SaveTemplate()
     {
+        if (string.IsNullOrEmpty(selectedTemplateType))
+        {
+            ToastService.ShowWarning("Please select a template type");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(templateSubject))
+        {
+            ToastService.ShowWarning("Email subject is required");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(templateBody))
+        {
+            ToastService.ShowWarning("Email body is required");
+            return;
+        }
+
         try
         {
-            // TODO: Save template to database
-            ToastService.ShowSuccess("Template saved successfully");
+            var template = new NotificationEmailTemplate
+            {
+                Id = currentTemplateId,
+                TemplateType = selectedTemplateType,
+                Subject = templateSubject,
+                HtmlBody = templateBody,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            bool success;
+            if (currentTemplateId > 0)
+            {
+                // Update existing template
+                success = await NotificationTemplateService.UpdateAsync(template);
+            }
+            else
+            {
+                // Create new template
+                template.CreatedAt = DateTime.UtcNow;
+                currentTemplateId = await NotificationTemplateService.CreateAsync(template);
+                success = currentTemplateId > 0;
+            }
+
+            if (success)
+            {
+                ToastService.ShowSuccess("Template saved successfully");
+            }
+            else
+            {
+                ToastService.ShowError("Failed to save template");
+            }
         }
         catch (Exception ex)
         {
+            Serilog.Log.Error(ex, "Failed to save template {Type}", selectedTemplateType);
             ToastService.ShowError($"Failed to save template: {ex.Message}");
         }
     }
 
-    private void ResetTemplateToDefault()
+    private async Task ResetTemplateToDefault()
     {
-        // TODO: Reset template to default
-        ToastService.ShowInfo("Template reset to default");
+        if (string.IsNullOrEmpty(selectedTemplateType))
+        {
+            ToastService.ShowWarning("Please select a template type");
+            return;
+        }
+
+        try
+        {
+            var success = await NotificationTemplateService.ResetToDefaultAsync(selectedTemplateType);
+
+            if (success)
+            {
+                ToastService.ShowSuccess("Template reset to default");
+                // Reload the template
+                await LoadTemplate();
+            }
+            else
+            {
+                ToastService.ShowError("Failed to reset template. Default template may not exist.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to reset template {Type}", selectedTemplateType);
+            ToastService.ShowError($"Failed to reset template: {ex.Message}");
+        }
     }
 
     private async Task ClearOldAuditLogs()
@@ -1466,6 +1737,22 @@
     {
         // TODO: Add confirmation modal
         ToastService.ShowWarning("Database reset requires confirmation");
+    }
+
+    private void UnlockDangerZone()
+    {
+        if (dangerZoneConfirmation)
+        {
+            dangerZoneUnlocked = true;
+            ToastService.ShowWarning("Danger Zone unlocked. Destructive operations are now enabled.");
+        }
+    }
+
+    private void LockDangerZone()
+    {
+        dangerZoneUnlocked = false;
+        dangerZoneConfirmation = false;
+        ToastService.ShowInfo("Danger Zone locked for safety.");
     }
 
     // Helper methods
@@ -1534,5 +1821,15 @@
         public string Timestamp { get; set; } = "";
         public string Level { get; set; } = "";
         public string Message { get; set; } = "";
+    }
+
+    // Log API response model
+    private class LogResponse
+    {
+        public List<LogEntry> Data { get; set; } = new();
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public int TotalCount { get; set; }
+        public int TotalPages { get; set; }
     }
 }

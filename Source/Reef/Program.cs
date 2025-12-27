@@ -391,6 +391,20 @@ public class Program
                 RoleClaimType = System.Security.Claims.ClaimTypes.Role,
                 NameClaimType = System.Security.Claims.ClaimTypes.Name
             };
+
+            // Configure to read JWT from cookie instead of Authorization header
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    // Try to get token from cookie first
+                    if (context.Request.Cookies.TryGetValue("reef_token", out var token))
+                    {
+                        context.Token = token;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         services.AddAuthorization();
