@@ -34,7 +34,7 @@
         </div>
     }
 
-    <!-- Basic Information -->
+    <!-- Basic Fields - ALWAYS VISIBLE -->
     <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -158,60 +158,15 @@
                 </div>
             }
         </div>
-    </div>
 
-    <!-- Tabs for Advanced Configuration -->
-    <div class="border-t pt-4">
-        <div class="border-b border-gray-200 mb-4">
-            <nav class="-mb-px flex space-x-4 overflow-x-auto">
-                @if (isEmailExport)
-                {
-                    <button type="button" @onclick='() => activeTab = "email"'
-                            class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "email" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                        <i data-lucide="mail" class="h-4 w-4 inline mr-1"></i>
-                        Email Config
-                    </button>
-                }
-                <button type="button" @onclick='() => activeTab = "preprocessing"'
-                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "preprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="play" class="h-4 w-4 inline mr-1"></i>
-                    Pre-Process
-                </button>
-                <button type="button" @onclick='() => activeTab = "postprocessing"'
-                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "postprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="check-circle" class="h-4 w-4 inline mr-1"></i>
-                    Post-Process
-                </button>
-                <button type="button" @onclick='() => activeTab = "deltasync"'
-                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "deltasync" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="refresh-cw" class="h-4 w-4 inline mr-1"></i>
-                    Smart Sync
-                </button>
-                <button type="button" @onclick='() => activeTab = "split"'
-                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "split" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="scissors" class="h-4 w-4 inline mr-1"></i>
-                    Split Output
-                </button>
-                <button type="button" @onclick='() => activeTab = "advanced"'
-                        class="px-4 py-2 text-sm font-medium border-b-2 transition-colors @(activeTab == "advanced" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="settings" class="h-4 w-4 inline mr-1"></i>
-                    Advanced
-                </button>
-            </nav>
-        </div>
-
-        <!-- Email Configuration Tab -->
-        @if (activeTab == "email" && isEmailExport)
+        <!-- Email Configuration (Email Export Only) - ALWAYS VISIBLE -->
+        @if (isEmailExport)
         {
-            <div class="space-y-4">
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <p class="text-sm text-blue-700">
-                        Configure email-specific settings. Each row from your query can generate a separate email using the template and recipient configuration below.
-                    </p>
-                </div>
+            <div class="border-t pt-4">
+                <h3 class="text-sm font-medium text-gray-900 mb-3">Email Configuration</h3>
 
                 <!-- Email Body Template -->
-                <div>
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                         Email Body Template
                         <span class="text-red-500 ml-1">*</span>
@@ -228,7 +183,7 @@
                 </div>
 
                 <!-- Recipients -->
-                <div>
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Recipients
                         <span class="text-red-500 ml-1">*</span>
@@ -260,7 +215,7 @@
                 </div>
 
                 <!-- CC (Optional) -->
-                <div>
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">CC (Optional)</label>
                     <div class="flex space-x-2 mb-2">
                         <button type="button" @onclick='() => emailCcMode = "column"'
@@ -287,7 +242,7 @@
                 </div>
 
                 <!-- Subject -->
-                <div>
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
                     <div class="flex space-x-2 mb-2">
                         <button type="button" @onclick='() => emailSubjectMode = "column"'
@@ -315,7 +270,7 @@
                 </div>
 
                 <!-- Success Threshold -->
-                <div>
+                <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Success Threshold (%)</label>
                     <input type="number" @bind="emailSuccessThresholdPercent" min="0" max="100"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md"
@@ -349,8 +304,61 @@
                         </div>
                     }
                 </div>
+            </div>
+        }
+    </div>
 
-                <!-- Email Attachments -->
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-4 overflow-x-auto">
+            <button type="button" @onclick='() => activeTab = "preprocessing"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "preprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="play" class="h-4 w-4 inline mr-1"></i>
+                Pre-Process
+            </button>
+            <button type="button" @onclick='() => activeTab = "postprocessing"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "postprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="check-circle" class="h-4 w-4 inline mr-1"></i>
+                Post-Process
+            </button>
+            <button type="button" @onclick='() => activeTab = "deltasync"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "deltasync" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="refresh-cw" class="h-4 w-4 inline mr-1"></i>
+                Smart Sync
+            </button>
+            <button type="button" @onclick='() => activeTab = "split"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "split" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="scissors" class="h-4 w-4 inline mr-1"></i>
+                Split Output
+            </button>
+            @if (isEmailExport)
+            {
+                <button type="button" @onclick='() => activeTab = "emailoptions"'
+                        class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "emailoptions" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="mail" class="h-4 w-4 inline mr-1"></i>
+                    Email Options
+                </button>
+            }
+            <button type="button" @onclick='() => activeTab = "advanced"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "advanced" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="sliders" class="h-4 w-4 inline mr-1"></i>
+                Advanced
+            </button>
+        </nav>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="py-4">
+        <!-- Email Options Tab (Attachments Only) -->
+        @if (activeTab == "emailoptions" && isEmailExport)
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <p class="text-sm text-blue-700">
+                        Configure email attachments. You can attach query results or other files to your emails.
+                    </p>
+                </div>
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Attachment Configuration (Optional)</label>
                     <textarea @bind="emailAttachmentConfig" rows="3"
@@ -650,7 +658,7 @@
                 </div>
             </div>
         }
-    </div>
+    </div><!-- End Tab Content -->
 
     <!-- Enable/Disable -->
     @if (Profile != null && Profile.Id > 0)
@@ -699,7 +707,7 @@
     private List<QueryTemplate> queryTemplates = new();
 
     // Tab state
-    private string activeTab = "email";
+    private string activeTab = "preprocessing";
 
     // Basic fields
     private string name = "";
@@ -778,8 +786,7 @@
             Serilog.Log.Error(ex, "Failed to load form data");
         }
 
-        // Set default active tab
-        activeTab = isEmailExport ? "email" : "preprocessing";
+        // activeTab is initialized to "preprocessing" by default
 
         if (Profile != null)
         {
