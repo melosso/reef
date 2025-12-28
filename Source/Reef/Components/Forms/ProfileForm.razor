@@ -6,6 +6,7 @@
 @inject QueryTemplateService QueryTemplateService
 @inject ToastService ToastService
 @inject IJSRuntime JS
+@inject NavigationManager Navigation
 
 <form @onsubmit="HandleSubmit" class="space-y-4">
     <!-- Profile Type Selection -->
@@ -34,8 +35,48 @@
         </div>
     }
 
-    <!-- Basic Fields - ALWAYS VISIBLE -->
-    <div class="space-y-4">
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-4 overflow-x-auto">
+            <button type="button" @onclick='() => activeTab = "general"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "general" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="settings" class="h-4 w-4 inline mr-1"></i>
+                General
+            </button>
+            <button type="button" @onclick='() => { if (IsEditMode) activeTab = "webhooks"; }'
+                    disabled="@(!IsEditMode)"
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "webhooks" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") @(!IsEditMode ? "opacity-50 cursor-not-allowed" : "")">
+                <i data-lucide="link" class="h-4 w-4 inline mr-1"></i>
+                Webhooks
+            </button>
+            <button type="button" @onclick='() => { if (IsEditMode) activeTab = "deltasync"; }'
+                    disabled="@(!IsEditMode)"
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "deltasync" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300") @(!IsEditMode ? "opacity-50 cursor-not-allowed" : "")">
+                <i data-lucide="refresh-cw" class="h-4 w-4 inline mr-1"></i>
+                Smart Sync
+            </button>
+            <button type="button" @onclick='() => activeTab = "split"'
+                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "split" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                <i data-lucide="scissors" class="h-4 w-4 inline mr-1"></i>
+                Split Output
+            </button>
+            @if (isEmailExport)
+            {
+                <button type="button" @onclick='() => activeTab = "emailoptions"'
+                        class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "emailoptions" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
+                    <i data-lucide="mail" class="h-4 w-4 inline mr-1"></i>
+                    Email Options
+                </button>
+            }
+        </nav>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="py-4">
+        <!-- General Tab -->
+        @if (activeTab == "general")
+        {
+            <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -78,20 +119,94 @@
 
             @if (!isEmailExport)
             {
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Output Format
-                        <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <select @bind="outputFormat"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="JSON">JSON</option>
-                        <option value="XML">XML</option>
-                        <option value="CSV">CSV</option>
-                        <option value="TAB">TAB (TSV)</option>
-                        <option value="YAML">YAML</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Output Format
+                            <span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <select @bind="outputFormat"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="JSON">JSON</option>
+                            <option value="XML">XML</option>
+                            <option value="CSV">CSV</option>
+                            <option value="TAB">TAB (TSV)</option>
+                            <option value="YAML">YAML</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Standard formatting (no customization)</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Custom Template (Optional)
+                            <span class="text-blue-600 text-xs ml-1">- Overrides format</span>
+                        </label>
+                        <select @bind="templateId"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">None - Use Output Format above</option>
+                            @foreach (var template in queryTemplates.Where(t => t.IsActive))
+                            {
+                                <option value="@template.Id">@template.Name (@template.Type)</option>
+                            }
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">
+                            @if (templateId.HasValue && templateId.Value > 0)
+                            {
+                                var selectedTemplate = queryTemplates.FirstOrDefault(t => t.Id == templateId.Value);
+                                if (selectedTemplate != null)
+                                {
+                                    <text>@selectedTemplate.Description</text>
+                                }
+                            }
+                            else
+                            {
+                                <text>No template selected</text>
+                            }
+                        </p>
+                    </div>
                 </div>
+
+                <!-- Document Options Panel (for DocumentTemplate types) -->
+                @if (templateId.HasValue && templateId.Value > 0)
+                {
+                    var selectedTemplate = queryTemplates.FirstOrDefault(t => t.Id == templateId.Value);
+                    if (selectedTemplate != null && selectedTemplate.Type == QueryTemplateType.DocumentTemplate)
+                    {
+                        <div class="mt-4 border border-purple-200 rounded-lg p-4 bg-purple-50">
+                            <h4 class="text-sm font-semibold text-purple-900 mb-3 flex items-center">
+                                <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+                                Document Options (PDF Generation)
+                            </h4>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Page Size</label>
+                                    <select @bind="documentPageSize"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                        <option value="A4">A4 (210 × 297 mm)</option>
+                                        <option value="Letter">Letter (8.5 × 11 in)</option>
+                                        <option value="Legal">Legal (8.5 × 14 in)</option>
+                                        <option value="A3">A3 (297 × 420 mm)</option>
+                                        <option value="Tabloid">Tabloid (11 × 17 in)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
+                                    <select @bind="documentOrientation"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                        <option value="Portrait">Portrait</option>
+                                        <option value="Landscape">Landscape</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Watermark (Optional)</label>
+                                    <input type="text" @bind="documentWatermark"
+                                           placeholder="e.g., CONFIDENTIAL"
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
             }
         </div>
 
@@ -104,6 +219,21 @@
             <textarea @bind="query" rows="6" required
                       class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       placeholder="SELECT * FROM Sales WHERE Date >= DATEADD(month, -1, GETDATE())"></textarea>
+        </div>
+
+        <!-- Scheduling Notice -->
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">Need to schedule this profile?</h3>
+                    <p class="mt-1 text-sm text-blue-700">
+                        After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.
+                    </p>
+                </div>
+            </div>
         </div>
 
         <!-- Output Destination -->
@@ -168,104 +298,145 @@
                 <!-- Email Body Template -->
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700 mb-1">
-                        Email Body Template
+                        Email Body Template (Scriban HTML)
                         <span class="text-red-500 ml-1">*</span>
                     </label>
                     <select @bind="emailTemplateId" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                        <option value="0">Select template...</option>
+                        <option value="0">-- Select HTML email template --</option>
                         @foreach (var template in emailTemplates)
                         {
                             <option value="@template.Id">@template.TemplateType</option>
                         }
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Scriban HTML template for email body</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Only Scriban templates with HTML output format are available. <a href="/templates" class="text-blue-600 hover:underline">→ Create a new email template</a>
+                    </p>
                 </div>
 
                 <!-- Recipients -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                        Recipients
-                        <span class="text-red-500 ml-1">*</span>
-                    </label>
-                    <div class="flex space-x-2 mb-2">
-                        <button type="button" @onclick='() => emailRecipientsMode = "column"'
-                                class="px-3 py-1 text-sm rounded @(emailRecipientsMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            From Column
-                        </button>
-                        <button type="button" @onclick='() => emailRecipientsMode = "hardcoded"'
-                                class="px-3 py-1 text-sm rounded @(emailRecipientsMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            Hardcoded
-                        </button>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700 flex items-center">
+                            Recipients
+                            <span class="text-red-500 ml-1">*</span>
+                            <span class="ml-1 text-gray-400 cursor-help" title="Column with the recipient's email. You can use either the plain address (email@example.com) or a name followed by the address (Name;email@example.com). It supports aliases as well.">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                            </span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-gray-600">Column</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" @bind="emailRecipientsUseHardcoded" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="text-xs font-medium text-gray-600">Hardcoded</span>
+                        </div>
                     </div>
-                    @if (emailRecipientsMode == "column")
+                    @if (!emailRecipientsUseHardcoded)
                     {
                         <input type="text" @bind="emailRecipientsColumn" required
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="EmailAddress">
-                        <p class="text-xs text-gray-500 mt-1">Column name containing email addresses</p>
+                               placeholder="e.g., email">
+                        <p class="text-xs text-gray-500 mt-1">Column name from query that contains recipient email address (supports "Name;email@address.com" format)</p>
                     }
                     else
                     {
                         <input type="email" @bind="emailRecipientsHardcoded" required
                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                               placeholder="recipient@example.com">
-                        <p class="text-xs text-gray-500 mt-1">One email address or multiple separated by semicolons</p>
+                               placeholder="e.g., recipient@example.com">
+                        <p class="text-xs text-gray-500 mt-1">Enter recipient email address</p>
                     }
                 </div>
 
                 <!-- CC (Optional) -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">CC (Optional)</label>
-                    <div class="flex space-x-2 mb-2">
-                        <button type="button" @onclick='() => emailCcMode = "column"'
-                                class="px-3 py-1 text-sm rounded @(emailCcMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            From Column
-                        </button>
-                        <button type="button" @onclick='() => emailCcMode = "hardcoded"'
-                                class="px-3 py-1 text-sm rounded @(emailCcMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            Hardcoded
-                        </button>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700 flex items-center">
+                            CC Column (Optional)
+                            <span class="ml-1 text-gray-400 cursor-help" title="Column with the CC email. You can use either the plain address (email@example.com) or a name followed by the address (Name;email@example.com). It supports aliases as well.">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                            </span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-gray-600">Column</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" @bind="emailCcUseHardcoded" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="text-xs font-medium text-gray-600">Hardcoded</span>
+                        </div>
                     </div>
-                    @if (emailCcMode == "column")
+                    @if (!emailCcUseHardcoded)
                     {
                         <input type="text" @bind="emailCcColumn"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="CcEmail">
+                               placeholder="e.g., email_cc">
+                        <p class="text-xs text-gray-500 mt-1">Column name from query that contains CC email address (supports "Name;email@address.com" format, optional)</p>
                     }
                     else
                     {
                         <input type="email" @bind="emailCcHardcoded"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                               placeholder="cc@example.com">
+                               placeholder="e.g., cc@example.com">
+                        <p class="text-xs text-gray-500 mt-1">Enter CC email address</p>
                     }
                 </div>
 
                 <!-- Subject -->
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                    <div class="flex space-x-2 mb-2">
-                        <button type="button" @onclick='() => emailSubjectMode = "column"'
-                                class="px-3 py-1 text-sm rounded @(emailSubjectMode == "column" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            From Column
-                        </button>
-                        <button type="button" @onclick='() => emailSubjectMode = "hardcoded"'
-                                class="px-3 py-1 text-sm rounded @(emailSubjectMode == "hardcoded" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700")">
-                            Hardcoded
-                        </button>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-sm font-medium text-gray-700 flex items-center">
+                            Subject (Optional)
+                            <span class="ml-1 text-gray-400 cursor-help" title="Column with the email subject. If not provided, will use profile name.">
+                                <i data-lucide="info" class="w-4 h-4"></i>
+                            </span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-gray-600">Column</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" @bind="emailSubjectUseHardcoded" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                            <span class="text-xs font-medium text-gray-600">Hardcoded</span>
+                        </div>
                     </div>
-                    @if (emailSubjectMode == "column")
+                    @if (!emailSubjectUseHardcoded)
                     {
                         <input type="text" @bind="emailSubjectColumn"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="Subject">
+                               placeholder="e.g., subject">
+                        <p class="text-xs text-gray-500 mt-1">Column name from query that contains email subject. If not provided, will use profile name.</p>
                     }
                     else
                     {
                         <input type="text" @bind="emailSubjectHardcoded"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                               placeholder="Monthly Sales Report">
-                        <p class="text-xs text-gray-500 mt-1">Supports Scriban variables like {{"{{"}} ProfileName {{"}}"}}</p>
+                               placeholder="e.g., Daily Report">
+                        <div class="mt-1">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-gray-500">Enter email subject text (supports Scriban variables)</p>
+                                <button type="button" @onclick="ToggleSubjectVariables"
+                                        class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors">
+                                    <span>Variables</span>
+                                    <i data-lucide="chevron-down" class="h-3 w-3 transition-transform @(showSubjectVariables ? "rotate-180" : "")"></i>
+                                </button>
+                            </div>
+                            @if (showSubjectVariables)
+                            {
+                                <div class="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
+                                    <p class="text-xs font-medium text-blue-900 mb-2">Available variables:</p>
+                                    <ul class="text-xs text-blue-800 space-y-1 ml-2">
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} columnName {{"}}"}}</code> - Any column from your query</li>
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} system.profileId {{"}}"}}</code> - Profile number</li>
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} system.profileName {{"}}"}}</code> - Profile name</li>
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} system.date {{"}}"}}</code> - Current date (yyyy-MM-dd)</li>
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} system.time {{"}}"}}</code> - Current time (HH:mm:ss)</li>
+                                        <li><code class="bg-blue-100 px-2 py-1 rounded">{{"{{"}} system.datetime {{"}}"}}</code> - Date and time (yyyy-MM-dd HH:mm:ss)</li>
+                                    </ul>
+                                </div>
+                            }
+                        </div>
                     }
                 </div>
 
@@ -306,80 +477,16 @@
                 </div>
             </div>
         }
-    </div>
 
-    <!-- Tabs Navigation -->
-    <div class="border-b border-gray-200">
-        <nav class="-mb-px flex space-x-4 overflow-x-auto">
-            <button type="button" @onclick='() => activeTab = "preprocessing"'
-                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "preprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                <i data-lucide="play" class="h-4 w-4 inline mr-1"></i>
-                Pre-Process
-            </button>
-            <button type="button" @onclick='() => activeTab = "postprocessing"'
-                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "postprocessing" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                <i data-lucide="check-circle" class="h-4 w-4 inline mr-1"></i>
-                Post-Process
-            </button>
-            <button type="button" @onclick='() => activeTab = "deltasync"'
-                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "deltasync" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                <i data-lucide="refresh-cw" class="h-4 w-4 inline mr-1"></i>
-                Smart Sync
-            </button>
-            <button type="button" @onclick='() => activeTab = "split"'
-                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "split" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                <i data-lucide="scissors" class="h-4 w-4 inline mr-1"></i>
-                Split Output
-            </button>
-            @if (isEmailExport)
-            {
-                <button type="button" @onclick='() => activeTab = "emailoptions"'
-                        class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "emailoptions" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                    <i data-lucide="mail" class="h-4 w-4 inline mr-1"></i>
-                    Email Options
-                </button>
-            }
-            <button type="button" @onclick='() => activeTab = "advanced"'
-                    class="px-3 py-1.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap @(activeTab == "advanced" ? "border-blue-500 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300")">
-                <i data-lucide="sliders" class="h-4 w-4 inline mr-1"></i>
-                Advanced
-            </button>
-        </nav>
-    </div>
+            <!-- Pre-Processing Section (Inside General Tab) -->
+            <div class="border-t border-gray-200 pt-4 mt-4">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <i data-lucide="play" class="w-4 h-4 mr-2 text-green-600"></i>
+                    Pre-Processing (Optional)
+                    <span class="ml-2 text-xs font-normal text-gray-500">Execute before main query</span>
+                </h4>
 
-    <!-- Tab Content -->
-    <div class="py-4">
-        <!-- Email Options Tab (Attachments Only) -->
-        @if (activeTab == "emailoptions" && isEmailExport)
-        {
-            <div class="space-y-4">
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <p class="text-sm text-blue-700">
-                        Configure email attachments. You can attach query results or other files to your emails.
-                    </p>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Attachment Configuration (Optional)</label>
-                    <textarea @bind="emailAttachmentConfig" rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                              placeholder='{"AttachQueryResults": true, "ResultsFormat": "CSV"}'></textarea>
-                    <p class="text-xs text-gray-500 mt-1">JSON configuration for email attachments</p>
-                </div>
-            </div>
-        }
-
-        <!-- Pre-Processing Tab -->
-        @if (activeTab == "preprocessing")
-        {
-            <div class="space-y-4">
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <p class="text-sm text-blue-700">
-                        Execute SQL queries or stored procedures <strong>before</strong> the main query runs. Useful for setting up temporary tables, variables, or data cleanup.
-                    </p>
-                </div>
-
-                <div>
+                <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Pre-Process Type</label>
                     <select @bind="preProcessType"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md">
@@ -391,49 +498,52 @@
 
                 @if (!string.IsNullOrEmpty(preProcessType))
                 {
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Configuration (JSON)
-                            <span class="text-red-500 ml-1">*</span>
-                        </label>
-                        <textarea @bind="preProcessConfig" rows="4"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                  placeholder='{"Query": "DELETE FROM TempTable WHERE Date < GETDATE()"}'></textarea>
-                        <p class="text-xs text-gray-500 mt-1">
-                            @if (preProcessType == "Query")
-                            {
-                                <text>Example: @("{\"Query\": \"DELETE FROM TempTable WHERE Date < GETDATE()\", \"Timeout\": 30}")</text>
-                            }
-                            else
-                            {
-                                <text>Example: {"ProcedureName": "usp_PrepareData", "Parameters": {}}</text>
-                            }
-                        </p>
-                    </div>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Command *
+                            </label>
+                            <textarea @bind="preProcessCommand" rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                      placeholder="@(preProcessType == "Query" ? "UPDATE Items SET Status='Processing' WHERE Id={executionid}" : "sp_PrepareData")"></textarea>
+                        </div>
 
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <label class="flex items-center">
-                            <input type="checkbox" @bind="preProcessRollbackOnFailure"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            <span class="ml-2 text-sm text-gray-700">Rollback if main query fails</span>
-                        </label>
-                        <p class="text-xs text-gray-500 mt-1">Undo pre-processing changes if the main query fails</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Timeout (seconds)
+                                </label>
+                                <input type="number" @bind="preProcessTimeout" min="1"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
+
+                            <div class="flex items-center pt-6">
+                                <input type="checkbox" @bind="preProcessRollbackOnFailure"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                <label class="ml-2 text-sm text-gray-900">
+                                    Rollback on main query failure
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                            <p class="text-xs text-yellow-700">
+                                <strong>Tip:</strong> Use context variables like {executionid}, {profileid}, {triggeredby} in your command.
+                            </p>
+                        </div>
                     </div>
                 }
             </div>
-        }
 
-        <!-- Post-Processing Tab -->
-        @if (activeTab == "postprocessing")
-        {
-            <div class="space-y-4">
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                    <p class="text-sm text-blue-700">
-                        Execute SQL queries, stored procedures, or webhooks <strong>after</strong> the main query completes. Useful for cleanup, logging, or triggering external systems.
-                    </p>
-                </div>
+            <!-- Post-Processing Section (Inside General Tab) -->
+            <div class="border-t border-gray-200 pt-4 mt-4">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-blue-600"></i>
+                    Post-Processing (Optional)
+                    <span class="ml-2 text-xs font-normal text-gray-500">Execute after main query</span>
+                </h4>
 
-                <div>
+                <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Post-Process Type</label>
                     <select @bind="postProcessType"
                             class="w-full px-3 py-2 border border-gray-300 rounded-md">
@@ -446,48 +556,410 @@
 
                 @if (!string.IsNullOrEmpty(postProcessType))
                 {
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Configuration (JSON)
-                            <span class="text-red-500 ml-1">*</span>
-                        </label>
-                        <textarea @bind="postProcessConfig" rows="4"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                  placeholder='{"Query": "UPDATE Stats SET LastRun = GETDATE()"}'></textarea>
-                        <p class="text-xs text-gray-500 mt-1">
-                            @if (postProcessType == "Query")
-                            {
-                                <text>Example: @("{\"Query\": \"UPDATE Stats SET LastRun = GETDATE()\", \"Timeout\": 30}")</text>
-                            }
-                            else if (postProcessType == "StoredProcedure")
-                            {
-                                <text>Example: {"ProcedureName": "usp_LogExecution", "Parameters": {}}</text>
-                            }
-                            else
-                            {
-                                <text>Example: {"Url": "https://api.example.com/notify", "Method": "POST"}</text>
-                            }
-                        </p>
-                    </div>
-
                     <div class="space-y-3">
-                        <label class="flex items-center">
-                            <input type="checkbox" @bind="postProcessSkipOnFailure"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            <span class="ml-2 text-sm text-gray-700">Skip post-processing if main query fails</span>
-                        </label>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Command *
+                            </label>
+                            <textarea @bind="postProcessCommand" rows="2"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                      placeholder="@(postProcessType == "Query" ? "UPDATE log SET status='complete', rows={rowcount} WHERE execution_id={executionid}" : "sp_LogExport")"></textarea>
+                        </div>
 
-                        <label class="flex items-center">
-                            <input type="checkbox" @bind="postProcessRollbackOnFailure"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            <span class="ml-2 text-sm text-gray-700">Rollback post-processing on its own failure</span>
-                        </label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Timeout (seconds)
+                                </label>
+                                <input type="number" @bind="postProcessTimeout" min="1"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            </div>
 
-                        <label class="flex items-center">
+                            <div class="flex items-center pt-6">
+                                <input type="checkbox" @bind="postProcessSkipOnFailure"
+                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                <label class="ml-2 text-sm text-gray-900">
+                                    Skip if main query fails
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
                             <input type="checkbox" @bind="postProcessOnZeroRows"
                                    class="h-4 w-4 text-blue-600 border-gray-300 rounded">
-                            <span class="ml-2 text-sm text-gray-700">Run even when query returns 0 rows</span>
+                            <label class="ml-2 text-sm text-gray-900">
+                                Run post-processing even when query returns 0 rows
+                            </label>
+                        </div>
+
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                            <p class="text-xs text-blue-700">
+                                <strong>Available variables:</strong> {executionid}, {profileid}, {rowcount}, {outputpath}, {filesizebytes}, {executiontimems}, {outputformat}, {triggeredby}, {startedat}, {completedat}, {status}, {deltasynccolumn}, {splitkey}
+                            </p>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Profile Enabled Checkbox -->
+            <div class="border-t border-gray-200 pt-4 mt-4">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is-enabled" @bind="isEnabled"
+                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="is-enabled" class="ml-2 block text-sm text-gray-900">
+                            Profile Enabled
                         </label>
+                    </div>
+                    <p class="text-xs text-gray-500 italic">
+                        (Profile can be tested and triggered manually even when disabled)
+                    </p>
+                </div>
+            </div>
+            </div>
+        }
+
+        <!-- Webhooks Tab -->
+        @if (activeTab == "webhooks")
+        {
+            <div class="space-y-4">
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-blue-700">
+                                Webhooks allow you to trigger profile execution via HTTP POST requests from external systems.
+                                Each webhook has a unique token that must be included in the URL.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Webhooks List -->
+                <div class="space-y-3">
+                    @if (webhooks.Count == 0)
+                    {
+                        <div class="text-center py-6 text-gray-500">
+                            <i data-lucide="link-2-off" class="w-12 h-12 mx-auto mb-2 text-gray-400"></i>
+                            <p>No webhooks configured for this profile</p>
+                            <p class="text-sm mt-1">Click "Create Webhook" to add one</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @foreach (var webhook in webhooks)
+                        {
+                            <div class="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center space-x-2 mb-2">
+                                            <i data-lucide="link" class="w-4 h-4 text-gray-400"></i>
+                                            <span class="font-medium text-gray-900">Webhook #@webhook.Id</span>
+                                            @if (webhook.IsActive)
+                                            {
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-700">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1"></span>
+                                                    Active
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-700">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400 mr-1"></span>
+                                                    Inactive
+                                                </span>
+                                            }
+                                        </div>
+                                        <div class="text-xs text-gray-500 mb-2">
+                                            Created @webhook.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                        <div class="bg-gray-50 rounded px-3 py-2 font-mono text-xs text-gray-700 break-all">
+                                            @GetWebhookUrl(webhook.Token)
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-1 ml-4">
+                                        <button type="button" @onclick="() => ToggleWebhook(webhook)"
+                                                class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="@(webhook.IsActive ? "Disable" : "Enable")">
+                                            <i data-lucide="@(webhook.IsActive ? "toggle-right" : "toggle-left")" class="w-4 h-4"></i>
+                                        </button>
+                                        <button type="button" @onclick="() => CopyWebhookUrl(webhook.Token)"
+                                                class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                                title="Copy URL">
+                                            <i data-lucide="copy" class="w-4 h-4"></i>
+                                        </button>
+                                        <button type="button" @onclick="() => RegenerateWebhookToken(webhook)"
+                                                class="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded transition-colors"
+                                                title="Regenerate Token">
+                                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                                        </button>
+                                        <button type="button" @onclick="() => TestWebhook(webhook.Token)"
+                                                class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="Test Webhook">
+                                            <i data-lucide="send" class="w-4 h-4"></i>
+                                        </button>
+                                        <button type="button" @onclick="() => DeleteWebhook(webhook)"
+                                                class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                title="Delete">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+                <!-- Create Webhook Button -->
+                <button type="button" @onclick="CreateWebhook"
+                        class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 transition-colors">
+                    <i data-lucide="plus-circle" class="w-4 h-4 inline mr-2"></i>
+                    Create Webhook
+                </button>
+            </div>
+        }
+
+        <!-- Email Options Tab (Attachments) -->
+        @if (activeTab == "emailoptions" && isEmailExport)
+        {
+            <div class="space-y-4">
+                <!-- Enable Attachments Toggle -->
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="paperclip" class="w-5 h-5 text-gray-400"></i>
+                        <div>
+                            <label class="text-sm font-medium text-gray-900">Enable Email Attachments</label>
+                            <p class="text-xs text-gray-500">Query must return binary file content and filename columns</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" @bind="attachmentsEnabled" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                @if (attachmentsEnabled)
+                {
+                    <div class="space-y-4">
+                        <!-- Required Query Columns Info -->
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 space-y-3">
+                            <div>
+                                <p class="text-xs text-blue-700 font-semibold mb-2">
+                                    <strong>Required Query Columns:</strong>
+                                </p>
+                                <div class="bg-white rounded border border-blue-200 p-3 space-y-2">
+                                    <div class="text-xs text-blue-800">
+                                        <div class="flex items-start">
+                                            <span class="inline-block bg-blue-100 text-blue-700 rounded px-2 py-1 mr-2 font-mono text-xs">1</span>
+                                            <div>
+                                                <strong>Binary Content Column</strong>
+                                                <div class="text-gray-600 text-xs">BLOB/VARBINARY data type containing file content</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="text-xs text-blue-800">
+                                        <div class="flex items-start">
+                                            <span class="inline-block bg-blue-100 text-blue-700 rounded px-2 py-1 mr-2 font-mono text-xs">2</span>
+                                            <div>
+                                                <strong>Filename Column</strong>
+                                                <div class="text-gray-600 text-xs">Field that returns the filename as text (e.g., "report.pdf", "invoice_2024.xlsx")</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-blue-700 border-t border-blue-200 pt-2">
+                                <strong>Example:</strong> SELECT email, pdf_content, filename FROM invoices
+                            </p>
+                        </div>
+
+                        <!-- File Content Column -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                File Content Column
+                                <span class="text-red-500 ml-1">*</span>
+                                <span class="ml-1 text-gray-400 cursor-help" title="Column containing binary file data (BLOB/VARBINARY type)">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                </span>
+                            </label>
+                            <input type="text" @bind="attachmentContentColumn"
+                                   placeholder="e.g., pdf_content, file_data"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Name of the column with binary file content from your query
+                            </p>
+                        </div>
+
+                        <!-- Filename Column -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                Filename Column
+                                <span class="text-red-500 ml-1">*</span>
+                                <span class="ml-1 text-gray-400 cursor-help" title="Column containing the filename for the attachment">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                </span>
+                            </label>
+                            <input type="text" @bind="attachmentFilenameColumn"
+                                   placeholder="e.g., filename, report_name"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Name of the column that returns the filename (e.g., "report.pdf", "invoice_2024.xlsx")
+                            </p>
+                        </div>
+
+                        <!-- Deduplication and Failsafe -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Deduplication
+                                </label>
+                                <select @bind="attachmentDeduplication"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    <option value="Auto">Auto (detect duplicates)</option>
+                                    <option value="ByFilename">By Filename</option>
+                                    <option value="ByHash">By Content Hash</option>
+                                    <option value="None">None (include all)</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Prevent duplicate attachments across rows
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Failsafe
+                                </label>
+                                <select @bind="attachmentFailsafe"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    <option value="Disabled">Disabled</option>
+                                    <option value="RequireAttachments">Fail if no attachments generated</option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Prevent emails from being sent if attachment generation fails
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Max Attachments per Email -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Max Attachments per Email
+                            </label>
+                            <input type="number" @bind="attachmentMaxCount" min="1" max="100"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Default: 50
+                            </p>
+                        </div>
+
+                        <!-- Attachment Grouping Info -->
+                        <div class="bg-gray-50 border border-gray-200 rounded p-3">
+                            <p class="text-xs text-gray-700">
+                                <strong>Attachment Grouping:</strong> Each email will have its own attachment from the query result.
+                            </p>
+                        </div>
+
+                        <!-- Document Template Option -->
+                        <div class="border-t border-gray-200 pt-4">
+                            <h5 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i data-lucide="file-text" class="w-4 h-4 mr-2 text-purple-600"></i>
+                                Generate Attachments from Document Template (Alternative)
+                            </h5>
+                            <p class="text-xs text-gray-500 mb-3">
+                                Instead of using binary content columns, you can generate PDF/DOCX attachments dynamically from query data using a Document Template.
+                            </p>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    Document Template (Optional)
+                                </label>
+                                <select @bind="attachmentDocumentTemplateId"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    <option value="">None - Use binary content columns above</option>
+                                    @foreach (var template in queryTemplates.Where(t => t.Type == QueryTemplateType.DocumentTemplate && t.IsActive))
+                                    {
+                                        <option value="@template.Id">@template.Name</option>
+                                    }
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    @if (attachmentDocumentTemplateId.HasValue && attachmentDocumentTemplateId.Value > 0)
+                                    {
+                                        var selectedTemplate = queryTemplates.FirstOrDefault(t => t.Id == attachmentDocumentTemplateId.Value);
+                                        if (selectedTemplate != null)
+                                        {
+                                            <text>@selectedTemplate.Description</text>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <text>No document template selected</text>
+                                    }
+                                </p>
+                            </div>
+
+                            <!-- Document Template Configuration (shown when template selected) -->
+                            @if (attachmentDocumentTemplateId.HasValue && attachmentDocumentTemplateId.Value > 0)
+                            {
+                                <div class="mt-4 border border-purple-200 rounded-lg p-4 bg-purple-50 space-y-4">
+                                    <h6 class="text-sm font-semibold text-purple-900 mb-2">Document Template Configuration</h6>
+
+                                    <!-- Filename Column -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Filename Column
+                                            <span class="text-xs text-gray-500 ml-1">(Optional)</span>
+                                        </label>
+                                        <input type="text" @bind="attachmentFilenameColumn"
+                                               placeholder="e.g., filename, document_name"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm">
+                                        <p class="text-xs text-gray-500 mt-1">Column containing the desired filename (without extension). If omitted, auto-generated names will be used.</p>
+                                    </div>
+
+                                    <!-- Generate Per Row -->
+                                    <div class="flex items-center justify-between p-3 bg-white border border-purple-200 rounded-lg">
+                                        <div>
+                                            <label class="text-sm font-medium text-gray-900">Generate one document per row</label>
+                                            <p class="text-xs text-gray-500">Creates separate attachment for each query result row</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" @bind="attachmentGeneratePerRow" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Page Size, Orientation, Watermark -->
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Page Size</label>
+                                            <select @bind="attachmentPageSize"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                                <option value="A4">A4</option>
+                                                <option value="Letter">Letter</option>
+                                                <option value="Legal">Legal</option>
+                                                <option value="A3">A3</option>
+                                                <option value="Tabloid">Tabloid</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
+                                            <select @bind="attachmentOrientation"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                                <option value="Portrait">Portrait</option>
+                                                <option value="Landscape">Landscape</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Watermark</label>
+                                            <input type="text" @bind="attachmentWatermark"
+                                                   placeholder="Optional"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 }
             </div>
@@ -515,57 +987,216 @@
 
                 @if (deltaSyncEnabled)
                 {
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">
-                            Primary Key Column (ReefId)
-                            <span class="text-red-500 ml-1">*</span>
-                        </label>
-                        <input type="text" @bind="deltaSyncReefIdColumn"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="e.g., UserId, OrderId, RecordId">
-                        <p class="text-xs text-gray-500 mt-1">Column name that uniquely identifies each row</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hash Algorithm</label>
-                        <select @bind="deltaSyncHashAlgorithm"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <option value="MD5">MD5 (Fastest)</option>
-                            <option value="SHA256">SHA256 (Recommended)</option>
-                            <option value="SHA512">SHA512 (Most Secure)</option>
-                        </select>
-                        <p class="text-xs text-gray-500 mt-1">Algorithm used to detect row changes</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Hash Columns (Optional)</label>
-                        <input type="text" @bind="deltaSyncHashColumns"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="Column1,Column2,Column3">
-                        <p class="text-xs text-gray-500 mt-1">Specific columns to hash (leave empty to hash all columns)</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Deleted Detection Method</label>
-                        <select @bind="deltaSyncDeletedDetectionMethod"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <option value="MissingFromQuery">Missing from query results</option>
-                            <option value="DeletedFlagColumn">Deleted flag column</option>
-                        </select>
-                    </div>
-
-                    @if (deltaSyncDeletedDetectionMethod == "DeletedFlagColumn")
-                    {
+                    <div class="space-y-4">
+                        <!-- Primary Key Configuration -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                Deleted Flag Column
-                                <span class="text-red-500 ml-1">*</span>
+                                Primary Key Column (ReefId) *
                             </label>
-                            <input type="text" @bind="deltaSyncDeletedFlagColumn"
+                            <input type="text" @bind="deltaSyncReefIdColumn"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                                   placeholder="IsDeleted">
+                                   placeholder="e.g., UserId, OrderId, RecordId">
+                            <p class="text-xs text-gray-500 mt-1">Column name from your query that uniquely identifies each row</p>
                         </div>
-                    }
+
+                        <!-- Advanced Settings Accordion -->
+                        <div class="border border-gray-200 rounded-lg">
+                            <button type="button" @onclick="ToggleDeltaSyncAdvanced"
+                                    class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-t-lg">
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="sliders" class="w-4 h-4 text-gray-600"></i>
+                                    <span class="text-sm font-medium text-gray-700">Advanced Settings</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400 transition-transform @(deltaSyncAdvancedExpanded ? "rotate-180" : "")"></i>
+                            </button>
+
+                            @if (deltaSyncAdvancedExpanded)
+                            {
+                                <div class="px-4 pb-4 space-y-4 border-t border-gray-200">
+                                    <!-- Hash Algorithm & Numeric Precision -->
+                                    <div class="grid grid-cols-2 gap-4 pt-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Hash Algorithm
+                                            </label>
+                                            <select @bind="deltaSyncHashAlgorithm"
+                                                    class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                                <option value="SHA256">SHA256 (Recommended)</option>
+                                                <option value="SHA512">SHA512 (More secure)</option>
+                                                <option value="MD5">MD5 (Fastest)</option>
+                                            </select>
+                                            <p class="text-xs text-gray-500 mt-1">Cryptographic hash function for change detection</p>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                                Numeric Precision
+                                            </label>
+                                            <input type="number" @bind="deltaSyncNumericPrecision" min="0" max="15"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                            <p class="text-xs text-gray-500 mt-1">Decimal places for floating-point comparison (0-15)</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Duplicate Handling Strategy -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Duplicate ReefId Strategy
+                                        </label>
+                                        <select @bind="deltaSyncDuplicateStrategy"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                            <option value="Strict">Strict - Fail execution if duplicates found</option>
+                                            <option value="CompositeHash">Composite Hash - Use combined hash for duplicates</option>
+                                            <option value="Skip">Skip - Ignore duplicate rows</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">How to handle duplicate ReefId values in query results</p>
+                                    </div>
+
+                                    <!-- NULL Handling Strategy -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            NULL ReefId Strategy
+                                        </label>
+                                        <select @bind="deltaSyncNullStrategy"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                            <option value="Strict">Strict - Fail execution if NULL ReefIds found</option>
+                                            <option value="GenerateHash">Generate Hash - Create synthetic hash for NULL rows</option>
+                                            <option value="Skip">Skip - Ignore rows with NULL ReefIds</option>
+                                        </select>
+                                        <p class="text-xs text-gray-500 mt-1">How to handle NULL values in ReefId column</p>
+                                    </div>
+
+                                    <!-- Track Deletes Option -->
+                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center space-x-2">
+                                            <i data-lucide="trash-2" class="w-4 h-4 text-gray-600"></i>
+                                            <div>
+                                                <label class="text-sm font-medium text-gray-900">Track Deletions</label>
+                                                <p class="text-xs text-gray-500">Export rows that disappeared from query results</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" @bind="deltaSyncTrackDeletes" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Advanced Output Options -->
+                                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                        <div class="flex items-center space-x-3">
+                                            <i data-lucide="eye-off" class="w-5 h-5 text-gray-400"></i>
+                                            <div>
+                                                <label class="text-sm font-medium text-gray-900">Exclude ReefId from Exported Data</label>
+                                                <p class="text-xs text-gray-500">ReefId column is used for tracking but not included in output files</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" @bind="deltaSyncExcludeReefId" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <p class="text-xs text-gray-500 italic flex items-start">
+                                        <i data-lucide="info" class="w-3 h-3 mr-1 mt-0.5 text-blue-500 flex-shrink-0"></i>
+                                        <span>
+                                            When enabled (recommended), the ReefId column is used internally for change detection
+                                            but won't appear in your exported files. Uncheck if you want the ReefId column included in the output.
+                                        </span>
+                                    </p>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Statistics Panel (Edit Mode Only) -->
+                        @if (Profile?.Id > 0)
+                        {
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-semibold text-gray-700 flex items-center">
+                                        <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2"></i>
+                                        Smart Sync Statistics
+                                    </h4>
+                                    <button type="button" @onclick="RefreshDeltaSyncStats"
+                                            class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                                        <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
+                                        Refresh
+                                    </button>
+                                </div>
+                                <div class="grid grid-cols-4 gap-3">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-gray-900">@statTotalRows</div>
+                                        <div class="text-xs text-gray-500">Total Tracked</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-blue-600">@statLastSync</div>
+                                        <div class="text-xs text-gray-500">Last Sync</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600">@statNewRows</div>
+                                        <div class="text-xs text-gray-500">New (Last Run)</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-orange-600">@statChangedRows</div>
+                                        <div class="text-xs text-gray-500">Changed (Last Run)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Memory Store Panel (Edit Mode Only) -->
+                            <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                <button type="button" @onclick="ToggleDeltaSyncMemoryStore"
+                                        class="flex items-center w-full text-sm font-semibold text-gray-900 hover:text-gray-700">
+                                    <i data-lucide="database" class="w-4 h-4 mr-2"></i>
+                                    Memory Store
+                                    <i data-lucide="chevron-down" class="w-4 h-4 ml-auto transform transition-transform @(deltaSyncMemoryStoreExpanded ? "rotate-180" : "")"></i>
+                                </button>
+
+                                @if (deltaSyncMemoryStoreExpanded)
+                                {
+                                    <div class="space-y-4 pt-4 border-t border-gray-200 mt-3">
+                                        <!-- Generate Hashes Section -->
+                                        <div class="flex items-start p-3 bg-blue-50 border border-blue-200 rounded">
+                                            <i data-lucide="hash" class="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"></i>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-semibold text-blue-900 mb-1">Initialize Hash Baseline</h4>
+                                                <p class="text-xs text-blue-700 mb-3">
+                                                    Executes your query and generates hashes for all rows without marking them as changes. This establishes the baseline so only new/updated data is synced next time.
+                                                </p>
+                                                <button type="button" @onclick="GenerateDeltaSyncHashes"
+                                                        class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded hover:bg-blue-100">
+                                                    <i data-lucide="hash" class="w-3 h-3 inline mr-1"></i>
+                                                    Generate Hashes from Query
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Reset Options Section -->
+                                        <div class="flex items-start p-3 bg-red-50 border border-red-200 rounded">
+                                            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0"></i>
+                                            <div class="flex-1">
+                                                <h4 class="text-sm font-semibold text-red-800 mb-1">Reset Smart Sync State</h4>
+                                                <p class="text-xs text-red-700 mb-3">
+                                                    Resetting will clear tracking history. The next execution will treat all rows as new.
+                                                </p>
+                                                <div class="flex space-x-2">
+                                                    <button type="button" @onclick="ResetDeltaSyncFull"
+                                                            class="px-3 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-100">
+                                                        <i data-lucide="rotate-ccw" class="w-3 h-3 inline mr-1"></i>
+                                                        Reset All Rows
+                                                    </button>
+                                                    <button type="button" @onclick="ShowResetRowsModal"
+                                                            class="px-3 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-100">
+                                                        <i data-lucide="list" class="w-3 h-3 inline mr-1"></i>
+                                                        Reset Specific Rows
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
                 }
             </div>
         }
@@ -591,6 +1222,51 @@
 
                 @if (splitEnabled)
                 {
+                    <!-- Email Grouping (Email Export Only) -->
+                    @if (isEmailExport)
+                    {
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div class="flex items-center space-x-3">
+                                <i data-lucide="mail" class="w-5 h-5 text-gray-400"></i>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-900">Group rows by split key</label>
+                                    <p class="text-xs text-gray-500">Send one email per split key value (e.g., one email per approver)</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" @bind="emailGroupBySplitKey" class="sr-only peer">
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+
+                        <!-- Workflow hint when enabled -->
+                        @if (emailGroupBySplitKey)
+                        {
+                            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p class="text-xs text-blue-800">
+                                    <i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>
+                                    <strong>Pro tip:</strong> For workflows requiring multiple documents per email (e.g., invoice approvals), enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Attachments → DocumentTemplate</strong> below to create separate PDFs for each row.
+                                </p>
+                            </div>
+                        }
+                    }
+
+                    <!-- Post-process per split -->
+                    <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-center space-x-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-gray-400"></i>
+                            <div>
+                                <label class="text-sm font-medium text-gray-900">Post-process per split</label>
+                                <p class="text-xs text-gray-500">Run post-processing for each split</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" @bind="splitPostProcessPerSplit" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Split Key Column -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">
                             Split Key Column
@@ -598,19 +1274,72 @@
                         </label>
                         <input type="text" @bind="splitKeyColumn"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
-                               placeholder="CustomerId">
-                        <p class="text-xs text-gray-500 mt-1">Column to split by (one file per unique value)</p>
+                               placeholder="e.g., CustomerId, DebtorCode, Region">
+                        <p class="text-xs text-gray-500 mt-1">Column name to group rows by (one file per unique value)</p>
                     </div>
 
+                    <!-- Filename Template -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Split Filename Template</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Filename Template</label>
                         <input type="text" @bind="splitFilenameTemplate"
                                class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
                                placeholder="{profile}_{splitkey}_{timestamp}.{format}">
                         <p class="text-xs text-gray-500 mt-1">
-                            Variables: {profile}, {splitkey}, {timestamp}, {format}, {date}, {time}, {guid}
+                            Available placeholders:
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{profile}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{splitkey}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{timestamp}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{date}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{time}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{guid}</code>,
+                            <code class="text-xs bg-gray-100 px-1 py-0.5 rounded">{format}</code>
                         </p>
                     </div>
+
+                    <!-- Batch Size (File Export Only) -->
+                    @if (!isEmailExport)
+                    {
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                Batch Size (Advanced)
+                            </label>
+                            <input type="number" @bind="splitBatchSize" min="1" max="10000"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                            <p class="text-xs text-gray-500 mt-1">
+                                Number of rows per file (default: 1 = one file per split key, 100 = batch 100 rows per file)
+                            </p>
+                        </div>
+
+                        <!-- Advanced Output Options for Split Key -->
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <i data-lucide="eye-off" class="w-5 h-5 text-blue-400"></i>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <h4 class="text-sm font-medium text-blue-800 mb-2">Advanced Output Options</h4>
+                                    <p class="text-xs text-blue-700 mb-3">
+                                        Control whether the Split Key column appears in your exported files
+                                    </p>
+                                    <div class="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                                        <div class="flex items-center space-x-3">
+                                            <div>
+                                                <label class="text-sm font-medium text-gray-900">Exclude Split Key from Exported Data</label>
+                                                <p class="text-xs text-gray-500">Split Key column is used for grouping but not included in output files</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" @bind="splitExcludeSplitKey" class="sr-only peer">
+                                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                    <p class="text-xs text-blue-600 mt-2">
+                                        <strong>When enabled (recommended):</strong> The Split Key column is used internally for grouping/filename generation but won't appear in your exported files. Uncheck if you want the Split Key column included in the output.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
         }
@@ -670,22 +1399,64 @@
         </div>
     }
 
-    <div class="flex justify-end space-x-3 pt-4 border-t">
-        <button type="button" @onclick="OnCancel"
-                class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-            Cancel
-        </button>
-        <button type="submit" disabled="@isSaving"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            @if (isSaving)
+    <div class="flex justify-between items-center pt-4 border-t">
+        <!-- Test Actions Dropdown -->
+        <div class="relative">
+            <button type="button" @onclick="ToggleTestActionsMenu"
+                    class="px-4 py-2.5 border border-blue-300 bg-blue-50 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center"
+                    title="Test Profile">
+                <i data-lucide="play" class="h-4 w-4 mr-1"></i>
+                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+            </button>
+
+            @if (showTestActionsMenu)
             {
-                <span>Saving...</span>
+                <div class="absolute left-0 bottom-full mb-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                    <div class="py-1">
+                        <button type="button" @onclick="RunQuery"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                title="Show first 25 rows from database">
+                            <i data-lucide="database" class="h-4 w-4 mr-2"></i>
+                            <span>Run Query</span>
+                        </button>
+                        <button type="button" @onclick="RunProfile"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                title="Run full export with template and destination">
+                            <i data-lucide="zap" class="h-4 w-4 mr-2"></i>
+                            <span>Run Profile</span>
+                        </button>
+                        @if (isEmailExport)
+                        {
+                            <button type="button" @onclick="PreviewHtml"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                    title="Preview email HTML">
+                                <i data-lucide="eye" class="h-4 w-4 mr-2"></i>
+                                <span>Preview HTML</span>
+                            </button>
+                        }
+                    </div>
+                </div>
             }
-            else
-            {
-                <span>Save Profile</span>
-            }
-        </button>
+        </div>
+
+        <!-- Cancel and Save Buttons -->
+        <div class="flex space-x-3">
+            <button type="button" @onclick="OnCancel"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                Cancel
+            </button>
+            <button type="submit" disabled="@isSaving"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                @if (isSaving)
+                {
+                    <span>Saving...</span>
+                }
+                else
+                {
+                    <span>Save Profile</span>
+                }
+            </button>
+        </div>
     </div>
 </form>
 
@@ -705,9 +1476,10 @@
     private List<Destination> filteredDestinations = new();
     private List<NotificationEmailTemplate> emailTemplates = new();
     private List<QueryTemplate> queryTemplates = new();
+    private List<WebhookTrigger> webhooks = new();
 
     // Tab state
-    private string activeTab = "preprocessing";
+    private string activeTab = "general";
 
     // Basic fields
     private string name = "";
@@ -722,53 +1494,96 @@
     // Email fields
     private bool isEmailExport = false;
     private int emailTemplateId = 0;
-    private string emailRecipientsMode = "hardcoded";
+    private bool emailRecipientsUseHardcoded = false;
     private string? emailRecipientsColumn = null;
     private string? emailRecipientsHardcoded = null;
-    private string emailCcMode = "hardcoded";
+    private bool emailCcUseHardcoded = false;
     private string? emailCcColumn = null;
     private string? emailCcHardcoded = null;
-    private string emailSubjectMode = "hardcoded";
+    private bool emailSubjectUseHardcoded = false;
     private string? emailSubjectColumn = null;
     private string? emailSubjectHardcoded = null;
     private int emailSuccessThresholdPercent = 60;
     private bool emailApprovalRequired = false;
     private bool emailApprovalRoleAdmin = true;
     private bool emailApprovalRoleUser = false;
-    private string? emailAttachmentConfig = null;
+    private bool showSubjectVariables = false;
+
+    // Email Attachment fields
+    private bool attachmentsEnabled = false;
+    private string? attachmentContentColumn = null;
+    private string? attachmentFilenameColumn = null;
+    private string attachmentDeduplication = "Auto";
+    private string attachmentFailsafe = "Disabled";
+    private int attachmentMaxCount = 50;
+    private int? attachmentDocumentTemplateId = null;
+
+    // Email Attachment Document Template options
+    private bool attachmentGeneratePerRow = false;
+    private string attachmentPageSize = "A4";
+    private string attachmentOrientation = "Portrait";
+    private string? attachmentWatermark = null;
 
     // Pre-Processing fields
     private string? preProcessType = null;
-    private string? preProcessConfig = null;
+    private string? preProcessCommand = null;
+    private int preProcessTimeout = 30;
     private bool preProcessRollbackOnFailure = true;
 
     // Post-Processing fields
     private string? postProcessType = null;
-    private string? postProcessConfig = null;
+    private string? postProcessCommand = null;
+    private int postProcessTimeout = 30;
     private bool postProcessSkipOnFailure = true;
     private bool postProcessRollbackOnFailure = false;
     private bool postProcessOnZeroRows = false;
 
     // Delta Sync fields
     private bool deltaSyncEnabled = false;
+    private bool deltaSyncAdvancedExpanded = false;
     private string? deltaSyncReefIdColumn = null;
     private string deltaSyncHashAlgorithm = "SHA256";
+    private int deltaSyncNumericPrecision = 6;
+    private string deltaSyncDuplicateStrategy = "Strict";
+    private string deltaSyncNullStrategy = "Strict";
+    private bool deltaSyncTrackDeletes = true;
+    private bool deltaSyncExcludeReefId = true;
     private string? deltaSyncHashColumns = null;
     private string deltaSyncDeletedDetectionMethod = "MissingFromQuery";
     private string? deltaSyncDeletedFlagColumn = null;
 
     // Split fields
     private bool splitEnabled = false;
+    private bool splitPostProcessPerSplit = false;
     private string? splitKeyColumn = null;
     private string? splitFilenameTemplate = "{profile}_{splitkey}_{timestamp}.{format}";
+    private int splitBatchSize = 1;
+    private bool splitExcludeSplitKey = true;
+    private bool emailGroupBySplitKey = false;
+
+    // Smart Sync Statistics and Memory Store fields
+    private bool deltaSyncMemoryStoreExpanded = false;
+    private string statTotalRows = "-";
+    private string statLastSync = "-";
+    private string statNewRows = "-";
+    private string statChangedRows = "-";
 
     // Advanced fields
     private int? templateId = null;
     private string? transformationOptionsJson = null;
     private string? notificationConfig = null;
 
+    // Document Options fields (for file export with DocumentTemplate)
+    private string documentPageSize = "A4";
+    private string documentOrientation = "Portrait";
+    private string? documentWatermark = null;
+
     private bool isEnabled = true;
     private bool isSaving = false;
+    private bool showTestActionsMenu = false;
+
+    // Computed property for edit mode
+    private bool IsEditMode => Profile?.Id > 0;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -802,18 +1617,63 @@
 
             // Email configuration
             emailTemplateId = Profile.EmailTemplateId ?? 0;
-            emailRecipientsMode = !string.IsNullOrEmpty(Profile.EmailRecipientsColumn) ? "column" : "hardcoded";
+            emailRecipientsUseHardcoded = !string.IsNullOrEmpty(Profile.EmailRecipientsHardcoded);
             emailRecipientsColumn = Profile.EmailRecipientsColumn;
             emailRecipientsHardcoded = Profile.EmailRecipientsHardcoded;
-            emailCcMode = !string.IsNullOrEmpty(Profile.EmailCcColumn) ? "column" : "hardcoded";
+            emailCcUseHardcoded = !string.IsNullOrEmpty(Profile.EmailCcHardcoded);
             emailCcColumn = Profile.EmailCcColumn;
             emailCcHardcoded = Profile.EmailCcHardcoded;
-            emailSubjectMode = !string.IsNullOrEmpty(Profile.EmailSubjectColumn) ? "column" : "hardcoded";
+            emailSubjectUseHardcoded = !string.IsNullOrEmpty(Profile.EmailSubjectHardcoded);
             emailSubjectColumn = Profile.EmailSubjectColumn;
             emailSubjectHardcoded = Profile.EmailSubjectHardcoded;
             emailSuccessThresholdPercent = Profile.EmailSuccessThresholdPercent;
             emailApprovalRequired = Profile.EmailApprovalRequired;
-            emailAttachmentConfig = Profile.EmailAttachmentConfig;
+
+            // Parse EmailAttachmentConfig from JSON
+            if (!string.IsNullOrEmpty(Profile.EmailAttachmentConfig))
+            {
+                try
+                {
+                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(Profile.EmailAttachmentConfig);
+                    if (config.TryGetProperty("Enabled", out var enabled))
+                        attachmentsEnabled = enabled.GetBoolean();
+                    if (config.TryGetProperty("Deduplication", out var dedup))
+                        attachmentDeduplication = dedup.GetString() ?? "Auto";
+                    if (config.TryGetProperty("Failsafe", out var failsafe))
+                        attachmentFailsafe = failsafe.GetString() ?? "Disabled";
+                    if (config.TryGetProperty("MaxCount", out var maxCount))
+                        attachmentMaxCount = maxCount.GetInt32();
+
+                    // Check for Document Template mode
+                    if (config.TryGetProperty("Mode", out var mode) && mode.GetString() == "DocumentTemplate")
+                    {
+                        if (config.TryGetProperty("DocumentTemplate", out var docTemplate))
+                        {
+                            if (docTemplate.TryGetProperty("TemplateId", out var templateId))
+                                attachmentDocumentTemplateId = templateId.GetInt32();
+                            if (docTemplate.TryGetProperty("FilenameColumnName", out var filenameCol))
+                                attachmentFilenameColumn = filenameCol.GetString();
+                            if (docTemplate.TryGetProperty("GeneratePerRow", out var generatePerRow))
+                                attachmentGeneratePerRow = generatePerRow.GetBoolean();
+                            if (docTemplate.TryGetProperty("PageSize", out var pageSize))
+                                attachmentPageSize = pageSize.GetString() ?? "A4";
+                            if (docTemplate.TryGetProperty("Orientation", out var orientation))
+                                attachmentOrientation = orientation.GetString() ?? "Portrait";
+                            if (docTemplate.TryGetProperty("Watermark", out var watermark))
+                                attachmentWatermark = watermark.GetString();
+                        }
+                    }
+                    else
+                    {
+                        // Binary mode
+                        if (config.TryGetProperty("ContentColumn", out var content))
+                            attachmentContentColumn = content.GetString();
+                        if (config.TryGetProperty("FilenameColumn", out var filename))
+                            attachmentFilenameColumn = filename.GetString();
+                    }
+                }
+                catch { }
+            }
 
             // Parse EmailApprovalRoles from JSON
             if (!string.IsNullOrEmpty(Profile.EmailApprovalRoles))
@@ -831,17 +1691,37 @@
                 }
             }
 
-            // Pre-Processing
+            // Pre-Processing (parse JSON config into Command/Timeout)
             preProcessType = Profile.PreProcessType;
-            preProcessConfig = Profile.PreProcessConfig;
             preProcessRollbackOnFailure = Profile.PreProcessRollbackOnFailure;
+            if (!string.IsNullOrEmpty(Profile.PreProcessConfig))
+            {
+                try
+                {
+                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(Profile.PreProcessConfig);
+                    if (config.TryGetProperty("Query", out var query)) preProcessCommand = query.GetString();
+                    else if (config.TryGetProperty("ProcedureName", out var proc)) preProcessCommand = proc.GetString();
+                    if (config.TryGetProperty("Timeout", out var timeout)) preProcessTimeout = timeout.GetInt32();
+                }
+                catch { preProcessCommand = Profile.PreProcessConfig; } // Fallback to raw config
+            }
 
-            // Post-Processing
+            // Post-Processing (parse JSON config into Command/Timeout)
             postProcessType = Profile.PostProcessType;
-            postProcessConfig = Profile.PostProcessConfig;
             postProcessSkipOnFailure = Profile.PostProcessSkipOnFailure;
             postProcessRollbackOnFailure = Profile.PostProcessRollbackOnFailure;
             postProcessOnZeroRows = Profile.PostProcessOnZeroRows;
+            if (!string.IsNullOrEmpty(Profile.PostProcessConfig))
+            {
+                try
+                {
+                    var config = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(Profile.PostProcessConfig);
+                    if (config.TryGetProperty("Query", out var query)) postProcessCommand = query.GetString();
+                    else if (config.TryGetProperty("ProcedureName", out var proc)) postProcessCommand = proc.GetString();
+                    if (config.TryGetProperty("Timeout", out var timeout)) postProcessTimeout = timeout.GetInt32();
+                }
+                catch { postProcessCommand = Profile.PostProcessConfig; } // Fallback to raw config
+            }
 
             // Delta Sync (parse from OutputPropertiesJson if exists)
             if (!string.IsNullOrEmpty(Profile.OutputPropertiesJson))
@@ -855,6 +1735,16 @@
                         deltaSyncReefIdColumn = reefId.GetString();
                     if (props.TryGetProperty("HashAlgorithm", out var hashAlg))
                         deltaSyncHashAlgorithm = hashAlg.GetString() ?? "SHA256";
+                    if (props.TryGetProperty("NumericPrecision", out var numPrec))
+                        deltaSyncNumericPrecision = numPrec.GetInt32();
+                    if (props.TryGetProperty("DuplicateStrategy", out var dupStrat))
+                        deltaSyncDuplicateStrategy = dupStrat.GetString() ?? "Strict";
+                    if (props.TryGetProperty("NullStrategy", out var nullStrat))
+                        deltaSyncNullStrategy = nullStrat.GetString() ?? "Strict";
+                    if (props.TryGetProperty("TrackDeletes", out var trackDel))
+                        deltaSyncTrackDeletes = trackDel.GetBoolean();
+                    if (props.TryGetProperty("ExcludeReefId", out var excludeId))
+                        deltaSyncExcludeReefId = excludeId.GetBoolean();
                     if (props.TryGetProperty("HashColumns", out var hashCols))
                         deltaSyncHashColumns = hashCols.GetString();
                     if (props.TryGetProperty("DeletedDetectionMethod", out var delMethod))
@@ -867,13 +1757,33 @@
 
             // Split
             splitEnabled = Profile.SplitEnabled;
+            splitPostProcessPerSplit = Profile.PostProcessPerSplit;
             splitKeyColumn = Profile.SplitKeyColumn;
             splitFilenameTemplate = Profile.SplitFilenameTemplate;
+            splitBatchSize = Profile.SplitBatchSize;
+            splitExcludeSplitKey = Profile.ExcludeSplitKeyFromOutput;
+            emailGroupBySplitKey = Profile.EmailGroupBySplitKey;
 
             // Advanced
             templateId = Profile.TemplateId;
             transformationOptionsJson = Profile.TransformationOptionsJson;
             notificationConfig = Profile.NotificationConfig;
+
+            // Parse DocumentOptions (for file export with DocumentTemplate)
+            if (!isEmailExport && !string.IsNullOrEmpty(Profile.DocumentOptions))
+            {
+                try
+                {
+                    var docOptions = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(Profile.DocumentOptions);
+                    if (docOptions.TryGetProperty("pageSize", out var pageSize))
+                        documentPageSize = pageSize.GetString() ?? "A4";
+                    if (docOptions.TryGetProperty("orientation", out var orientation))
+                        documentOrientation = orientation.GetString() ?? "Portrait";
+                    if (docOptions.TryGetProperty("watermark", out var watermark))
+                        documentWatermark = watermark.GetString();
+                }
+                catch { }
+            }
 
             isEnabled = Profile.IsEnabled;
         }
@@ -900,12 +1810,232 @@
         }
     }
 
+    private void ToggleDeltaSyncAdvanced()
+    {
+        deltaSyncAdvancedExpanded = !deltaSyncAdvancedExpanded;
+    }
+
+    private void ToggleDeltaSyncMemoryStore()
+    {
+        deltaSyncMemoryStoreExpanded = !deltaSyncMemoryStoreExpanded;
+    }
+
+    private async Task RefreshDeltaSyncStats()
+    {
+        // TODO: Call API to get statistics
+        ToastService.ShowInfo("Refresh Statistics functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task GenerateDeltaSyncHashes()
+    {
+        // TODO: Call API to generate hashes
+        ToastService.ShowInfo("Generate Hashes functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task ResetDeltaSyncFull()
+    {
+        // TODO: Call API to reset all rows
+        ToastService.ShowInfo("Reset All Rows functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task ShowResetRowsModal()
+    {
+        // TODO: Show modal for selective reset
+        ToastService.ShowInfo("Reset Specific Rows functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private void ToggleTestActionsMenu()
+    {
+        showTestActionsMenu = !showTestActionsMenu;
+    }
+
+    private void ToggleSubjectVariables()
+    {
+        showSubjectVariables = !showSubjectVariables;
+    }
+
+    private async Task RunQuery()
+    {
+        showTestActionsMenu = false;
+        // TODO: Implement Run Query functionality
+        // This should execute the query and show first 25 rows in a modal
+        ToastService.ShowInfo("Run Query functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task RunProfile()
+    {
+        showTestActionsMenu = false;
+        // TODO: Implement Run Profile functionality
+        // This should execute the full profile with template and destination
+        ToastService.ShowInfo("Run Profile functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task PreviewHtml()
+    {
+        showTestActionsMenu = false;
+        // TODO: Implement Preview HTML functionality
+        // This should preview the email HTML in a modal
+        ToastService.ShowInfo("Preview HTML functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    // Webhook Management Methods
+    private string GetWebhookUrl(string token)
+    {
+        var baseUri = Navigation.BaseUri.TrimEnd('/');
+        return $"{baseUri}/webhooks/{token}";
+    }
+
+    private async Task CreateWebhook()
+    {
+        if (Profile?.Id == null || Profile.Id == 0)
+        {
+            ToastService.ShowError("Please save the profile first");
+            return;
+        }
+
+        // TODO: Call API to create webhook
+        ToastService.ShowInfo("Create Webhook functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task ToggleWebhook(WebhookTrigger webhook)
+    {
+        // TODO: Call API to toggle webhook
+        ToastService.ShowInfo($"{(webhook.IsActive ? "Disable" : "Enable")} Webhook functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task CopyWebhookUrl(string token)
+    {
+        var url = GetWebhookUrl(token);
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+        ToastService.ShowSuccess("Webhook URL copied to clipboard");
+    }
+
+    private async Task RegenerateWebhookToken(WebhookTrigger webhook)
+    {
+        // TODO: Call API to regenerate token
+        ToastService.ShowInfo("Regenerate Token functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task TestWebhook(string token)
+    {
+        // TODO: Show test webhook modal with curl command
+        ToastService.ShowInfo("Test Webhook functionality coming soon");
+        await Task.CompletedTask;
+    }
+
+    private async Task DeleteWebhook(WebhookTrigger webhook)
+    {
+        // TODO: Call API to delete webhook
+        ToastService.ShowInfo("Delete Webhook functionality coming soon");
+        await Task.CompletedTask;
+    }
+
     private string? SerializeApprovalRoles()
     {
         var roles = new List<string>();
         if (emailApprovalRoleAdmin) roles.Add("Admin");
         if (emailApprovalRoleUser) roles.Add("User");
         return roles.Count > 0 ? System.Text.Json.JsonSerializer.Serialize(roles) : null;
+    }
+
+    private string? SerializeAttachmentConfig()
+    {
+        if (!attachmentsEnabled) return null;
+
+        var config = new Dictionary<string, object>
+        {
+            ["Enabled"] = true,
+            ["Deduplication"] = attachmentDeduplication,
+            ["Failsafe"] = attachmentFailsafe,
+            ["MaxCount"] = attachmentMaxCount
+        };
+
+        // Document Template mode
+        if (attachmentDocumentTemplateId.HasValue && attachmentDocumentTemplateId.Value > 0)
+        {
+            config["Mode"] = "DocumentTemplate";
+            config["DocumentTemplate"] = new Dictionary<string, object>
+            {
+                ["TemplateId"] = attachmentDocumentTemplateId.Value,
+                ["FilenameColumnName"] = attachmentFilenameColumn ?? "",
+                ["GeneratePerRow"] = attachmentGeneratePerRow,
+                ["PageSize"] = attachmentPageSize,
+                ["Orientation"] = attachmentOrientation,
+                ["Watermark"] = attachmentWatermark ?? ""
+            };
+        }
+        else
+        {
+            // Binary mode
+            config["ContentColumn"] = attachmentContentColumn ?? "";
+            config["FilenameColumn"] = attachmentFilenameColumn ?? "";
+        }
+
+        return System.Text.Json.JsonSerializer.Serialize(config);
+    }
+
+    private string? SerializeDocumentOptions()
+    {
+        // Only serialize for file exports with DocumentTemplate
+        if (isEmailExport || !templateId.HasValue || templateId.Value == 0) return null;
+
+        var template = queryTemplates.FirstOrDefault(t => t.Id == templateId.Value);
+        if (template == null || template.Type != QueryTemplateType.DocumentTemplate) return null;
+
+        var options = new Dictionary<string, object>
+        {
+            ["pageSize"] = documentPageSize,
+            ["orientation"] = documentOrientation
+        };
+
+        if (!string.IsNullOrEmpty(documentWatermark))
+            options["watermark"] = documentWatermark;
+
+        return System.Text.Json.JsonSerializer.Serialize(options);
+    }
+
+    private string? SerializePreProcessConfig()
+    {
+        if (string.IsNullOrEmpty(preProcessCommand)) return null;
+
+        var config = new Dictionary<string, object>
+        {
+            ["Timeout"] = preProcessTimeout
+        };
+
+        if (preProcessType == "Query")
+            config["Query"] = preProcessCommand;
+        else if (preProcessType == "StoredProcedure")
+            config["ProcedureName"] = preProcessCommand;
+
+        return System.Text.Json.JsonSerializer.Serialize(config);
+    }
+
+    private string? SerializePostProcessConfig()
+    {
+        if (string.IsNullOrEmpty(postProcessCommand)) return null;
+
+        var config = new Dictionary<string, object>
+        {
+            ["Timeout"] = postProcessTimeout
+        };
+
+        if (postProcessType == "Query")
+            config["Query"] = postProcessCommand;
+        else if (postProcessType == "StoredProcedure")
+            config["ProcedureName"] = postProcessCommand;
+
+        return System.Text.Json.JsonSerializer.Serialize(config);
     }
 
     private string? SerializeDeltaSyncConfig()
@@ -917,6 +2047,11 @@
             ["DeltaSyncEnabled"] = deltaSyncEnabled,
             ["ReefIdColumn"] = deltaSyncReefIdColumn ?? "",
             ["HashAlgorithm"] = deltaSyncHashAlgorithm,
+            ["NumericPrecision"] = deltaSyncNumericPrecision,
+            ["DuplicateStrategy"] = deltaSyncDuplicateStrategy,
+            ["NullStrategy"] = deltaSyncNullStrategy,
+            ["TrackDeletes"] = deltaSyncTrackDeletes,
+            ["ExcludeReefId"] = deltaSyncExcludeReefId,
             ["DeletedDetectionMethod"] = deltaSyncDeletedDetectionMethod
         };
 
@@ -976,13 +2111,13 @@
                 return;
             }
 
-            if (emailRecipientsMode == "column" && string.IsNullOrWhiteSpace(emailRecipientsColumn))
+            if (!emailRecipientsUseHardcoded && string.IsNullOrWhiteSpace(emailRecipientsColumn))
             {
                 ToastService.ShowError("Please enter a recipients column name");
                 return;
             }
 
-            if (emailRecipientsMode == "hardcoded" && string.IsNullOrWhiteSpace(emailRecipientsHardcoded))
+            if (emailRecipientsUseHardcoded && string.IsNullOrWhiteSpace(emailRecipientsHardcoded))
             {
                 ToastService.ShowError("Please enter recipient email addresses");
                 return;
@@ -1019,25 +2154,25 @@
 
                 // Email fields
                 EmailTemplateId = isEmailExport ? emailTemplateId : null,
-                EmailRecipientsColumn = isEmailExport && emailRecipientsMode == "column" ? emailRecipientsColumn : null,
-                EmailRecipientsHardcoded = isEmailExport && emailRecipientsMode == "hardcoded" ? emailRecipientsHardcoded : null,
-                EmailCcColumn = isEmailExport && emailCcMode == "column" ? emailCcColumn : null,
-                EmailCcHardcoded = isEmailExport && emailCcMode == "hardcoded" ? emailCcHardcoded : null,
-                EmailSubjectColumn = isEmailExport && emailSubjectMode == "column" ? emailSubjectColumn : null,
-                EmailSubjectHardcoded = isEmailExport && emailSubjectMode == "hardcoded" ? emailSubjectHardcoded : null,
+                EmailRecipientsColumn = isEmailExport && !emailRecipientsUseHardcoded ? emailRecipientsColumn : null,
+                EmailRecipientsHardcoded = isEmailExport && emailRecipientsUseHardcoded ? emailRecipientsHardcoded : null,
+                EmailCcColumn = isEmailExport && !emailCcUseHardcoded ? emailCcColumn : null,
+                EmailCcHardcoded = isEmailExport && emailCcUseHardcoded ? emailCcHardcoded : null,
+                EmailSubjectColumn = isEmailExport && !emailSubjectUseHardcoded ? emailSubjectColumn : null,
+                EmailSubjectHardcoded = isEmailExport && emailSubjectUseHardcoded ? emailSubjectHardcoded : null,
                 EmailSuccessThresholdPercent = isEmailExport ? emailSuccessThresholdPercent : 60,
                 EmailApprovalRequired = isEmailExport && emailApprovalRequired,
                 EmailApprovalRoles = (isEmailExport && emailApprovalRequired) ? SerializeApprovalRoles() : null,
-                EmailAttachmentConfig = isEmailExport ? emailAttachmentConfig : null,
+                EmailAttachmentConfig = isEmailExport ? SerializeAttachmentConfig() : null,
 
                 // Pre-Processing
                 PreProcessType = preProcessType,
-                PreProcessConfig = !string.IsNullOrEmpty(preProcessType) ? preProcessConfig : null,
+                PreProcessConfig = !string.IsNullOrEmpty(preProcessType) ? SerializePreProcessConfig() : null,
                 PreProcessRollbackOnFailure = preProcessRollbackOnFailure,
 
                 // Post-Processing
                 PostProcessType = postProcessType,
-                PostProcessConfig = !string.IsNullOrEmpty(postProcessType) ? postProcessConfig : null,
+                PostProcessConfig = !string.IsNullOrEmpty(postProcessType) ? SerializePostProcessConfig() : null,
                 PostProcessSkipOnFailure = postProcessSkipOnFailure,
                 PostProcessRollbackOnFailure = postProcessRollbackOnFailure,
                 PostProcessOnZeroRows = postProcessOnZeroRows,
@@ -1049,11 +2184,16 @@
                 SplitEnabled = splitEnabled,
                 SplitKeyColumn = splitEnabled ? splitKeyColumn : null,
                 SplitFilenameTemplate = splitEnabled ? splitFilenameTemplate : null,
+                SplitBatchSize = splitEnabled ? splitBatchSize : 1,
+                PostProcessPerSplit = splitEnabled && splitPostProcessPerSplit,
+                ExcludeSplitKeyFromOutput = splitEnabled && splitExcludeSplitKey,
+                EmailGroupBySplitKey = isEmailExport && splitEnabled && emailGroupBySplitKey,
 
                 // Advanced
                 TemplateId = templateId,
                 TransformationOptionsJson = transformationOptionsJson,
                 NotificationConfig = notificationConfig,
+                DocumentOptions = SerializeDocumentOptions(),
 
                 IsEnabled = isEnabled,
                 Hash = Profile?.Hash ?? ""

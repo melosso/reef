@@ -88,6 +88,7 @@ public class Profile
     public int? OutputDestinationId { get; set; } // FK to Destinations table (optional)
     public int? TemplateId { get; set; } // FK to QueryTemplates table (optional - for custom transformations)
     public string? TransformationOptionsJson { get; set; } // JSON options for SQL Server native transformations (ForJsonOptions, ForXmlOptions)
+    public string? DocumentOptions { get; set; } // JSON options for document template generation (page size, orientation, watermark) - only used when TemplateId points to DocumentTemplate type
 
     // Pre-Processing Configuration
     public string? PreProcessType { get; set; } // null, Query, StoredProcedure
