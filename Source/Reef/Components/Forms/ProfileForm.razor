@@ -2,7 +2,6 @@
 @inject ConnectionService ConnectionService
 @inject GroupService GroupService
 @inject DestinationService DestinationService
-@inject NotificationTemplateService NotificationTemplateService
 @inject QueryTemplateService QueryTemplateService
 @inject ToastService ToastService
 @inject IJSRuntime JS
@@ -304,9 +303,9 @@
                     <select @bind="emailTemplateId" required
                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                         <option value="0">-- Select HTML email template --</option>
-                        @foreach (var template in emailTemplates)
+                        @foreach (var template in queryTemplates.Where(t => t.Type == QueryTemplateType.ScribanTemplate && t.OutputFormat?.ToUpper() == "HTML" && t.IsActive))
                         {
-                            <option value="@template.Id">@template.TemplateType</option>
+                            <option value="@template.Id">@template.Name (@template.OutputFormat)</option>
                         }
                     </select>
                     <p class="text-xs text-gray-500 mt-1">
@@ -601,20 +600,18 @@
                 }
             </div>
 
-            <!-- Profile Enabled Checkbox -->
+            <!-- Profile Enabled Toggle -->
             <div class="border-t border-gray-200 pt-4 mt-4">
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" id="is-enabled" @bind="isEnabled"
-                               class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
-                        <label for="is-enabled" class="ml-2 block text-sm text-gray-900">
-                            Profile Enabled
-                        </label>
-                    </div>
-                    <p class="text-xs text-gray-500 italic">
-                        (Profile can be tested and triggered manually even when disabled)
-                    </p>
+                <div class="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <label for="is-enabled-general" class="text-sm font-medium text-gray-700 flex-1">Active Status</label>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="is-enabled-general" @bind="isEnabled" class="sr-only peer" />
+                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
                 </div>
+                <p class="text-xs text-gray-500 mt-2 italic">
+                    Profile can be tested and triggered manually even when disabled
+                </p>
             </div>
             </div>
         }
@@ -1212,12 +1209,17 @@
                 </div>
 
                 <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                        <label class="text-sm font-medium text-gray-900">Enable Split Output</label>
-                        <p class="text-xs text-gray-500">Generate separate files based on column value</p>
+                    <div class="flex items-center space-x-3">
+                        <i data-lucide="scissors" class="w-5 h-5 text-gray-400"></i>
+                        <div>
+                            <label class="text-sm font-medium text-gray-900">Enable Split Output</label>
+                            <p class="text-xs text-gray-500">Generate separate files based on column value</p>
+                        </div>
                     </div>
-                    <input type="checkbox" @bind="splitEnabled"
-                           class="h-5 w-5 text-blue-600 border-gray-300 rounded">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" @bind="splitEnabled" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                    </label>
                 </div>
 
                 @if (splitEnabled)
@@ -1229,26 +1231,20 @@
                             <div class="flex items-center space-x-3">
                                 <i data-lucide="mail" class="w-5 h-5 text-gray-400"></i>
                                 <div>
-                                    <label class="text-sm font-medium text-gray-900">Group rows by split key</label>
+                                    <label class="text-sm font-medium text-gray-900 flex items-center">
+                                        Group rows by split key
+                                        <span class="ml-1 text-gray-400 cursor-help" title="Pro tip: For workflows requiring multiple documents per email (e.g., invoice approvals), enable 'Generate one document per row' in Email Options → Attachments → DocumentTemplate below to create separate PDFs for each row.">
+                                            <i data-lucide="info" class="w-4 h-4"></i>
+                                        </span>
+                                    </label>
                                     <p class="text-xs text-gray-500">Send one email per split key value (e.g., one email per approver)</p>
                                 </div>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" @bind="emailGroupBySplitKey" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
                             </label>
                         </div>
-
-                        <!-- Workflow hint when enabled -->
-                        @if (emailGroupBySplitKey)
-                        {
-                            <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p class="text-xs text-blue-800">
-                                    <i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>
-                                    <strong>Pro tip:</strong> For workflows requiring multiple documents per email (e.g., invoice approvals), enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Attachments → DocumentTemplate</strong> below to create separate PDFs for each row.
-                                </p>
-                            </div>
-                        }
                     }
 
                     <!-- Post-process per split -->
@@ -1389,16 +1385,6 @@
         }
     </div><!-- End Tab Content -->
 
-    <!-- Enable/Disable -->
-    @if (Profile != null && Profile.Id > 0)
-    {
-        <div class="flex items-center border-t pt-4">
-            <input type="checkbox" @bind="isEnabled"
-                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-            <span class="ml-2 text-sm font-medium text-gray-700">Profile is enabled</span>
-        </div>
-    }
-
     <div class="flex justify-between items-center pt-4 border-t">
         <!-- Test Actions Dropdown -->
         <div class="relative">
@@ -1422,8 +1408,8 @@
                         <button type="button" @onclick="RunProfile"
                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                 title="Run full export with template and destination">
-                            <i data-lucide="zap" class="h-4 w-4 mr-2"></i>
-                            <span>Run Profile</span>
+                            <i data-lucide="play-circle" class="h-4 w-4 mr-2"></i>
+                            <span>Run Profile (Test)</span>
                         </button>
                         @if (isEmailExport)
                         {
@@ -1460,6 +1446,123 @@
     </div>
 </form>
 
+<!-- Query Results Preview Modal -->
+@if (showQueryResultsModal)
+{
+    <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @onclick="CloseQueryResultsModal">
+        <div class="relative w-full max-w-6xl mx-auto my-8" @onclick:stopPropagation="true">
+            <div class="bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">Query Results Preview</h2>
+                        <p class="text-sm text-gray-500 mt-1">First 25 rows from your query</p>
+                    </div>
+                    <button type="button" @onclick="CloseQueryResultsModal" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <div class="px-6 py-4 max-h-96 overflow-auto bg-gray-50 border-b border-gray-200">
+                    @if (queryResultsLoading)
+                    {
+                        <div class="flex items-center justify-center py-8">
+                            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            <span class="ml-3 text-gray-600">Executing query...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(queryResultsError))
+                    {
+                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm text-red-800">@queryResultsError</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-xs text-gray-700">@((MarkupString)queryResultsHtml)</div>
+                    }
+                </div>
+
+                <div class="px-6 py-3 bg-green-50 border-b border-green-200">
+                    <p class="text-xs text-green-700">
+                        <strong>Note:</strong> This preview shows the first 25 rows from your query. The full profile execution will run the complete query.
+                    </p>
+                </div>
+
+                <div class="flex justify-end px-6 py-4">
+                    <button type="button" @onclick="CloseQueryResultsModal"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Email HTML Preview Modal -->
+@if (showEmailPreviewModal)
+{
+    <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @onclick="CloseEmailPreviewModal">
+        <div class="relative w-full max-w-4xl mx-auto my-8" @onclick:stopPropagation="true">
+            <div class="bg-white rounded-lg shadow-xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Email HTML Preview</h2>
+                    <button type="button" @onclick="CloseEmailPreviewModal" class="text-gray-400 hover:text-gray-500">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+
+                <div class="px-6 py-4 max-h-96 overflow-y-auto bg-gray-50 border-b border-gray-200">
+                    @if (emailPreviewLoading)
+                    {
+                        <div class="flex items-center justify-center py-8">
+                            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            <span class="ml-3 text-gray-600">Generating preview...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(emailPreviewError))
+                    {
+                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p class="text-sm text-red-800">@emailPreviewError</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="bg-white border border-gray-300 rounded-md p-4">
+                            @((MarkupString)emailPreviewHtml)
+                        </div>
+                    }
+                </div>
+
+                <div class="px-6 py-3 bg-blue-50 border-b border-blue-200">
+                    <p class="text-xs text-blue-700">
+                        <strong>Note:</strong> This preview uses the first row from your query. Make sure your query returns at least one row.
+                    </p>
+                </div>
+
+                <div class="flex justify-end space-x-3 px-6 py-4">
+                    <button type="button" @onclick="CloseEmailPreviewModal"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Close
+                    </button>
+                    <button type="button" @onclick="DownloadEmailPreview"
+                            disabled="@(string.IsNullOrEmpty(emailPreviewHtml))"
+                            class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="download" class="h-4 w-4 mr-2"></i>
+                        Download HTML
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public ProfileWithConnection? Profile { get; set; }
@@ -1474,7 +1577,6 @@
     private List<ProfileGroup> groups = new();
     private List<Destination> destinations = new();
     private List<Destination> filteredDestinations = new();
-    private List<NotificationEmailTemplate> emailTemplates = new();
     private List<QueryTemplate> queryTemplates = new();
     private List<WebhookTrigger> webhooks = new();
 
@@ -1582,6 +1684,16 @@
     private bool isSaving = false;
     private bool showTestActionsMenu = false;
 
+    // Modal state for test actions
+    private bool showQueryResultsModal = false;
+    private bool showEmailPreviewModal = false;
+    private bool queryResultsLoading = false;
+    private bool emailPreviewLoading = false;
+    private string queryResultsHtml = "";
+    private string emailPreviewHtml = "";
+    private string? queryResultsError = null;
+    private string? emailPreviewError = null;
+
     // Computed property for edit mode
     private bool IsEditMode => Profile?.Id > 0;
 
@@ -1593,7 +1705,6 @@
             connections = (await ConnectionService.GetAllAsync()).ToList();
             groups = (await GroupService.GetAllAsync()).ToList();
             destinations = (await DestinationService.GetAllAsync()).ToList();
-            emailTemplates = (await NotificationTemplateService.GetAllAsync()).ToList();
             queryTemplates = (await QueryTemplateService.GetAllAsync()).ToList();
         }
         catch (Exception ex)
@@ -1861,28 +1972,193 @@
     private async Task RunQuery()
     {
         showTestActionsMenu = false;
-        // TODO: Implement Run Query functionality
-        // This should execute the query and show first 25 rows in a modal
-        ToastService.ShowInfo("Run Query functionality coming soon");
-        await Task.CompletedTask;
+
+        if (connectionId == 0 || string.IsNullOrWhiteSpace(query))
+        {
+            ToastService.ShowError("Please select a connection and enter a query");
+            return;
+        }
+
+        try
+        {
+            queryResultsLoading = true;
+            queryResultsError = null;
+            queryResultsHtml = "";
+            showQueryResultsModal = true;
+            StateHasChanged();
+
+            // Call the API endpoint using a helper JavaScript function
+            var requestBody = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                connectionId = connectionId,
+                query = query
+            });
+
+            var result = await JS.InvokeAsync<System.Text.Json.JsonElement>("eval", $@"
+                (async () => {{
+                    const response = await fetch('/api/profiles/test-query-preview', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }},
+                        body: {System.Text.Json.JsonSerializer.Serialize(requestBody)}
+                    }});
+                    return await response.json();
+                }})()
+            ");
+
+            if (result.TryGetProperty("html", out var htmlElement))
+            {
+                queryResultsHtml = htmlElement.GetString() ?? "";
+            }
+            else if (result.TryGetProperty("error", out var errorElement))
+            {
+                queryResultsError = errorElement.GetString();
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to run query preview");
+            queryResultsError = $"Failed to execute query: {ex.Message}";
+        }
+        finally
+        {
+            queryResultsLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task RunProfile()
     {
         showTestActionsMenu = false;
-        // TODO: Implement Run Profile functionality
-        // This should execute the full profile with template and destination
-        ToastService.ShowInfo("Run Profile functionality coming soon");
-        await Task.CompletedTask;
+
+        if (Profile?.Id == null || Profile.Id == 0)
+        {
+            ToastService.ShowError("Please save the profile first before testing");
+            return;
+        }
+
+        try
+        {
+            // Call the execution API endpoint
+            var response = await JS.InvokeAsync<object>("fetch", $"/api/executions/execute/{Profile.Id}", new
+            {
+                method = "POST",
+                headers = new Dictionary<string, string>
+                {
+                    { "Content-Type", "application/json" }
+                }
+            });
+
+            ToastService.ShowSuccess($"Profile '{Profile.Name}' execution started");
+
+            // Wait briefly then navigate to executions page
+            await Task.Delay(500);
+            Navigation.NavigateTo("/executions");
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to execute profile {ProfileId}", Profile.Id);
+            ToastService.ShowError($"Failed to execute profile: {ex.Message}");
+        }
     }
 
     private async Task PreviewHtml()
     {
         showTestActionsMenu = false;
-        // TODO: Implement Preview HTML functionality
-        // This should preview the email HTML in a modal
-        ToastService.ShowInfo("Preview HTML functionality coming soon");
-        await Task.CompletedTask;
+
+        if (Profile?.Id == null || Profile.Id == 0)
+        {
+            ToastService.ShowError("Please save the profile first before previewing HTML");
+            return;
+        }
+
+        if (!isEmailExport)
+        {
+            ToastService.ShowError("HTML preview is only available for email exports");
+            return;
+        }
+
+        try
+        {
+            emailPreviewLoading = true;
+            emailPreviewError = null;
+            emailPreviewHtml = "";
+            showEmailPreviewModal = true;
+            StateHasChanged();
+
+            // Call the API endpoint using a helper JavaScript function
+            var result = await JS.InvokeAsync<System.Text.Json.JsonElement>("eval", $@"
+                (async () => {{
+                    const response = await fetch('/api/profiles/{Profile.Id}/preview-email-html', {{
+                        method: 'POST',
+                        headers: {{ 'Content-Type': 'application/json' }}
+                    }});
+                    return await response.json();
+                }})()
+            ");
+
+            if (result.TryGetProperty("html", out var htmlElement))
+            {
+                emailPreviewHtml = htmlElement.GetString() ?? "";
+            }
+            else if (result.TryGetProperty("error", out var errorElement))
+            {
+                emailPreviewError = errorElement.GetString();
+            }
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to preview email HTML for profile {ProfileId}", Profile.Id);
+            emailPreviewError = $"Failed to generate preview: {ex.Message}";
+        }
+        finally
+        {
+            emailPreviewLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Modal Helper Methods
+    private void CloseQueryResultsModal()
+    {
+        showQueryResultsModal = false;
+        queryResultsHtml = "";
+        queryResultsError = null;
+    }
+
+    private void CloseEmailPreviewModal()
+    {
+        showEmailPreviewModal = false;
+        emailPreviewHtml = "";
+        emailPreviewError = null;
+    }
+
+    private async Task DownloadEmailPreview()
+    {
+        if (string.IsNullOrEmpty(emailPreviewHtml))
+        {
+            ToastService.ShowError("No preview HTML available to download");
+            return;
+        }
+
+        try
+        {
+            var fileName = $"email-preview-{Profile?.Name ?? "profile"}-{DateTime.Now:yyyyMMdd-HHmmss}.html";
+            var base64 = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(emailPreviewHtml));
+
+            await JS.InvokeVoidAsync("eval", $@"
+                const link = document.createElement('a');
+                link.href = 'data:text/html;base64,{base64}';
+                link.download = '{fileName}';
+                link.click();
+            ");
+
+            ToastService.ShowSuccess("Email preview downloaded");
+        }
+        catch (Exception ex)
+        {
+            Serilog.Log.Error(ex, "Failed to download email preview");
+            ToastService.ShowError("Failed to download preview");
+        }
     }
 
     // Webhook Management Methods
@@ -2066,14 +2342,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        try
         {
-            try
-            {
-                await JS.InvokeVoidAsync("lucide.createIcons");
-            }
-            catch { }
+            await JS.InvokeVoidAsync("initLucide");
         }
+        catch { }
     }
 
     private async Task HandleSubmit()

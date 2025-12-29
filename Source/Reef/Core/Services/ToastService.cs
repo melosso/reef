@@ -5,6 +5,8 @@ namespace Reef.Core.Services;
 /// </summary>
 public class ToastService
 {
+    private const int MaxToasts = 7;
+    private const int MaxDurationMs = 15000;
     private readonly List<ToastMessage> _toasts = new();
     public IReadOnlyList<ToastMessage> Toasts => _toasts.AsReadOnly();
 
@@ -45,6 +47,19 @@ public class ToastService
 
     private void ShowToast(string message, ToastType type, int durationMs)
     {
+        // Enforce maximum duration of 15 seconds
+        var safeDuration = Math.Min(durationMs, MaxDurationMs);
+
+        // Remove oldest toast if we've reached the limit
+        if (_toasts.Count >= MaxToasts)
+        {
+            var oldestToast = _toasts.OrderBy(t => t.CreatedAt).FirstOrDefault();
+            if (oldestToast != null)
+            {
+                RemoveToast(oldestToast.Id);
+            }
+        }
+
         var toast = new ToastMessage
         {
             Id = Guid.NewGuid(),
@@ -57,7 +72,7 @@ public class ToastService
         OnToastAdded?.Invoke();
 
         // Auto-remove after duration
-        Task.Delay(durationMs).ContinueWith(_ =>
+        Task.Delay(safeDuration).ContinueWith(_ =>
         {
             RemoveToast(toast.Id);
         });

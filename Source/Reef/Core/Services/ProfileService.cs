@@ -35,15 +35,25 @@ public class ProfileService
         await connection.OpenAsync();
 
         const string sql = @"
-            SELECT 
+            SELECT
                 p.*,
                 c.Name as ConnectionName,
                 c.Type as ConnectionType,
                 c.IsActive as ConnectionIsActive,
-                pg.Name as GroupName
+                pg.Name as GroupName,
+                qt.Name as TemplateName,
+                qt.Type as TemplateType,
+                (
+                    SELECT pe.Status
+                    FROM ProfileExecutions pe
+                    WHERE pe.ProfileId = p.Id
+                    ORDER BY pe.StartedAt DESC
+                    LIMIT 1
+                ) as LastExecutionStatus
             FROM Profiles p
             INNER JOIN Connections c ON p.ConnectionId = c.Id
             LEFT JOIN ProfileGroups pg ON p.GroupId = pg.Id
+            LEFT JOIN QueryTemplates qt ON p.TemplateId = qt.Id
             ORDER BY p.Name";
 
         var profiles = await connection.QueryAsync<ProfileWithConnection>(sql);
@@ -697,6 +707,8 @@ public class ProfileWithConnection : Profile
     public string? GroupName { get; set; }
     public bool ConnectionIsActive { get; set; }
     public string? TemplateName { get; set; }
+    public int? TemplateType { get; set; } // QueryTemplateType enum value
     public string? OutputDestinationName { get; set; }
     public string? EmailTemplateName { get; set; }
+    public string? LastExecutionStatus { get; set; } // Running, Success, Failed, or null if never executed
 }

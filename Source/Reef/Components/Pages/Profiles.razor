@@ -86,10 +86,31 @@
                                 @(profile.ConnectionName ?? "—")
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-600">
-                                @profile.OutputFormat
+                                @GetOutputFormatDisplay(profile)
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-600">
-                                @(profile.LastExecutedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-2">
+                                    @if (profile.LastExecutionStatus != null)
+                                    {
+                                        @if (profile.LastExecutionStatus == "Success")
+                                        {
+                                            <StatusBadge Text="" Color="teal" ShowDot="true" Title="Success" />
+                                        }
+                                        else if (profile.LastExecutionStatus == "Failed")
+                                        {
+                                            <StatusBadge Text="" Color="red" ShowDot="true" Title="Failed" />
+                                        }
+                                        else if (profile.LastExecutionStatus == "Running")
+                                        {
+                                            <StatusBadge Text="" Color="blue" ShowDot="true" Title="Running" />
+                                        }
+                                    }
+                                    else if (profile.LastExecutedAt == null)
+                                    {
+                                        <StatusBadge Text="" Color="slate" ShowDot="true" Title="Never ran" />
+                                    }
+                                    <span class="text-sm text-gray-600">@(profile.LastExecutedAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</span>
+                                </div>
                             </td>
                             <td class="px-6 py-4">
                                 <StatusBadge Text="@(profile.IsEnabled ? "Enabled" : "Disabled")"
@@ -301,6 +322,24 @@
 
         var preview = query.Replace("\n", " ").Replace("\r", " ").Trim();
         return preview.Length > 60 ? preview.Substring(0, 60) + "..." : preview;
+    }
+
+    private string GetOutputFormatDisplay(ProfileWithConnection profile)
+    {
+        // If profile uses a template, display template name instead of raw format
+        if (profile.TemplateId.HasValue && !string.IsNullOrWhiteSpace(profile.TemplateName))
+        {
+            // For DocumentTemplate type (11), show the template name
+            if (profile.TemplateType == 11)
+            {
+                return $"Document: {profile.TemplateName}";
+            }
+            // For other template types, show template name
+            return profile.TemplateName;
+        }
+
+        // Otherwise show the raw output format
+        return profile.OutputFormat;
     }
 
     private async Task ExecuteProfile(ProfileWithConnection profile)

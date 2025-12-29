@@ -1,7 +1,7 @@
 @if (ShowDot)
 {
     <!-- Status Dot Indicator -->
-    <span class="inline-flex items-center text-xs @TextColorClass">
+    <span class="inline-flex items-center text-xs @TextColorClass" title="@Title">
         <span class="w-2 h-2 rounded-full @DotColorClass mr-2"></span>
         @Text
     </span>
@@ -9,7 +9,7 @@
 else
 {
     <!-- Badge Style -->
-    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold @BadgeColorClass border">
+    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold @BadgeColorClass border" title="@Title">
         @Text
     </span>
 }
@@ -19,6 +19,7 @@ else
     [Parameter] public string Status { get; set; } = "active"; // active, inactive, success, error, warning, info
     [Parameter] public string? Color { get; set; } // Alternative to Status: green, blue, red, orange, gray
     [Parameter] public bool ShowDot { get; set; } = true;
+    [Parameter] public string? Title { get; set; } // Tooltip text
 
     private string EffectiveStatus => !string.IsNullOrEmpty(Color) ? Color.ToLower() : Status.ToLower();
 
