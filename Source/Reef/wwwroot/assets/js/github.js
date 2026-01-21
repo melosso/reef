@@ -24,7 +24,7 @@ function getCookie(name) {
 }
 
 /**
- * Compares two semantic versions in the format "YYYY.M.P".
+ * Compares two semantic versions in the format "X.Y.Z".
  */
 function compareVersions(v1, v2) {
     const normalize = (v) => v.replace(/^v/, '').split('.').map(Number);

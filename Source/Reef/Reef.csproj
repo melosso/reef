@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Reef</RootNamespace>
-    <Version>2025.12.0</Version>
+    <Version>1.3.2</Version>
     
     <!-- Assembly Information -->
     <AssemblyTitle>Reef</AssemblyTitle>
