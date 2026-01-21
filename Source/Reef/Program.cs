@@ -328,6 +328,7 @@ public class Program
         services.AddScoped<EmailApprovalService>();
         services.AddScoped<BlazorAuthService>();
         services.AddScoped<ToastService>();
+        services.AddScoped<PasswordChangeModalService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
 

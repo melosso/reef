@@ -3,7 +3,7 @@
 @inject IJSRuntime JS
 @implements IDisposable
 
-<div class="fixed top-4 right-4 z-[100] space-y-2">
+<div class="fixed top-4 right-4 z-[300] space-y-2">
     @foreach (var toast in ToastService.Toasts)
     {
         <div class="surface-container px-4 py-3 shadow-lg min-w-[300px] max-w-md flex items-start space-x-3 toast @GetToastColorClass(toast.Type)">

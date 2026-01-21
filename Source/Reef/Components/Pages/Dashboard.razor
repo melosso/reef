@@ -4,6 +4,9 @@
 @inject ConnectionService ConnectionService
 @inject ExecutionService ExecutionService
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject PasswordChangeModalService PasswordChangeModalService
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Dashboard · Reef</PageTitle>
 
@@ -185,6 +188,9 @@
     {
         try
         {
+            // Check if password change is required
+            await CheckPasswordChangeRequired();
+
             // Load system metrics from AdminService
             var metrics = await AdminService.GetSystemMetricsAsync();
 
@@ -281,5 +287,31 @@
             return $"{sizeInMb / 1024.0:F2} GB";
 
         return $"{sizeInMb / (1024.0 * 1024.0):F2} TB";
+    }
+
+    private async Task CheckPasswordChangeRequired()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                var username = user.Identity.Name;
+                if (!string.IsNullOrEmpty(username))
+                {
+                    var dbUser = await AdminService.GetUserByUsernameAsync(username);
+                    if (dbUser?.PasswordChangeRequired == true)
+                    {
+                        PasswordChangeModalService.Show(username, isRequired: true);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error checking password change requirement: {ex.Message}");
+        }
     }
 }

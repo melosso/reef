@@ -23,10 +23,24 @@ if (document.readyState === 'loading') {
 }
 
 // Blazor Enhanced Navigation - reinitialize after each page update
-// This is the official 2025 pattern from Microsoft
-Blazor.addEventListener('enhancedload', () => {
-    // Wait for DOM to stabilize after Blazor's update
-    requestAnimationFrame(() => {
-        window.initLucide();
-    });
-});
+// Wait for Blazor to be available before registering the event listener
+function registerBlazorEnhancedLoad() {
+    if (typeof Blazor !== 'undefined' && Blazor.addEventListener) {
+        Blazor.addEventListener('enhancedload', () => {
+            // Wait for DOM to stabilize after Blazor's update
+            requestAnimationFrame(() => {
+                window.initLucide();
+            });
+        });
+    } else {
+        // Blazor not ready yet, retry after a short delay
+        setTimeout(registerBlazorEnhancedLoad, 100);
+    }
+}
+
+// Start checking for Blazor after DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', registerBlazorEnhancedLoad);
+} else {
+    registerBlazorEnhancedLoad();
+}

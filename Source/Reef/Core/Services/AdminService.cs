@@ -230,6 +230,94 @@ public class AdminService
     }
 
     /// <summary>
+    /// Get a user by username (returns only fields needed for authentication checks)
+    /// </summary>
+    public async Task<User?> GetUserByUsernameAsync(string username)
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var user = await conn.QuerySingleOrDefaultAsync<User>(
+                @"SELECT Id, Username, PasswordHash, Role, IsActive, PasswordChangeRequired
+                  FROM Users
+                  WHERE LOWER(Username) = @Username AND IsDeleted = 0 AND IsActive = 1",
+                new { Username = username.ToLowerInvariant() });
+
+            return user;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving user {Username}", username);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Change user password (for self-service password change)
+    /// </summary>
+    public async Task<(bool Success, string Message, bool RequiresLogoff)> ChangePasswordAsync(string username, string currentPassword, string newPassword)
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            // Get user with only the fields we need
+            var user = await conn.QuerySingleOrDefaultAsync<(int Id, string PasswordHash, bool PasswordChangeRequired)?>(
+                @"SELECT Id, PasswordHash, PasswordChangeRequired
+                  FROM Users
+                  WHERE LOWER(Username) = @Username AND IsDeleted = 0 AND IsActive = 1",
+                new { Username = username.ToLowerInvariant() });
+
+            if (user == null)
+            {
+                return (false, "User not found", false);
+            }
+
+            // Verify current password
+            if (!_passwordHasher.VerifyPassword(currentPassword, user.Value.PasswordHash))
+            {
+                return (false, "Current password is incorrect", false);
+            }
+
+            // Validate new password
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            {
+                return (false, "New password must be at least 6 characters long", false);
+            }
+
+            // Check if new password is different from current
+            if (_passwordHasher.VerifyPassword(newPassword, user.Value.PasswordHash))
+            {
+                return (false, "New password must be different from current password", false);
+            }
+
+            // Hash new password and update
+            var newPasswordHash = _passwordHasher.HashPassword(newPassword);
+
+            await conn.ExecuteAsync(
+                @"UPDATE Users
+                  SET PasswordHash = @PasswordHash,
+                      PasswordChangeRequired = 0,
+                      ModifiedAt = datetime('now')
+                  WHERE Id = @Id",
+                new { PasswordHash = newPasswordHash, Id = user.Value.Id });
+
+            Log.Information("Password changed for user {Username}", username);
+
+            // Return requiresLogoff if the password change was required (forced change)
+            return (true, "Password changed successfully", user.Value.PasswordChangeRequired);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error changing password for user {Username}", username);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Create a new user
     /// </summary>
     public async Task<int> CreateUserAsync(string username, string password, string role)
