@@ -339,29 +339,23 @@ function fadeOut(el) {
 }
 
 // -------------------------
-// Lucide Icon Render Queue
+// Lucide Icon Render
 // -------------------------
-let lucideRenderQueued = false;
 
 /**
- * Queue a single Lucide render instead of calling createIcons multiple times
- * This prevents layout thrashing from multiple icon re-renders
+ * Render Lucide icons synchronously so they are present before first paint.
+ * Calling this from an inline <script> block during body parsing means the
+ * browser hasn't painted yet — icons appear on the very first frame with no
+ * pop-in flash. Safe to call multiple times; already-converted icons are skipped.
  */
 window.queueLucideRender = function() {
-    if (lucideRenderQueued) return;
-    lucideRenderQueued = true;
-
-    // Use requestAnimationFrame to batch icon renders
-    requestAnimationFrame(() => {
-        if (typeof lucide !== 'undefined' && lucide.createIcons) {
-            try {
-                lucide.createIcons();
-            } catch (e) {
-                console.warn('Lucide render failed:', e);
-            }
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try {
+            lucide.createIcons();
+        } catch (e) {
+            console.warn('Lucide render failed:', e);
         }
-        lucideRenderQueued = false;
-    });
+    }
 }
 
 // -----------------------------
@@ -548,6 +542,11 @@ function showSkeleton(selector, rows = 3) {
     }
 }
 
+// Expose UX helpers for the SPA router to call after content swaps
+window.enhanceInteractions = enhanceInteractions;
+window.enhanceTooltips = enhanceTooltips;
+window.responsiveGrids = responsiveGrids;
+
 // -----------------------------
 // Run UX Enhancements
 // -----------------------------
@@ -555,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceInteractions();
     enhanceTooltips();
     responsiveGrids();
-    
+
     // Update approval badge if not on login page
     const menuLink = document.querySelector('a[href="/email-approvals"]');
     if (menuLink) {

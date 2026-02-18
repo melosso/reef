@@ -37,9 +37,6 @@ let jobZoomState = {
 // ============ INIT ============
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Set user info in sidebar
-    setUserSidebarInfo();
-
     // Initialize Mermaid once
     mermaid.initialize({
         startOnLoad: false,

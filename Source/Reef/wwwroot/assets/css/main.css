@@ -1,5 +1,31 @@
 body {
     font-family: 'Inter', sans-serif;
+    /* Hide body for one render tick so Tailwind's MutationObserver can
+       inject all styles before the first paint.  The animation fires
+       immediately (0s duration, 0ms delay) which is enough to push
+       visibility into the next microtask batch. */
+    animation: reef-reveal 0s 20ms forwards;
+    visibility: hidden;
+}
+@keyframes reef-reveal {
+    to { visibility: visible; }
+}
+
+/* ── SPA view transitions ─────────────────────────────────────────────────── */
+/* Keep the sidebar visually stable — it is a persistent shell element that
+   should not participate in the content cross-fade. */
+#sidebar {
+    view-transition-name: sidebar;
+}
+/* Snap the sidebar instantly; only the content area fades. */
+::view-transition-group(sidebar) {
+    animation-duration: 0s;
+}
+/* Quick, subtle fade for the content area. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 120ms;
+    animation-timing-function: ease-out;
 }
 .user-menu-expanded {
     max-height: 200px;

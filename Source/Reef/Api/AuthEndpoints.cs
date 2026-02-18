@@ -53,14 +53,14 @@ public static class AuthEndpoints
 
             if (user == null)
             {
-                Log.Warning("Login attempt failed for user {Username} - user not found", request.Username);
+                Log.Warning("Login attempt failed for user {Username}. Reason: user not found", request.Username);
                 return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
             }
 
             // Verify password
             if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
-                Log.Warning("Login attempt failed for user {Username} - invalid password", request.Username);
+                Log.Warning("Login attempt failed for user {Username}. Reason: invalid password", request.Username);
                 return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
             }
 

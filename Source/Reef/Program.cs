@@ -12,6 +12,8 @@ using Reef.Core.Middleware;
 using Serilog;
 using Serilog.Sinks.EventLog;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Security.Claims;
 using System.Runtime.InteropServices;
 using Dapper;
 
@@ -201,7 +203,7 @@ public class Program
             }
 
             // Configure HTTP pipeline
-            ConfigureMiddleware(app);
+            await ConfigureMiddleware(app);
 
             // Map API endpoints
             MapEndpoints(app);
@@ -386,7 +388,7 @@ public class Program
         Log.Debug("Authentication configured");
     }
 
-    private static void ConfigureMiddleware(WebApplication app)
+    private static async Task ConfigureMiddleware(WebApplication app)
     {
         // Global exception handler - always return JSON
         app.Use(async (context, next) =>
@@ -476,26 +478,41 @@ public class Program
         {
             Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
 
-            var htmlFiles = new[]
+            // Pages served as static files (no layout injection)
+            var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "index.html",
-                "dashboard.html",
-                "connections.html",
-                "documentation.html",
-                "email-approvals.html",
-                "jobs.html",
-                "admin.html",
-                "destinations.html",
-                "executions.html",
-                "groups.html",
-                "logoff.html",
-                "profiles.html",
-                "templates.html",
-                "404.html"
+                "index.html", "logoff.html", "404.html"
             };
 
+            // Authenticated pages that get the shared layout
+            var layoutPages = new[]
+            {
+                "dashboard.html",
+                "connections.html",
+                "destinations.html",
+                "templates.html",
+                "profiles.html",
+                "jobs.html",
+                "groups.html",
+                "executions.html",
+                "email-approvals.html",
+                "documentation.html",
+                "admin.html"
+            };
+
+            var navPages = new[] { "dashboard", "connections", "destinations", "templates",
+                                   "profiles", "jobs", "groups", "executions",
+                                   "email-approvals", "documentation", "admin" };
+
+            var layoutPath = Path.Combine(viewsFolder, "_layout.html");
+            var layoutTemplate = File.Exists(layoutPath)
+                ? await File.ReadAllTextAsync(layoutPath)
+                : null;
+
             var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var fileName in htmlFiles)
+
+            // Map static pages (served as-is)
+            foreach (var fileName in staticPages)
             {
                 var filePath = Path.Combine(viewsFolder, fileName);
                 if (File.Exists(filePath))
@@ -510,6 +527,70 @@ public class Program
                             await context.Response.SendFileAsync(filePath);
                         });
                     }
+                }
+            }
+
+            // Map authenticated pages (served via layout renderer)
+            foreach (var fileName in layoutPages)
+            {
+                var filePath = Path.Combine(viewsFolder, fileName);
+                if (!File.Exists(filePath)) continue;
+
+                var route = "/" + Path.GetFileNameWithoutExtension(fileName);
+                if (!mappedRoutes.Add(route)) continue;
+
+                var pageName = Path.GetFileNameWithoutExtension(fileName);
+
+                if (layoutTemplate == null)
+                {
+                    // Fallback: serve raw if layout is missing
+                    app.MapGet(route, async context =>
+                    {
+                        Log.Debug("Serving HTML route (no layout): {Route} -> {File}", route, filePath);
+                        context.Response.ContentType = "text/html";
+                        await context.Response.SendFileAsync(filePath);
+                    });
+                }
+                else
+                {
+                    app.MapGet(route, async context =>
+                    {
+                        Log.Debug("Serving HTML route (layout): {Route} -> {File}", route, filePath);
+
+                        var pageContent = await File.ReadAllTextAsync(filePath);
+                        var username = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
+                        var userInitial = username.Length > 0 ? username[0].ToString().ToUpper() : "?";
+                        var displayName = username.Length > 1
+                            ? char.ToUpper(username[0]) + username[1..]
+                            : username.ToUpper();
+
+                        var titleMatch = Regex.Match(pageContent, @"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->");
+                        var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
+
+                        var scriptsMatch = Regex.Match(pageContent, @"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline);
+                        var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
+
+                        var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
+                        var content = contentStart >= 0 ? pageContent[contentStart..] : pageContent;
+
+                        var html = layoutTemplate
+                            .Replace("{{PAGE_TITLE}}", pageTitle)
+                            .Replace("{{USERNAME}}", displayName)
+                            .Replace("{{USER_INITIAL}}", userInitial)
+                            .Replace("{{PAGE_SCRIPTS}}", extraScripts)
+                            .Replace("{{PAGE_CONTENT}}", content);
+
+                        foreach (var nav in navPages)
+                        {
+                            var activeClass = nav == pageName
+                                ? "bg-slate-900 text-slate-100"
+                                : "hover:bg-slate-700 hover:text-slate-100";
+                            html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
+                        }
+
+                        context.Response.ContentType = "text/html";
+                        await context.Response.WriteAsync(html);
+                    });
                 }
             }
 

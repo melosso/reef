@@ -6,14 +6,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Reef</RootNamespace>
-    <Version>1.3.2</Version>
+    <Version>1.3.3</Version>
     
     <!-- Assembly Information -->
     <AssemblyTitle>Reef</AssemblyTitle>
     <AssemblyDescription>A Lightweight Data Export Service</AssemblyDescription>
     <AssemblyProduct>Reef</AssemblyProduct>
     <AssemblyCompany>Melosso</AssemblyCompany>
-    <AssemblyCopyright>Copyright © Melosso 2025</AssemblyCopyright>
+    <AssemblyCopyright>Copyright © Melosso 2026</AssemblyCopyright>
 
     <!-- Additional Metadata -->
     <Authors>Melosso</Authors>
@@ -50,7 +50,6 @@
     <PackageReference Include="SSH.NET" Version="2025.1.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
     <PackageReference Include="YamlDotNet" Version="16.3.0" />
-    <!-- Document Generation -->
     <PackageReference Include="QuestPDF" Version="2024.12.0" />
     <PackageReference Include="DocumentFormat.OpenXml" Version="3.2.0" />
   </ItemGroup>

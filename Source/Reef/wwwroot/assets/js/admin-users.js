@@ -463,7 +463,6 @@ async function updateUser() {
                 localStorage.removeItem('reef_display_name');
             }
             // Update sidebar immediately
-            setUserSidebarInfo();
         }
 
         closeEditUserModal();
