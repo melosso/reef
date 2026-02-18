@@ -44,6 +44,7 @@ public static class ProfilesEndpoints
 
         // Query Testing endpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
+        group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
     }
 
@@ -1205,6 +1206,108 @@ public static class ProfilesEndpoints
         catch (Exception ex)
         {
             Log.Error(ex, "Error testing query for profile {Id}", id);
+            return Results.Problem("Error testing query: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// POST /api/profiles/{id}/test-query-delta - Test a saved profile's query with delta sync awareness.
+    /// Runs the query (first 25 rows), passes results through DeltaSyncService without committing,
+    /// and returns rows tagged with their sync status (new / changed / unchanged).
+    /// </summary>
+    private static async Task<IResult> TestQueryDelta(
+        int id,
+        ProfileService profileService,
+        ConnectionService connectionService,
+        QueryExecutor queryExecutor,
+        DeltaSyncService deltaSyncService)
+    {
+        try
+        {
+            var profile = await profileService.GetByIdAsync(id);
+            if (profile == null)
+                return Results.NotFound(new { error = "Profile not found" });
+
+            if (!profile.DeltaSyncEnabled || string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
+                return Results.BadRequest(new { error = "Delta sync is not enabled for this profile" });
+
+            var connection = await connectionService.GetByIdAsync(profile.ConnectionId);
+            if (connection == null)
+                return Results.NotFound(new { error = "Connection not found" });
+
+            // Build a 25-row limited version of the query
+            var testQuery = profile.Query?.Trim() ?? "";
+            var hasLimit = testQuery.Contains("LIMIT", StringComparison.OrdinalIgnoreCase) ||
+                           testQuery.Contains("TOP", StringComparison.OrdinalIgnoreCase) ||
+                           testQuery.Contains("FETCH", StringComparison.OrdinalIgnoreCase);
+
+            if (!hasLimit)
+            {
+                if (connection.Type == "SqlServer")
+                {
+                    var selectIndex = testQuery.IndexOf("SELECT", StringComparison.OrdinalIgnoreCase);
+                    if (selectIndex >= 0)
+                        testQuery = testQuery.Insert(selectIndex + "SELECT".Length, " TOP 25");
+                }
+                else
+                {
+                    testQuery += " LIMIT 25";
+                }
+            }
+
+            var (success, rows, error, executionTime) = await queryExecutor.ExecuteQueryAsync(
+                connection, testQuery, null, commandTimeout: 30);
+
+            if (!success)
+                return Results.Ok(new { success = false, error, executionTimeMs = executionTime });
+
+            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+
+            // Run delta comparison without committing hashes
+            var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, profile);
+
+            // Tag each row with its status so the client can render accordingly
+            var taggedRows = new List<Dictionary<string, object>>();
+
+            foreach (var row in delta.NewRows)
+            {
+                var tagged = new Dictionary<string, object>(row) { ["_reefStatus"] = "new" };
+                taggedRows.Add(tagged);
+            }
+            foreach (var row in delta.ChangedRows)
+            {
+                var tagged = new Dictionary<string, object>(row) { ["_reefStatus"] = "changed" };
+                taggedRows.Add(tagged);
+            }
+            foreach (var row in delta.UnchangedRows)
+            {
+                var tagged = new Dictionary<string, object>(row) { ["_reefStatus"] = "unchanged" };
+                taggedRows.Add(tagged);
+            }
+
+            // Column list without the internal tag
+            var dataColumns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>();
+
+            return Results.Ok(new
+            {
+                success = true,
+                rowCount = taggedRows.Count,
+                totalExecutionTimeMs = executionTime,
+                columns = dataColumns,
+                rows = taggedRows,
+                deltaEnabled = true,
+                summary = new
+                {
+                    newRows = delta.NewRows.Count,
+                    changedRows = delta.ChangedRows.Count,
+                    unchangedRows = delta.UnchangedRows.Count,
+                    deletedRows = delta.DeletedReefIds.Count
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error running delta-aware query test for profile {Id}", id);
             return Results.Problem("Error testing query: " + ex.Message);
         }
     }

@@ -1536,6 +1536,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <p class="text-sm text-gray-500 mt-1">
                             Showing <span id="query-results-count">0</span> rows
                             <span id="query-results-time" class="text-gray-400"></span>
+                            <span id="query-results-delta-summary" class="hidden ml-2 space-x-2"></span>
                         </p>
                     </div>
                     <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500">
@@ -1562,6 +1563,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <strong>Note:</strong> This preview shows the first 25 rows from your query.
                         The full profile execution will run the complete query.
                     </p>
+                </div>
+
+                <!-- Delta sync legend (shown only when delta mode is active) -->
+                <div id="query-results-delta-legend" class="hidden px-6 py-2 bg-gray-50 border-b border-gray-200 flex items-center gap-4 text-xs text-gray-600">
+                    <span class="font-medium text-gray-700">Smart Sync status:</span>
+                    <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-green-500"></span> New record</span>
+                    <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-amber-400"></span> Changed since last run</span>
+                    <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-gray-300"></span> Unchanged</span>
                 </div>
 
                 <!-- Footer -->
@@ -4869,12 +4878,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 btnText.textContent = 'Testing...';
             }
 
+            // Hide delta UI elements until we know if this run uses delta mode
+            document.getElementById('query-results-delta-summary').classList.add('hidden');
+            document.getElementById('query-results-delta-legend').classList.add('hidden');
+
             try {
-                // Get query and connection from form (works for both saved and unsaved profiles)
                 const connectionId = parseInt(document.getElementById('profile-connection').value);
                 const query = document.getElementById('profile-query').value;
+                const profileId = document.getElementById('profile-id')?.value;
+                const deltaEnabled = document.getElementById('deltaSyncEnabled')?.checked;
 
-                // Validate inputs
                 if (!connectionId || isNaN(connectionId)) {
                     showToast('Please select a connection', 'error');
                     return;
@@ -4899,18 +4912,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 `;
 
-                // Call test-query-preview endpoint (works without saved profile)
-                const response = await fetch(`${API_BASE}/api/profiles/test-query-preview`, {
-                    method: 'POST',
-                    headers: {
-                        ...getAuthHeaders(),
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        connectionId: connectionId,
-                        query: query
-                    })
-                });
+                // Use delta endpoint when the saved profile has Smart Sync enabled
+                const useDelta = profileId && parseInt(profileId) > 0 && deltaEnabled;
+                let response;
+
+                if (useDelta) {
+                    response = await fetch(`${API_BASE}/api/profiles/${profileId}/test-query-delta`, {
+                        method: 'POST',
+                        headers: getAuthHeaders()
+                    });
+                } else {
+                    response = await fetch(`${API_BASE}/api/profiles/test-query-preview`, {
+                        method: 'POST',
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ connectionId, query })
+                    });
+                }
 
                 if (!response.ok) {
                     throw new Error(`HTTP error ${response.status}`);
@@ -4919,7 +4936,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const result = await response.json();
 
                 if (!result.success) {
-                    // Show error
                     document.getElementById('query-results-content').innerHTML = `
                         <div class="bg-red-50 border border-red-200 rounded-md p-4">
                             <div class="flex">
@@ -4942,6 +4958,28 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 document.getElementById('query-results-count').textContent = result.rowCount || 0;
                 document.getElementById('query-results-time').textContent = `(${result.totalExecutionTimeMs}ms)`;
 
+                // Show delta summary badges when applicable
+                if (result.deltaEnabled && result.summary) {
+                    const s = result.summary;
+                    const summaryEl = document.getElementById('query-results-delta-summary');
+                    summaryEl.innerHTML = [
+                        s.newRows > 0
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>${s.newRows} new</span>`
+                            : '',
+                        s.changedRows > 0
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>${s.changedRows} changed</span>`
+                            : '',
+                        s.unchangedRows > 0
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>${s.unchangedRows} unchanged</span>`
+                            : '',
+                        s.deletedRows > 0
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"><span class="w-1.5 h-1.5 rounded-full bg-red-400"></span>${s.deletedRows} deleted</span>`
+                            : ''
+                    ].filter(Boolean).join('');
+                    summaryEl.classList.remove('hidden');
+                    document.getElementById('query-results-delta-legend').classList.remove('hidden');
+                }
+
                 // Display results in table
                 if (result.rowCount === 0) {
                     document.getElementById('query-results-content').innerHTML = `
@@ -4956,15 +4994,31 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     `;
                     queueLucideRender();
                 } else {
-                    // Build table
                     const columns = result.columns || [];
                     const rows = result.rows || [];
+                    const isDelta = !!result.deltaEnabled;
+
+                    // Row background + status badge helpers
+                    const rowBg = (status) => {
+                        if (!isDelta) return '';
+                        if (status === 'new') return 'bg-green-50';
+                        if (status === 'changed') return 'bg-amber-50';
+                        return '';
+                    };
+                    const statusBadge = (status) => {
+                        if (status === 'new')
+                            return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>New</span>';
+                        if (status === 'changed')
+                            return '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800"><span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Changed</span>';
+                        return '<span class="text-gray-300 text-xs">—</span>';
+                    };
 
                     let tableHtml = `
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200 border border-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
+                                        ${isDelta ? '<th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200 whitespace-nowrap">Status</th>' : ''}
                                         ${columns.map(col => `<th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">${escapeHtml(col)}</th>`).join('')}
                                     </tr>
                                 </thead>
@@ -4972,10 +5026,17 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     `;
 
                     rows.forEach((row, idx) => {
-                        tableHtml += '<tr class="' + (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50') + '">';
+                        const status = row['_reefStatus'];
+                        const bg = rowBg(status) || (idx % 2 === 0 ? 'bg-white' : 'bg-gray-50');
+                        tableHtml += `<tr class="${bg}">`;
+                        if (isDelta) {
+                            tableHtml += `<td class="px-3 py-2 border-r border-gray-200 whitespace-nowrap">${statusBadge(status)}</td>`;
+                        }
                         columns.forEach(col => {
                             const value = row[col];
-                            const displayValue = value === null || value === undefined ? '<span class="text-gray-400 italic">null</span>' : escapeHtml(String(value));
+                            const displayValue = value === null || value === undefined
+                                ? '<span class="text-gray-400 italic">null</span>'
+                                : escapeHtml(String(value));
                             tableHtml += `<td class="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">${displayValue}</td>`;
                         });
                         tableHtml += '</tr>';
