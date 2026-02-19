@@ -13,185 +13,178 @@
     {{PAGE_SCRIPTS}}
     <script src="/assets/js/router.js"></script>
 </head>
-<body class="bg-slate-50">
-<div class="flex h-screen">
-    <!-- Sidebar (server-rendered) -->
-    <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-800 text-slate-300">
-        <div class="flex items-center justify-left px-6 h-16 border-b border-slate-700">
-            <!-- waves icon -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-blue-400/80" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<body class="bg-slate-50 antialiased">
+<div class="flex h-screen overflow-hidden">
+    <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-900 text-slate-400 border-r border-slate-800">
+        <div class="flex items-center justify-left px-6 h-16 border-b border-slate-800">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-blue-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
                 <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
                 <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
             </svg>
             <div class="flex items-center ml-3 select-none mt-0.5">
-                <span class="text-slate-100 text-lg font-semibold font-inter tracking-tight">
+                <span class="text-slate-100 text-lg font-bold tracking-tight">
                 Reef
                 </span>
-                <span class="ml-3 px-3 py-1 rounded border border-slate-700 text-slate-400 text-[10px] uppercase tracking-wide leading-none">
-                beta
+                <span id="beta-tag" 
+                    onclick="triggerWiggle()" 
+                    class="ml-3 px-2 py-0.5 rounded border border-slate-700 bg-slate-800/50 text-slate-500 text-[10px] uppercase font-bold tracking-widest leading-none cursor-pointer select-none inline-block transition-transform">
+                    beta
                 </span>
             </div>
         </div>
 
-        <nav class="flex-1 px-4 py-4">
-            <a href="/dashboard" class="flex items-center px-4 py-3 rounded-lg {{NAV_dashboard}}">
-                <!-- layout-dashboard icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="7" height="9" x="3" y="3" rx="1"/>
-                    <rect width="7" height="5" x="14" y="3" rx="1"/>
-                    <rect width="7" height="9" x="14" y="12" rx="1"/>
-                    <rect width="7" height="5" x="3" y="16" rx="1"/>
-                </svg>
-                <span class="ml-3">Dashboard</span>
-            </a>
+        <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-6">
+            <div>
+                <a href="/dashboard" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_dashboard}}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="7" height="9" x="3" y="3" rx="1"/>
+                        <rect width="7" height="5" x="14" y="3" rx="1"/>
+                        <rect width="7" height="9" x="14" y="12" rx="1"/>
+                        <rect width="7" height="5" x="3" y="16" rx="1"/>
+                    </svg>
+                    <span class="ml-3 text-sm font-medium">Dashboard</span>
+                </a>
+            </div>
 
-            <div class="mt-6">
-                <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Management</h3>
-                <div class="mt-2 space-y-2">
-                    <a href="/connections" class="flex items-center px-4 py-3 rounded-lg {{NAV_connections}}">
-                        <!-- link-2 icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div>
+                <h3 class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] disable-select">Management</h3>
+                <div class="mt-2 space-y-1">
+                    <a href="/connections" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_connections}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 17H7A5 5 0 0 1 7 7h2"/>
                             <path d="M15 7h2a5 5 0 1 1 0 10h-2"/>
                             <line x1="8" x2="16" y1="12" y2="12"/>
                         </svg>
-                        <span class="ml-3">Connections</span>
+                        <span class="ml-3 text-sm font-medium">Connections</span>
                     </a>
-                    <a href="/destinations" class="flex items-center px-4 py-3 rounded-lg {{NAV_destinations}}">
-                        <!-- send icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/destinations" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_destinations}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m22 2-7 20-4-9-9-4Z"/>
                             <path d="M22 2 11 13"/>
                         </svg>
-                        <span class="ml-3">Destinations</span>
+                        <span class="ml-3 text-sm font-medium">Destinations</span>
                     </a>
-                    <a href="/templates" class="flex items-center px-4 py-3 rounded-lg {{NAV_templates}}">
-                        <!-- file-text icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/templates" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_templates}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
                             <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
                             <path d="M10 9H8"/>
                             <path d="M16 13H8"/>
                             <path d="M16 17H8"/>
                         </svg>
-                        <span class="ml-3">Templates</span>
+                        <span class="ml-3 text-sm font-medium">Templates</span>
                     </a>
-                    <a href="/groups" class="flex items-center px-4 py-3 rounded-lg {{NAV_groups}}">
-                        <!-- folder icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/groups" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_groups}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
                         </svg>
-                        <span class="ml-3">Groups</span>
+                        <span class="ml-3 text-sm font-medium">Groups</span>
                     </a>
-                    <a href="/profiles" class="flex items-center px-4 py-3 rounded-lg {{NAV_profiles}}">
-                        <!-- file-code icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                </div>
+            </div>
+
+            <div>
+                <h3 class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] disable-select">Automation</h3>
+                <div class="mt-2 space-y-1">
+                    <a href="/profiles" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_profiles}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
                             <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
                             <path d="m10 13-2 2 2 2"/>
                             <path d="m14 17 2-2-2-2"/>
                         </svg>
-                        <span class="ml-3">Profiles</span>
+                        <span class="ml-3 text-sm font-medium">Profiles</span>
                     </a>
-                </div>
-            </div>
-
-            <div class="mt-6">
-                <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Automation</h3>
-                <div class="mt-2 space-y-2">
-                    <a href="/jobs" class="flex items-center px-4 py-3 rounded-lg {{NAV_jobs}}">
-                        <!-- briefcase icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/jobs" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_jobs}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
                             <rect width="20" height="14" x="2" y="6" rx="2"/>
                         </svg>
-                        <span class="ml-3">Jobs</span>
+                        <span class="ml-3 text-sm font-medium">Jobs</span>
                     </a>
-                    <a href="/executions" class="flex items-center px-4 py-3 rounded-lg {{NAV_executions}}">
-                        <!-- activity icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/executions" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_executions}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
                         </svg>
-                        <span class="ml-3">Executions</span>
+                        <span class="ml-3 text-sm font-medium">Executions</span>
                     </a>
-                    <a href="/email-approvals" class="flex items-center px-4 py-3 rounded-lg {{NAV_email-approvals}}">
-                        <!-- check-square icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <a href="/email-approvals" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_email-approvals}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="m9 11 3 3L22 4"/>
                             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
                         </svg>
-                        <span class="ml-3">Approvals</span>
+                        <span class="ml-3 text-sm font-medium">Approvals</span>
                     </a>
                 </div>
             </div>
 
-            <div class="mt-6">
-                <h3 class="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider disable-select">Reference</h3>
-                <div class="mt-2 space-y-2">
-                    <a href="/documentation" class="flex items-center px-4 py-3 rounded-lg {{NAV_documentation}}">
-                        <!-- book-open icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <div>
+                <h3 class="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] disable-select">Reference</h3>
+                <div class="mt-2 space-y-1">
+                    <a href="/documentation" class="flex items-center px-3 py-2 rounded-lg transition-colors hover:bg-slate-800 hover:text-slate-100 {{NAV_documentation}}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 opacity-70" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
                             <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                         </svg>
-                        <span class="ml-3">Documentation</span>
+                        <span class="ml-3 text-sm font-medium">Documentation</span>
                     </a>
                 </div>
             </div>
         </nav>
 
-        <!-- User Section with Expandable Menu -->
-        <div class="border-t border-slate-700">
-            <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-slate-700/50 transition-colors">
+        <div class="border-t border-slate-800 bg-slate-900/50">
+            <button onclick="toggleUserMenu()" class="w-full flex items-center justify-between p-4 hover:bg-slate-800/40 transition-colors group">
                 <div class="flex items-center space-x-3">
-                    <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                        <span id="user-initial" class="text-white font-bold text-lg">{{USER_INITIAL}}</span>
+                    <div id="user-initial">
+                        <span class="text-white font-bold text-sm select-none tracking-wider">
+                            {{USER_INITIAL}}
+                        </span>
                     </div>
-                    <div class="text-left">
-                        <div id="username-display" class="text-slate-100 font-semibold">{{USERNAME}}</div>
-                        <div class="text-xs text-slate-400">View menu</div>
+                    
+                    <div class="text-left overflow-hidden">
+                        <div id="username-display" class="text-slate-100 text-sm font-semibold truncate">
+                            {{USERNAME}}
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">
+                            System User
+                        </div>
                     </div>
                 </div>
-                <!-- chevron-up icon -->
-                <svg id="chevron-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 transition-transform" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                
+                <svg id="chevron-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 group-hover:text-slate-300 transition-transform" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="m18 15-6-6-6 6"/>
                 </svg>
             </button>
 
-            <!-- Expandable Menu -->
             <div id="user-menu" class="overflow-hidden user-menu-collapsed">
-                <div class="px-2 pb-2 space-y-1">
-                    <a href="/admin" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
-                        <!-- settings icon -->
+                <div class="px-2 pb-3 space-y-1">
+                    <a href="/admin" class="flex items-center px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                             <circle cx="12" cy="12" r="3"/>
                         </svg>
-                        <span class="ml-3 text-sm">Settings</span>
+                        <span class="ml-3 text-xs font-medium">Settings</span>
                     </a>
-                    <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
-                        <!-- github icon -->
+                    <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="flex items-center px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
                             <path d="M9 18c-4.51 2-5-2-7-2"/>
                         </svg>
-                        <span class="ml-3 text-sm">GitHub</span>
-                        <!-- external-link icon -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-auto" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <span class="ml-3 text-xs font-medium">GitHub</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-auto opacity-50" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M15 3h6v6"/>
                             <path d="M10 14 21 3"/>
                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                         </svg>
                     </a>
-                    <button onclick="logout()" class="w-full flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 text-slate-300 hover:text-slate-100 transition-colors">
-                        <!-- log-out icon -->
+                    <button onclick="logout()" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                             <polyline points="16 17 21 12 16 7"/>
                             <line x1="21" x2="9" y1="12" y2="12"/>
                         </svg>
-                        <span class="ml-3 text-sm">Logout</span>
+                        <span class="ml-3 text-xs font-medium">Logout</span>
                     </button>
                 </div>
             </div>

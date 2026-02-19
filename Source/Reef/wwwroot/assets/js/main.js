@@ -215,6 +215,27 @@ window.clearApiCache = function(pattern) {
 };
 
 // -----------------------------
+// Sidebar / Wiggle 
+// -----------------------------
+function triggerWiggle() {
+    const element = document.getElementById('beta-tag');
+    
+    // Remove the class if it currently exists to reset the animation timer
+    element.classList.remove('animate-wiggle');
+    
+    // Trigger a reflow to ensure the browser recognizes the removal before re-adding
+    void element.offsetWidth;
+    
+    // Apply the animation class
+    element.classList.add('animate-wiggle');
+    
+    // Optional: Remove the class after the duration (300ms) to clean up the DOM state
+    element.addEventListener('animationend', () => {
+        element.classList.remove('animate-wiggle');
+    }, { once: true });
+}
+
+// -----------------------------
 // Sidebar / User Info
 // -----------------------------
 function setUserSidebarInfo() {
