@@ -1,6 +1,6 @@
 # Reef - Publish Script
 
-$repoBase = "D:\Repository\Reef"
+$repoBase = "C:\Github\reef"
 $sourceDir = "$repoBase\Source\Reef"
 $deploymentDir = "$repoBase\Deployment"
 
