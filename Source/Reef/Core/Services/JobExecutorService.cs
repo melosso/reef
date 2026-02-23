@@ -14,6 +14,7 @@ public class JobExecutorService
     private readonly JobService _jobService;
     private readonly ExecutionService _executionService;
     private readonly ProfileService _profileService;
+    private readonly ImportExecutionService _importExecutionService;
     private readonly NotificationService _notificationService;
     private readonly IConfiguration _configuration;
 
@@ -21,12 +22,14 @@ public class JobExecutorService
         JobService jobService,
         ExecutionService executionService,
         ProfileService profileService,
+        ImportExecutionService importExecutionService,
         NotificationService notificationService,
         IConfiguration configuration)
     {
         _jobService = jobService;
         _executionService = executionService;
         _profileService = profileService;
+        _importExecutionService = importExecutionService;
         _notificationService = notificationService;
         _configuration = configuration;
     }
@@ -260,14 +263,30 @@ public class JobExecutorService
     }
 
     /// <summary>
-    /// Execute a profile-based job
+    /// Execute a profile-based job (export or import profile)
     /// </summary>
     private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
         ExecuteProfileJobAsync(Job job, Dictionary<string, object>? parameters)
     {
+        // Import profile path
+        if (job.ImportProfileId.HasValue)
+        {
+            var execution = await _importExecutionService.ExecuteAsync(
+                job.ImportProfileId.Value,
+                $"Job-{job.Id}");
+
+            var success = execution.Status is "Success" or "PartialSuccess";
+            var outputData = JsonSerializer.Serialize(new { executionId = execution.Id, status = execution.Status });
+            var errorMessage = success ? null : execution.ErrorMessage;
+            var rowsProcessed = execution.TotalRowsRead > 0 ? execution.TotalRowsRead : (int?)null;
+
+            return (success, outputData, errorMessage, rowsProcessed);
+        }
+
+        // Export profile path
         if (!job.ProfileId.HasValue)
         {
-            return (false, null, "ProfileId is required for ProfileExecution jobs", null);
+            return (false, null, "ProfileId or ImportProfileId is required for ProfileExecution jobs", null);
         }
 
         // Convert parameters to string dictionary for ExecutionService
@@ -280,27 +299,19 @@ public class JobExecutorService
             );
         }
 
-        var (executionId, success, outputPath, errorMessage) = 
+        var (executionId, exportSuccess, outputPath, exportErrorMessage) =
             await _executionService.ExecuteProfileAsync(
-                job.ProfileId.Value, 
-                stringParams, 
+                job.ProfileId.Value,
+                stringParams,
                 $"Job-{job.Id}",
                 job.Id,              // Pass job ID for tracking
                 job.DestinationId);  // Pass the job's destination override
 
-        var outputData = success && outputPath != null
+        var exportOutputData = exportSuccess && outputPath != null
             ? JsonSerializer.Serialize(new { executionId, outputPath })
             : null;
 
-        // Try to get row count from profile execution if available
-        int? rowsProcessed = null;
-        if (success && executionId > 0)
-        {
-            // The ExecutionService doesn't return row count, but we can try to query it
-            // For now, we'll leave it null
-        }
-
-        return (success, outputData, errorMessage, rowsProcessed);
+        return (exportSuccess, exportOutputData, exportErrorMessage, null);
     }
 
     /// <summary>

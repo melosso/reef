@@ -143,7 +143,60 @@
                         </div>
                     </div>
                 </div>
+                <!-- ── Import Executions Section ──────────────────────────────── -->
+                <div class="mt-8">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <i data-lucide="upload" class="h-5 w-5 mr-2 text-indigo-500"></i>
+                            Import Executions
+                        </h2>
+                        <button onclick="loadImportExecutions()" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center">
+                            <i data-lucide="refresh-cw" class="h-4 w-4 mr-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profile</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rows (In/Up/Fail)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phase</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="import-executions-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
+                                        <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
+                                        Loading...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </main>
+        </div>
+    </div>
+
+    <!-- Import Execution Details Modal -->
+    <div id="import-exec-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i data-lucide="upload" class="h-5 w-5 mr-2 text-indigo-500"></i>
+                    Import Execution Details
+                </h3>
+                <button onclick="closeImportExecModal()" class="text-gray-400 hover:text-gray-500">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            <div id="import-exec-modal-body">
+                <p class="text-gray-500 text-center py-8">Loading...</p>
+            </div>
         </div>
     </div>
 
@@ -1187,6 +1240,192 @@
                 showToast('Failed to download log: ' + (err.message || err), 'error');
             }
         }
+
+        // ── Import Executions ──────────────────────────────────────────────
+
+        let importProfiles = [];
+
+        async function loadImportExecutions() {
+            try {
+                // Load all import profiles to get names
+                const pResp = await fetch(`${API_BASE}/api/profiles?type=import`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                });
+                if (pResp.ok) importProfiles = await pResp.json();
+
+                // Load recent executions for all profiles (last 5 per profile)
+                const allExecs = [];
+                for (const p of importProfiles) {
+                    try {
+                        const eResp = await fetch(`${API_BASE}/api/profiles/${p.id}/executions?type=import&limit=5`, {
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                        });
+                        if (eResp.ok) {
+                            const execs = await eResp.json();
+                            execs.forEach(e => { e._profileName = p.name; });
+                            allExecs.push(...execs);
+                        }
+                    } catch {}
+                }
+
+                // Sort by startedAt descending, take most recent 50
+                allExecs.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+                renderImportExecutions(allExecs.slice(0, 50));
+            } catch (e) {
+                document.getElementById('import-executions-tbody').innerHTML =
+                    `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+            }
+        }
+
+        function renderImportExecutions(execs) {
+            const tbody = document.getElementById('import-executions-tbody');
+            if (!execs || execs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    <i data-lucide="upload" class="h-10 w-10 mx-auto mb-2 text-gray-300"></i>
+                    <p>No import executions found.</p></td></tr>`;
+                queueLucideRender();
+                return;
+            }
+
+            const statusColors = {
+                'Running': 'bg-blue-100 text-blue-800',
+                'Success': 'bg-green-100 text-green-800',
+                'PartialSuccess': 'bg-yellow-100 text-yellow-800',
+                'Failed': 'bg-red-100 text-red-800',
+            };
+
+            tbody.innerHTML = execs.map(e => {
+                const color = statusColors[e.status] || 'bg-gray-100 text-gray-800';
+                const started = new Date(e.startedAt).toLocaleString();
+                let duration = '—';
+                if (e.completedAt) {
+                    const ms = new Date(e.completedAt) - new Date(e.startedAt);
+                    duration = ms < 60000 ? `${(ms/1000).toFixed(1)}s` : `${(ms/60000).toFixed(1)}m`;
+                }
+                const rows = `${e.rowsInserted ?? 0} / ${e.rowsUpdated ?? 0} / ${e.rowsFailed ?? 0}`;
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors border-l-4 border-transparent hover:border-indigo-400">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center text-sm font-medium text-gray-900">
+                                <i data-lucide="upload" class="h-4 w-4 text-indigo-400 mr-2"></i>
+                                ${escapeHtml(e._profileName || `Profile #${e.importProfileId}`)}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${color}">${escapeHtml(e.status)}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${started}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${duration}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">${rows}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(e.currentPhase || '—')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <button onclick="viewImportExecution(${e.id})" class="text-blue-600 hover:text-blue-800 text-sm mr-2">
+                                <i data-lucide="eye" class="h-4 w-4 inline"></i> Details
+                            </button>
+                        </td>
+                    </tr>`;
+            }).join('');
+            queueLucideRender();
+        }
+
+        async function viewImportExecution(execId) {
+            const modal = document.getElementById('import-exec-modal');
+            const body = document.getElementById('import-exec-modal-body');
+            body.innerHTML = '<p class="text-gray-500 text-center py-8">Loading...</p>';
+            modal.classList.remove('hidden');
+            queueLucideRender();
+
+            try {
+                const [eResp, errResp] = await Promise.all([
+                    fetch(`${API_BASE}/api/import-profiles/executions/${execId}`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                    }),
+                    fetch(`${API_BASE}/api/import-profiles/executions/${execId}/errors`, {
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                    })
+                ]);
+                const exec = await eResp.json();
+                const errors = errResp.ok ? await errResp.json() : [];
+
+                const profileName = importProfiles.find(p => p.id === exec.importProfileId)?.name
+                    || `Profile #${exec.importProfileId}`;
+
+                const statusColor = { Running:'bg-blue-100 text-blue-800', Success:'bg-green-100 text-green-800',
+                    PartialSuccess:'bg-yellow-100 text-yellow-800', Failed:'bg-red-100 text-red-800' }[exec.status] || 'bg-gray-100 text-gray-800';
+
+                body.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">${escapeHtml(profileName)}</p>
+                                <p class="text-xs text-gray-500">Execution #${exec.id} · ${new Date(exec.startedAt).toLocaleString()}</p>
+                            </div>
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full ${statusColor}">${escapeHtml(exec.status)}</span>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            ${[
+                                ['Inserted', exec.rowsInserted ?? 0, 'text-green-600'],
+                                ['Updated', exec.rowsUpdated ?? 0, 'text-blue-600'],
+                                ['Skipped', exec.rowsSkipped ?? 0, 'text-gray-600'],
+                                ['Failed', exec.rowsFailed ?? 0, 'text-red-600'],
+                                ['Deleted', exec.rowsDeleted ?? 0, 'text-orange-600'],
+                                ['Total Read', exec.totalRowsRead ?? 0, 'text-gray-700'],
+                            ].map(([label, val, cls]) =>
+                                `<div class="bg-gray-50 rounded-lg p-3 text-center">
+                                    <p class="text-xs text-gray-500">${label}</p>
+                                    <p class="text-xl font-bold ${cls}">${val}</p>
+                                </div>`
+                            ).join('')}
+                        </div>
+
+                        ${exec.deltaSyncNewRows || exec.deltaSyncChangedRows ? `
+                        <div class="bg-indigo-50 rounded-lg p-3">
+                            <p class="text-xs font-medium text-indigo-700 mb-1">Smart Sync</p>
+                            <div class="flex gap-4 text-xs text-indigo-600">
+                                <span>New: ${exec.deltaSyncNewRows ?? 0}</span>
+                                <span>Changed: ${exec.deltaSyncChangedRows ?? 0}</span>
+                                <span>Unchanged: ${exec.deltaSyncUnchangedRows ?? 0}</span>
+                                <span>Deleted: ${exec.deltaSyncDeletedRows ?? 0}</span>
+                            </div>
+                        </div>` : ''}
+
+                        ${exec.errorMessage ? `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <p class="text-xs font-medium text-red-700 mb-1">Error</p>
+                            <pre class="text-xs text-red-600 whitespace-pre-wrap">${escapeHtml(exec.errorMessage)}</pre>
+                        </div>` : ''}
+
+                        ${errors.length > 0 ? `
+                        <div>
+                            <h4 class="text-sm font-medium text-gray-700 mb-2">Row Errors (${errors.length})</h4>
+                            <div class="max-h-48 overflow-y-auto border rounded divide-y text-xs">
+                                ${errors.map(e => `
+                                    <div class="px-3 py-2">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium text-red-700">${escapeHtml(e.errorType || 'Error')}</span>
+                                            <span class="text-gray-400">Row ${e.rowNumber ?? '?'}</span>
+                                        </div>
+                                        <p class="text-gray-600 mt-0.5">${escapeHtml(e.errorMessage)}</p>
+                                        ${e.rowDataJson ? `<pre class="text-gray-400 text-xs mt-0.5 truncate">${escapeHtml(e.rowDataJson.substring(0,100))}</pre>` : ''}
+                                    </div>`).join('')}
+                            </div>
+                        </div>` : ''}
+                    </div>`;
+            } catch (e) {
+                body.innerHTML = `<p class="text-red-500 text-center py-8">Error: ${escapeHtml(e.message)}</p>`;
+            }
+        }
+
+        function closeImportExecModal() {
+            document.getElementById('import-exec-modal').classList.add('hidden');
+        }
+
+        // Load import executions on page init
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => loadImportExecutions(), 800);
+        });
+
     </script>
 </body>
 </html>

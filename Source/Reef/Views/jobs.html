@@ -374,13 +374,23 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Profile</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Export Profile</label>
                             <select id="job-profileId"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                                <option value="">Select profile...</option>
+                                <option value="">Select export profile...</option>
                             </select>
                         </div>
-                        
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Import Profile</label>
+                            <select id="job-importProfileId"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select import profile...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
                             <select id="job-destinationId"
@@ -388,6 +398,7 @@
                                 <option value="">Select destination...</option>
                             </select>
                         </div>
+                        <div></div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -604,51 +615,6 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        function formatDateTime(dateString) {
-            if (!dateString) return 'Never';
-            let date;
-            try {
-                // If already ends with Z or has timezone, don't add Z
-                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
-                    date = new Date(dateString);
-                } else {
-                    date = new Date(dateString + 'Z');
-                }
-                if (isNaN(date.getTime())) return 'Never';
-                return date.toLocaleString();
-            } catch {
-                return 'Never';
-            }
-        }
-
-        function formatRelativeTime(dateString) {
-            if (!dateString) return null;
-            let date;
-            try {
-                // If already ends with Z or has timezone, don't add Z
-                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
-                    date = new Date(dateString);
-                } else {
-                    date = new Date(dateString + 'Z');
-                }
-                if (isNaN(date.getTime())) return null;
-            } catch {
-                return null;
-            }
-
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMins / 60);
-            const diffDays = Math.floor(diffHours / 24);
-
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 7) return `${diffDays}d ago`;
-            return null;
         }
 
         function showJobTab(tabName) {
@@ -1178,25 +1144,42 @@
 
         // Store profiles and destinations for reference
         let profilesCache = [];
+        let importProfilesCache = [];
         let profileSelectListenerAttached = false;
 
         async function loadProfilesAndDestinations() {
             try {
-                const profilesResponse = await fetch('/api/profiles', {
-                    headers: getAuthHeaders()
-                });
+                const [profilesResponse, importProfilesResponse] = await Promise.all([
+                    fetch('/api/profiles', { headers: getAuthHeaders() }),
+                    fetch('/api/profiles?type=import', { headers: getAuthHeaders() })
+                ]);
+
                 if (profilesResponse.ok) {
                     const profiles = await profilesResponse.json();
                     profilesCache = profiles; // Store for later reference
                     const profileSelect = document.getElementById('job-profileId');
-                    profileSelect.innerHTML = '<option value="">Select profile...</option>' +
+                    profileSelect.innerHTML = '<option value="">Select export profile...</option>' +
                         profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
 
                     // Attach change event listener only once
                     if (!profileSelectListenerAttached) {
-                        profileSelect.addEventListener('change', updateDestinationFieldState);
+                        profileSelect.addEventListener('change', function() {
+                            if (this.value) document.getElementById('job-importProfileId').value = '';
+                            updateDestinationFieldState();
+                        });
                         profileSelectListenerAttached = true;
                     }
+                }
+
+                if (importProfilesResponse.ok) {
+                    const importProfiles = await importProfilesResponse.json();
+                    importProfilesCache = importProfiles;
+                    const importProfileSelect = document.getElementById('job-importProfileId');
+                    importProfileSelect.innerHTML = '<option value="">Select import profile...</option>' +
+                        importProfiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                    importProfileSelect.addEventListener('change', function() {
+                        if (this.value) document.getElementById('job-profileId').value = '';
+                    });
                 }
 
                 const destResponse = await fetch('/api/destinations', {
@@ -1269,9 +1252,10 @@
             await checkAuth();
 
             try {
-                const [jobsResponse, profilesResponse, destinationsResponse] = await Promise.all([
+                const [jobsResponse, profilesResponse, importProfilesResponse, destinationsResponse] = await Promise.all([
                     fetch(API_BASE, { headers: getAuthHeaders() }),
                     fetch('/api/profiles', { headers: getAuthHeaders() }),
+                    fetch('/api/profiles?type=import', { headers: getAuthHeaders() }),
                     fetch('/api/destinations', { headers: getAuthHeaders() })
                 ]);
 
@@ -1281,6 +1265,11 @@
 
                 if (profilesResponse.ok) {
                     profiles = await profilesResponse.json();
+                }
+
+                let importProfilesList = [];
+                if (importProfilesResponse.ok) {
+                    importProfilesList = await importProfilesResponse.json();
                 }
 
                 if (destinationsResponse.ok) {
@@ -1293,6 +1282,12 @@
                         const profile = profiles.find(p => p.id === job.profileId);
                         if (profile) {
                             job.profileName = profile.name;
+                        }
+                    }
+                    if (job.importProfileId) {
+                        const importProfile = importProfilesList.find(p => p.id === job.importProfileId);
+                        if (importProfile) {
+                            job.importProfileName = importProfile.name;
                         }
                     }
                 });
@@ -1579,6 +1574,7 @@
                                             </span>
                                         ` : ''}
                                         ${job.profileId && job.profileName ? `<span class="flex items-center"><i data-lucide="file-code" class="h-3 w-3 mr-1"></i>${escapeHtml(job.profileName)}</span>` : job.profileId ? `<span class="flex items-center"><i data-lucide="file-code" class="h-3 w-3 mr-1"></i>Profile #${job.profileId}</span>` : ''}
+                                        ${job.importProfileId && job.importProfileName ? `<span class="flex items-center"><i data-lucide="file-input" class="h-3 w-3 mr-1"></i>${escapeHtml(job.importProfileName)}</span>` : job.importProfileId ? `<span class="flex items-center"><i data-lucide="file-input" class="h-3 w-3 mr-1"></i>Import #${job.importProfileId}</span>` : ''}
                                     </div>
                                 </div>
                             </div>
@@ -1681,6 +1677,12 @@
                                         <div>
                                             <dt class="text-gray-500">Profile:</dt>
                                             <dd class="font-medium text-blue-600">${escapeHtml(job.profileName || 'Unknown')}</dd>
+                                        </div>
+                                        ` : ''}
+                                        ${job.importProfileId ? `
+                                        <div>
+                                            <dt class="text-gray-500">Import Profile:</dt>
+                                            <dd class="font-medium text-blue-600">${escapeHtml(job.importProfileName || 'Unknown')}</dd>
                                         </div>
                                         ` : ''}
                                         ${job.destinationId ? `
@@ -1837,6 +1839,7 @@
                 document.getElementById('job-description').value = job.description || '';
                 document.getElementById('job-type').value = job.type || '';
                 document.getElementById('job-profileId').value = job.profileId || '';
+                document.getElementById('job-importProfileId').value = job.importProfileId || '';
                 document.getElementById('job-destinationId').value = job.destinationId || '';
 
                 // Update destination field state based on selected profile type
@@ -1992,6 +1995,7 @@
                 description: document.getElementById('job-description').value,
                 type: document.getElementById('job-type').value,
                 profileId: parseInt(document.getElementById('job-profileId').value) || null,
+                importProfileId: parseInt(document.getElementById('job-importProfileId').value) || null,
                 destinationId: parseInt(document.getElementById('job-destinationId').value) || null,
                 scheduleType: scheduleType,
                 cronExpression: cronExpression,

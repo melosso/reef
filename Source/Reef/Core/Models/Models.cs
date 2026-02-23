@@ -250,6 +250,7 @@ public class WebhookTrigger
     public int Id { get; set; }
     public int? ProfileId { get; set; } // Nullable to support Job webhooks
     public int? JobId { get; set; } // Nullable to support Profile webhooks
+    public int? ImportProfileId { get; set; } // Nullable to support Import Profile webhooks
     public required string Token { get; set; } // Unique webhook token
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

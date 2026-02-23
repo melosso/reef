@@ -34,12 +34,13 @@ public static class WebhooksEndpoints
     private static async Task<IResult> GetAll(
         [FromServices] WebhookService service,
         [FromQuery] int? profileId = null,
-        [FromQuery] int? jobId = null)
+        [FromQuery] int? jobId = null,
+        [FromQuery] int? importProfileId = null)
     {
         try
         {
             List<Reef.Core.Models.WebhookTrigger> webhooks;
-            
+
             if (profileId.HasValue)
             {
                 webhooks = await service.GetByProfileIdAsync(profileId.Value);
@@ -48,10 +49,13 @@ public static class WebhooksEndpoints
             {
                 webhooks = await service.GetByJobIdAsync(jobId.Value);
             }
+            else if (importProfileId.HasValue)
+            {
+                webhooks = await service.GetByImportProfileIdAsync(importProfileId.Value);
+            }
             else
             {
-                // Would need a GetAllAsync method - for now return error
-                return Results.BadRequest(new { error = "profileId or jobId query parameter is required" });
+                return Results.BadRequest(new { error = "profileId, jobId, or importProfileId query parameter is required" });
             }
 
             // Don't return actual tokens, only masked versions
@@ -60,6 +64,7 @@ public static class WebhooksEndpoints
                 w.Id,
                 w.ProfileId,
                 w.JobId,
+                w.ImportProfileId,
                 Token = $"reef_wh_...{w.Token.Substring(Math.Max(0, w.Token.Length - 8))}",
                 w.IsActive,
                 w.CreatedAt,
@@ -83,12 +88,12 @@ public static class WebhooksEndpoints
         int id,
         [FromServices] WebhookService service,
         [FromServices] ProfileService profileService,
-        [FromServices] JobService jobService)
+        [FromServices] JobService jobService,
+        [FromServices] ImportProfileService importProfileService)
     {
         try
         {
-            var webhooks = await service.GetByProfileIdAsync(0); // This is a hack - need GetByIdAsync
-            var webhook = webhooks.FirstOrDefault(w => w.Id == id);
+            var webhook = await service.GetByIdAsync(id);
 
             if (webhook == null)
             {
@@ -96,7 +101,7 @@ public static class WebhooksEndpoints
             }
 
             object result;
-            
+
             if (webhook.ProfileId.HasValue)
             {
                 var profile = await profileService.GetByIdAsync(webhook.ProfileId.Value);
@@ -105,6 +110,7 @@ public static class WebhooksEndpoints
                     webhook.Id,
                     webhook.ProfileId,
                     webhook.JobId,
+                    webhook.ImportProfileId,
                     ProfileName = profile?.Name,
                     Token = $"reef_wh_...{webhook.Token.Substring(Math.Max(0, webhook.Token.Length - 8))}",
                     webhook.IsActive,
@@ -121,7 +127,25 @@ public static class WebhooksEndpoints
                     webhook.Id,
                     webhook.ProfileId,
                     webhook.JobId,
+                    webhook.ImportProfileId,
                     JobName = job?.Name,
+                    Token = $"reef_wh_...{webhook.Token.Substring(Math.Max(0, webhook.Token.Length - 8))}",
+                    webhook.IsActive,
+                    webhook.CreatedAt,
+                    webhook.LastTriggeredAt,
+                    webhook.TriggerCount
+                };
+            }
+            else if (webhook.ImportProfileId.HasValue)
+            {
+                var importProfile = await importProfileService.GetByIdAsync(webhook.ImportProfileId.Value);
+                result = new
+                {
+                    webhook.Id,
+                    webhook.ProfileId,
+                    webhook.JobId,
+                    webhook.ImportProfileId,
+                    ImportProfileName = importProfile?.Name,
                     Token = $"reef_wh_...{webhook.Token.Substring(Math.Max(0, webhook.Token.Length - 8))}",
                     webhook.IsActive,
                     webhook.CreatedAt,
@@ -131,7 +155,7 @@ public static class WebhooksEndpoints
             }
             else
             {
-                return Results.Problem("Invalid webhook: no ProfileId or JobId");
+                return Results.Problem("Invalid webhook: no ProfileId, JobId, or ImportProfileId");
             }
 
             return Results.Ok(result);
@@ -145,7 +169,7 @@ public static class WebhooksEndpoints
 
     /// <summary>
     /// POST /api/webhooks - Create new webhook trigger
-    /// Body: { "profileId": 123 } OR { "jobId": 456 }
+    /// Body: { "profileId": 123 } OR { "jobId": 456 } OR { "importProfileId": 789 }
     /// </summary>
     private static async Task<IResult> Create(
         HttpContext context,
@@ -153,6 +177,7 @@ public static class WebhooksEndpoints
         [FromServices] WebhookService service,
         [FromServices] ProfileService profileService,
         [FromServices] JobService jobService,
+        [FromServices] ImportProfileService importProfileService,
         [FromServices] AuditService auditService)
     {
         try
@@ -160,12 +185,13 @@ public static class WebhooksEndpoints
             // Normalize: treat 0 as null
             var profileId = request.ProfileId.HasValue && request.ProfileId.Value > 0 ? request.ProfileId : null;
             var jobId = request.JobId.HasValue && request.JobId.Value > 0 ? request.JobId : null;
-            
-            // Validate that exactly one of profileId or jobId is provided
-            if ((profileId.HasValue && jobId.HasValue) ||
-                (!profileId.HasValue && !jobId.HasValue))
+            var importProfileId = request.ImportProfileId.HasValue && request.ImportProfileId.Value > 0 ? request.ImportProfileId : null;
+
+            // Validate that exactly one is provided
+            var providedCount = (profileId.HasValue ? 1 : 0) + (jobId.HasValue ? 1 : 0) + (importProfileId.HasValue ? 1 : 0);
+            if (providedCount != 1)
             {
-                return Results.BadRequest(new { error = "Exactly one of profileId or jobId must be provided" });
+                return Results.BadRequest(new { error = "Exactly one of profileId, jobId, or importProfileId must be provided" });
             }
 
             int webhookId;
@@ -173,23 +199,25 @@ public static class WebhooksEndpoints
 
             if (profileId.HasValue)
             {
-                // Validate profile exists
                 var profile = await profileService.GetByIdAsync(profileId.Value);
                 if (profile == null)
-                {
                     return Results.BadRequest(new { error = $"Profile {profileId.Value} not found" });
-                }
 
                 (webhookId, token) = await service.CreateWebhookAsync(profileId.Value);
             }
+            else if (importProfileId.HasValue)
+            {
+                var importProfile = await importProfileService.GetByIdAsync(importProfileId.Value);
+                if (importProfile == null)
+                    return Results.BadRequest(new { error = $"Import Profile {importProfileId.Value} not found" });
+
+                (webhookId, token) = await service.CreateWebhookForImportProfileAsync(importProfileId.Value);
+            }
             else // jobId must have value
             {
-                // Validate job exists
                 var job = await jobService.GetByIdAsync(jobId!.Value);
                 if (job == null)
-                {
                     return Results.BadRequest(new { error = $"Job {jobId.Value} not found" });
-                }
 
                 (webhookId, token) = await service.CreateWebhookForJobAsync(jobId.Value);
             }
@@ -342,6 +370,7 @@ public static class WebhooksEndpoints
     private static async Task<IResult> TriggerWebhook(
         string token,
         HttpContext context,
+        CancellationToken ct,
         [FromBody] WebhookTriggerRequest? request,
         [FromServices] WebhookService service,
         [FromServices] ExecutionService executionService,
@@ -502,9 +531,32 @@ public static class WebhooksEndpoints
                     message = $"Job execution started with ID {executionId}"
                 };
             }
+            else if (webhook.ImportProfileId.HasValue)
+            {
+                // Execute import profile
+                Log.Information("Triggering import profile {ImportProfileId} via webhook {WebhookId} and token {Token}",
+                    webhook.ImportProfileId.Value, webhook.Id, token);
+
+                var importExecService = context.RequestServices.GetRequiredService<ImportExecutionService>();
+                var exec = await importExecService.ExecuteAsync(webhook.ImportProfileId.Value, $"Webhook/{webhook.Id}", ct);
+
+                // Update webhook last triggered
+                await service.UpdateLastTriggeredAsync(webhook.Id);
+
+                // Audit log
+                var importChanges = JsonSerializer.Serialize(new { executionId = exec.Id });
+                await auditService.LogAsync("WebhookTrigger", webhook.Id, "Triggered", "Webhook", importChanges, context);
+
+                result = new
+                {
+                    executionId = exec.Id,
+                    status = exec.Status,
+                    message = $"Import profile execution started with ID {exec.Id}"
+                };
+            }
             else
             {
-                Log.Error("Webhook {WebhookId} has neither ProfileId nor JobId", webhook.Id);
+                Log.Error("Webhook {WebhookId} has neither ProfileId, JobId, nor ImportProfileId", webhook.Id);
                 return Results.Json(
                     new
                     {
@@ -540,6 +592,7 @@ public record CreateWebhookRequest
 {
     public int? ProfileId { get; init; }
     public int? JobId { get; init; }
+    public int? ImportProfileId { get; init; }
 }
 
 /// <summary>

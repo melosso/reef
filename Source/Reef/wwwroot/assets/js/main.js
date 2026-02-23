@@ -259,7 +259,7 @@ window.showToast = function(message, type = 'info', persistent = false) {
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
-        toastContainer.className = 'fixed top-4 right-4 z-50 flex flex-col items-end space-y-2';
+        toastContainer.className = 'fixed top-4 right-4 z-250 flex flex-col items-end space-y-2';
         document.body.appendChild(toastContainer);
     }
 
@@ -301,7 +301,14 @@ window.showToast = function(message, type = 'info', persistent = false) {
     });
 
     // Auto-remove after duration
-    const duration = type === 'success' ? 20000 : 8000; // errors auto-hide after 8s
+    const durationMap = {
+    success: 3000,
+    info: 4000,
+    warning: 6000,
+    error: 10000
+    };
+
+    const duration = durationMap[type] ?? 4000;
     if (!persistent) {
         setTimeout(() => fadeOut(toast), duration);
     }
@@ -332,6 +339,21 @@ window.copyErrorMessage = async function(button, message) {
         }, 2000);
     }
 };
+
+/**
+ * Escape special characters for use in HTML
+ * @param {string} text - The text to escape
+ * @returns {string} - The escaped string
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make escapeHtml available globally
+window.escapeHtml = escapeHtml;
 
 /**
  * Escape special characters for use in HTML onclick attributes
@@ -697,3 +719,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'Never';
+    let date;
+    try {
+        // If already ends with Z or has timezone, don't add Z
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+            date = new Date(dateString);
+        } else {
+            date = new Date(dateString + 'Z');
+        }
+        if (isNaN(date.getTime())) return 'Never';
+        return date.toLocaleString();
+    } catch {
+        return 'Never';
+    }
+}
+
+function formatRelativeTime(dateString) {
+    if (!dateString) return null;
+    let date;
+    try {
+        // If already ends with Z or has timezone, don't add Z
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+            date = new Date(dateString);
+        } else {
+            date = new Date(dateString + 'Z');
+        }
+        if (isNaN(date.getTime())) return null;
+    } catch {
+        return null;
+    }
+
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return null;
+}

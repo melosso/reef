@@ -48,6 +48,12 @@ public class DatabaseInitializer
         // Delta Sync Table
         await CreateDeltaSyncStateTableAsync(connection);
 
+        // Import Profile Tables
+        await CreateImportProfilesTableAsync(connection);
+        await CreateImportProfileExecutionsTableAsync(connection);
+        await CreateImportExecutionErrorsTableAsync(connection);
+        await CreateImportDeltaSyncStateTableAsync(connection);
+
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
 
@@ -1402,8 +1408,28 @@ public class DatabaseInitializer
         // Add EmailGroupBySplitKey for email export grouping
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailGroupBySplitKey", "INTEGER NOT NULL DEFAULT 0");
 
-        // If future migrations are needed for compatibility:
-        // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
+        // Import Profile tables (idempotent - safe to call on existing databases)
+        await CreateImportProfilesTableAsync(connection);
+        await CreateImportProfileExecutionsTableAsync(connection);
+        await CreateImportExecutionErrorsTableAsync(connection);
+        await CreateImportDeltaSyncStateTableAsync(connection);
+
+        // LocalFile target columns (migration for existing ImportProfiles rows)
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "TargetType", "TEXT NOT NULL DEFAULT 'Database'");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetPath", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetFormat", "TEXT NULL DEFAULT 'CSV'");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetWriteMode", "TEXT NULL DEFAULT 'Overwrite'");
+
+        // Allow NULL on TargetConnectionId (required for LocalFile target type)
+        await MigrateImportProfilesTargetConnectionNullableAsync(connection);
+
+        // Add ImportProfileId to WebhookTriggers for import profile webhook support
+        await AddColumnIfNotExistsAsync(connection, "WebhookTriggers", "ImportProfileId",
+            "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
+
+        // Add ImportProfileId to Jobs so jobs can execute import profiles
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "ImportProfileId",
+            "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
 
         Log.Debug("Database schema migrations completed");
     }
@@ -2819,6 +2845,383 @@ public class DatabaseInitializer
   </table>
 </body>
 </html>";
+    }
+
+    // ── Import Profile Tables ───────────────────────────────────────────────────
+
+    private async Task CreateImportProfilesTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportProfiles (
+                Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name                    TEXT    NOT NULL,
+                GroupId                 INTEGER NULL,
+
+                -- Source
+                SourceType              TEXT    NOT NULL DEFAULT 'Local',
+                SourceDestinationId     INTEGER NULL,
+                SourceConfig            TEXT    NULL,
+                SourceFilePath          TEXT    NULL,
+                SourceFilePattern       TEXT    NULL,
+                SourceFileSelection     TEXT    NOT NULL DEFAULT 'Latest',
+                ArchiveAfterImport      INTEGER NOT NULL DEFAULT 0,
+                ArchivePath             TEXT    NULL,
+
+                -- HTTP-specific source options
+                HttpMethod              TEXT    NULL DEFAULT 'GET',
+                HttpBodyTemplate        TEXT    NULL,
+                HttpPaginationEnabled   INTEGER NOT NULL DEFAULT 0,
+                HttpPaginationConfig    TEXT    NULL,
+                HttpDataRootPath        TEXT    NULL,
+
+                -- Format / Parsing
+                SourceFormat            TEXT    NOT NULL DEFAULT 'CSV',
+                FormatConfig            TEXT    NULL,
+
+                -- Column mapping
+                ColumnMappingsJson      TEXT    NULL,
+                AutoMapColumns          INTEGER NOT NULL DEFAULT 1,
+                SkipUnmappedColumns     INTEGER NOT NULL DEFAULT 1,
+
+                -- Target
+                TargetConnectionId      INTEGER NULL,
+                TargetTable             TEXT    NOT NULL,
+                LoadStrategy            TEXT    NOT NULL DEFAULT 'Upsert',
+                UpsertKeyColumns        TEXT    NULL,
+                BatchSize               INTEGER NOT NULL DEFAULT 500,
+                CommandTimeoutSeconds   INTEGER NOT NULL DEFAULT 120,
+
+                -- Delta Sync
+                DeltaSyncEnabled        INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncReefIdColumn   TEXT    NULL,
+                DeltaSyncHashAlgorithm  TEXT    NULL DEFAULT 'SHA256',
+                DeltaSyncTrackDeletes   INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncDeleteStrategy TEXT    NULL DEFAULT 'SoftDelete',
+                DeltaSyncDeleteColumn   TEXT    NULL,
+                DeltaSyncDeleteValue    TEXT    NULL,
+                DeltaSyncRetentionDays  INTEGER NULL,
+
+                -- Failure handling
+                OnSourceFailure         TEXT    NOT NULL DEFAULT 'Fail',
+                OnParseFailure          TEXT    NOT NULL DEFAULT 'SkipRow',
+                OnRowFailure            TEXT    NOT NULL DEFAULT 'SkipRow',
+                OnConstraintViolation   TEXT    NOT NULL DEFAULT 'SkipRow',
+                MaxFailedRowsBeforeAbort INTEGER NOT NULL DEFAULT 0,
+                MaxFailedRowsPercent    INTEGER NOT NULL DEFAULT 0,
+                RollbackOnAbort         INTEGER NOT NULL DEFAULT 1,
+                RetryCount              INTEGER NOT NULL DEFAULT 3,
+
+                -- Pre/Post processing
+                PreProcessType          TEXT    NULL,
+                PreProcessConfig        TEXT    NULL,
+                PreProcessRollbackOnFailure INTEGER NOT NULL DEFAULT 1,
+                PostProcessType         TEXT    NULL,
+                PostProcessConfig       TEXT    NULL,
+                PostProcessSkipOnFailure INTEGER NOT NULL DEFAULT 1,
+
+                -- Scheduling
+                ScheduleType            TEXT    NULL,
+                ScheduleCron            TEXT    NULL,
+                ScheduleIntervalMinutes INTEGER NULL,
+
+                -- Notifications
+                NotificationConfig      TEXT    NULL,
+
+                -- Meta
+                IsEnabled               INTEGER NOT NULL DEFAULT 1,
+                Hash                    TEXT    NOT NULL DEFAULT '',
+                CreatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                CreatedBy               INTEGER NULL,
+                LastExecutedAt          TEXT    NULL,
+
+                FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
+                FOREIGN KEY (TargetConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportProfiles table ready");
+    }
+
+    /// <summary>
+    /// Migrate ImportProfiles.TargetConnectionId from NOT NULL to NULL so that LocalFile profiles
+    /// can be stored without a database connection reference. Uses the SQLite table-rename pattern.
+    /// Each DDL step is executed as an individual statement to avoid multi-statement SQL issues.
+    /// Recovery logic handles partial migrations from previous failed attempts.
+    /// </summary>
+    private async Task MigrateImportProfilesTargetConnectionNullableAsync(SqliteConnection connection)
+    {
+        // ── Recovery: handle partial failures from a previous migration attempt ──
+        var oldTableExists = (await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ImportProfiles_old'")) > 0;
+        var newTableExists = (await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ImportProfiles'")) > 0;
+
+        if (oldTableExists && newTableExists)
+        {
+            // RENAME + CREATE + INSERT all completed but DROP TABLE failed — clean up
+            Log.Warning("Stale ImportProfiles_old table found — dropping it to complete previous migration");
+            await connection.ExecuteAsync("DROP TABLE IF EXISTS ImportProfiles_old");
+            return;
+        }
+
+        if (oldTableExists && !newTableExists)
+        {
+            // RENAME succeeded but CREATE/INSERT failed — complete migration from the old table
+            Log.Warning("Recovering from partial ImportProfiles migration (old table exists, new table missing)");
+            await CompleteImportProfilesMigrationFromOldTableAsync(connection);
+            return;
+        }
+
+        // ── Normal path: check if migration is needed ──
+        var cols = await connection.QueryAsync("PRAGMA table_info(ImportProfiles)");
+        var col = cols.FirstOrDefault(c => (string)c.name == "TargetConnectionId");
+        if (col == null || (long)col.notnull == 0)
+            return; // Already nullable or column not found — nothing to do
+
+        Log.Information("Migrating ImportProfiles.TargetConnectionId to nullable (LocalFile support)...");
+
+        // Get all existing column names so we can copy data safely
+        var allCols = (await connection.QueryAsync("PRAGMA table_info(ImportProfiles)"))
+            .Select(c => (string)c.name)
+            .ToList();
+        var colList = string.Join(", ", allCols);
+
+        await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            // Execute each DDL statement individually — multi-statement strings are unreliable
+            // across different SQLite driver versions
+            await connection.ExecuteAsync("ALTER TABLE ImportProfiles RENAME TO ImportProfiles_old");
+            await connection.ExecuteAsync(BuildImportProfilesCreateTableSql());
+            await connection.ExecuteAsync($"INSERT INTO ImportProfiles ({colList}) SELECT {colList} FROM ImportProfiles_old");
+            await connection.ExecuteAsync("DROP TABLE ImportProfiles_old");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled)");
+
+            Log.Information("ImportProfiles.TargetConnectionId migration completed");
+        }
+        finally
+        {
+            await connection.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+    }
+
+    /// <summary>
+    /// Completes an ImportProfiles migration that was partially executed (old table exists, new table missing).
+    /// </summary>
+    private async Task CompleteImportProfilesMigrationFromOldTableAsync(SqliteConnection connection)
+    {
+        var oldCols = (await connection.QueryAsync("PRAGMA table_info(ImportProfiles_old)"))
+            .Select(c => (string)c.name)
+            .ToList();
+        var colList = string.Join(", ", oldCols);
+
+        await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            await connection.ExecuteAsync(BuildImportProfilesCreateTableSql());
+            await connection.ExecuteAsync($"INSERT INTO ImportProfiles ({colList}) SELECT {colList} FROM ImportProfiles_old");
+            await connection.ExecuteAsync("DROP TABLE ImportProfiles_old");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled)");
+
+            Log.Information("ImportProfiles migration recovery completed successfully");
+        }
+        finally
+        {
+            await connection.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+    }
+
+    /// <summary>
+    /// Returns the CREATE TABLE SQL for the ImportProfiles table with nullable TargetConnectionId.
+    /// Shared between the normal migration path and the recovery path.
+    /// </summary>
+    private static string BuildImportProfilesCreateTableSql() => @"
+        CREATE TABLE ImportProfiles (
+            Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name                    TEXT    NOT NULL,
+            GroupId                 INTEGER NULL,
+
+            SourceType              TEXT    NOT NULL DEFAULT 'Local',
+            SourceDestinationId     INTEGER NULL,
+            SourceConfig            TEXT    NULL,
+            SourceFilePath          TEXT    NULL,
+            SourceFilePattern       TEXT    NULL,
+            SourceFileSelection     TEXT    NOT NULL DEFAULT 'Latest',
+            ArchiveAfterImport      INTEGER NOT NULL DEFAULT 0,
+            ArchivePath             TEXT    NULL,
+            HttpMethod              TEXT    NULL DEFAULT 'GET',
+            HttpBodyTemplate        TEXT    NULL,
+            HttpPaginationEnabled   INTEGER NOT NULL DEFAULT 0,
+            HttpPaginationConfig    TEXT    NULL,
+            HttpDataRootPath        TEXT    NULL,
+
+            SourceFormat            TEXT    NOT NULL DEFAULT 'CSV',
+            FormatConfig            TEXT    NULL,
+
+            ColumnMappingsJson      TEXT    NULL,
+            AutoMapColumns          INTEGER NOT NULL DEFAULT 1,
+            SkipUnmappedColumns     INTEGER NOT NULL DEFAULT 1,
+
+            TargetType              TEXT    NOT NULL DEFAULT 'Database',
+            TargetConnectionId      INTEGER NULL,
+            TargetTable             TEXT    NOT NULL DEFAULT '',
+            LocalTargetPath         TEXT    NULL,
+            LocalTargetFormat       TEXT    NULL DEFAULT 'CSV',
+            LocalTargetWriteMode    TEXT    NULL DEFAULT 'Overwrite',
+            LoadStrategy            TEXT    NOT NULL DEFAULT 'Upsert',
+            UpsertKeyColumns        TEXT    NULL,
+            BatchSize               INTEGER NOT NULL DEFAULT 500,
+            CommandTimeoutSeconds   INTEGER NOT NULL DEFAULT 120,
+
+            DeltaSyncEnabled        INTEGER NOT NULL DEFAULT 0,
+            DeltaSyncReefIdColumn   TEXT    NULL,
+            DeltaSyncHashAlgorithm  TEXT    NULL DEFAULT 'SHA256',
+            DeltaSyncTrackDeletes   INTEGER NOT NULL DEFAULT 0,
+            DeltaSyncDeleteStrategy TEXT    NULL DEFAULT 'SoftDelete',
+            DeltaSyncDeleteColumn   TEXT    NULL,
+            DeltaSyncDeleteValue    TEXT    NULL,
+            DeltaSyncRetentionDays  INTEGER NULL,
+
+            OnSourceFailure         TEXT    NOT NULL DEFAULT 'Fail',
+            OnParseFailure          TEXT    NOT NULL DEFAULT 'SkipRow',
+            OnRowFailure            TEXT    NOT NULL DEFAULT 'SkipRow',
+            OnConstraintViolation   TEXT    NOT NULL DEFAULT 'SkipRow',
+            MaxFailedRowsBeforeAbort INTEGER NOT NULL DEFAULT 0,
+            MaxFailedRowsPercent    INTEGER NOT NULL DEFAULT 0,
+            RollbackOnAbort         INTEGER NOT NULL DEFAULT 1,
+            RetryCount              INTEGER NOT NULL DEFAULT 3,
+
+            PreProcessType          TEXT    NULL,
+            PreProcessConfig        TEXT    NULL,
+            PreProcessRollbackOnFailure INTEGER NOT NULL DEFAULT 1,
+            PostProcessType         TEXT    NULL,
+            PostProcessConfig       TEXT    NULL,
+            PostProcessSkipOnFailure INTEGER NOT NULL DEFAULT 1,
+
+            ScheduleType            TEXT    NULL,
+            ScheduleCron            TEXT    NULL,
+            ScheduleIntervalMinutes INTEGER NULL,
+
+            NotificationConfig      TEXT    NULL,
+
+            IsEnabled               INTEGER NOT NULL DEFAULT 1,
+            Hash                    TEXT    NOT NULL DEFAULT '',
+            CreatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+            UpdatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+            CreatedBy               INTEGER NULL,
+            LastExecutedAt          TEXT    NULL,
+
+            FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
+            FOREIGN KEY (TargetConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT
+        )";
+
+    private async Task CreateImportProfileExecutionsTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportProfileExecutions (
+                Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId         INTEGER NOT NULL,
+                Status                  TEXT    NOT NULL DEFAULT 'Running',
+                TriggeredBy             TEXT    NULL,
+                StartedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                CompletedAt             TEXT    NULL,
+
+                -- Row counters
+                TotalRowsRead           INTEGER NOT NULL DEFAULT 0,
+                RowsInserted            INTEGER NOT NULL DEFAULT 0,
+                RowsUpdated             INTEGER NOT NULL DEFAULT 0,
+                RowsSkipped             INTEGER NOT NULL DEFAULT 0,
+                RowsDeleted             INTEGER NOT NULL DEFAULT 0,
+                RowsFailed              INTEGER NOT NULL DEFAULT 0,
+
+                -- Progress / Diagnostics
+                CurrentPhase            TEXT    NULL,
+                ErrorMessage            TEXT    NULL,
+                StackTrace              TEXT    NULL,
+                ExecutionLog            TEXT    NULL,
+                FilesProcessed          INTEGER NOT NULL DEFAULT 0,
+                BytesProcessed          INTEGER NOT NULL DEFAULT 0,
+
+                -- Delta sync counters
+                DeltaSyncNewRows        INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncChangedRows    INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncUnchangedRows  INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncDeletedRows    INTEGER NOT NULL DEFAULT 0,
+
+                -- Phase timing (JSON object keyed by phase name)
+                PhaseTimingsJson        TEXT    NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_impexec_profile  ON ImportProfileExecutions(ImportProfileId);
+            CREATE INDEX IF NOT EXISTS idx_impexec_started  ON ImportProfileExecutions(StartedAt DESC);
+            CREATE INDEX IF NOT EXISTS idx_impexec_status   ON ImportProfileExecutions(Status);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportProfileExecutions table ready");
+    }
+
+    private async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportExecutionErrors (
+                Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                ExecutionId   INTEGER NOT NULL,
+                RowNumber     INTEGER NULL,
+                ReefId        TEXT    NULL,
+                ErrorType     TEXT    NOT NULL DEFAULT 'Unknown',
+                ErrorMessage  TEXT    NOT NULL,
+                RowDataJson   TEXT    NULL,
+                Phase         TEXT    NULL,
+                OccurredAt    TEXT    NOT NULL DEFAULT (datetime('now')),
+
+                FOREIGN KEY (ExecutionId) REFERENCES ImportProfileExecutions(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_imperrors_execution ON ImportExecutionErrors(ExecutionId);
+            CREATE INDEX IF NOT EXISTS idx_imperrors_phase     ON ImportExecutionErrors(ExecutionId, Phase);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportExecutionErrors table ready");
+    }
+
+    private async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportDeltaSyncState (
+                Id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId     INTEGER NOT NULL,
+                ReefId              TEXT    NOT NULL,
+                RowHash             TEXT    NOT NULL,
+                LastSeenExecutionId INTEGER NOT NULL,
+                FirstSeenAt         TEXT    NOT NULL DEFAULT (datetime('now')),
+                LastSeenAt          TEXT    NOT NULL DEFAULT (datetime('now')),
+                IsDeleted           INTEGER NOT NULL DEFAULT 0,
+                DeletedAt           TEXT    NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
+                UNIQUE (ImportProfileId, ReefId)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_impdelta_profile_reef ON ImportDeltaSyncState(ImportProfileId, ReefId);
+            CREATE INDEX IF NOT EXISTS idx_impdelta_profile_hash ON ImportDeltaSyncState(ImportProfileId, RowHash);
+            CREATE INDEX IF NOT EXISTS idx_impdelta_deleted      ON ImportDeltaSyncState(ImportProfileId, IsDeleted);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportDeltaSyncState table ready");
     }
 
     /// <summary>
