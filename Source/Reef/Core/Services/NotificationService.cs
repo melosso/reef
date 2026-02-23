@@ -142,7 +142,7 @@ public class NotificationService
             // Check throttling - max once per 30 minutes per profile
             if (!_throttler.ShouldNotifyProfileSuccess(profile.Id))
             {
-                Log.Debug("Profile success notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Profile success notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -159,8 +159,8 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {
@@ -185,7 +185,7 @@ public class NotificationService
             // Check throttling - max once per 5 minutes per profile (failures are more important)
             if (!_throttler.ShouldNotifyProfileFailure(profile.Id))
             {
-                Log.Debug("Profile failure notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Profile failure notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -202,8 +202,8 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {
@@ -227,7 +227,7 @@ public class NotificationService
 
             if (!_throttler.ShouldNotifyImportProfileSuccess(profile.Id))
             {
-                Log.Debug("Import profile success notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Import profile success notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -240,8 +240,8 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {
@@ -265,7 +265,7 @@ public class NotificationService
 
             if (!_throttler.ShouldNotifyImportProfileFailure(profile.Id))
             {
-                Log.Debug("Import profile failure notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Import profile failure notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -278,8 +278,8 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {

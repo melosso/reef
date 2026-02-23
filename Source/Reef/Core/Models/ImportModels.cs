@@ -163,6 +163,9 @@ public class ImportProfile
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedBy { get; set; }
     public DateTime? LastExecutedAt { get; set; }
+
+    // Unique human-readable short code, e.g. "I-B7K2" (set on creation, immutable)
+    public string Code { get; set; } = "";
 }
 
 /// <summary>

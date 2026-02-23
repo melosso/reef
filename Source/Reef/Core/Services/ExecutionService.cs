@@ -99,7 +99,7 @@ public class ExecutionService
 
             if (!profile.IsEnabled)
             {
-                Log.Warning("Profile {ProfileId} is disabled", profileId);
+                Log.Warning("Profile {ProfileCode} ({ProfileName}) is disabled", profile.Code, profile.Name);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Profile is disabled");
                 return (executionId, false, null, "Profile is disabled");
             }
@@ -107,20 +107,20 @@ public class ExecutionService
             var connection = await _connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)
             {
-                Log.Warning("Connection {ConnectionId} not found for profile {ProfileId}", profile.ConnectionId, profileId);
+                Log.Warning("Connection {ConnectionId} not found for profile {ProfileCode}", profile.ConnectionId, profile.Code);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Connection not found");
                 return (executionId, false, null, "Connection not found");
             }
 
             if (!connection.IsActive)
             {
-                Log.Warning("Connection {ConnectionId} is inactive", connection.Id);
+                Log.Warning("Connection {ConnectionId} is inactive for profile {ProfileCode}", connection.Id, profile.Code);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Connection is inactive");
                 return (executionId, false, null, "Connection is inactive");
             }
 
-            Log.Debug("Starting execution of profile {ProfileName} (ID: {ProfileId}) triggered by {TriggeredBy}", 
-                profile.Name, profileId, triggeredBy);
+            Log.Debug("Starting execution of profile {ProfileCode} ({ProfileName}) triggered by {TriggeredBy}",
+                profile.Code, profile.Name, triggeredBy);
 
             // Check dependencies if profile has any
             if (!string.IsNullOrEmpty(profile.DependsOnProfileIds))
@@ -128,7 +128,7 @@ public class ExecutionService
                 var isDependenciesSatisfied = await ValidateProfileDependenciesAsync(profileId, profile.DependsOnProfileIds);
                 if (!isDependenciesSatisfied)
                 {
-                    Log.Warning("Profile {ProfileId} dependencies not satisfied", profileId);
+                    Log.Warning("Profile {ProfileCode} ({ProfileName}) dependencies not satisfied", profile.Code, profile.Name);
                     await UpdateExecutionRecordAsync(
                         executionId,
                         "Failed",
@@ -138,7 +138,7 @@ public class ExecutionService
                         "Profile dependencies not satisfied - one or more dependent profiles have not completed successfully");
                     return (executionId, false, null, "Dependencies not satisfied");
                 }
-                Log.Information("Profile {ProfileId} dependencies validated successfully", profileId);
+                Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
             
             // ===== PHASE 1: PRE-PROCESSING =====
@@ -258,7 +258,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Delta sync processing failed for profile {ProfileId}", profileId);
+                    Log.Error(ex, "Delta sync processing failed for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                     await UpdateExecutionRecordAsync(executionId, "Failed", originalRowCount, null, 
                         stopwatch.ElapsedMilliseconds, $"Delta sync error: {ex.Message}");
                     return (executionId, false, null, $"Delta sync error: {ex.Message}");
@@ -268,7 +268,7 @@ public class ExecutionService
             // Check if there are any rows to export (for both delta sync and regular profiles)
             if (rows.Count == 0)
             {
-                Log.Information("No rows to export for profile {ProfileId}", profileId);
+                Log.Information("No rows to export for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
 
                 var message = profile.DeltaSyncEnabled
                     ? "No changes detected by smart sync"
@@ -345,7 +345,7 @@ public class ExecutionService
             // Skip email export if there's a destination override (test mode or manual override)
             if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
-                Log.Information("Profile {ProfileId} executing as email export (sending {RowCount} rows)", profile.Id, rows.Count);
+                Log.Information("Profile {ProfileCode} ({ProfileName}) executing as email export (sending {RowCount} rows)", profile.Code, profile.Name, rows.Count);
 
                 try
                 {
@@ -388,7 +388,7 @@ public class ExecutionService
                     // Check if email approval is required
                     if (profile.EmailApprovalRequired)
                     {
-                        Log.Information("Email approval required for profile {ProfileId}, storing {RowCount} emails for approval", profile.Id, rows.Count);
+                        Log.Information("Email approval required for profile {ProfileCode} ({ProfileName}), storing {RowCount} emails for approval", profile.Code, profile.Name, rows.Count);
 
                         try
                         {
@@ -1513,7 +1513,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             ORDER BY pe.StartedAt DESC
@@ -1594,7 +1595,8 @@ public class ExecutionService
         var dataSql = $@"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             {whereClause}
@@ -1624,7 +1626,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.ProfileId = @ProfileId
@@ -1646,7 +1649,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.Id = @Id";
@@ -1664,7 +1668,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.ProfileId = @ProfileId

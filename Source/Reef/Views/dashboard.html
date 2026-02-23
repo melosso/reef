@@ -260,7 +260,7 @@
                 const importExecArrays = await Promise.all(importProfiles.map(p =>
                     cachedFetch(`/api/profiles/${p.id}/executions?type=import&limit=3`, { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 })
                         .then(r => r.ok ? r.json() : [])
-                        .then(execs => execs.map(e => ({ ...e, _profileName: p.name, _type: 'import' })))
+                        .then(execs => execs.map(e => ({ ...e, _profileName: p.name, _profileCode: p.code, _type: 'import' })))
                         .catch(() => [])
                 ));
                 const importExecutions = importExecArrays.flat()
@@ -371,6 +371,7 @@
                         const profileName = isImport
                             ? (exec._profileName || `Profile #${exec.importProfileId}`)
                             : (exec.profileName || 'Unknown');
+                        const profileCode = isImport ? (exec._profileCode || '') : (exec.profileCode || '');
                         const typeBadge = isImport
                             ? '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Import</span>'
                             : '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Export</span>';
@@ -387,7 +388,9 @@
                             class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent ${isImport ? 'hover:border-indigo-400' : 'hover:border-blue-500'}"
                         >
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.id}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${profileName}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
+                                ${profileName}${profileCode ? ` <span class="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${escapeHtml(profileCode)}</span>` : ''}
+                            </td>
                             <td class="px-6 py-4 whitespace-nowrap">${typeBadge}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exec.status)}">${exec.status}</span>

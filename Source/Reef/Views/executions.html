@@ -486,7 +486,8 @@
         function renderExportRow(exec) {
             const statusBadge = getStatusBadge(exec.status);
             const profile = profiles.find(p => p.id === exec.profileId);
-            const profileName = profile ? profile.name : `Profile #${exec.profileId}`;
+            const profileName = profile ? profile.name : (exec.profileName || `Profile #${exec.profileId}`);
+            const profileCode = profile ? profile.code : (exec.profileCode || '');
             const startedAt = parseDate(exec.startedAt)?.toLocaleString() || '-';
             const duration = exec.executionTimeMs ? `${(exec.executionTimeMs / 1000).toFixed(2)}s` : '-';
             const preProcessBadge = getProcessingBadge(exec.preProcessStatus, exec.preProcessTimeMs);
@@ -496,7 +497,10 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <i data-lucide="file-code" class="h-4 w-4 text-gray-400 mr-2"></i>
-                            <span class="text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profileName)}</span>
+                            <div>
+                                <span class="text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profileName)}</span>
+                                ${profileCode ? `<span class="ml-2 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${escapeHtml(profileCode)}</span>` : ''}
+                            </div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -521,6 +525,7 @@
         function renderImportRow(exec) {
             const statusBadge = getStatusBadge(exec.status);
             const profileName = exec._profileName || `Profile #${exec.importProfileId}`;
+            const profileCode = exec._profileCode || '';
             const startedAt = parseDate(exec.startedAt)?.toLocaleString() || '-';
             let duration = '-';
             if (exec.completedAt) {
@@ -533,7 +538,10 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <i data-lucide="upload" class="h-4 w-4 text-indigo-400 mr-2"></i>
-                            <span class="text-sm font-medium text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(profileName)}</span>
+                            <div>
+                                <span class="text-sm font-medium text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(profileName)}</span>
+                                ${profileCode ? `<span class="ml-2 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${escapeHtml(profileCode)}</span>` : ''}
+                            </div>
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -559,6 +567,7 @@
             const tbody = document.getElementById('executions-tbody');
             const profileFilterVal = document.getElementById('filter-profile').value;
             const isImportFilter = profileFilterVal.startsWith('import:');
+            const searchTerm = (document.getElementById('search-input')?.value || '').toLowerCase().trim();
 
             let exportRows, importRows;
             if (isImportFilter) {
@@ -568,6 +577,15 @@
             } else {
                 exportRows = executions;
                 importRows = importExecutions;
+            }
+
+            // Client-side search filter for import rows (export search is server-side)
+            if (searchTerm) {
+                importRows = importRows.filter(e => {
+                    const name = (e._profileName || '').toLowerCase();
+                    const code = (e._profileCode || '').toLowerCase();
+                    return name.includes(searchTerm) || code.includes(searchTerm);
+                });
             }
 
             const combined = [
@@ -1395,7 +1413,7 @@
                         });
                         if (eResp.ok) {
                             const execs = await eResp.json();
-                            execs.forEach(e => { e._profileName = p.name; });
+                            execs.forEach(e => { e._profileName = p.name; e._profileCode = p.code; });
                             allExecs.push(...execs);
                         }
                     } catch {}

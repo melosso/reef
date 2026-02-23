@@ -1151,12 +1151,12 @@
                 if (profilesResponse.ok) {
                     const profiles = await profilesResponse.json();
                     profilesCache = profiles; // Store for later reference (used by updateDestinationFieldState)
-                    exportGroup.innerHTML = profiles.map(p => `<option value="export:${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                    exportGroup.innerHTML = profiles.map(p => `<option value="export:${p.id}">${escapeHtml(p.name)}${p.code ? ` [${p.code}]` : ''}</option>`).join('');
                 }
 
                 if (importProfilesResponse.ok) {
                     const importProfiles = await importProfilesResponse.json();
-                    importGroup.innerHTML = importProfiles.map(p => `<option value="import:${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                    importGroup.innerHTML = importProfiles.map(p => `<option value="import:${p.id}">${escapeHtml(p.name)}${p.code ? ` [${p.code}]` : ''}</option>`).join('');
                 }
 
                 // Attach change event listener only once
@@ -1272,14 +1272,12 @@
 
                 // Enrich jobs with profile names
                 allJobs.forEach(job => {
-                    if (job.profileId) {
-                        if (job.profileType === 'import') {
-                            const importProfile = importProfilesList.find(p => p.id === job.profileId);
-                            if (importProfile) job.profileName = importProfile.name;
-                        } else {
-                            const profile = profiles.find(p => p.id === job.profileId);
-                            if (profile) job.profileName = profile.name;
-                        }
+                    if (job.importProfileId) {
+                        const importProfile = importProfilesList.find(p => p.id === job.importProfileId);
+                        if (importProfile) job.profileName = importProfile.name;
+                    } else if (job.profileId) {
+                        const profile = profiles.find(p => p.id === job.profileId);
+                        if (profile) job.profileName = profile.name;
                     }
                 });
 
@@ -1822,9 +1820,11 @@
                 document.getElementById('job-name').value = job.name || '';
                 document.getElementById('job-description').value = job.description || '';
                 document.getElementById('job-type').value = job.type || '';
-                const profileSelectValue = job.profileId
-                    ? `${job.profileType === 'import' ? 'import' : 'export'}:${job.profileId}`
-                    : '';
+                const profileSelectValue = job.importProfileId
+                    ? `import:${job.importProfileId}`
+                    : job.profileId
+                        ? `export:${job.profileId}`
+                        : '';
                 document.getElementById('job-profileId').value = profileSelectValue;
                 document.getElementById('job-destinationId').value = job.destinationId || '';
 
@@ -1978,14 +1978,15 @@
             const jobName = document.getElementById('job-name').value;
             const profileRaw = document.getElementById('job-profileId').value; // e.g. "import:3" or "export:5"
             const [profileTypePart, profileIdPart] = profileRaw ? profileRaw.split(':') : ['', ''];
-            const profileId = parseInt(profileIdPart) || null;
-            const profileType = profileId && profileTypePart === 'import' ? 'import' : null;
+            const parsedId = parseInt(profileIdPart) || null;
+            const profileId = profileTypePart === 'export' ? parsedId : null;
+            const importProfileId = profileTypePart === 'import' ? parsedId : null;
             const job = {
                 name: jobName,
                 description: document.getElementById('job-description').value,
                 type: document.getElementById('job-type').value,
                 profileId,
-                profileType,
+                importProfileId,
                 destinationId: parseInt(document.getElementById('job-destinationId').value) || null,
                 scheduleType: scheduleType,
                 cronExpression: cronExpression,

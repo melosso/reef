@@ -75,8 +75,8 @@ public class ImportExecutionService
         exec.Id = await _profileService.CreateExecutionAsync(exec);
         var phaseTimings = new Dictionary<string, long>();
 
-        Log.Information("ImportExecution {Id} started for profile '{Name}' (#{ProfileId})",
-            exec.Id, profile.Name, importProfileId);
+        Log.Information("ImportExecution {Id} started for profile {ProfileCode} ({ProfileName})",
+            exec.Id, profile.Code, profile.Name);
 
         try
         {
@@ -116,7 +116,7 @@ public class ImportExecutionService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "ImportExecution {Id}: failed to update LastExecutedAt on profile {ProfileId}", exec.Id, importProfileId);
+                Log.Error(ex, "ImportExecution {Id}: failed to update LastExecutedAt on profile {ProfileCode}", exec.Id, profile.Code);
             }
 
             Log.Information(

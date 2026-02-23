@@ -158,6 +158,9 @@ public class Profile
     public int SplitBatchSize { get; set; } = 1; // Number of rows per file (1 = one file per split key, N = batch N rows per file)
     public bool PostProcessPerSplit { get; set; } = false; // Run post-processing for each split
     public bool EmailGroupBySplitKey { get; set; } = false; // For email exports: group rows by split key (one email per split key value)
+
+    // Unique human-readable short code, e.g. "P-A3F1" (set on creation, immutable)
+    public string Code { get; set; } = "";
 }
 
 /// <summary>
@@ -169,6 +172,7 @@ public class ProfileExecution
     public int ProfileId { get; set; }
     public int? JobId { get; set; } // Optional: Which job triggered this execution
     public string? ProfileName { get; set; } // Profile name from JOIN with Profiles table
+    public string? ProfileCode { get; set; } // Profile code from JOIN with Profiles table
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
     public string Status { get; set; } = "Running"; // Running, Success, Failed

@@ -1432,18 +1432,19 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "WebhookTriggers", "ImportProfileId",
             "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
 
-        // Add ProfileType to Jobs to distinguish export vs import profile links
+        // Add ProfileType to Jobs (legacy discriminator — retained for backward compat, ignored in new code)
         await AddColumnIfNotExistsAsync(connection, "Jobs", "ProfileType", "TEXT NULL");
 
-        // Migrate any Jobs that previously used ImportProfileId: copy value to ProfileId, set ProfileType='import'
-        // (handles DBs where the now-removed ImportProfileId column was applied)
-        var importProfileIdExists = (await connection.ExecuteScalarAsync<long>(
-            "SELECT COUNT(*) FROM pragma_table_info('Jobs') WHERE name='ImportProfileId'")) > 0;
-        if (importProfileIdExists)
-        {
-            await connection.ExecuteAsync(
-                "UPDATE Jobs SET ProfileId = ImportProfileId, ProfileType = 'import' WHERE ImportProfileId IS NOT NULL AND ProfileType IS NULL");
-        }
+        // Add proper ImportProfileId FK column to Jobs (replaces ProfileType discriminator)
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "ImportProfileId", "INTEGER NULL");
+
+        // Migrate: for import jobs that stored the ID in ProfileId+ProfileType, move ID to ImportProfileId
+        await connection.ExecuteAsync(@"
+            UPDATE Jobs
+            SET ImportProfileId = ProfileId, ProfileId = NULL
+            WHERE ProfileType = 'import'
+              AND ProfileId IS NOT NULL
+              AND ImportProfileId IS NULL");
 
         // Import profile notification flags
         await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnImportProfileFailure", "INTEGER NOT NULL DEFAULT 1");
@@ -1451,6 +1452,15 @@ public class DatabaseInitializer
 
         // Seed import profile notification templates if not yet present (for existing DBs)
         await SeedImportProfileNotificationTemplatesAsync(connection);
+
+        // Add Code column to Profiles and ImportProfiles for unique short-code identification
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "Code", "TEXT NOT NULL DEFAULT ''");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "Code", "TEXT NOT NULL DEFAULT ''");
+        await BackfillProfileCodesAsync(connection);
+        await connection.ExecuteAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS UX_Profiles_Code ON Profiles(Code) WHERE Code != ''");
+        await connection.ExecuteAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS UX_ImportProfiles_Code ON ImportProfiles(Code) WHERE Code != ''");
 
         // ProfileExecutionErrors table for per-send failure tracking (email, archive, etc.)
         await connection.ExecuteAsync(@"
@@ -3568,6 +3578,57 @@ public class DatabaseInitializer
   </table>
 </body>
 </html>";
+    }
+
+    /// <summary>
+    /// Back-fill unique short codes for any Profiles or ImportProfiles rows that have Code=''.
+    /// Runs per-row with collision retry — safe for live data.
+    /// </summary>
+    private async Task BackfillProfileCodesAsync(SqliteConnection connection)
+    {
+        // Back-fill export profiles
+        var exportIds = (await connection.QueryAsync<int>(
+            "SELECT Id FROM Profiles WHERE Code = '' OR Code IS NULL")).ToList();
+
+        foreach (var id in exportIds)
+        {
+            string code;
+            int attempts = 0;
+            do
+            {
+                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                attempts++;
+            }
+            while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Profiles WHERE Code = @Code AND Id != @Id", new { Code = code, Id = id }) > 0);
+
+            await connection.ExecuteAsync("UPDATE Profiles SET Code = @Code WHERE Id = @Id", new { Code = code, Id = id });
+        }
+
+        if (exportIds.Count > 0)
+            Log.Information("Back-filled codes for {Count} export profile(s)", exportIds.Count);
+
+        // Back-fill import profiles
+        var importIds = (await connection.QueryAsync<int>(
+            "SELECT Id FROM ImportProfiles WHERE Code = '' OR Code IS NULL")).ToList();
+
+        foreach (var id in importIds)
+        {
+            string code;
+            int attempts = 0;
+            do
+            {
+                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                attempts++;
+            }
+            while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM ImportProfiles WHERE Code = @Code AND Id != @Id", new { Code = code, Id = id }) > 0);
+
+            await connection.ExecuteAsync("UPDATE ImportProfiles SET Code = @Code WHERE Id = @Id", new { Code = code, Id = id });
+        }
+
+        if (importIds.Count > 0)
+            Log.Information("Back-filled codes for {Count} import profile(s)", importIds.Count);
     }
 
     /// <summary>

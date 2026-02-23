@@ -98,6 +98,12 @@ public class ImportProfileService
             profile.CreatedAt = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
 
+            // Generate unique short code with collision retry
+            if (string.IsNullOrEmpty(profile.Code))
+            {
+                profile.Code = await GenerateUniqueCodeAsync(conn);
+            }
+
             const string sql = @"
                 INSERT INTO ImportProfiles (
                     Name, GroupId,
@@ -117,7 +123,7 @@ public class ImportProfileService
                     MaxFailedRowsBeforeAbort, MaxFailedRowsPercent, RollbackOnAbort, RetryCount,
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure,
-                    NotificationConfig, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy
+                    NotificationConfig, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
                 ) VALUES (
                     @Name, @GroupId,
                     @SourceType, @SourceDestinationId, @SourceConfig,
@@ -136,7 +142,7 @@ public class ImportProfileService
                     @MaxFailedRowsBeforeAbort, @MaxFailedRowsPercent, @RollbackOnAbort, @RetryCount,
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure,
-                    @NotificationConfig, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy
+                    @NotificationConfig, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
                 );
                 SELECT last_insert_rowid();";
 
@@ -399,6 +405,20 @@ public class ImportProfileService
             DeletedRowsLastRun = lastExec?.DeltaSyncDeletedRows ?? 0,
             UnchangedRowsLastRun = lastExec?.DeltaSyncUnchangedRows ?? 0,
         };
+    }
+
+    // ── Code Generation ────────────────────────────────────────────────
+
+    private static async Task<string> GenerateUniqueCodeAsync(SqliteConnection conn)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var code = Reef.Helpers.ProfileCodeGenerator.Generate();
+            var exists = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM ImportProfiles WHERE Code = @Code", new { Code = code });
+            if (exists == 0) return code;
+        }
+        return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
     }
 
     // ── Validation ─────────────────────────────────────────────────────
