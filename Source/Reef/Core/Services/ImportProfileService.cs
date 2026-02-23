@@ -367,6 +367,40 @@ public class ImportProfileService
         return deleted;
     }
 
+    public async Task<ImportDeltaSyncStats> GetDeltaSyncStatsAsync(int importProfileId)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        var activeRows = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM ImportDeltaSyncState WHERE ImportProfileId = @Id AND IsDeleted = 0",
+            new { Id = importProfileId });
+
+        var deletedRows = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM ImportDeltaSyncState WHERE ImportProfileId = @Id AND IsDeleted = 1",
+            new { Id = importProfileId });
+
+        var lastSeenAt = await conn.ExecuteScalarAsync<string?>(
+            "SELECT MAX(LastSeenAt) FROM ImportDeltaSyncState WHERE ImportProfileId = @Id",
+            new { Id = importProfileId });
+
+        var lastExec = await conn.QueryFirstOrDefaultAsync<ImportProfileExecution>(
+            "SELECT * FROM ImportProfileExecutions WHERE ImportProfileId = @Id ORDER BY StartedAt DESC LIMIT 1",
+            new { Id = importProfileId });
+
+        return new ImportDeltaSyncStats
+        {
+            ActiveRows = activeRows,
+            DeletedRows = deletedRows,
+            TotalTrackedRows = activeRows + deletedRows,
+            LastSyncDate = lastSeenAt,
+            NewRowsLastRun = lastExec?.DeltaSyncNewRows ?? 0,
+            ChangedRowsLastRun = lastExec?.DeltaSyncChangedRows ?? 0,
+            DeletedRowsLastRun = lastExec?.DeltaSyncDeletedRows ?? 0,
+            UnchangedRowsLastRun = lastExec?.DeltaSyncUnchangedRows ?? 0,
+        };
+    }
+
     // ── Validation ─────────────────────────────────────────────────────
 
     private static async Task ValidateAsync(SqliteConnection conn, ImportProfile profile)
@@ -422,6 +456,18 @@ public class ImportProfileService
                 try { System.Text.Json.JsonDocument.Parse(value); }
                 catch { throw new InvalidOperationException($"{field} must be valid JSON"); }
             }
+        }
+
+        if (profile.DeltaSyncEnabled)
+        {
+            if (string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
+                throw new InvalidOperationException(
+                    "Smart Sync requires a ReefId Column to be set.");
+            if (!System.Text.RegularExpressions.Regex.IsMatch(
+                    profile.DeltaSyncReefIdColumn,
+                    @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
+                throw new InvalidOperationException(
+                    "ReefId Column must be a valid identifier (letters, digits, underscores; cannot start with a digit).");
         }
     }
 

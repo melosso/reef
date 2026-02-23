@@ -2145,6 +2145,69 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Statistics Panel (Edit Mode Only) -->
+                        <div id="impDeltaSyncStats" class="hidden border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-700 flex items-center">
+                                    <i data-lucide="bar-chart-2" class="w-4 h-4 mr-2"></i>
+                                    Smart Sync Statistics
+                                </h4>
+                                <button type="button" onclick="loadImportDeltaSyncStats()"
+                                        class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                                    <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
+                                    Refresh
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-4 gap-3">
+                                <div class="text-center">
+                                    <div id="impStatTotalRows" class="text-2xl font-bold text-gray-900">-</div>
+                                    <div class="text-xs text-gray-500">Total Tracked</div>
+                                </div>
+                                <div class="text-center">
+                                    <div id="impStatLastSync" class="text-2xl font-bold text-blue-600">-</div>
+                                    <div class="text-xs text-gray-500">Last Sync</div>
+                                </div>
+                                <div class="text-center">
+                                    <div id="impStatNewRows" class="text-2xl font-bold text-green-600">-</div>
+                                    <div class="text-xs text-gray-500">New (Last Run)</div>
+                                </div>
+                                <div class="text-center">
+                                    <div id="impStatChangedRows" class="text-2xl font-bold text-orange-600">-</div>
+                                    <div class="text-xs text-gray-500">Changed (Last Run)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Memory Store Panel (Edit Mode Only) -->
+                        <div id="impDeltaSyncAdvancedPanel" class="hidden border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div class="">
+                                <button type="button" onclick="toggleImportDeltaSyncAdvanced()"
+                                        class="flex items-center w-full text-sm font-semibold text-gray-900 hover:text-gray-700">
+                                    <i data-lucide="database" class="w-4 h-4 mr-2"></i>
+                                    Memory Store
+                                    <i data-lucide="chevron-down" class="w-4 h-4 ml-auto transform transition-transform" id="impAdvancedSettingsChevron"></i>
+                                </button>
+                            </div>
+                            <div id="impDeltaSyncAdvancedContent" class="hidden space-y-4 pt-4 border-t border-gray-200">
+                                <div class="flex items-start p-3 bg-red-50 border border-red-200 rounded">
+                                    <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0"></i>
+                                    <div class="flex-1">
+                                        <h4 class="text-sm font-semibold text-red-800 mb-1">Reset Smart Sync State</h4>
+                                        <p class="text-xs text-red-700 mb-3">
+                                            Clears all tracked row hashes. On the next import run, all rows will be treated as new and re-imported.
+                                        </p>
+                                        <div class="flex space-x-2">
+                                            <button type="button" onclick="resetImportDeltaSync()"
+                                                    class="px-3 py-1.5 text-xs font-medium text-red-700 bg-white border border-red-300 rounded hover:bg-red-100">
+                                                <i data-lucide="rotate-ccw" class="w-3 h-3 inline mr-1"></i>
+                                                Reset All Rows
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -2936,7 +2999,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                 const canExecute = profile.connectionIsActive && profile.isEnabled;
                 const executeButton = canExecute
-                    ? `<button id="play-btn-${profile.id}" onclick="executeProfile(${profile.id}, false, ${profile.isEmailExport})" class="text-green-600 hover:text-green-900 mr-3" title="Execute Profile">
+                    ? `<button id="play-btn-export-${profile.id}" onclick="executeProfile(${profile.id}, false, ${profile.isEmailExport})" class="text-green-600 hover:text-green-900 mr-3" title="Execute Profile">
                           <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
                        </button>`
                     : `<button disabled class="text-gray-400 cursor-not-allowed mr-3" title="${!profile.connectionIsActive ? 'Connection Disabled' : 'Profile Disabled'}">
@@ -2968,10 +3031,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             }
                             return escapeHtml(profile.outputFormat);
                         })()}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${(() => {
-                            if (!profile.outputDestinationId) return 'Not configured';
+                        <td class="px-6 py-4 whitespace-nowrap">${(() => {
+                            if (!profile.outputDestinationId) return '<span class="text-sm text-gray-400">Not configured</span>';
                             const dest = destinations.find(d => d.id === profile.outputDestinationId);
-                            return dest ? escapeHtml(`${dest.name} (${dest.type})`) : 'Unknown';
+                            if (!dest) return '<span class="text-sm text-gray-400">Unknown</span>';
+                            return `<div class="text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(dest.name)}</div><div class="text-xs text-gray-400">${escapeHtml(dest.type)}</div>`;
                         })()}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
@@ -3005,14 +3069,25 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const _statusBadge = p.isEnabled
                     ? '<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">Enabled</span>'
                     : '<span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Disabled</span>';
-                const _srcLabel = { 'Local': 'Local File', 'Sftp': 'SFTP', 'Http': 'HTTP API' }[p.sourceType] || (p.sourceType || '');
+
+                // Source column: use saved source destination name when available, else source type label
+                const _srcTypeLabel = { 'Local': 'Local File', 'Sftp': 'SFTP', 'Http': 'HTTP API', 'Ftp': 'FTP' }[p.sourceType] || (p.sourceType || '—');
+                const _srcPrimary = p.sourceDestinationName ? escapeHtml(p.sourceDestinationName) : escapeHtml(_srcTypeLabel);
+                const _srcSub = p.sourceDestinationName ? `<div class="text-xs text-gray-400">${escapeHtml(_srcTypeLabel)}</div>` : '';
+
+                // Destination column: DB connection + table, or LocalFile (format only — filename is too specific)
+                const _destCell = (() => {
+                    if (p.targetType === 'LocalFile') {
+                        const _fmt = escapeHtml(p.localTargetFormat || 'CSV');
+                        return `<div class="text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">Local File</div><div class="text-xs text-gray-400">${_fmt}</div>`;
+                    }
+                    const _connName = p.targetConnectionName || '—';
+                    const _table = p.targetTable || '';
+                    return `<div class="text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(_connName)}</div>${_table ? `<div class="text-xs text-gray-400 font-mono">${escapeHtml(_table)}</div>` : ''}`;
+                })();
+
                 const _lastRun = p.lastExecutedAt ? (formatRelativeTime(p.lastExecutedAt) || new Date(p.lastExecutedAt).toLocaleString()) : 'Never';
-                const _stratBadge = {
-                    'Upsert':      '<span class="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full">Upsert</span>',
-                    'Insert':      '<span class="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full">Insert</span>',
-                    'Append':      '<span class="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 rounded-full">Append</span>',
-                    'FullReplace': '<span class="px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded-full">Full Replace</span>',
-                }[p.loadStrategy] || escapeHtml(p.loadStrategy || '');
+
                 return `
                     <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-indigo-500">
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -3021,17 +3096,19 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <span class="ml-2 px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded flex-shrink-0">Import</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(p.targetConnectionName || '—')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(p.groupName || 'None')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            <span class="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded-full">${escapeHtml(_srcLabel)}</span>
-                            <span class="ml-1 text-xs text-gray-400">${escapeHtml(p.sourceFormat || 'CSV')}</span>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${_srcPrimary}</div>
+                            ${_srcSub}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors font-mono text-xs">${escapeHtml(p.targetTable || '—')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(p.groupName || 'None')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(p.sourceFormat || 'CSV')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${_destCell}
+                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">${_statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${_lastRun}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${_lastRun}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="executeProfile(${p.id}, true, false)" class="text-green-600 hover:text-green-900 mr-3" title="Run Now">
+                            <button id="play-btn-import-${p.id}" onclick="executeProfile(${p.id}, true, false)" class="text-green-600 hover:text-green-900 mr-3" title="Run Now">
                                 <i data-lucide="play-circle" class="h-4 w-4 inline"></i>
                             </button>
                             <button onclick="editProfile(${p.id}, true)" class="text-blue-600 hover:text-blue-900 mr-3" title="Edit">
@@ -3057,11 +3134,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         
         async function executeProfile(id, isImport, isEmail) {
             if (isImport) {
-                const profile = importProfiles.find(p => p.id === id);
-                if (!profile) return;
-                if (!confirm(`Run import "${profile.name}" now?`)) return;
-
-                window.showToast('Starting import...', 'info');
+                setPlayButtonLoading(id, true, true);
                 try {
                     const resp = await fetch(`${API_BASE}/api/profiles/${id}/execute?type=import`, {
                         method: 'POST',
@@ -3070,20 +3143,32 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const result = await resp.json();
                     const status = result.status;
-                    const msg = `Import finished: ${status}. ` +
-                        `Inserted=${result.rowsInserted}, Updated=${result.rowsUpdated}, ` +
-                        `Skipped=${result.rowsSkipped}, Failed=${result.rowsFailed}`;
-                    window.showToast(msg, status === 'Success' ? 'success' : status === 'PartialSuccess' ? 'warning' : 'error');
+                    if (status === 'Success') {
+                        window.showToast('Import executed successfully! Check the Executions page for results.', 'success');
+                    } else {
+                        const parts = [];
+                        if (result.rowsInserted) parts.push(`${result.rowsInserted} inserted`);
+                        if (result.rowsUpdated) parts.push(`${result.rowsUpdated} updated`);
+                        if (result.rowsSkipped) parts.push(`${result.rowsSkipped} skipped`);
+                        if (result.rowsFailed) parts.push(`${result.rowsFailed} failed`);
+                        const summary = parts.length ? parts.join(', ') : 'no rows processed';
+                        const msg = status === 'PartialSuccess'
+                            ? `Import partially completed — ${summary}.`
+                            : `Import failed — ${summary}.`;
+                        window.showToast(msg, status === 'PartialSuccess' ? 'warning' : 'error');
+                    }
                     await loadImportProfiles();
                     renderProfiles();
                 } catch (e) {
-                    window.showToast('Error running import: ' + e.message, 'error');
+                    window.showToast(e.message || 'Failed to execute import', 'error');
+                } finally {
+                    setPlayButtonLoading(id, false, true);
                 }
                 return;
             }
 
             // Set loading state immediately
-            setPlayButtonLoading(id, true);
+            setPlayButtonLoading(id, true, false);
 
             try {
                 const profile = profiles.find(p => p.id === id);
@@ -3095,7 +3180,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 // For email profiles, show confirmation modal with math verification
                 if (isEmail) {
                     // Clear loading state since modal will handle the execution
-                    setPlayButtonLoading(id, false);
+                    setPlayButtonLoading(id, false, false);
                     pendingEmailProfileId = id;
                     showEmailExecutionConfirmationModal();
                     return;
@@ -3110,7 +3195,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 // Always clear loading state when done (for non-email profiles)
                 const profile = profiles.find(p => p.id === id);
                 if (profile && !profile.isEmailExport) {
-                    setPlayButtonLoading(id, false);
+                    setPlayButtonLoading(id, false, false);
                 }
             }
         }
@@ -3655,11 +3740,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             impWebhooksTabBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             impWebhooksTabBtn.title = '';
             loadImportWebhooks(profileId);
+            // Show Memory Store panels for existing profiles
+            document.getElementById('impDeltaSyncStats').classList.remove('hidden');
+            document.getElementById('impDeltaSyncAdvancedPanel').classList.remove('hidden');
+            loadImportDeltaSyncStats();
         } else {
             impWebhooksTabBtn.disabled = true;
             impWebhooksTabBtn.classList.add('opacity-50', 'cursor-not-allowed');
             impWebhooksTabBtn.title = 'Save the profile first to enable webhooks';
             document.getElementById('imp-webhooksList').innerHTML = '<p class="text-gray-500 text-center py-4">Save the profile to enable webhooks.</p>';
+            // Hide Memory Store panels for new profiles
+            document.getElementById('impDeltaSyncStats').classList.add('hidden');
+            document.getElementById('impDeltaSyncAdvancedPanel').classList.add('hidden');
         }
 
         document.getElementById('import-profile-modal').classList.remove('hidden');
@@ -5764,8 +5856,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         let currentMathQuestion = null;
 
         // Helper functions for play button loading state
-        function setPlayButtonLoading(profileId, isLoading) {
-            const button = document.getElementById(`play-btn-${profileId}`);
+        function setPlayButtonLoading(profileId, isLoading, isImport = false) {
+            const prefix = isImport ? 'play-btn-import-' : 'play-btn-export-';
+            const button = document.getElementById(`${prefix}${profileId}`);
             if (!button) return;
 
             if (isLoading) {
@@ -5786,7 +5879,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         async function executeProfileNormal(id) {
             // Set loading state immediately
-            setPlayButtonLoading(id, true);
+            setPlayButtonLoading(id, true, false);
 
             try {
                 const profile = profiles.find(p => p.id === id);
@@ -5798,7 +5891,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 // For email profiles, show confirmation modal with math verification
                 if (profile.isEmailExport) {
                     // Clear loading state since modal will handle the execution
-                    setPlayButtonLoading(id, false);
+                    setPlayButtonLoading(id, false, false);
                     pendingEmailProfileId = id;
                     showEmailExecutionConfirmationModal();
                     return;
@@ -5813,7 +5906,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 // Always clear loading state when done (for non-email profiles)
                 const profile = profiles.find(p => p.id === id);
                 if (profile && !profile.isEmailExport) {
-                    setPlayButtonLoading(id, false);
+                    setPlayButtonLoading(id, false, false);
                 }
             }
         }
@@ -5969,6 +6062,77 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 answer: answer
             };
         }
+
+        // ── Import Profile Delta Sync ─────────────────────────────────────
+
+        async function loadImportDeltaSyncStats() {
+            const profileId = currentImportProfileId;
+            if (!profileId) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/import-profiles/${profileId}/delta-sync/stats`, {
+                    headers: getAuthHeaders()
+                });
+                if (!resp.ok) return;
+                const stats = await resp.json();
+                if (!stats.enabled) {
+                    document.getElementById('impStatTotalRows').textContent = '\u2014';
+                    document.getElementById('impStatLastSync').textContent = 'Not enabled';
+                    document.getElementById('impStatNewRows').textContent = '\u2014';
+                    document.getElementById('impStatChangedRows').textContent = '\u2014';
+                    return;
+                }
+                document.getElementById('impStatTotalRows').textContent = (stats.activeRows || 0).toLocaleString();
+                document.getElementById('impStatNewRows').textContent = (stats.newRowsLastRun || 0).toLocaleString();
+                document.getElementById('impStatChangedRows').textContent = (stats.changedRowsLastRun || 0).toLocaleString();
+                if (stats.lastSyncDate) {
+                    const d = new Date(stats.lastSyncDate);
+                    const diffMs = Date.now() - d.getTime();
+                    const diffH = Math.floor(diffMs / 3600000);
+                    const diffM = Math.floor(diffMs / 60000);
+                    document.getElementById('impStatLastSync').textContent =
+                        diffM < 1 ? 'Just now' :
+                        diffH < 1 ? `${diffM}m ago` :
+                        diffH < 24 ? `${diffH}h ago` :
+                        d.toLocaleDateString();
+                } else {
+                    document.getElementById('impStatLastSync').textContent = 'Never';
+                }
+            } catch(e) {
+                console.error('Error loading import delta sync stats:', e);
+            }
+        }
+
+        function toggleImportDeltaSyncAdvanced() {
+            const content = document.getElementById('impDeltaSyncAdvancedContent');
+            const chevron = document.getElementById('impAdvancedSettingsChevron');
+
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        async function resetImportDeltaSync() {
+            if (!currentImportProfileId) return;
+            if (!confirm('This will clear all tracked row hashes. On the next run, all rows will be treated as new and re-imported.\n\nAre you sure?')) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/import-profiles/${currentImportProfileId}/delta-sync/reset`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const result = await resp.json();
+                window.showToast(result.message || 'Smart Sync state reset successfully', 'success');
+                loadImportDeltaSyncStats();
+            } catch(e) {
+                window.showToast('Failed to reset Smart Sync state: ' + e.message, 'error');
+            }
+        }
+
+        // ── Export Profile Delta Sync ─────────────────────────────────────
 
         function toggleDeltaSyncAdvanced() {
             const panel = document.getElementById('deltaSyncAdvanced');

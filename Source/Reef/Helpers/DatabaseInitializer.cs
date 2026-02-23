@@ -411,13 +411,15 @@ public class DatabaseInitializer
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ProfileId INTEGER NULL,
                     JobId INTEGER NULL,
+                    ImportProfileId INTEGER NULL,
                     Token TEXT NOT NULL UNIQUE,
                     IsActive INTEGER NOT NULL DEFAULT 1,
                     CreatedAt TEXT NOT NULL,
                     LastTriggeredAt TEXT NULL,
                     TriggerCount INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
-                    FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE CASCADE
+                    FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
                 );
 
                 CREATE INDEX idx_webhooks_token ON WebhookTriggers(Token);
@@ -606,6 +608,7 @@ public class DatabaseInitializer
                 Description TEXT NOT NULL DEFAULT '',
                 Type INTEGER NOT NULL,
                 ProfileId INTEGER NULL,
+                ProfileType TEXT NULL,
                 DestinationId INTEGER NULL,
                 CustomActionJson TEXT NULL,
 
@@ -807,6 +810,8 @@ public class DatabaseInitializer
                 NotifyOnJobSuccess INTEGER NOT NULL DEFAULT 0,
                 NotifyOnProfileFailure INTEGER NOT NULL DEFAULT 1,
                 NotifyOnProfileSuccess INTEGER NOT NULL DEFAULT 0,
+                NotifyOnImportProfileFailure INTEGER NOT NULL DEFAULT 1,
+                NotifyOnImportProfileSuccess INTEGER NOT NULL DEFAULT 0,
                 NotifyOnDatabaseSizeThreshold INTEGER NOT NULL DEFAULT 1,
                 DatabaseSizeThresholdBytes INTEGER NOT NULL DEFAULT 1073741824,
                 NotifyOnNewUser INTEGER NOT NULL DEFAULT 0,
@@ -1427,9 +1432,40 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "WebhookTriggers", "ImportProfileId",
             "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
 
-        // Add ImportProfileId to Jobs so jobs can execute import profiles
-        await AddColumnIfNotExistsAsync(connection, "Jobs", "ImportProfileId",
-            "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
+        // Add ProfileType to Jobs to distinguish export vs import profile links
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "ProfileType", "TEXT NULL");
+
+        // Migrate any Jobs that previously used ImportProfileId: copy value to ProfileId, set ProfileType='import'
+        // (handles DBs where the now-removed ImportProfileId column was applied)
+        var importProfileIdExists = (await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM pragma_table_info('Jobs') WHERE name='ImportProfileId'")) > 0;
+        if (importProfileIdExists)
+        {
+            await connection.ExecuteAsync(
+                "UPDATE Jobs SET ProfileId = ImportProfileId, ProfileType = 'import' WHERE ImportProfileId IS NOT NULL AND ProfileType IS NULL");
+        }
+
+        // Import profile notification flags
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnImportProfileFailure", "INTEGER NOT NULL DEFAULT 1");
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnImportProfileSuccess", "INTEGER NOT NULL DEFAULT 0");
+
+        // Seed import profile notification templates if not yet present (for existing DBs)
+        await SeedImportProfileNotificationTemplatesAsync(connection);
+
+        // ProfileExecutionErrors table for per-send failure tracking (email, archive, etc.)
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS ProfileExecutionErrors (
+                Id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ExecutionId INTEGER NOT NULL,
+                ErrorType   TEXT    NOT NULL DEFAULT 'Unknown',
+                Phase       TEXT,
+                Detail      TEXT,
+                ErrorMessage TEXT   NOT NULL DEFAULT '',
+                OccurredAt  TEXT    NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (ExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE
+            )");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_prof_exec_errors_exec ON ProfileExecutionErrors(ExecutionId)");
 
         Log.Debug("Database schema migrations completed");
     }
@@ -2884,8 +2920,12 @@ public class DatabaseInitializer
                 SkipUnmappedColumns     INTEGER NOT NULL DEFAULT 1,
 
                 -- Target
+                TargetType              TEXT    NOT NULL DEFAULT 'Database',
                 TargetConnectionId      INTEGER NULL,
-                TargetTable             TEXT    NOT NULL,
+                TargetTable             TEXT    NOT NULL DEFAULT '',
+                LocalTargetPath         TEXT    NULL,
+                LocalTargetFormat       TEXT    NULL DEFAULT 'CSV',
+                LocalTargetWriteMode    TEXT    NULL DEFAULT 'Overwrite',
                 LoadStrategy            TEXT    NOT NULL DEFAULT 'Upsert',
                 UpsertKeyColumns        TEXT    NULL,
                 BatchSize               INTEGER NOT NULL DEFAULT 500,
@@ -2981,8 +3021,9 @@ public class DatabaseInitializer
         // ── Normal path: check if migration is needed ──
         var cols = await connection.QueryAsync("PRAGMA table_info(ImportProfiles)");
         var col = cols.FirstOrDefault(c => (string)c.name == "TargetConnectionId");
-        if (col == null || (long)col.notnull == 0)
-            return; // Already nullable or column not found — nothing to do
+        if (col == null) return; // Column not found — nothing to do
+        if ((long)(col.notnull ?? 0L) == 0)
+            return; // Already nullable — nothing to do
 
         Log.Information("Migrating ImportProfiles.TargetConnectionId to nullable (LocalFile support)...");
 
@@ -3222,6 +3263,311 @@ public class DatabaseInitializer
         ";
         await connection.ExecuteAsync(sql);
         Log.Debug("✓ ImportDeltaSyncState table ready");
+    }
+
+    /// <summary>
+    /// Seed import profile notification templates for existing databases that already have other templates.
+    /// Uses INSERT OR IGNORE so it's safe to run on every startup.
+    /// </summary>
+    private async Task SeedImportProfileNotificationTemplatesAsync(SqliteConnection connection)
+    {
+        try
+        {
+            const string insertSql = @"
+                INSERT OR IGNORE INTO NotificationEmailTemplate (TemplateType, Subject, HtmlBody, IsDefault, CTAButtonText, CreatedAt, UpdatedAt)
+                VALUES (@TemplateType, @Subject, @HtmlBody, @IsDefault, @CTAButtonText, @CreatedAt, @UpdatedAt)";
+
+            var templates = new[]
+            {
+                new { TemplateType = "ImportProfileSuccess", Subject = "[Reef] Import '{{ ProfileName }}' completed successfully", CTAButtonText = "View Execution" },
+                new { TemplateType = "ImportProfileFailure", Subject = "[Reef] Import '{{ ProfileName }}' execution failed", CTAButtonText = "View Execution" },
+            };
+
+            foreach (var template in templates)
+            {
+                var htmlBody = template.TemplateType switch
+                {
+                    "ImportProfileSuccess" => BuildImportProfileSuccessEmailBody(),
+                    "ImportProfileFailure" => BuildImportProfileFailureEmailBody(),
+                    _ => BuildSimpleNotificationTemplate(template.TemplateType)
+                };
+
+                await connection.ExecuteAsync(insertSql, new
+                {
+                    template.TemplateType,
+                    template.Subject,
+                    HtmlBody = htmlBody,
+                    IsDefault = 1,
+                    template.CTAButtonText,
+                    CreatedAt = DateTime.UtcNow.ToString("o"),
+                    UpdatedAt = DateTime.UtcNow.ToString("o")
+                });
+            }
+
+            Log.Debug("Import profile notification templates seeded (INSERT OR IGNORE)");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error seeding import profile notification email templates");
+        }
+    }
+
+    /// <summary>
+    /// Build default email body for ImportProfileSuccess notification
+    /// </summary>
+    private static string BuildImportProfileSuccessEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Import Execution Success</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Import {{ ProfileName }} completed successfully.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  Import completed successfully
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Import profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> has completed successfully.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution Time
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionTime }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Rows Imported
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ RowsImported }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Rows Failed
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ RowsFailed }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for ImportProfileFailure notification
+    /// </summary>
+    private static string BuildImportProfileFailureEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Import Execution Failed</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Import {{ ProfileName }} execution failed.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px; color:#dc2626;"">
+                  Import execution failed
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Import profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> encountered an error during execution.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fef2f2; border:1px solid #fecaca; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7f1d1d;"">
+                    <strong>Error:</strong> {{ ErrorMessage }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
     }
 
     /// <summary>

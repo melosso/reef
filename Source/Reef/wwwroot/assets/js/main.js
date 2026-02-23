@@ -259,39 +259,47 @@ window.showToast = function(message, type = 'info', persistent = false) {
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
-        toastContainer.className = 'fixed top-4 right-4 z-250 flex flex-col items-end space-y-2';
+        toastContainer.className = 'fixed top-4 right-4 z-[9999] flex flex-col items-end space-y-2';
         document.body.appendChild(toastContainer);
     }
 
+    const timestamp = new Date();
+    const timeStr = timestamp.toLocaleTimeString();
+
     const toast = document.createElement('div');
-    toast.className = `
-        flex items-center w-fit max-w-[90vw] sm:max-w-sm px-4 py-3 mb-2 rounded shadow text-white
-        ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800'}
-        opacity-0 transition-opacity duration-300
-    `;
+    toast.className = [
+        'flex items-center w-fit max-w-[90vw] sm:max-w-sm px-4 py-3 mb-2 rounded shadow text-white',
+        'cursor-pointer select-none',
+        type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-gray-800',
+        'opacity-0 transition-opacity duration-300'
+    ].join(' ');
+    toast.title = 'Click to copy · ' + timeStr;
 
-    // For error toasts, add a copy button
-    let actionButtons = '';
-    if (type === 'error') {
-        actionButtons = `
-            <button class="ml-2 text-white opacity-70 hover:opacity-100 transition-opacity"
-                    title="Copy error message to clipboard"
-                    onclick="copyErrorMessage(this, '${escapeForJS(message)}')"
-                    aria-label="Copy error">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                </svg>
-            </button>
-        `;
-    }
+    toast.innerHTML = `
+        <span class="flex-1 pr-2">${message}</span>
+        <div class="flex items-center ml-2 gap-2 shrink-0">
+            <span class="text-xs opacity-60 tabular-nums">${timeStr}</span>
+            <button class="text-white opacity-60 hover:opacity-100 transition-opacity text-lg leading-none" data-dismiss aria-label="Close">×</button>
+        </div>`;
 
-    toast.innerHTML = `<span class="flex-1">${message}</span>
-                       <div class="flex items-center ml-4">
-                           ${actionButtons}
-                           <button class="text-white opacity-70 hover:opacity-100 transition-opacity"
-                                   onclick="fadeOut(this.closest('div[class*=flex][class*=items-center][class*=w-fit]'))"
-                                   aria-label="Close">×</button>
-                       </div>`;
+    // Click anywhere except dismiss button → copy message + timestamp
+    toast.addEventListener('click', function(e) {
+        if (e.target.closest('[data-dismiss]')) return;
+        const text = '[' + timestamp.toLocaleString() + '] ' + message;
+        copyToClipboard(text).then(ok => {
+            if (!ok) return;
+            // Brief ring feedback
+            toast.classList.add('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50');
+            setTimeout(() => toast.classList.remove('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50'), 500);
+        });
+    });
+
+    // Dismiss button
+    toast.querySelector('[data-dismiss]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dismissToast(toast);
+    });
+
     toastContainer.appendChild(toast);
 
     // Fade in
@@ -301,17 +309,15 @@ window.showToast = function(message, type = 'info', persistent = false) {
     });
 
     // Auto-remove after duration
-    const durationMap = {
-    success: 3000,
-    info: 4000,
-    warning: 6000,
-    error: 10000
-    };
-
+    const durationMap = { success: 3000, info: 4000, warning: 6000, error: 10000 };
     const duration = durationMap[type] ?? 4000;
-    if (!persistent) {
-        setTimeout(() => fadeOut(toast), duration);
-    }
+    let autoTimer = persistent ? null : setTimeout(() => dismissToast(toast), duration);
+
+    // Pause auto-dismiss while the user hovers
+    toast.addEventListener('mouseenter', () => { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } });
+    toast.addEventListener('mouseleave', () => {
+        if (!persistent && !autoTimer) autoTimer = setTimeout(() => dismissToast(toast), 2000);
+    });
 };
 
 /**
@@ -373,6 +379,13 @@ function escapeForJS(str) {
 function fadeIn(el) {
     el.classList.remove('opacity-0');
     el.classList.add('opacity-100', 'transition', 'duration-300');
+}
+
+function dismissToast(el) {
+    if (!el || !el.parentNode) return;
+    el.classList.remove('opacity-100');
+    el.classList.add('opacity-0');
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 300);
 }
 
 function fadeOut(el) {
@@ -452,7 +465,7 @@ function showTooltip(el) {
     if (!tooltipEl) {
         tooltipEl = document.createElement('div');
         tooltipEl.className = `
-            fixed z-50 bg-gray-800 text-white text-sm px-2 py-1 rounded-lg shadow-lg
+            fixed z-[9999] bg-gray-800 text-white text-sm px-2 py-1 rounded-lg shadow-lg
             whitespace-pre-line max-w-xs break-words pointer-events-none
             transition-opacity duration-150 opacity-0
         `;

@@ -6,8 +6,8 @@ public class Job
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public JobType Type { get; set; }
-    public int? ProfileId { get; set; } // Link to export profile for profile-based jobs
-    public int? ImportProfileId { get; set; } // Link to import profile (mutually exclusive with ProfileId)
+    public int? ProfileId { get; set; } // References either Profiles or ImportProfiles depending on ProfileType
+    public string? ProfileType { get; set; } // null or 'export' = export profile; 'import' = import profile
     public int? DestinationId { get; set; } // Optional destination override
     public string? CustomActionJson { get; set; } // For custom job types
     

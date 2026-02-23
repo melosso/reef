@@ -26,7 +26,7 @@ public class LocalFileImportTarget : IImportTarget
         Directory.CreateDirectory(Path.GetDirectoryName(path) ?? ".");
 
         bool append = context.TargetWriteMode?.Equals("Append", StringComparison.OrdinalIgnoreCase) == true;
-        var format = (context.TargetFormat ?? "CSV").ToUpperInvariant();
+        var format = ResolveFormat(context.TargetFormat, path);
 
         int written = format switch
         {
@@ -176,6 +176,24 @@ public class LocalFileImportTarget : IImportTarget
             await writer.WriteLineAsync(JsonSerializer.Serialize(row));
         }
         return rows.Count;
+    }
+
+    /// <summary>
+    /// Resolves the output format. When the configured format is the default CSV,
+    /// infers JSON or JSONL from the file extension so users don't have to set both.
+    /// An explicitly configured non-CSV format always wins.
+    /// </summary>
+    private static string ResolveFormat(string? configuredFormat, string? filePath)
+    {
+        var fmt = (configuredFormat ?? "CSV").ToUpperInvariant();
+        if (fmt != "CSV") return fmt;
+
+        return Path.GetExtension(filePath ?? "").ToLowerInvariant() switch
+        {
+            ".json"  => "JSON",
+            ".jsonl" => "JSONL",
+            _        => "CSV"
+        };
     }
 
     private static string QuoteCsv(string? value)

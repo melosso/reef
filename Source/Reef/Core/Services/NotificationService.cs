@@ -212,6 +212,82 @@ public class NotificationService
     }
 
     /// <summary>
+    /// Send notification for successful import profile execution
+    /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
+    /// </summary>
+    public async Task SendImportExecutionSuccessAsync(ImportProfileExecution execution, ImportProfile profile)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileSuccess)
+            {
+                return;
+            }
+
+            if (!_throttler.ShouldNotifyImportProfileSuccess(profile.Id))
+            {
+                Log.Debug("Import profile success notification throttled for profile {ProfileId}", profile.Id);
+                return;
+            }
+
+            var fallbackSubject = $"[Reef] Import '{profile.Name}' completed successfully";
+            var fallbackBody = BuildImportSuccessEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileSuccess", fallbackSubject, fallbackBody);
+
+            var context = BuildImportSuccessEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileId})",
+                execution.Id, profile.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error sending import success notification for execution {ExecutionId}", execution.Id);
+        }
+    }
+
+    /// <summary>
+    /// Send notification for failed import profile execution
+    /// Uses throttling to prevent excessive emails (max once per 5 minutes per profile)
+    /// </summary>
+    public async Task SendImportExecutionFailureAsync(ImportProfileExecution execution, ImportProfile profile)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileFailure)
+            {
+                return;
+            }
+
+            if (!_throttler.ShouldNotifyImportProfileFailure(profile.Id))
+            {
+                Log.Debug("Import profile failure notification throttled for profile {ProfileId}", profile.Id);
+                return;
+            }
+
+            var fallbackSubject = $"[Reef] Import '{profile.Name}' execution failed";
+            var fallbackBody = BuildImportFailureEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileFailure", fallbackSubject, fallbackBody);
+
+            var context = BuildImportFailureEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileId})",
+                execution.Id, profile.Id);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error sending import failure notification for execution {ExecutionId}", execution.Id);
+        }
+    }
+
+    /// <summary>
     /// Send notification for job success
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per job)
     /// </summary>
@@ -884,6 +960,14 @@ public class NotificationService
 </html>";
     }
 
+    private static string BuildImportSuccessEmailBodyTemplate() =>
+        "<p>Import profile <strong>{{ ProfileName }}</strong> completed successfully. " +
+        "Execution ID: {{ ExecutionId }}. Rows imported: {{ RowsImported }}. Rows failed: {{ RowsFailed }}.</p>";
+
+    private static string BuildImportFailureEmailBodyTemplate() =>
+        "<p>Import profile <strong>{{ ProfileName }}</strong> failed. " +
+        "Execution ID: {{ ExecutionId }}. Error: {{ ErrorMessage }}</p>";
+
     private string BuildJobSuccessEmailBody(string jobName, Dictionary<string, object> jobDetails)
     {
         var detailsHtml = string.Join("",
@@ -1458,6 +1542,36 @@ public class NotificationService
     }
 
     private ScriptObject BuildFailureEmailContext(ProfileExecution execution, Profile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ErrorMessage"] = execution.ErrorMessage ?? "Unknown error";
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildImportSuccessEmailContext(ImportProfileExecution execution, ImportProfile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ExecutionTime"] = execution.CompletedAt.HasValue
+            ? $"{(execution.CompletedAt.Value - execution.StartedAt).TotalSeconds:F2}s"
+            : "N/A";
+        context["RowsImported"] = (execution.RowsInserted + execution.RowsUpdated).ToString();
+        context["RowsFailed"] = execution.RowsFailed.ToString();
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildImportFailureEmailContext(ImportProfileExecution execution, ImportProfile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;

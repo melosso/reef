@@ -33,7 +33,7 @@ public class DatabaseImportTarget : IImportTarget
     {
         if (!rows.Any()) return new ImportBatchResult();
 
-        using var db = OpenConnection(context.TargetConnection);
+        using var db = OpenConnection(context.TargetConnection!);
         await db.OpenAsync(ct);
 
         return context.LoadStrategy switch
@@ -51,7 +51,7 @@ public class DatabaseImportTarget : IImportTarget
         ImportWriteContext context,
         CancellationToken ct = default)
     {
-        using var db = OpenConnection(context.TargetConnection);
+        using var db = OpenConnection(context.TargetConnection!);
         await db.OpenAsync(ct);
 
         var result = new ImportBatchResult();
@@ -60,7 +60,7 @@ public class DatabaseImportTarget : IImportTarget
         try
         {
             // Truncate target table
-            var truncateSql = $"TRUNCATE TABLE {QuoteTable(context.TargetConnection.Type, context.TargetTable)}";
+            var truncateSql = $"TRUNCATE TABLE {QuoteTable(context.TargetConnection!.Type, context.TargetTable)}";
             await db.ExecuteAsync(new CommandDefinition(truncateSql, transaction: tx,
                 commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
 
@@ -258,7 +258,7 @@ public class DatabaseImportTarget : IImportTarget
         CancellationToken ct)
     {
         var result = new ImportBatchResult();
-        var connType = context.TargetConnection.Type.ToUpperInvariant();
+        var connType = context.TargetConnection!.Type.ToUpperInvariant();
         var table = context.TargetTable;
 
         int rowNum = 0;
@@ -330,7 +330,7 @@ public class DatabaseImportTarget : IImportTarget
         CancellationToken ct)
     {
         var result = new ImportBatchResult();
-        var connType = context.TargetConnection.Type.ToUpperInvariant();
+        var connType = context.TargetConnection!.Type.ToUpperInvariant();
 
         int rowNum = 0;
         foreach (var batch in rows.Chunk(context.BatchSize))

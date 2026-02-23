@@ -550,7 +550,7 @@ public class ExecutionService
                     }
 
                     // Send emails directly (approval not required)
-                    var (emailSuccess, emailMessage, successCount, failureCount, splits) = await _emailExportService.ExportToEmailAsync(
+                    var (emailSuccess, emailMessage, successCount, failureCount, splits, emailFailures) = await _emailExportService.ExportToEmailAsync(
                         profile,
                         emailDestination,
                         emailTemplate,
@@ -576,6 +576,13 @@ public class ExecutionService
                         Log.Debug("Inserting {SplitCount} execution split records for execution {ExecutionId}", splits.Count, executionId);
                         await InsertExecutionSplitsAsync(executionId, splits);
                         Log.Debug("Successfully inserted {SplitCount} execution split records", splits.Count);
+                    }
+
+                    // Record per-recipient failures
+                    foreach (var (recipient, error) in emailFailures)
+                    {
+                        try { await AddExecutionErrorAsync(executionId, "Email", "EmailSend", recipient, error); }
+                        catch { /* non-blocking */ }
                     }
 
                     // Check if email export meets success threshold
@@ -3035,5 +3042,30 @@ public class ExecutionService
             TotalRowsProcessed = deltaSyncResult.TotalRowsProcessed,
             NewHashState = filteredNewHashState
         };
+    }
+
+    private async Task AddExecutionErrorAsync(
+        int executionId, string errorType, string phase, string? detail, string message)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        await conn.ExecuteAsync(@"
+            INSERT INTO ProfileExecutionErrors
+                (ExecutionId, ErrorType, Phase, Detail, ErrorMessage, OccurredAt)
+            VALUES
+                (@ExecutionId, @ErrorType, @Phase, @Detail, @ErrorMessage, @OccurredAt)",
+            new { ExecutionId = executionId, ErrorType = errorType, Phase = phase,
+                  Detail = detail, ErrorMessage = message, OccurredAt = DateTime.UtcNow });
+    }
+
+    public async Task<List<ProfileExecutionError>> GetExecutionErrorsAsync(int executionId)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        var rows = await conn.QueryAsync<ProfileExecutionError>(@"
+            SELECT * FROM ProfileExecutionErrors
+            WHERE ExecutionId = @ExecutionId
+            ORDER BY OccurredAt", new { ExecutionId = executionId });
+        return rows.ToList();
     }
 }

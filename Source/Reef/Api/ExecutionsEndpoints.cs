@@ -21,10 +21,11 @@ public static class ExecutionsEndpoints
     group.MapGet("/", GetAllExecutions);
     group.MapGet("/{id:int}", GetExecutionById);
     group.MapGet("/{id:int}/test", GetExecutionById);
+    group.MapGet("/{id:int}/errors", GetExecutionErrors);
     group.MapPost("/execute/{profileId:int}", ExecuteProfile);
     group.MapGet("/by-profile/{profileId:int}", GetExecutionsByProfile);
     group.MapGet("/recent", GetRecentExecutions);
-    group.MapGet("/download/{token}", DownloadExecutionFile); 
+    group.MapGet("/download/{token}", DownloadExecutionFile);
     }
     
     /// <summary>
@@ -275,6 +276,21 @@ public static class ExecutionsEndpoints
         {
             Log.Error(ex, "Error getting recent executions");
             return Results.Problem("Error retrieving recent executions");
+        }
+    }
+
+    /// <summary>
+    /// GET /api/executions/{id}/errors - Get per-send failure records for an execution
+    /// </summary>
+    private static async Task<IResult> GetExecutionErrors(
+        int id,
+        [FromServices] ExecutionService svc)
+    {
+        try { return Results.Ok(await svc.GetExecutionErrorsAsync(id)); }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error getting execution errors for {Id}", id);
+            return Results.Problem($"Error retrieving errors: {ex.Message}");
         }
     }
 }

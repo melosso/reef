@@ -61,6 +61,7 @@
                                 class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 hover:border-gray-400">
                                 <option value="" disabled selected hidden>Select status</option>
                                 <option value="Success">Success</option>
+                                <option value="PartialSuccess">Partial Success</option>
                                 <option value="Failed">Failed</option>
                                 <option value="Running">Running</option>
                             </select>
@@ -82,6 +83,7 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profile</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
                                 <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Pre</th>
@@ -94,7 +96,7 @@
                         </thead>
                         <tbody id="executions-tbody" class="bg-white divide-y divide-gray-200">
                             <tr>
-                                <td colspan="8" class="px-6 py-4 text-center text-gray-500">
+                                <td colspan="10" class="px-6 py-4 text-center text-gray-500">
                                     <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
                                     Loading executions...
                                 </td>
@@ -143,41 +145,6 @@
                         </div>
                     </div>
                 </div>
-                <!-- ── Import Executions Section ──────────────────────────────── -->
-                <div class="mt-8">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <i data-lucide="upload" class="h-5 w-5 mr-2 text-indigo-500"></i>
-                            Import Executions
-                        </h2>
-                        <button onclick="loadImportExecutions()" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center">
-                            <i data-lucide="refresh-cw" class="h-4 w-4 mr-1"></i>Refresh
-                        </button>
-                    </div>
-                    <div class="bg-white rounded-lg shadow overflow-hidden">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profile</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rows (In/Up/Fail)</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phase</th>
-                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="import-executions-tbody" class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                                        <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
-                                        Loading...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </main>
         </div>
     </div>
@@ -202,9 +169,12 @@
 
     <!-- Execution Details Modal -->
     <div id="details-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Execution Details</h3>
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i data-lucide="download" class="h-5 w-5 mr-2 text-blue-500"></i>
+                    Export Execution Details
+                </h3>
                 <div class="flex items-center space-x-2">
                     <button id="download-log-btn" title="Download Log" class="text-gray-400 hover:text-blue-600 focus:outline-none" style="display:none">
                         <i data-lucide="download" class="h-6 w-6"></i>
@@ -293,6 +263,8 @@
     <script>
         const API_BASE = window.location.origin;
         let executions = [];
+        let importExecutions = [];
+        let importProfiles = [];
         let profiles = [];
         let jobs = [];
         let autoRefreshInterval = null;
@@ -353,6 +325,7 @@
             const jobId = urlParams.get('jobId');
             const profileId = urlParams.get('profileId');
             const executionId = urlParams.get('id');
+            const importExecutionId = urlParams.get('importId');
 
             // Load saved filters first
             loadExecutionFilters();
@@ -371,10 +344,15 @@
             // If an execution ID was provided in the URL, open its details modal
             if (executionId) {
                 await viewDetails(parseInt(executionId));
+            } else if (importExecutionId) {
+                await viewImportExecution(parseInt(importExecutionId));
             }
 
             // Auto-refresh every 10 seconds for running executions
             autoRefreshInterval = setInterval(checkRunningExecutions, 10000);
+
+            // Load import executions in background (non-blocking, re-renders when ready)
+            loadImportExecutions();
         }
 
         async function loadExecutions() {
@@ -385,6 +363,18 @@
                 const fromDate = document.getElementById('filter-date-from').value;
                 const toDate = document.getElementById('filter-date-to').value;
                 const searchTerm = document.getElementById('search-input').value;
+
+                // Import profile filter: no server call, client-side only
+                if (profileId.startsWith('import:')) {
+                    executions = [];
+                    const importProfileId = parseInt(profileId.split(':')[1]);
+                    const filtered = importExecutions.filter(e => e.importProfileId === importProfileId);
+                    totalCount = filtered.length;
+                    totalPages = 1;
+                    renderExecutions();
+                    renderPagination();
+                    return;
+                }
 
                 let url = `${API_BASE}/api/executions?page=${currentPage}&pageSize=${pageSize}`;
                 if (profileId) url += `&profileId=${profileId}`;
@@ -445,13 +435,40 @@
         function populateProfileFilters() {
             const filterSelect = document.getElementById('filter-profile');
             const executeSelect = document.getElementById('execute-profile');
-            
-            const profileOptions = profiles.map(p => 
+
+            const profileOptions = profiles.map(p =>
                 `<option value="${p.id}">${escapeHtml(p.name)}</option>`
             ).join('');
 
-            filterSelect.innerHTML = '<option value="">Show All</option>' + profileOptions;
+            filterSelect.innerHTML = `<option value="">Show All</option><optgroup label="Export Profiles" id="export-profile-group">${profileOptions}</optgroup>`;
             executeSelect.innerHTML = '<option value="">Choose a profile...</option>' + profileOptions;
+        }
+
+        function populateImportProfileFilters() {
+            if (importProfiles.length === 0) return;
+            const filterSelect = document.getElementById('filter-profile');
+
+            // Remove existing import optgroup if any (avoid duplicates on refresh)
+            const existing = filterSelect.querySelector('optgroup[label="Import Profiles"]');
+            if (existing) existing.remove();
+
+            const group = document.createElement('optgroup');
+            group.label = 'Import Profiles';
+            group.innerHTML = importProfiles.map(p =>
+                `<option value="import:${p.id}">${escapeHtml(p.name)}</option>`
+            ).join('');
+            filterSelect.appendChild(group);
+
+            // Restore saved import profile filter if it was set before profiles loaded
+            const saved = localStorage.getItem('executions_filters');
+            if (saved) {
+                try {
+                    const filters = JSON.parse(saved);
+                    if (filters.profileId && filters.profileId.startsWith('import:')) {
+                        filterSelect.value = filters.profileId;
+                    }
+                } catch {}
+            }
         }
 
         function populateJobFilters() {
@@ -466,13 +483,102 @@
             runJobSelect.innerHTML = '<option value="">Choose a job...</option>' + jobOptions;
         }
 
+        function renderExportRow(exec) {
+            const statusBadge = getStatusBadge(exec.status);
+            const profile = profiles.find(p => p.id === exec.profileId);
+            const profileName = profile ? profile.name : `Profile #${exec.profileId}`;
+            const startedAt = parseDate(exec.startedAt)?.toLocaleString() || '-';
+            const duration = exec.executionTimeMs ? `${(exec.executionTimeMs / 1000).toFixed(2)}s` : '-';
+            const preProcessBadge = getProcessingBadge(exec.preProcessStatus, exec.preProcessTimeMs);
+            const postProcessBadge = getProcessingBadge(exec.postProcessStatus, exec.postProcessTimeMs);
+            return `
+                <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <i data-lucide="file-code" class="h-4 w-4 text-gray-400 mr-2"></i>
+                            <span class="text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profileName)}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Export</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${startedAt}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${duration}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">${preProcessBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">${postProcessBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.rowCount || 0}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(exec.triggeredBy || 'System')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="viewDetails(${exec.id})" class="text-blue-600 hover:text-blue-900">
+                            <i data-lucide="eye" class="h-4 w-4 inline"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderImportRow(exec) {
+            const statusBadge = getStatusBadge(exec.status);
+            const profileName = exec._profileName || `Profile #${exec.importProfileId}`;
+            const startedAt = parseDate(exec.startedAt)?.toLocaleString() || '-';
+            let duration = '-';
+            if (exec.completedAt) {
+                const ms = new Date(exec.completedAt) - new Date(exec.startedAt);
+                duration = ms < 60000 ? `${(ms / 1000).toFixed(1)}s` : `${(ms / 60000).toFixed(1)}m`;
+            }
+            const rows = exec.totalRowsRead != null ? exec.totalRowsRead : (exec.rowsInserted ?? 0) + (exec.rowsUpdated ?? 0);
+            return `
+                <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-indigo-400">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <i data-lucide="upload" class="h-4 w-4 text-indigo-400 mr-2"></i>
+                            <span class="text-sm font-medium text-gray-900 group-hover:text-indigo-900 transition-colors">${escapeHtml(profileName)}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Import</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${startedAt}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${duration}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-300">—</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-gray-300">—</td>
+                    <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${rows}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">—</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="viewImportExecution(${exec.id})" class="text-blue-600 hover:text-blue-900">
+                            <i data-lucide="eye" class="h-4 w-4 inline"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
         function renderExecutions() {
             const tbody = document.getElementById('executions-tbody');
-            
-            if (executions.length === 0) {
+            const profileFilterVal = document.getElementById('filter-profile').value;
+            const isImportFilter = profileFilterVal.startsWith('import:');
+
+            let exportRows, importRows;
+            if (isImportFilter) {
+                const importProfileId = parseInt(profileFilterVal.split(':')[1]);
+                importRows = importExecutions.filter(e => e.importProfileId === importProfileId);
+                exportRows = [];
+            } else {
+                exportRows = executions;
+                importRows = importExecutions;
+            }
+
+            const combined = [
+                ...exportRows.map(e => ({ ...e, _type: 'export' })),
+                ...importRows.map(e => ({ ...e, _type: 'import' }))
+            ].sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
+
+            if (combined.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="9" class="px-6 py-8 text-center text-gray-500">
+                        <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                             <i data-lucide="activity" class="h-12 w-12 mx-auto mb-2 text-gray-300"></i>
                             <p>No executions found.</p>
                         </td>
@@ -482,40 +588,9 @@
                 return;
             }
 
-            tbody.innerHTML = executions.map(exec => {
-                const statusBadge = getStatusBadge(exec.status);
-                const profile = profiles.find(p => p.id === exec.profileId);
-                const profileName = profile ? profile.name : `Profile #${exec.profileId}`;
-                
-                const startedAt = parseDate(exec.startedAt)?.toLocaleString() || '-';
-                const duration = exec.executionTimeMs ? `${(exec.executionTimeMs / 1000).toFixed(2)}s` : '-';
-                
-                const preProcessBadge = getProcessingBadge(exec.preProcessStatus, exec.preProcessTimeMs);
-                const postProcessBadge = getProcessingBadge(exec.postProcessStatus, exec.postProcessTimeMs);
-
-                return `
-                    <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <i data-lucide="file-code" class="h-4 w-4 text-gray-400 mr-2"></i>
-                                <span class="text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profileName)}</span>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${startedAt}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${duration}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">${preProcessBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-center">${postProcessBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.rowCount || 0}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(exec.triggeredBy || 'System')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="viewDetails(${exec.id})" class="text-blue-600 hover:text-blue-900">
-                                <i data-lucide="eye" class="h-4 w-4 inline"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            tbody.innerHTML = combined.map(exec =>
+                exec._type === 'import' ? renderImportRow(exec) : renderExportRow(exec)
+            ).join('');
 
             queueLucideRender();
         }
@@ -525,7 +600,8 @@
                 'Success': '<span class="px-2 py-1 text-xs font-semibold text-green-800 bg-green-100 rounded-full">Success</span>',
                 'Failed': '<span class="px-2 py-1 text-xs font-semibold text-red-800 bg-red-100 rounded-full">Failed</span>',
                 'Running': '<span class="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full">Running</span>',
-                'Partial': '<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-full">Partial</span>'
+                'Partial': '<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-full">Partial</span>',
+                'PartialSuccess': '<span class="px-2 py-1 text-xs font-semibold text-yellow-800 bg-yellow-100 rounded-full">Partial</span>'
             };
             return badges[status] || '<span class="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 rounded-full">Unknown</span>';
         }
@@ -746,160 +822,186 @@
                     }
                 }
 
+                // Pre-compute values for cleaner template
+                const statusBadgeClass = {
+                    'Success': 'bg-green-100 text-green-800',
+                    'Failed': 'bg-red-100 text-red-800',
+                    'Running': 'bg-blue-100 text-blue-800',
+                    'PartialSuccess': 'bg-yellow-100 text-yellow-800'
+                }[execution.status] || 'bg-gray-100 text-gray-800';
+
+                const startDate = parseDate(execution.startedAt);
+                const endDate = execution.completedAt ? parseDate(execution.completedAt) : null;
+
+                let outputFileHtml = '';
+                if (execution.outputPath) {
+                    const match = execution.outputPath.match(/exports\/[\d-]+\/([^\/]+)\//);
+                    const token = match ? match[1] : '';
+                    const filename = execution.outputPath.split('/').pop();
+                    outputFileHtml = token
+                        ? `<a href="/api/executions/download/${token}" class="text-sm text-blue-600 hover:underline break-all" download>${escapeHtml(filename)}</a>`
+                        : `<span class="text-sm text-gray-700 break-all">${escapeHtml(filename || '-')}</span>`;
+                }
+
                 let detailsHtml = `
-                    <div class="grid grid-cols-2 gap-4">
+                    <!-- Header -->
+                    <div class="flex items-start justify-between mb-4">
                         <div>
-                            <p class="text-sm font-medium text-gray-500">Profile</p>
-                            <p class="mt-1 text-sm text-gray-900">${escapeHtml(profileName)}</p>
+                            <h2 class="text-xl font-bold text-gray-900">${escapeHtml(profileName)}</h2>
+                            <p class="text-sm text-gray-500 mt-0.5">
+                                Execution #${execution.id}
+                                &middot; Triggered by ${escapeHtml(execution.triggeredBy || 'System')}
+                                ${execution.jobId ? `&middot; Job: ${jobInfo}` : ''}
+                            </p>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Status</p>
-                            <p class="mt-1">${getStatusBadge(execution.status)}</p>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClass} ml-4 flex-shrink-0">
+                            ${execution.status || 'Unknown'}
+                        </span>
+                    </div>
+
+                    <!-- Timing -->
+                    <div class="grid grid-cols-4 gap-3 mb-4">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Started</p>
+                            <p class="text-sm font-semibold text-gray-900">${startDate ? startDate.toLocaleTimeString() : '-'}</p>
+                            <p class="text-xs text-gray-400">${startDate ? startDate.toLocaleDateString() : ''}</p>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Connection</p>
-                            <p class="mt-1 text-sm text-gray-900">${connectionInfo}</p>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Completed</p>
+                            <p class="text-sm font-semibold text-gray-900">${endDate ? endDate.toLocaleTimeString() : (execution.status === 'Running' ? 'Running\u2026' : '-')}</p>
+                            <p class="text-xs text-gray-400">${endDate ? endDate.toLocaleDateString() : ''}</p>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Destination</p>
-                            <p class="mt-1 text-sm text-gray-900">${destinationInfo}</p>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Duration</p>
+                            <p class="text-sm font-semibold text-gray-900">${execution.executionTimeMs ? (execution.executionTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
                         </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Job</p>
-                            <p class="mt-1 text-sm text-gray-900">${jobInfo}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Triggered By</p>
-                            <p class="mt-1 text-sm text-gray-900">${escapeHtml(execution.triggeredBy || 'System')}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Started At</p>
-                            <p class="mt-1 text-sm text-gray-900">${parseDate(execution.startedAt)?.toLocaleString() || '-'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Completed At</p>
-                            <p class="mt-1 text-sm text-gray-900">${execution.completedAt ? parseDate(execution.completedAt)?.toLocaleString() : 'Not yet'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Execution Time</p>
-                            <p class="mt-1 text-sm text-gray-900">${execution.executionTimeMs ? (execution.executionTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Row Count</p>
-                            <p class="mt-1 text-sm text-gray-900">${execution.rowCount || 0}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">File Size</p>
-                            <p class="mt-1 text-sm text-gray-900">${execution.fileSizeBytes ? formatBytes(execution.fileSizeBytes) : '-'}</p>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-500">Output File</p>
-                            <p class="mt-1 text-sm text-gray-900 break-all">${execution.outputPath ? (() => {
-                                const match = execution.outputPath.match(/exports\/[\d-]+\/([^\/]+)\//);
-                                const token = match ? match[1] : '';
-                                const filename = execution.outputPath.split('/').pop();
-                                return token ? `<a href="/api/executions/download/${token}" class="text-blue-600 hover:underline" download>${escapeHtml(filename)}</a>` : escapeHtml(filename || '-');
-                            })() : '-'}</p>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Output</p>
+                            <p class="text-sm font-semibold text-gray-900">${(execution.rowCount || 0).toLocaleString()} rows</p>
+                            ${execution.fileSizeBytes ? `<p class="text-xs text-gray-400">${formatBytes(execution.fileSizeBytes)}</p>` : ''}
                         </div>
                     </div>
-                    
+
+                    ${connectionInfo !== '-' || destinationInfo !== '-' ? `
+                    <!-- Data Flow -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Data Flow</p>
+                        <div class="flex items-center flex-wrap gap-2">
+                            ${connectionInfo !== '-' ? `
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-blue-50 text-blue-800 border border-blue-200">
+                                <i data-lucide="database" class="h-3.5 w-3.5 mr-1.5"></i>
+                                ${connectionInfo}
+                            </span>
+                            <span class="text-gray-400 font-medium">&rarr;</span>
+                            ` : ''}
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-purple-50 text-purple-800 border border-purple-200">
+                                <i data-lucide="file-text" class="h-3.5 w-3.5 mr-1.5"></i>
+                                Export
+                            </span>
+                            ${destinationInfo !== '-' ? `
+                            <span class="text-gray-400 font-medium">&rarr;</span>
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium bg-green-50 text-green-800 border border-green-200">
+                                <i data-lucide="send" class="h-3.5 w-3.5 mr-1.5"></i>
+                                ${destinationInfo}
+                            </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    ${execution.outputPath ? `
+                    <!-- Output File -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Output File</p>
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="file" class="h-4 w-4 text-gray-400 flex-shrink-0"></i>
+                            ${outputFileHtml}
+                        </div>
+                    </div>
+                    ` : ''}
+
                     ${execution.preProcessStatus ? `
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <div class="flex items-center mb-3">
-                                <i data-lucide="play" class="h-5 w-5 text-green-600 mr-2"></i>
-                                <h4 class="text-sm font-semibold text-gray-700">Pre-Processing Phase</h4>
+                    <!-- Pre-Processing -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <i data-lucide="play" class="h-4 w-4 text-green-600 mr-2"></i>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pre-Processing</p>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-500">Status</p>
-                                    <p class="mt-1">${getStatusBadge(execution.preProcessStatus)}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-500">Duration</p>
-                                    <p class="mt-1 text-sm text-gray-900">${execution.preProcessTimeMs ? (execution.preProcessTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
-                                </div>
-                                ${execution.preProcessStartedAt ? `
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-500">Started</p>
-                                        <p class="mt-1 text-sm text-gray-900">${parseDate(execution.preProcessStartedAt)?.toLocaleString() || '-'}</p>
-                                    </div>
-                                ` : ''}
-                                ${execution.preProcessCompletedAt ? `
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-500">Completed</p>
-                                        <p class="mt-1 text-sm text-gray-900">${parseDate(execution.preProcessCompletedAt)?.toLocaleString() || '-'}</p>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            ${execution.preProcessError ? `
-                                <div class="mt-3">
-                                    <p class="text-sm font-medium text-gray-500 mb-2">Error</p>
-                                    <div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.preProcessError).trim()}</div>
-                                </div>
-                            ` : ''}
+                            ${getStatusBadge(execution.preProcessStatus)}
                         </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <p class="text-xs text-gray-500">Duration</p>
+                                <p class="text-sm font-medium text-gray-900">${execution.preProcessTimeMs ? (execution.preProcessTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
+                            </div>
+                            ${execution.preProcessStartedAt ? `<div>
+                                <p class="text-xs text-gray-500">Started</p>
+                                <p class="text-sm font-medium text-gray-900">${parseDate(execution.preProcessStartedAt)?.toLocaleTimeString() || '-'}</p>
+                            </div>` : ''}
+                            ${execution.preProcessCompletedAt ? `<div>
+                                <p class="text-xs text-gray-500">Completed</p>
+                                <p class="text-sm font-medium text-gray-900">${parseDate(execution.preProcessCompletedAt)?.toLocaleTimeString() || '-'}</p>
+                            </div>` : ''}
+                        </div>
+                        ${execution.preProcessError ? `
+                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.preProcessError).trim()}</div>
+                        ` : ''}
+                    </div>
                     ` : ''}
-                    
+
                     ${execution.postProcessStatus ? `
-                        <div class="mt-6 pt-6 border-t border-gray-200">
-                            <div class="flex items-center mb-3">
-                                <i data-lucide="check-circle" class="h-5 w-5 text-blue-600 mr-2"></i>
-                                <h4 class="text-sm font-semibold text-gray-700">Post-Processing Phase</h4>
+                    <!-- Post-Processing -->
+                    <div class="border border-gray-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center">
+                                <i data-lucide="check-circle" class="h-4 w-4 text-blue-600 mr-2"></i>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Post-Processing</p>
                             </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm font-medium text-gray-500">Status</p>
-                                    <p class="mt-1">${getStatusBadge(execution.postProcessStatus)}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm font-medium text-gray-500">Duration</p>
-                                    <p class="mt-1 text-sm text-gray-900">${execution.postProcessTimeMs ? (execution.postProcessTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
-                                </div>
-                                ${execution.postProcessStartedAt ? `
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-500">Started</p>
-                                        <p class="mt-1 text-sm text-gray-900">${parseDate(execution.postProcessStartedAt)?.toLocaleString() || '-'}</p>
-                                    </div>
-                                ` : ''}
-                                ${execution.postProcessCompletedAt ? `
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-500">Completed</p>
-                                        <p class="mt-1 text-sm text-gray-900">${parseDate(execution.postProcessCompletedAt)?.toLocaleString() || '-'}</p>
-                                    </div>
-                                ` : ''}
-                            </div>
-                            ${execution.postProcessError ? `
-                                <div class="mt-3">
-                                    <p class="text-sm font-medium text-gray-500 mb-2">Error</p>
-                                    <div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.postProcessError).trim()}</div>
-                                </div>
-                            ` : ''}
+                            ${getStatusBadge(execution.postProcessStatus)}
                         </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <p class="text-xs text-gray-500">Duration</p>
+                                <p class="text-sm font-medium text-gray-900">${execution.postProcessTimeMs ? (execution.postProcessTimeMs / 1000).toFixed(2) + 's' : '-'}</p>
+                            </div>
+                            ${execution.postProcessStartedAt ? `<div>
+                                <p class="text-xs text-gray-500">Started</p>
+                                <p class="text-sm font-medium text-gray-900">${parseDate(execution.postProcessStartedAt)?.toLocaleTimeString() || '-'}</p>
+                            </div>` : ''}
+                            ${execution.postProcessCompletedAt ? `<div>
+                                <p class="text-xs text-gray-500">Completed</p>
+                                <p class="text-sm font-medium text-gray-900">${parseDate(execution.postProcessCompletedAt)?.toLocaleTimeString() || '-'}</p>
+                            </div>` : ''}
+                        </div>
+                        ${execution.postProcessError ? `
+                        <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.postProcessError).trim()}</div>
+                        ` : ''}
+                    </div>
                     ` : ''}
-                    
+
                     ${execution.errorMessage ? `
-                        <div class="mt-4">
-                            <div class="flex justify-between items-center mb-2">
-                                <p class="text-sm font-medium text-gray-500">Error Message</p>
-                                <button onclick="copyToClipboard('${escapeHtml(execution.errorMessage).replace(/'/g, "\\'").replace(/\n/g, "\\n")}', this)" class="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 flex items-center">
-                                    <i data-lucide="copy" class="h-3 w-3 mr-1"></i>
-                                    Copy
-                                </button>
-                            </div>
-                            <div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.errorMessage).trim()}</div>
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Error</p>
+                            <button onclick="copyToClipboard('${escapeHtml(execution.errorMessage).replace(/'/g, "\\'").replace(/\n/g, "\\n")}', this)" class="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 flex items-center">
+                                <i data-lucide="copy" class="h-3 w-3 mr-1"></i>Copy
+                            </button>
                         </div>
+                        <div class="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.errorMessage).trim()}</div>
+                    </div>
                     ` : ''}
+
                     ${execution.outputMessage ? `
-                        <div class="mt-4">
-                            <div class="flex justify-between items-center mb-2">
-                                <p class="text-sm font-medium text-gray-500">Response</p>
-                                <button onclick="copyToClipboard('${escapeHtml(execution.outputMessage).replace(/'/g, "\\'").replace(/\n/g, "\\n")}', this)" class="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 flex items-center">
-                                    <i data-lucide="copy" class="h-3 w-3 mr-1"></i>
-                                    Copy
-                                </button>
-                            </div>
-                            <div class="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.outputMessage).trim()}</div>
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Response</p>
+                            <button onclick="copyToClipboard('${escapeHtml(execution.outputMessage).replace(/'/g, "\\'").replace(/\n/g, "\\n")}', this)" class="text-xs px-2 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded hover:bg-gray-50 flex items-center">
+                                <i data-lucide="copy" class="h-3 w-3 mr-1"></i>Copy
+                            </button>
                         </div>
+                        <div class="p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800 font-mono whitespace-pre-wrap">${escapeHtml(execution.outputMessage).trim()}</div>
+                    </div>
                     ` : ''}
                 `;
 
@@ -927,6 +1029,36 @@
                 // Load split details asynchronously if needed
                 if (execution.wasSplit) {
                     await loadSplitDetails(id);
+                }
+
+                // Load per-recipient failure records if there were send failures
+                if ((execution.splitFailureCount ?? 0) > 0) {
+                    try {
+                        const errRes = await fetch(`${API_BASE}/api/executions/${execution.id}/errors`, {
+                            headers: getAuthHeaders()
+                        });
+                        if (errRes.ok) {
+                            const errs = await errRes.json();
+                            if (errs.length > 0) {
+                                const errSection = document.createElement('div');
+                                errSection.className = 'border border-red-200 rounded-lg p-3 bg-red-50 mt-4';
+                                errSection.innerHTML = `
+                                    <p class="text-xs font-semibold text-red-500 uppercase tracking-wider mb-2">
+                                        Send Failures (${errs.length})
+                                    </p>
+                                    <ul class="space-y-1">
+                                    ${errs.map(e => `
+                                        <li class="text-xs text-red-800">
+                                            <span class="font-medium">${escapeHtml(e.detail ?? e.errorType)}</span>
+                                            — ${escapeHtml(e.errorMessage)}
+                                        </li>`).join('')}
+                                    </ul>`;
+                                document.getElementById('execution-details').appendChild(errSection);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error loading execution errors:', e);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading execution details:', error);
@@ -1107,12 +1239,13 @@
         });
 
         async function refreshExecutions() {
-            await loadExecutions();
+            await Promise.all([loadExecutions(), loadImportExecutions()]);
         }
 
         async function checkRunningExecutions() {
-            const runningExecutions = executions.filter(e => e.status === 'Running');
-            if (runningExecutions.length > 0) {
+            const hasRunning = executions.some(e => e.status === 'Running') ||
+                               importExecutions.some(e => e.status === 'Running');
+            if (hasRunning) {
                 await refreshExecutions();
             }
         }
@@ -1243,22 +1376,22 @@
 
         // ── Import Executions ──────────────────────────────────────────────
 
-        let importProfiles = [];
-
         async function loadImportExecutions() {
             try {
-                // Load all import profiles to get names
                 const pResp = await fetch(`${API_BASE}/api/profiles?type=import`, {
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                    headers: getAuthHeaders()
                 });
-                if (pResp.ok) importProfiles = await pResp.json();
+                if (pResp.ok) {
+                    importProfiles = await pResp.json();
+                    populateImportProfileFilters();
+                }
 
-                // Load recent executions for all profiles (last 5 per profile)
+                // Load recent executions per profile (up to 10 each, 50 total)
                 const allExecs = [];
                 for (const p of importProfiles) {
                     try {
-                        const eResp = await fetch(`${API_BASE}/api/profiles/${p.id}/executions?type=import&limit=5`, {
-                            headers: { 'Authorization': `Bearer ${localStorage.getItem('reef_token')}` }
+                        const eResp = await fetch(`${API_BASE}/api/profiles/${p.id}/executions?type=import&limit=10`, {
+                            headers: getAuthHeaders()
                         });
                         if (eResp.ok) {
                             const execs = await eResp.json();
@@ -1268,64 +1401,14 @@
                     } catch {}
                 }
 
-                // Sort by startedAt descending, take most recent 50
                 allExecs.sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt));
-                renderImportExecutions(allExecs.slice(0, 50));
+                importExecutions = allExecs.slice(0, 50);
+
+                // Re-render unified table with import rows included
+                renderExecutions();
             } catch (e) {
-                document.getElementById('import-executions-tbody').innerHTML =
-                    `<tr><td colspan="7" class="px-6 py-4 text-center text-red-500">Failed to load: ${escapeHtml(e.message)}</td></tr>`;
+                console.error('Error loading import executions:', e);
             }
-        }
-
-        function renderImportExecutions(execs) {
-            const tbody = document.getElementById('import-executions-tbody');
-            if (!execs || execs.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">
-                    <i data-lucide="upload" class="h-10 w-10 mx-auto mb-2 text-gray-300"></i>
-                    <p>No import executions found.</p></td></tr>`;
-                queueLucideRender();
-                return;
-            }
-
-            const statusColors = {
-                'Running': 'bg-blue-100 text-blue-800',
-                'Success': 'bg-green-100 text-green-800',
-                'PartialSuccess': 'bg-yellow-100 text-yellow-800',
-                'Failed': 'bg-red-100 text-red-800',
-            };
-
-            tbody.innerHTML = execs.map(e => {
-                const color = statusColors[e.status] || 'bg-gray-100 text-gray-800';
-                const started = new Date(e.startedAt).toLocaleString();
-                let duration = '—';
-                if (e.completedAt) {
-                    const ms = new Date(e.completedAt) - new Date(e.startedAt);
-                    duration = ms < 60000 ? `${(ms/1000).toFixed(1)}s` : `${(ms/60000).toFixed(1)}m`;
-                }
-                const rows = `${e.rowsInserted ?? 0} / ${e.rowsUpdated ?? 0} / ${e.rowsFailed ?? 0}`;
-                return `
-                    <tr class="hover:bg-slate-50 transition-colors border-l-4 border-transparent hover:border-indigo-400">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center text-sm font-medium text-gray-900">
-                                <i data-lucide="upload" class="h-4 w-4 text-indigo-400 mr-2"></i>
-                                ${escapeHtml(e._profileName || `Profile #${e.importProfileId}`)}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full ${color}">${escapeHtml(e.status)}</span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${started}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${duration}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-700">${rows}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(e.currentPhase || '—')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right">
-                            <button onclick="viewImportExecution(${e.id})" class="text-blue-600 hover:text-blue-800 text-sm mr-2">
-                                <i data-lucide="eye" class="h-4 w-4 inline"></i> Details
-                            </button>
-                        </td>
-                    </tr>`;
-            }).join('');
-            queueLucideRender();
         }
 
         async function viewImportExecution(execId) {
@@ -1347,70 +1430,186 @@
                 const exec = await eResp.json();
                 const errors = errResp.ok ? await errResp.json() : [];
 
-                const profileName = importProfiles.find(p => p.id === exec.importProfileId)?.name
-                    || `Profile #${exec.importProfileId}`;
+                const profile = importProfiles.find(p => p.id === exec.importProfileId);
+                const profileName = profile?.name || `Profile #${exec.importProfileId}`;
 
-                const statusColor = { Running:'bg-blue-100 text-blue-800', Success:'bg-green-100 text-green-800',
-                    PartialSuccess:'bg-yellow-100 text-yellow-800', Failed:'bg-red-100 text-red-800' }[exec.status] || 'bg-gray-100 text-gray-800';
+                const statusColor = {
+                    Running: 'bg-blue-100 text-blue-800',
+                    Success: 'bg-green-100 text-green-800',
+                    PartialSuccess: 'bg-yellow-100 text-yellow-800',
+                    Failed: 'bg-red-100 text-red-800'
+                }[exec.status] || 'bg-gray-100 text-gray-800';
+
+                // Timing
+                const durationMs = exec.completedAt
+                    ? new Date(exec.completedAt) - new Date(exec.startedAt) : null;
+                const durationStr = durationMs != null
+                    ? (durationMs < 60000 ? `${(durationMs / 1000).toFixed(1)}s` : `${(durationMs / 60000).toFixed(1)}m`)
+                    : 'Running…';
+                const throughput = durationMs && exec.totalRowsRead > 0
+                    ? `${Math.round(exec.totalRowsRead / (durationMs / 1000))} rows/s` : null;
+
+                const fmtBytes = (b) => {
+                    if (!b) return '—';
+                    if (b > 1048576) return `${(b / 1048576).toFixed(1)} MB`;
+                    if (b > 1024) return `${(b / 1024).toFixed(1)} KB`;
+                    return `${b} B`;
+                };
+
+                // Phase timings
+                let phaseTimings = null;
+                if (exec.phaseTimingsJson) { try { phaseTimings = JSON.parse(exec.phaseTimingsJson); } catch {} }
+
+                // Data flow labels (from profile)
+                const sourceType  = profile?.sourceType  || '—';
+                const sourceFormat = profile?.sourceFormat || '—';
+                const loadStrategy = profile?.loadStrategy || '—';
+                const targetType   = profile?.targetType   || 'Database';
+                const targetTable  = targetType === 'LocalFile' ? 'Local File' : (profile?.targetTable  || '—');
+                const targetDesc   = targetType === 'LocalFile'
+                    ? (profile?.localTargetFormat || 'File')
+                    : (profile?.targetConnectionName || (profile?.targetConnectionId ? `Connection #${profile.targetConnectionId}` : '—'));
 
                 body.innerHTML = `
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
+                    <div class="space-y-5">
+
+                        <!-- Header -->
+                        <div class="flex items-start justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-700">${escapeHtml(profileName)}</p>
-                                <p class="text-xs text-gray-500">Execution #${exec.id} · ${new Date(exec.startedAt).toLocaleString()}</p>
+                                <p class="font-semibold text-gray-900">${escapeHtml(profileName)}</p>
+                                <p class="text-xs text-gray-500 mt-0.5">
+                                    Execution #${exec.id}${exec.triggeredBy ? ` · Triggered by <span class="font-medium text-gray-700">${escapeHtml(exec.triggeredBy)}</span>` : ''}
+                                </p>
                             </div>
-                            <span class="px-3 py-1 text-sm font-semibold rounded-full ${statusColor}">${escapeHtml(exec.status)}</span>
+                            <span class="px-3 py-1 text-sm font-semibold rounded-full ${statusColor} shrink-0 ml-3">${escapeHtml(exec.status)}</span>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-3">
-                            ${[
-                                ['Inserted', exec.rowsInserted ?? 0, 'text-green-600'],
-                                ['Updated', exec.rowsUpdated ?? 0, 'text-blue-600'],
-                                ['Skipped', exec.rowsSkipped ?? 0, 'text-gray-600'],
-                                ['Failed', exec.rowsFailed ?? 0, 'text-red-600'],
-                                ['Deleted', exec.rowsDeleted ?? 0, 'text-orange-600'],
-                                ['Total Read', exec.totalRowsRead ?? 0, 'text-gray-700'],
-                            ].map(([label, val, cls]) =>
-                                `<div class="bg-gray-50 rounded-lg p-3 text-center">
-                                    <p class="text-xs text-gray-500">${label}</p>
-                                    <p class="text-xl font-bold ${cls}">${val}</p>
-                                </div>`
-                            ).join('')}
+                        <!-- Timing -->
+                        <div class="grid grid-cols-4 gap-3 text-center">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-xs text-gray-500 mb-1">Started</p>
+                                <p class="text-sm font-medium text-gray-900">${new Date(exec.startedAt).toLocaleTimeString()}</p>
+                                <p class="text-xs text-gray-400">${new Date(exec.startedAt).toLocaleDateString()}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-xs text-gray-500 mb-1">Completed</p>
+                                <p class="text-sm font-medium text-gray-900">${exec.completedAt ? new Date(exec.completedAt).toLocaleTimeString() : '—'}</p>
+                                <p class="text-xs text-gray-400">${exec.completedAt ? new Date(exec.completedAt).toLocaleDateString() : 'Still running'}</p>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-xs text-gray-500 mb-1">Duration</p>
+                                <p class="text-sm font-bold text-gray-900">${durationStr}</p>
+                                ${throughput ? `<p class="text-xs text-gray-400">${throughput}</p>` : ''}
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <p class="text-xs text-gray-500 mb-1">Files / Size</p>
+                                <p class="text-sm font-medium text-gray-900">${exec.filesProcessed ?? 0} file${(exec.filesProcessed ?? 0) !== 1 ? 's' : ''}</p>
+                                <p class="text-xs text-gray-400">${fmtBytes(exec.bytesProcessed)}</p>
+                            </div>
                         </div>
 
-                        ${exec.deltaSyncNewRows || exec.deltaSyncChangedRows ? `
-                        <div class="bg-indigo-50 rounded-lg p-3">
-                            <p class="text-xs font-medium text-indigo-700 mb-1">Smart Sync</p>
-                            <div class="flex gap-4 text-xs text-indigo-600">
-                                <span>New: ${exec.deltaSyncNewRows ?? 0}</span>
-                                <span>Changed: ${exec.deltaSyncChangedRows ?? 0}</span>
-                                <span>Unchanged: ${exec.deltaSyncUnchangedRows ?? 0}</span>
-                                <span>Deleted: ${exec.deltaSyncDeletedRows ?? 0}</span>
+                        <!-- Data flow -->
+                        ${profile ? `
+                        <div class="border border-gray-200 rounded-lg p-3">
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Data Flow</p>
+                            <div class="flex items-center gap-2 flex-wrap text-sm">
+                                <span class="px-2 py-1 rounded bg-blue-50 text-blue-700 font-medium">${escapeHtml(sourceType)}</span>
+                                <span class="text-gray-300">→</span>
+                                <span class="px-2 py-1 rounded bg-gray-100 text-gray-600">${escapeHtml(sourceFormat)}</span>
+                                <span class="text-gray-300">→</span>
+                                <span class="px-2 py-1 rounded bg-purple-50 text-purple-700 font-medium">${escapeHtml(loadStrategy)}</span>
+                                <span class="text-gray-300">→</span>
+                                <span class="px-2 py-1 rounded bg-green-50 text-green-700 font-mono text-xs font-semibold">${escapeHtml(targetTable)}</span>
+                                <span class="text-gray-400 text-xs">(${escapeHtml(targetDesc)})</span>
                             </div>
                         </div>` : ''}
 
+                        <!-- Row statistics -->
+                        <div>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Row Statistics</p>
+                            <div class="grid grid-cols-3 gap-3">
+                                ${[
+                                    ['Total Read', exec.totalRowsRead ?? 0, 'text-gray-700'],
+                                    ['Inserted',   exec.rowsInserted  ?? 0, 'text-green-600'],
+                                    ['Updated',    exec.rowsUpdated   ?? 0, 'text-blue-600'],
+                                    ['Skipped',    exec.rowsSkipped   ?? 0, 'text-gray-500'],
+                                    ['Deleted',    exec.rowsDeleted   ?? 0, 'text-orange-600'],
+                                    ['Failed',     exec.rowsFailed    ?? 0, 'text-red-600'],
+                                ].map(([label, val, cls]) =>
+                                    `<div class="bg-gray-50 rounded-lg p-3 text-center">
+                                        <p class="text-xs text-gray-500">${label}</p>
+                                        <p class="text-xl font-bold ${cls}">${val}</p>
+                                    </div>`
+                                ).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Pipeline phases -->
+                        ${phaseTimings && Object.keys(phaseTimings).length > 0 ? (() => {
+                            const maxMs = Math.max(...Object.values(phaseTimings));
+                            return `
+                            <div>
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Pipeline Phases</p>
+                                <div class="space-y-2">
+                                    ${Object.entries(phaseTimings).map(([phase, ms]) => {
+                                        const pct = maxMs > 0 ? Math.round((ms / maxMs) * 100) : 0;
+                                        const dur = ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(2)}s`;
+                                        return `
+                                        <div>
+                                            <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                                <span class="font-medium">${escapeHtml(phase)}</span>
+                                                <span class="text-gray-400">${dur}</span>
+                                            </div>
+                                            <div class="w-full bg-gray-100 rounded-full h-1.5">
+                                                <div class="bg-indigo-400 h-1.5 rounded-full" style="width:${pct}%"></div>
+                                            </div>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>`;
+                        })() : ''}
+
+                        <!-- Smart Sync -->
+                        ${(exec.deltaSyncNewRows || exec.deltaSyncChangedRows || exec.deltaSyncUnchangedRows || exec.deltaSyncDeletedRows) ? `
+                        <div class="bg-indigo-50 rounded-lg p-3">
+                            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wider mb-2">Smart Sync</p>
+                            <div class="grid grid-cols-4 gap-2 text-center">
+                                <div><p class="text-xs text-indigo-400">New</p><p class="text-lg font-bold text-indigo-700">${exec.deltaSyncNewRows ?? 0}</p></div>
+                                <div><p class="text-xs text-indigo-400">Changed</p><p class="text-lg font-bold text-indigo-700">${exec.deltaSyncChangedRows ?? 0}</p></div>
+                                <div><p class="text-xs text-indigo-400">Unchanged</p><p class="text-lg font-bold text-indigo-700">${exec.deltaSyncUnchangedRows ?? 0}</p></div>
+                                <div><p class="text-xs text-indigo-400">Deleted</p><p class="text-lg font-bold text-indigo-700">${exec.deltaSyncDeletedRows ?? 0}</p></div>
+                            </div>
+                        </div>` : ''}
+
+                        <!-- Error -->
                         ${exec.errorMessage ? `
                         <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-                            <p class="text-xs font-medium text-red-700 mb-1">Error</p>
-                            <pre class="text-xs text-red-600 whitespace-pre-wrap">${escapeHtml(exec.errorMessage)}</pre>
+                            <p class="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2">Error</p>
+                            <pre class="text-xs text-red-700 whitespace-pre-wrap">${escapeHtml(exec.errorMessage)}</pre>
+                            ${exec.stackTrace ? `
+                            <details class="mt-2">
+                                <summary class="text-xs text-red-400 cursor-pointer hover:text-red-600 select-none">Stack trace</summary>
+                                <pre class="mt-2 text-xs text-red-400 whitespace-pre-wrap overflow-x-auto max-h-40">${escapeHtml(exec.stackTrace)}</pre>
+                            </details>` : ''}
                         </div>` : ''}
 
+                        <!-- Row errors -->
                         ${errors.length > 0 ? `
                         <div>
-                            <h4 class="text-sm font-medium text-gray-700 mb-2">Row Errors (${errors.length})</h4>
+                            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Row Errors (${errors.length})</p>
                             <div class="max-h-48 overflow-y-auto border rounded divide-y text-xs">
                                 ${errors.map(e => `
                                     <div class="px-3 py-2">
                                         <div class="flex justify-between">
                                             <span class="font-medium text-red-700">${escapeHtml(e.errorType || 'Error')}</span>
-                                            <span class="text-gray-400">Row ${e.rowNumber ?? '?'}</span>
+                                            <span class="text-gray-400">Row ${e.rowNumber ?? '?'}${e.phase ? ` · ${escapeHtml(e.phase)}` : ''}</span>
                                         </div>
                                         <p class="text-gray-600 mt-0.5">${escapeHtml(e.errorMessage)}</p>
-                                        ${e.rowDataJson ? `<pre class="text-gray-400 text-xs mt-0.5 truncate">${escapeHtml(e.rowDataJson.substring(0,100))}</pre>` : ''}
+                                        ${e.rowDataJson ? `<pre class="text-gray-400 mt-0.5 truncate">${escapeHtml(e.rowDataJson.substring(0, 120))}</pre>` : ''}
                                     </div>`).join('')}
                             </div>
                         </div>` : ''}
+
                     </div>`;
             } catch (e) {
                 body.innerHTML = `<p class="text-red-500 text-center py-8">Error: ${escapeHtml(e.message)}</p>`;
@@ -1421,10 +1620,6 @@
             document.getElementById('import-exec-modal').classList.add('hidden');
         }
 
-        // Load import executions on page init
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => loadImportExecutions(), 800);
-        });
 
     </script>
 </body>

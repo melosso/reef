@@ -170,7 +170,7 @@ public class EmailExportService
     /// <param name="emailTemplate">Scriban template for email body (HTML)</param>
     /// <param name="queryResults">Query result rows from execution</param>
     /// <returns>Success status, message, success count, failure count, and split details</returns>
-    public async Task<(bool Success, string? Message, int SuccessCount, int FailureCount, List<ProfileExecutionSplit> Splits)> ExportToEmailAsync(
+    public async Task<(bool Success, string? Message, int SuccessCount, int FailureCount, List<ProfileExecutionSplit> Splits, List<(string Recipient, string Error)> Failures)> ExportToEmailAsync(
         Profile profile,
         Destination emailDestination,
         QueryTemplate emailTemplate,
@@ -178,20 +178,22 @@ public class EmailExportService
     {
         try
         {
+            var _emptyFailures = new List<(string Recipient, string Error)>();
+
             if (!profile.IsEmailExport)
             {
-                return (false, "Profile is not configured as email export", 0, 0, new List<ProfileExecutionSplit>());
+                return (false, "Profile is not configured as email export", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             if (queryResults == null || queryResults.Count == 0)
             {
                 Log.Information("No query results to email from profile {ProfileId}", profile.Id);
-                return (true, "No rows returned from query", 0, 0, new List<ProfileExecutionSplit>());
+                return (true, "No rows returned from query", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             if (string.IsNullOrEmpty(emailDestination.ConfigurationJson))
             {
-                return (false, "Email destination configuration is empty", 0, 0, new List<ProfileExecutionSplit>());
+                return (false, "Email destination configuration is empty", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             var emailConfig = JsonSerializer.Deserialize<EmailDestinationConfiguration>(
@@ -199,25 +201,26 @@ public class EmailExportService
 
             if (emailConfig == null)
             {
-                return (false, "Invalid email destination configuration", 0, 0, new List<ProfileExecutionSplit>());
+                return (false, "Invalid email destination configuration", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             // Validate template is present
             if (emailTemplate == null || string.IsNullOrEmpty(emailTemplate.Template))
             {
-                return (false, "Email template not found or empty", 0, 0, new List<ProfileExecutionSplit>());
+                return (false, "Email template not found or empty", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             // Validate recipients are configured (either column or hardcoded)
             if (string.IsNullOrEmpty(profile.EmailRecipientsColumn) && string.IsNullOrEmpty(profile.EmailRecipientsHardcoded))
             {
-                return (false, "Email recipients column or hardcoded email not configured", 0, 0, new List<ProfileExecutionSplit>());
+                return (false, "Email recipients column or hardcoded email not configured", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
             var successCount = 0;
             var failureCount = 0;
             var errors = new List<string>();
             var splits = new List<ProfileExecutionSplit>();
+            var failures = new List<(string Recipient, string Error)>();
 
             // Parse attachment configuration if present
             AttachmentConfig? attachmentConfig = null;
@@ -284,6 +287,10 @@ public class EmailExportService
                             ErrorMessage = result.Error,
                             CompletedAt = DateTime.UtcNow
                         });
+                        var failureRecipient = profile.UseHardcodedRecipients
+                            ? (profile.EmailRecipientsHardcoded ?? "unknown")
+                            : (SafeGetValue(group.First(), profile.EmailRecipientsColumn ?? "")?.ToString() ?? "unknown");
+                        failures.Add((failureRecipient, result.Error ?? "Unknown error"));
                     }
                 }
             }
@@ -324,11 +331,11 @@ public class EmailExportService
                         queryResults,
                         attachmentConfig);
                     
-                    var recipient = useHardcodedRecipient 
+                    var recipient = useHardcodedRecipient
                         ? (profile.EmailRecipientsHardcoded ?? "unknown")
                         : (firstRecipient ?? "unknown");
                     var splitKey = MaskEmailForLog(recipient);
-                    
+
                     if (result.Success)
                     {
                         successCount++;
@@ -355,6 +362,7 @@ public class EmailExportService
                             ErrorMessage = result.Error,
                             CompletedAt = DateTime.UtcNow
                         });
+                        failures.Add((recipient, result.Error ?? "Unknown error"));
                     }
                 }
                 else
@@ -403,6 +411,7 @@ public class EmailExportService
                             ErrorMessage = result.Error,
                             CompletedAt = DateTime.UtcNow
                         });
+                        failures.Add((recipient, result.Error ?? "Unknown error"));
                     }
                 }
                 }
@@ -415,13 +424,13 @@ public class EmailExportService
             }
 
             Log.Information(message);
-            return (failureCount == 0, message, successCount, failureCount, splits);
+            return (failureCount == 0, message, successCount, failureCount, splits, failures);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Failed to export query results as email from profile {ProfileId}: {Error}",
                 profile.Id, ex.Message);
-            return (false, $"Email export failed: {ex.Message}", 0, 0, new List<ProfileExecutionSplit>());
+            return (false, $"Email export failed: {ex.Message}", 0, 0, new List<ProfileExecutionSplit>(), new List<(string, string)>());
         }
     }
 

@@ -236,6 +236,20 @@ public class ImportExecutionError
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 }
 
+// ===== Delta Sync Stats =====
+
+public record ImportDeltaSyncStats
+{
+    public int ActiveRows { get; init; }
+    public int DeletedRows { get; init; }
+    public int TotalTrackedRows { get; init; }
+    public string? LastSyncDate { get; init; }
+    public int NewRowsLastRun { get; init; }
+    public int ChangedRowsLastRun { get; init; }
+    public int DeletedRowsLastRun { get; init; }
+    public int UnchangedRowsLastRun { get; init; }
+}
+
 // ===== Configuration Models =====
 
 /// <summary>

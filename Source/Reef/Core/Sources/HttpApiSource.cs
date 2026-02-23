@@ -156,11 +156,27 @@ public class HttpApiSource : IImportSource
             var json = await response.Content.ReadAsStringAsync(ct);
             using var doc = JsonDocument.Parse(json);
 
+            // Determine effective root path: prefer HttpDataRootPath, fall back to FormatConfig.DataRootPath
+            var effectiveRootPath = profile.HttpDataRootPath;
+            if (string.IsNullOrWhiteSpace(effectiveRootPath) && !string.IsNullOrWhiteSpace(profile.FormatConfig))
+            {
+                try
+                {
+                    using var fDoc = JsonDocument.Parse(profile.FormatConfig);
+                    if (fDoc.RootElement.TryGetProperty("DataRootPath", out var drpEl)
+                        && drpEl.ValueKind == JsonValueKind.String)
+                    {
+                        effectiveRootPath = drpEl.GetString();
+                    }
+                }
+                catch { /* ignore malformed FormatConfig */ }
+            }
+
             // Extract data array from response
             var dataElement = doc.RootElement;
-            if (!string.IsNullOrWhiteSpace(profile.HttpDataRootPath))
+            if (!string.IsNullOrWhiteSpace(effectiveRootPath))
             {
-                dataElement = NavigatePath(dataElement, profile.HttpDataRootPath);
+                dataElement = NavigatePath(dataElement, effectiveRootPath);
             }
 
             if (dataElement.ValueKind == JsonValueKind.Array)
@@ -174,8 +190,45 @@ public class HttpApiSource : IImportSource
 
                 allRows.AddRange(rows.Select(r => (object)Parsers.JsonImportParser.JsonToDict(r)));
             }
+            else if (dataElement.ValueKind == JsonValueKind.Object && string.IsNullOrWhiteSpace(effectiveRootPath))
+            {
+                // No root path configured — scan for a single array property to use automatically
+                var arrayProps = dataElement.EnumerateObject()
+                    .Where(p => p.Value.ValueKind == JsonValueKind.Array)
+                    .ToList();
+
+                if (arrayProps.Count == 1)
+                {
+                    Log.Warning("HttpApiSource: paginated response is a JSON object; auto-detected data array at " +
+                        "'{Key}'. Set HttpDataRootPath='{Key}' on the profile to avoid this scan.",
+                        arrayProps[0].Name, arrayProps[0].Name);
+                    var rows = arrayProps[0].Value.EnumerateArray().ToList();
+                    if (rows.Count == 0 && pagCfg.StopOnEmptyPage)
+                    {
+                        Log.Debug("HttpApiSource: auto-detected array is empty at page {Page}, stopping", page);
+                        break;
+                    }
+                    allRows.AddRange(rows.Select(r => (object)Parsers.JsonImportParser.JsonToDict(r)));
+                }
+                else if (arrayProps.Count > 1)
+                {
+                    var names = string.Join(", ", arrayProps.Select(p => $"'{p.Name}'"));
+                    throw new InvalidOperationException(
+                        $"Paginated HTTP response is a JSON object with multiple array properties ({names}). " +
+                        "Set HttpDataRootPath on the profile to specify which array contains the data.");
+                }
+                else
+                {
+                    Log.Warning("HttpApiSource: paginated response page {Page} is a JSON object with no array " +
+                        "properties. Treating entire object as a single row.", page);
+                    allRows.Add(Parsers.JsonImportParser.JsonToDict(dataElement));
+                }
+            }
             else if (dataElement.ValueKind == JsonValueKind.Object)
             {
+                // Root path was set but resolved to an object rather than an array — likely a wrong path
+                Log.Warning("HttpApiSource: HttpDataRootPath '{Path}' resolved to a JSON object, not an array. " +
+                    "Check your HttpDataRootPath configuration.", effectiveRootPath);
                 allRows.Add(Parsers.JsonImportParser.JsonToDict(dataElement));
             }
 

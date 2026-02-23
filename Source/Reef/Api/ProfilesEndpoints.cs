@@ -308,18 +308,33 @@ public static class ProfilesEndpoints
             {
                 if (string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
                 {
-                    return Results.BadRequest(new { 
-                        error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true" 
+                    return Results.BadRequest(new {
+                        error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true"
                     });
                 }
-                
+
                 // Validate ReefId column name format (basic SQL identifier validation)
                 if (!System.Text.RegularExpressions.Regex.IsMatch(profile.DeltaSyncReefIdColumn, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 {
-                    return Results.BadRequest(new { 
-                        error = "DeltaSyncReefIdColumn must be a valid SQL identifier" 
+                    return Results.BadRequest(new {
+                        error = "DeltaSyncReefIdColumn must be a valid SQL identifier"
                     });
                 }
+            }
+
+            // Validate email recipient configuration
+            if (profile.IsEmailExport && profile.UseHardcodedRecipients)
+            {
+                if (string.IsNullOrWhiteSpace(profile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = "Hardcoded recipient email is required." });
+                if (!IsValidEmail(profile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = $"'{profile.EmailRecipientsHardcoded}' is not a valid email address." });
+            }
+            if (profile.IsEmailExport && profile.UseHardcodedCc
+                && !string.IsNullOrWhiteSpace(profile.EmailCcHardcoded)
+                && !IsValidEmail(profile.EmailCcHardcoded))
+            {
+                return Results.BadRequest(new { error = $"CC address '{profile.EmailCcHardcoded}' is not a valid email address." });
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
@@ -495,6 +510,21 @@ public static class ProfilesEndpoints
             // Email Approval Workflow Configuration
             existingProfile.EmailApprovalRequired = profile.EmailApprovalRequired;
             existingProfile.EmailApprovalRoles = profile.EmailApprovalRoles;
+
+            // Validate email recipient configuration
+            if (existingProfile.IsEmailExport && existingProfile.UseHardcodedRecipients)
+            {
+                if (string.IsNullOrWhiteSpace(existingProfile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = "Hardcoded recipient email is required." });
+                if (!IsValidEmail(existingProfile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = $"'{existingProfile.EmailRecipientsHardcoded}' is not a valid email address." });
+            }
+            if (existingProfile.IsEmailExport && existingProfile.UseHardcodedCc
+                && !string.IsNullOrWhiteSpace(existingProfile.EmailCcHardcoded)
+                && !IsValidEmail(existingProfile.EmailCcHardcoded))
+            {
+                return Results.BadRequest(new { error = $"CC address '{existingProfile.EmailCcHardcoded}' is not a valid email address." });
+            }
 
             var success = await service.UpdateAsync(existingProfile);
 
@@ -1669,4 +1699,9 @@ public static class ProfilesEndpoints
         public int ConnectionId { get; set; }
         public string Query { get; set; } = string.Empty;
     }
+
+    private static bool IsValidEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) &&
+        System.Text.RegularExpressions.Regex.IsMatch(email.Trim(),
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 }

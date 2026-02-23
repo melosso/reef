@@ -243,6 +243,20 @@ public class ProfileExecutionSplit
 }
 
 /// <summary>
+/// Per-send failure record for email export or other split-based executions
+/// </summary>
+public class ProfileExecutionError
+{
+    public int      Id           { get; set; }
+    public int      ExecutionId  { get; set; }
+    public string   ErrorType    { get; set; } = "Unknown";
+    public string?  Phase        { get; set; }
+    public string?  Detail       { get; set; }  // e.g. recipient address
+    public string   ErrorMessage { get; set; } = "";
+    public DateTime OccurredAt   { get; set; }
+}
+
+/// <summary>
 /// Webhook trigger entity for external integrations
 /// </summary>
 public class WebhookTrigger
@@ -738,6 +752,8 @@ public class NotificationSettings
     public bool NotifyOnJobSuccess { get; set; } = false;
     public bool NotifyOnProfileFailure { get; set; } = true;
     public bool NotifyOnProfileSuccess { get; set; } = false;
+    public bool NotifyOnImportProfileFailure { get; set; } = true;
+    public bool NotifyOnImportProfileSuccess { get; set; } = false;
     public bool NotifyOnDatabaseSizeThreshold { get; set; } = true;
     public long DatabaseSizeThresholdBytes { get; set; } = 1_073_741_824; // 1 GB default
     public bool NotifyOnNewUser { get; set; } = false;

@@ -269,10 +269,13 @@ public class JobExecutorService
         ExecuteProfileJobAsync(Job job, Dictionary<string, object>? parameters)
     {
         // Import profile path
-        if (job.ImportProfileId.HasValue)
+        if (job.ProfileType == "import")
         {
+            if (!job.ProfileId.HasValue)
+                return (false, null, "ProfileId is required for import profile jobs", null);
+
             var execution = await _importExecutionService.ExecuteAsync(
-                job.ImportProfileId.Value,
+                job.ProfileId.Value,
                 $"Job-{job.Id}");
 
             var success = execution.Status is "Success" or "PartialSuccess";
@@ -286,7 +289,7 @@ public class JobExecutorService
         // Export profile path
         if (!job.ProfileId.HasValue)
         {
-            return (false, null, "ProfileId or ImportProfileId is required for ProfileExecution jobs", null);
+            return (false, null, "ProfileId is required for ProfileExecution jobs", null);
         }
 
         // Convert parameters to string dictionary for ExecutionService

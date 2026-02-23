@@ -46,9 +46,11 @@ public class AdminService
             // Get total connections
             var totalConnections = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Connections");
 
-            // Get total profiles
-            var totalProfiles = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Profiles");
-            var activeProfiles = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Profiles WHERE IsEnabled = 1");
+            // Get total profiles (export + import)
+            var totalProfiles = await conn.ExecuteScalarAsync<int>(
+                "SELECT (SELECT COUNT(*) FROM Profiles) + (SELECT COUNT(*) FROM ImportProfiles)");
+            var activeProfiles = await conn.ExecuteScalarAsync<int>(
+                "SELECT (SELECT COUNT(*) FROM Profiles WHERE IsEnabled = 1) + (SELECT COUNT(*) FROM ImportProfiles WHERE IsEnabled = 1)");
 
             // Get total executions
             var totalExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ProfileExecutions");
@@ -924,6 +926,8 @@ public class AdminService
                         NotifyOnJobSuccess = @NotifyOnJobSuccess,
                         NotifyOnProfileFailure = @NotifyOnProfileFailure,
                         NotifyOnProfileSuccess = @NotifyOnProfileSuccess,
+                        NotifyOnImportProfileFailure = @NotifyOnImportProfileFailure,
+                        NotifyOnImportProfileSuccess = @NotifyOnImportProfileSuccess,
                         NotifyOnDatabaseSizeThreshold = @NotifyOnDatabaseSizeThreshold,
                         DatabaseSizeThresholdBytes = @DatabaseSizeThresholdBytes,
                         NotifyOnNewUser = @NotifyOnNewUser,
@@ -948,6 +952,7 @@ public class AdminService
                         IsEnabled, DestinationId, DestinationName,
                         NotifyOnJobFailure, NotifyOnJobSuccess,
                         NotifyOnProfileFailure, NotifyOnProfileSuccess,
+                        NotifyOnImportProfileFailure, NotifyOnImportProfileSuccess,
                         NotifyOnDatabaseSizeThreshold, DatabaseSizeThresholdBytes,
                         NotifyOnNewUser, NotifyOnNewApiKey, NotifyOnNewWebhook,
                         NotifyOnNewEmailApproval, NewEmailApprovalCooldownHours,
@@ -957,6 +962,7 @@ public class AdminService
                         @IsEnabled, @DestinationId, @DestinationName,
                         @NotifyOnJobFailure, @NotifyOnJobSuccess,
                         @NotifyOnProfileFailure, @NotifyOnProfileSuccess,
+                        @NotifyOnImportProfileFailure, @NotifyOnImportProfileSuccess,
                         @NotifyOnDatabaseSizeThreshold, @DatabaseSizeThresholdBytes,
                         @NotifyOnNewUser, @NotifyOnNewApiKey, @NotifyOnNewWebhook,
                         @NotifyOnNewEmailApproval, @NewEmailApprovalCooldownHours,

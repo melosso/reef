@@ -44,6 +44,7 @@ public static class ImportProfilesEndpoints
         g.MapPost("/test-target",           TestTarget);
 
         // ── Delta Sync ─────────────────────────────────────────────────
+        g.MapGet("/{id:int}/delta-sync/stats",    GetDeltaSyncStats);
         g.MapDelete("/{id:int}/delta-sync/reset", ResetDeltaSync);
     }
 
@@ -424,6 +425,35 @@ public static class ImportProfilesEndpoints
     }
 
     // ── Delta Sync ─────────────────────────────────────────────────────
+
+    private static async Task<IResult> GetDeltaSyncStats(
+        int id,
+        [FromServices] ImportProfileService svc)
+    {
+        try
+        {
+            var profile = await svc.GetByIdAsync(id);
+            if (profile is null) return Results.NotFound();
+
+            if (!profile.DeltaSyncEnabled)
+                return Results.Ok(new { enabled = false, message = "Smart Sync is not enabled for this profile" });
+
+            var stats = await svc.GetDeltaSyncStatsAsync(id);
+            return Results.Ok(new
+            {
+                enabled = true,
+                activeRows = stats.ActiveRows,
+                deletedRows = stats.DeletedRows,
+                totalTrackedRows = stats.TotalTrackedRows,
+                lastSyncDate = stats.LastSyncDate,
+                newRowsLastRun = stats.NewRowsLastRun,
+                changedRowsLastRun = stats.ChangedRowsLastRun,
+                deletedRowsLastRun = stats.DeletedRowsLastRun,
+                unchangedRowsLastRun = stats.UnchangedRowsLastRun
+            });
+        }
+        catch (Exception ex) { return ServerError($"getting delta sync stats for import profile {id}", ex); }
+    }
 
     private static async Task<IResult> ResetDeltaSync(
         int id,

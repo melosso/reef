@@ -15,6 +15,7 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
+            background-color: #020617; /* slate-950 */
         }
 
         /* --- Animated Blob Background --- */
@@ -23,7 +24,7 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background-color: #111827; 
+            background-color: #020617; 
         }
 
         .blob {
@@ -35,36 +36,32 @@
         }
 
         .blob.color-1 {
-            background: #1e3a8a;
+            background: #1e3a8a; /* blue-900 */
             width: 450px;
             height: 450px;
             top: -100px;
             left: -150px;
-            /* Slowed down animation */
             animation: move-blob-1 35s infinite alternate ease-in-out;
         }
 
         .blob.color-2 {
-            background: #4c1d95;
+            background: #4c1d95; /* violet-900 to match original depth */
             width: 350px;
             height: 350px;
             bottom: -50px;
             right: -100px;
-            /* Slowed down animation */
             animation: move-blob-2 40s infinite alternate ease-in-out;
         }
         
         .blob.color-3 {
-            background: #312e81;
+            background: #312e81; /* indigo-900 */
             width: 300px;
             height: 300px;
             top: 50%;
             left: 50%;
-            /* Slowed down animation */
             animation: move-blob-3 30s infinite alternate ease-in-out;
         }
 
-        /* Keyframes are unchanged, just the duration */
         @keyframes move-blob-1 {
             from { transform: translate(0, 0) scale(1); }
             to { transform: translate(150px, 200px) scale(1.2); }
@@ -80,8 +77,7 @@
             to { transform: translate(-20px, -200px) scale(1); }
         }
 
-
-        /* --- Fade-in animation for elements --- */
+        /* --- Animations --- */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -93,7 +89,6 @@
             opacity: 0;
         }
 
-        /* --- Slide-down animation for error messages --- */
         @keyframes slideDown {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -103,7 +98,6 @@
             animation: slideDown 0.3s ease-out forwards;
         }
 
-        /* --- Spinner transitions --- */
         #login-spinner {
             transition: opacity 0.3s ease-out, transform 0.3s ease-out;
         }
@@ -111,10 +105,7 @@
         #login-spinner.hidden {
             opacity: 0;
             transform: scale(0.8);
-        }
-
-        #login-text {
-            transition: opacity 0.3s ease-in;
+            display: none;
         }
 
         /* --- Hive Overlay --- */
@@ -147,7 +138,7 @@
         }
     </style>
 </head>
-<body class="text-gray-200 antialiased">
+<body class="text-slate-200 antialiased">
 
     <div class="background-container">
        <div class="blob color-1"></div>
@@ -162,73 +153,58 @@
                      fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
             </pattern>
         </defs>
-
         <g>
             <rect width="200%" height="200%" fill="url(#hexPattern)"/>
         </g>
     </svg>
     
     <div id="login-page" class="relative z-10 flex min-h-screen w-full items-center justify-center p-4">     
-        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-gray-900/30 backdrop-blur-xl border border-gray-700/50 rounded-lg shadow-2xl shadow-blue-900/30">
+        <div class="fade-in w-full max-w-md p-8 space-y-8 bg-slate-900/30 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-blue-900/20">
             
             <div class="flex flex-col items-center">
-                <div class="p-3 bg-blue-500/10 rounded-full">
-                    <i data-lucide="waves" class="h-10 w-10 text-blue-400"></i>
+                <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-full shadow-inner">
+                    <i data-lucide="waves" class="h-8 w-8 text-blue-400"></i>
                 </div>
-                <h2 id="greeting-header" class="mt-4 text-3xl font-bold text-center text-white disable-select">
+                <h2 id="greeting-header" class="mt-5 text-3xl font-bold tracking-tight text-center text-slate-50 disable-select">
                     Welcome to Reef
                 </h2>
-                <p class="mt-2 text-center text-sm text-gray-400 disable-select">
+                <p class="mt-2 text-center text-sm font-medium text-slate-400 disable-select">
                     A Lightweight Data Export Service
                 </p>
             </div>
             
             <form id="login-form" class="space-y-6">
                 <div>
-                    <label for="username" class="block text-sm font-medium text-gray-300 disable-select">Username</label>
-                    <div class="mt-1">
-                        <input id="username" name="username" type="text" autocomplete="username" required
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                               placeholder="admin" value="">
-                    </div>
+                    <label for="username" class="block text-sm font-medium text-slate-300 disable-select ml-1 mb-1.5">Username</label>
+                    <input id="username" name="username" type="text" autocomplete="username" required
+                           class="w-full px-4 py-2.5 bg-slate-950/50 border border-slate-700 text-slate-100 rounded-lg shadow-sm placeholder-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                           placeholder="admin" value="">
                 </div>
 
                 <div>
-                    <label for="password" class="block text-sm font-medium text-gray-300 disable-select">Password</label>
-                    <div class="mt-1">
-                        <input id="password" name="password" type="password" autocomplete="current-password" required
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                               placeholder="••••••••" value="">
-                    </div>
+                    <label for="password" class="block text-sm font-medium text-slate-300 disable-select ml-1 mb-1.5">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required
+                           class="w-full px-4 py-2.5 bg-slate-950/50 border border-slate-700 text-slate-100 rounded-lg shadow-sm placeholder-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                           placeholder="••••••••" value="">
                 </div>
 
-                <div class="flex items-center justify-between p-4 bg-gray-800/50 rounded-lg">
-                    <label for="remember-me" class="text-sm font-medium text-gray-300">Remember me</label>
+                <div class="flex items-center justify-between p-4 bg-slate-950/40 border border-slate-800/50 rounded-lg">
+                    <label for="remember-me" class="text-sm font-medium text-slate-300 cursor-pointer disable-select">Remember me</label>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="remember-me" name="remember-me" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-400 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                 </div>
 
                 <div>
                     <button id="login-button" type="submit"
-                            class="flex w-full justify-center items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg shadow-md
-                                   /* --- Animations --- */
-                                   transition-all duration-200 ease-in-out
-                                   hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/50 hover:-translate-y-0.5
-                                   active:bg-blue-800 active:scale-[0.9 9]
-                                   /* --- Focus States --- */
-                                   focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-blue-500
-                                   /* --- Disabled State --- */
-                                   disabled:opacity-75 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md">
-                        
+                            class="flex w-full justify-center items-center px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg shadow-md transition-all duration-200 ease-in-out hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5 active:bg-blue-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-500 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:active:scale-100">
                         <i id="login-spinner" data-lucide="loader-2" class="h-5 w-5 animate-spin hidden mr-2"></i>
-                        
                         <span id="login-text">Sign In</span>
                     </button>
                 </div>
 
-                <div id="error-container"></div>
+                <div id="error-container" class="empty:hidden"></div>
             </form>
         </div>
     </div>
@@ -258,9 +234,7 @@
             }
         }
         
-        // --- All your other JavaScript ---
-
-        // Greeting message logic
+        // --- Greeting message logic ---
         (function setGreeting() {
             const greetings = [
                 "Welcome back to Reef", "Hello from Reef", "Good to see you again on Reef",
@@ -299,18 +273,16 @@
             }
         })();
 
-
-        // Centralized login logic
+        // --- Centralized login logic ---
         const loginForm = document.getElementById('login-form');
         const errorContainer = document.getElementById('error-container');
 
-        // Enhanced error display function
         function showError(message, type = 'error') {
             const bgColor = type === 'error' ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400';
             const icon = type === 'error' ? 'alert-circle' : 'alert-triangle';
             
             errorContainer.innerHTML = `
-                <div class="${bgColor} border-l-4 p-4 rounded-md error-slide-in" role="alert">
+                <div class="${bgColor} border-l-4 p-4 rounded-md error-slide-in mt-4" role="alert">
                     <div class="flex items-center">
                         <i data-lucide="${icon}" class="h-5 w-5 mr-3 flex-shrink-0"></i>
                         <p class="text-sm font-medium">${message}</p>
@@ -329,7 +301,7 @@
                         if (errorContainer.contains(firstChild)) {
                             errorContainer.innerHTML = '';
                         }
-                    }, 100);
+                    }, 300);
                 }
             }, 6000);
         }
@@ -341,11 +313,12 @@
             const spinner = document.getElementById('login-spinner');
             if (spinner) {
                 spinner.classList.add('hidden');
+                spinner.classList.remove('inline-block');
             }
             setTimeout(() => {
                 loginButton.disabled = false;
                 loginText.textContent = 'Sign In';
-            }, 300);
+            }, 200);
         }
 
         loginForm.addEventListener('submit', async (e) => {
@@ -355,11 +328,12 @@
             const spinner = document.getElementById('login-spinner');
             if (spinner) {
                 spinner.classList.remove('hidden');
+                spinner.classList.add('inline-block');
             }
             
             setTimeout(() => {
                 loginButton.disabled = true;
-                loginText.textContent = 'Sign in';
+                loginText.textContent = 'Authenticating';
             }, 10);
             
             const username = document.getElementById('username').value;
@@ -386,7 +360,7 @@
                         window.location.href = '/dashboard';
                         return; 
                     } else {
-                        console.log('No token received');
+                        console.warn('No token received');
                         showError('Login failed: No token received.');
                         resetLoginButton();
                     }
@@ -411,7 +385,9 @@
             }
         });
 
-        redirectIfAuthenticated();
+        if (typeof redirectIfAuthenticated === 'function') {
+            redirectIfAuthenticated();
+        }
     </script>
 </body>
 </html>

@@ -111,19 +111,19 @@ public class LocalFileSource : IImportSource
         var basePath = GetBasePath(profile);
 
         if (string.IsNullOrWhiteSpace(basePath))
-            return Task.FromResult((false, "No file path or base directory configured"));
+            return Task.FromResult<(bool, string?)>((false, "No file path or base directory configured"));
 
         if (!string.IsNullOrWhiteSpace(profile.SourceFilePath) && File.Exists(profile.SourceFilePath))
-            return Task.FromResult((true, $"File exists: {profile.SourceFilePath}"));
+            return Task.FromResult<(bool, string?)>((true, $"File exists: {profile.SourceFilePath}"));
 
         if (Directory.Exists(basePath))
         {
             var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
             var count = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly).Length;
-            return Task.FromResult((true, $"Directory exists. {count} matching file(s) found."));
+            return Task.FromResult<(bool, string?)>((true, $"Directory exists. {count} matching file(s) found."));
         }
 
-        return Task.FromResult((false, $"Path not found: {basePath}"));
+        return Task.FromResult<(bool, string?)>((false, $"Path not found: {basePath}"));
     }
 
     // ── Helpers ──────────────────────────────────────────────

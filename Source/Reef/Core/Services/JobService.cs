@@ -148,8 +148,8 @@ public class JobService
     /// </summary>
     private async Task ValidateJobConfiguration(Job job)
     {
-        // If ProfileId is set, check if it's an Email export profile
-        if (job.ProfileId.HasValue)
+        // If ProfileId is set and it's an export profile, check if it's an Email export profile
+        if (job.ProfileId.HasValue && job.ProfileType != "import")
         {
             using var conn = new SqliteConnection(_connectionString);
             const string sql = "SELECT IsEmailExport FROM Profiles WHERE Id = @Id";
@@ -193,13 +193,13 @@ public class JobService
         
         var sql = @"
             INSERT INTO Jobs (
-                Name, Description, Type, ProfileId, ImportProfileId, DestinationId, CustomActionJson,
+                Name, Description, Type, ProfileId, ProfileType, DestinationId, CustomActionJson,
                 ScheduleType, CronExpression, IntervalMinutes, StartDate, EndDate, StartTime, EndTime, WeekDays, MonthDay,
                 MaxRetries, TimeoutMinutes, Priority, AllowConcurrent, DependsOnJobIds, AutoPauseEnabled,
                 IsEnabled, Status, NextRunTime, Tags, CreatedAt, CreatedBy, Hash
             )
             VALUES (
-                @Name, @Description, @Type, @ProfileId, @ImportProfileId, @DestinationId, @CustomActionJson,
+                @Name, @Description, @Type, @ProfileId, @ProfileType, @DestinationId, @CustomActionJson,
                 @ScheduleType, @CronExpression, @IntervalMinutes, @StartDate, @EndDate, @StartTime, @EndTime, @WeekDays, @MonthDay,
                 @MaxRetries, @TimeoutMinutes, @Priority, @AllowConcurrent, @DependsOnJobIds, @AutoPauseEnabled,
                 @IsEnabled, @Status, @NextRunTime, @Tags, @CreatedAt, @CreatedBy, @Hash
@@ -247,7 +247,7 @@ public class JobService
             var sql = @"
                 UPDATE Jobs
                 SET Name = @Name, Description = @Description, Type = @Type,
-                    ProfileId = @ProfileId, ImportProfileId = @ImportProfileId, DestinationId = @DestinationId, CustomActionJson = @CustomActionJson,
+                    ProfileId = @ProfileId, ProfileType = @ProfileType, DestinationId = @DestinationId, CustomActionJson = @CustomActionJson,
                     ScheduleType = @ScheduleType, CronExpression = @CronExpression,
                     IntervalMinutes = @IntervalMinutes, StartDate = @StartDate, EndDate = @EndDate,
                     StartTime = @StartTime, EndTime = @EndTime, WeekDays = @WeekDays, MonthDay = @MonthDay,

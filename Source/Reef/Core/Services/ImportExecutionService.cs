@@ -34,6 +34,7 @@ public class ImportExecutionService
     private readonly DatabaseConfig _reefDbConfig;
     private readonly DatabaseImportTarget _databaseImportTarget;
     private readonly LocalFileImportTarget _localFileImportTarget;
+    private readonly NotificationService _notificationService;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
 
     public ImportExecutionService(
@@ -41,13 +42,15 @@ public class ImportExecutionService
         ConnectionService connectionService,
         DatabaseConfig reefDbConfig,
         DatabaseImportTarget databaseImportTarget,
-        LocalFileImportTarget localFileImportTarget)
+        LocalFileImportTarget localFileImportTarget,
+        NotificationService notificationService)
     {
         _profileService = profileService;
         _connectionService = connectionService;
         _reefDbConfig = reefDbConfig;
         _databaseImportTarget = databaseImportTarget;
         _localFileImportTarget = localFileImportTarget;
+        _notificationService = notificationService;
     }
 
     // ── Public Entry Points ────────────────────────────────────────────
@@ -122,6 +125,18 @@ public class ImportExecutionService
                 exec.Id, exec.Status,
                 exec.TotalRowsRead, exec.RowsInserted, exec.RowsUpdated,
                 exec.RowsSkipped, exec.RowsFailed, exec.RowsDeleted);
+
+            try
+            {
+                if (exec.Status == "Failed")
+                    _ = _notificationService.SendImportExecutionFailureAsync(exec, profile);
+                else
+                    _ = _notificationService.SendImportExecutionSuccessAsync(exec, profile);
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "ImportExecution {Id}: failed to send notification", exec.Id);
+            }
         }
 
         return exec;
@@ -205,7 +220,7 @@ public class ImportExecutionService
         {
             await TimedPhaseAsync("GetSchema", exec, phaseTimings, ct, async () =>
             {
-                try { tableSchema = await _databaseImportTarget.GetTableSchemaAsync(connection!, profile.TargetTable, ct); }
+                try { tableSchema = await _databaseImportTarget.GetTableSchemaAsync(connection!, profile.TargetTable!, ct); }
                 catch (Exception ex) { Log.Warning(ex, "Could not retrieve schema for {Table}", profile.TargetTable); }
             });
         }
@@ -259,27 +274,25 @@ public class ImportExecutionService
                     if (profile.DeltaSyncEnabled && !string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
                     {
                         var reefIdKey = profile.DeltaSyncReefIdColumn!;
-                        if (!mapped.TryGetValue(reefIdKey, out var reefIdVal) || reefIdVal is null)
+                        if (mapped.TryGetValue(reefIdKey, out var reefIdVal) && reefIdVal is not null)
                         {
-                            exec.RowsSkipped++;
-                            continue;
+                            var reefId = reefIdVal.ToString()!.Trim();
+                            var hash = ComputeRowHash(mapped, profile.DeltaSyncHashAlgorithm ?? "SHA256");
+                            currentHashState[reefId] = hash;
+
+                            if (previousHashes.TryGetValue(reefId, out var prevHash) && prevHash == hash)
+                            {
+                                exec.DeltaSyncUnchangedRows++;
+                                exec.RowsSkipped++;
+                                continue;
+                            }
+
+                            if (previousHashes.ContainsKey(reefId))
+                                exec.DeltaSyncChangedRows++;
+                            else
+                                exec.DeltaSyncNewRows++;
                         }
-
-                        var reefId = reefIdVal.ToString()!.Trim();
-                        var hash = ComputeRowHash(mapped, profile.DeltaSyncHashAlgorithm ?? "SHA256");
-                        currentHashState[reefId] = hash;
-
-                        if (previousHashes.TryGetValue(reefId, out var prevHash) && prevHash == hash)
-                        {
-                            exec.DeltaSyncUnchangedRows++;
-                            exec.RowsSkipped++;
-                            continue;
-                        }
-
-                        if (previousHashes.ContainsKey(reefId))
-                            exec.DeltaSyncChangedRows++;
-                        else
-                            exec.DeltaSyncNewRows++;
+                        // If ReefId column missing or null: write the row without delta sync tracking
                     }
 
                     if (isFullReplace)
@@ -338,6 +351,25 @@ public class ImportExecutionService
             });
         }
 
+        // Warn when Smart Sync was enabled but no rows were tracked (ReefId column missing in data)
+        if (profile.DeltaSyncEnabled
+            && !string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn)
+            && exec.TotalRowsRead > 0
+            && currentHashState.Count == 0)
+        {
+            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+            {
+                ExecutionId  = exec.Id,
+                ErrorType    = "Configuration",
+                Phase        = "DeltaSync",
+                ErrorMessage =
+                    $"Smart Sync is enabled but column '{profile.DeltaSyncReefIdColumn}' " +
+                    $"was not found in any of the {exec.TotalRowsRead} row(s) processed. " +
+                    "Check the ReefId Column setting in Smart Sync.",
+                OccurredAt   = DateTime.UtcNow
+            });
+        }
+
         // ── Phase 9: Archive source files ─────────────────────────────
         if (profile.ArchiveAfterImport)
         {
@@ -353,6 +385,18 @@ public class ImportExecutionService
                     catch (Exception ex)
                     {
                         Log.Warning(ex, "ImportExecution {Id}: archive failed for {File}", exec.Id, file.Identifier);
+                        try
+                        {
+                            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+                            {
+                                ExecutionId  = exec.Id,
+                                ErrorType    = "Archive",
+                                Phase        = "Archive",
+                                ErrorMessage = $"Archive failed for '{file.Identifier}': {ex.Message}",
+                                OccurredAt   = DateTime.UtcNow
+                            });
+                        }
+                        catch { /* never let error-recording abort execution */ }
                     }
                 }
             });
