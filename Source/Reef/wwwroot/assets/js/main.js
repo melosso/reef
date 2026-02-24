@@ -251,7 +251,7 @@ function setUserSidebarInfo() {
 
     if (usernameDisplay) usernameDisplay.textContent = nameToDisplay.charAt(0).toUpperCase() + nameToDisplay.slice(1);
     if (userInitial) userInitial.textContent = nameToDisplay[0].toUpperCase();
-    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'System User';
+    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'Local User';
 }
 
 // -----------------------------
@@ -613,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceInteractions();
     enhanceTooltips();
     responsiveGrids();
+    setUserSidebarInfo();
 
     // Update approval badge if not on login page
     const menuLink = document.querySelector('a[href="/email-approvals"]');

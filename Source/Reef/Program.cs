@@ -49,8 +49,9 @@ public class Program
         }
 
         // Configure initial logger from appsettings.json
-        var loggerConfig = new LoggerConfiguration();
-        
+        var loggerConfig = new LoggerConfiguration()
+            .Enrich.FromLogContext();
+
         try
         {
             loggerConfig.ReadFrom.Configuration(tempConfig);

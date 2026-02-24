@@ -9,7 +9,7 @@
                             <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
                             Refresh
                         </button>
-                        <button onclick="openRunJobModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                        <button onclick="openRunJobModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
                             <i data-lucide="play" class="h-4 w-4 mr-2"></i>
                             Run Job
                         </button>
@@ -155,7 +155,7 @@
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                     <i data-lucide="upload" class="h-5 w-5 mr-2 text-indigo-500"></i>
-                    Import Execution Details
+                    Details
                 </h3>
                 <button onclick="closeImportExecModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
@@ -173,13 +173,13 @@
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                     <i data-lucide="download" class="h-5 w-5 mr-2 text-blue-500"></i>
-                    Export Execution Details
+                    Details
                 </h3>
                 <div class="flex items-center space-x-2">
-                    <button id="download-log-btn" title="Download Log" class="text-gray-400 hover:text-blue-600 focus:outline-none" style="display:none">
+                    <button id="download-log-btn" data-tooltip="Download details to file..." data-tooltip-position="bottom" class="text-gray-400 hover:text-blue-600 focus:outline-none" style="display:none">
                         <i data-lucide="download" class="h-6 w-6"></i>
                     </button>
-                    <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeDetailsModal()"data-tooltip="Close" data-tooltip-position="bottom"  class="text-gray-400 hover:text-gray-500">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
@@ -219,7 +219,7 @@
                     <button type="button" onclick="closeExecuteModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
                         Cancel
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    <button type="submit" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-md hover:bg-slate-700 shadow-sm transition-colors duration-150 active:scale-95">
                         Execute Now
                     </button>
                 </div>
@@ -1369,12 +1369,15 @@
                 const filename = `log_${executionId}${ts ? '_' + ts : ''}.json`;
                 // Get domain (hostname only, no port, protocol, or path)
                 let domain = window.location.hostname;
+                // Remove profileId from execution
+                let execution2 = { ...execution, profileId: undefined };
                 // Wrap as requested: [ { id, timestamp, domain, details: { ...all fields... } } ]
                 const wrapped = [{
-                    id: execution.id,
-                    timestamp: execution.startedAt || startedAt || null,
+                    id: execution2.id,
+                    profile: execution2.profileCode,
+                    timestamp: execution2.startedAt || startedAt || null,
                     domain: domain,
-                    details: execution
+                    details: execution2
                 }];
                 const blob = new Blob([JSON.stringify(wrapped, null, 2)], {type: 'application/json'});
                 const url = URL.createObjectURL(blob);

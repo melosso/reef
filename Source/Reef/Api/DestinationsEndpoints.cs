@@ -71,19 +71,117 @@ public static class DestinationsEndpoints
         .WithName("GetAllDestinations")
         .Produces<IEnumerable<Destination>>(200);
 
-        // GET: Get destination by ID
+        // GET: Get destination by ID (includes endpoints array)
         group.MapGet("/{id:int}", async (
             int id,
             [FromServices] DestinationService service) =>
         {
             var destination = await service.GetByIdAsync(id);
-            return destination != null 
-                ? Results.Ok(destination) 
-                : Results.NotFound(new { message = "Destination not found" });
+            if (destination == null)
+                return Results.NotFound(new { message = "Destination not found" });
+
+            var endpoints = await service.GetEndpointsByDestinationIdAsync(id);
+            return Results.Ok(new
+            {
+                destination.Id,
+                destination.Name,
+                destination.Description,
+                destination.Type,
+                destination.ConfigurationJson,
+                destination.IsActive,
+                destination.Tags,
+                destination.CreatedAt,
+                destination.ModifiedAt,
+                destination.Hash,
+                endpoints
+            });
         })
         .WithName("GetDestinationById")
-        .Produces<Destination>(200)
+        .Produces(200)
         .Produces(404);
+
+        // GET: List endpoints for a destination
+        group.MapGet("/{id:int}/endpoints", async (
+            int id,
+            [FromServices] DestinationService service) =>
+        {
+            var endpoints = await service.GetEndpointsByDestinationIdAsync(id);
+            return Results.Ok(endpoints);
+        })
+        .WithName("GetDestinationEndpoints")
+        .Produces<IEnumerable<DestinationEndpoint>>(200);
+
+        // POST: Create endpoint
+        group.MapPost("/{id:int}/endpoints", async (
+            int id,
+            [FromBody] DestinationEndpoint endpoint,
+            [FromServices] DestinationService service) =>
+        {
+            try
+            {
+                endpoint.DestinationId = id;
+                var created = await service.CreateEndpointAsync(endpoint);
+                return Results.Created($"/api/destinations/{id}/endpoints/{created.Id}", created);
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+        })
+        .WithName("CreateDestinationEndpoint")
+        .Produces<DestinationEndpoint>(201)
+        .Produces(400);
+
+        // PUT: Update endpoint
+        group.MapPut("/{id:int}/endpoints/{epId:int}", async (
+            int id,
+            int epId,
+            [FromBody] DestinationEndpoint endpoint,
+            [FromServices] DestinationService service) =>
+        {
+            if (epId != endpoint.Id || id != endpoint.DestinationId)
+                return Results.BadRequest(new { message = "ID mismatch" });
+
+            try
+            {
+                await service.UpdateEndpointAsync(endpoint);
+                var updated = await service.GetEndpointByIdAsync(epId);
+                return updated != null ? Results.Ok(updated) : Results.NotFound(new { message = "Endpoint not found" });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+        })
+        .WithName("UpdateDestinationEndpoint")
+        .Produces<DestinationEndpoint>(200)
+        .Produces(400)
+        .Produces(404);
+
+        // DELETE: Delete endpoint
+        group.MapDelete("/{id:int}/endpoints/{epId:int}", async (
+            int id,
+            int epId,
+            [FromServices] DestinationService service) =>
+        {
+            try
+            {
+                var ep = await service.GetEndpointByIdAsync(epId);
+                if (ep == null || ep.DestinationId != id)
+                    return Results.NotFound(new { message = "Endpoint not found" });
+
+                await service.DeleteEndpointAsync(epId);
+                return Results.NoContent();
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { message = ex.Message });
+            }
+        })
+        .WithName("DeleteDestinationEndpoint")
+        .Produces(204)
+        .Produces(404)
+        .Produces(400);
 
         // POST: Create new destination
         group.MapPost("/", async (

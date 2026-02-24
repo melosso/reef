@@ -85,7 +85,15 @@ public class HttpDestination : IDestination
     {
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, config.Url);
+            var httpMethod = config.Method?.ToUpperInvariant() switch
+            {
+                "GET"    => HttpMethod.Get,
+                "PUT"    => HttpMethod.Put,
+                "PATCH"  => HttpMethod.Patch,
+                "DELETE" => HttpMethod.Delete,
+                _        => HttpMethod.Post
+            };
+            using var request = new HttpRequestMessage(httpMethod, config.Url);
 
             // Add authentication
             AddAuthentication(request, config);
@@ -496,6 +504,11 @@ public class HttpConfig
     /// Target URL for the HTTP POST request
     /// </summary>
     public required string Url { get; set; }
+
+    /// <summary>
+    /// HTTP method: GET, POST, PUT, PATCH, DELETE (default: POST)
+    /// </summary>
+    public string? Method { get; set; }
 
     /// <summary>
     /// Upload format: "multipart" (form-data), "json", "raw"/"binary"

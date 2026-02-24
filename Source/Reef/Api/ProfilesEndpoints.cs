@@ -445,6 +445,7 @@ public static class ProfilesEndpoints
             existingProfile.OutputFormat = profile.OutputFormat;
             existingProfile.TemplateId = profile.TemplateId;
             existingProfile.OutputDestinationId = profile.OutputDestinationId;
+            existingProfile.OutputDestinationEndpointId = profile.OutputDestinationEndpointId;
             existingProfile.OutputDestinationType = profile.OutputDestinationType;
             existingProfile.OutputDestinationConfig = profile.OutputDestinationConfig;
             existingProfile.OutputPropertiesJson = profile.OutputPropertiesJson;

@@ -6,21 +6,21 @@
                     <h1 class="text-2xl font-semibold text-gray-900 disable-select">Profiles</h1>
                     <div class="flex space-x-3 items-center">
                         <div class="relative">
-                            <button id="newProfileButton" onclick="toggleNewProfileMenu()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                            <button id="newProfileButton" onclick="toggleNewProfileMenu()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
                                 <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                                 New Profile
                                 <i data-lucide="chevron-down" class="h-4 w-4 ml-2"></i>
                             </button>
-                            <div id="newProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 border border-gray-200">
-                                <button onclick="openAddProfileModal('standard')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 flex items-center">
+                            <div id="newProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 border border-slate-200">
+                                <button onclick="openAddProfileModal('standard')" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
                                     <i data-lucide="file-code" class="h-4 w-4 mr-2"></i>
                                     Export Profile
                                 </button>
-                                <button onclick="openAddProfileModal('email')" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 flex items-center">
+                                <button onclick="openAddProfileModal('email')" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
                                     <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
                                     Export Email
                                 </button>
-                                <button onclick="openImportProfileModal(); toggleNewProfileMenu();" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 flex items-center">
+                                <button onclick="openImportProfileModal(); toggleNewProfileMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
                                     <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
                                     Import Profile
                                 </button>
@@ -274,6 +274,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 Select Destination *
                             </label>
                             <select id="destination-id" required
+                                    onchange="onDestinationChange()"
                                     class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">-- Select a destination --</option>
                                 <!-- Will be populated dynamically -->
@@ -281,6 +282,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <p class="mt-1 text-xs text-gray-500">
                                 <a href="/destinations" class="text-blue-600 hover:underline">→ Manage Destinations</a>
                             </p>
+                        </div>
+
+                        <!-- Endpoint dropdown: shown only when destination has endpoints -->
+                        <div id="destination-endpoint-section" class="hidden mb-4">
+                            <label for="destination-endpoint-id" class="block text-sm font-medium text-gray-700 mb-1">
+                                Endpoint
+                            </label>
+                            <select id="destination-endpoint-id"
+                                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">(use full destination config)</option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">Select a named endpoint, or leave blank to use the full destination configuration.</p>
                         </div>
 
                         <div id="nonEmailFields">
@@ -2896,6 +2909,33 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
         }
 
+        async function onDestinationChange() {
+            const destId = document.getElementById('destination-id').value;
+            const section = document.getElementById('destination-endpoint-section');
+            const select  = document.getElementById('destination-endpoint-id');
+            if (!destId || !section || !select) return;
+            select.innerHTML = '<option value="">(use full destination config)</option>';
+            section.classList.add('hidden');
+            try {
+                const resp = await fetch(`${API_BASE}/api/destinations/${destId}`, { headers: getAuthHeaders() });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const eps = data.endpoints || [];
+                if (eps.length > 0) {
+                    eps.forEach(ep => {
+                        const opt = document.createElement('option');
+                        opt.value = ep.id;
+                        const detail = ep.pathSuffix || ep.remotePath || ep.keyPrefix || '';
+                        opt.textContent = ep.name + (detail ? ` — ${detail}` : '');
+                        select.appendChild(opt);
+                    });
+                    section.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Error loading destination endpoints:', err);
+            }
+        }
+
         async function loadTemplates() {
             try {
                 const response = await fetch(`${API_BASE}/api/templates`, {
@@ -3410,6 +3450,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     }
                 }
                 document.getElementById('destination-id').value = profile.outputDestinationId || '';
+                // Restore endpoint selection (must load endpoints list first)
+                if (profile.outputDestinationId) {
+                    await onDestinationChange();
+                    if (profile.outputDestinationEndpointId) {
+                        document.getElementById('destination-endpoint-id').value = profile.outputDestinationEndpointId;
+                    }
+                }
                 document.getElementById('is-enabled').checked = profile.isEnabled;
 
                 // Pre-processing fields
@@ -3868,6 +3915,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('modal-title').textContent = isEmailExport ? 'Add Email Export Profile' : 'Add Profile';
         document.getElementById('profile-form').reset();
         document.getElementById('profile-id').value = '';
+
+        // Reset endpoint dropdown section
+        const epSection = document.getElementById('destination-endpoint-section');
+        const epSelect  = document.getElementById('destination-endpoint-id');
+        if (epSection) epSection.classList.add('hidden');
+        if (epSelect)  epSelect.innerHTML = '<option value="">(use full destination config)</option>';
 
         // Re-set the checkbox after form reset
         document.getElementById('isEmailExport').checked = isEmailExport;
@@ -5326,6 +5379,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const outputFormat = isEmailExportProfile ? 'HTML' : document.getElementById('output-format').value;
             const templateId = document.getElementById('template-id').value ? parseInt(document.getElementById('template-id').value) : null;
             const outputDestinationId = document.getElementById('destination-id').value ? parseInt(document.getElementById('destination-id').value) : null;
+            const outputDestinationEndpointId = document.getElementById('destination-endpoint-id')?.value ? parseInt(document.getElementById('destination-endpoint-id').value) : null;
             const isEnabled = document.getElementById('is-enabled').checked;
 
             // Validation
@@ -5537,6 +5591,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 outputFormat,
                 templateId,
                 outputDestinationId,
+                outputDestinationEndpointId,
                 outputDestinationType: 'Local', // Backend still expects this, send default
                 outputDestinationConfig: null, // Backend still expects this
                 isEnabled,
@@ -5760,11 +5815,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                     // For testing email profiles, use local file destination instead of email destination
                     let outputDestinationId = document.getElementById('destination-id').value ? parseInt(document.getElementById('destination-id').value) : null;
+                    let outputDestinationEndpointId = document.getElementById('destination-endpoint-id')?.value ? parseInt(document.getElementById('destination-endpoint-id').value) : null;
                     if (isEmailExportProfile && outputDestinationId) {
                         // Find local file destination for testing
                         const localDest = destinations.find(d => d.type === 'Local');
                         if (localDest) {
                             outputDestinationId = localDest.id;
+                            outputDestinationEndpointId = null; // no endpoint for local test dest
                             showToast('Test mode: Using local file destination instead of email for preview', 'info');
                         }
                     }
@@ -5881,6 +5938,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     outputFormat,
                                     templateId,
                                     outputDestinationId,
+                                    outputDestinationEndpointId,
                                     outputDestinationType: 'Local',
                                     outputDestinationConfig: null,
                                     isEnabled,

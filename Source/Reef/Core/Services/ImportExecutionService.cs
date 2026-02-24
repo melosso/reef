@@ -9,6 +9,7 @@ using Reef.Core.Parsers;
 using Reef.Core.Sources;
 using Reef.Core.Targets;
 using Serilog;
+using Serilog.Context;
 
 namespace Reef.Core.Services;
 
@@ -74,6 +75,9 @@ public class ImportExecutionService
 
         exec.Id = await _profileService.CreateExecutionAsync(exec);
         var phaseTimings = new Dictionary<string, long>();
+
+        // Push profile code into log context so all downstream messages carry it
+        using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
 
         Log.Information("ImportExecution {Id} started for profile {ProfileCode} ({ProfileName})",
             exec.Id, profile.Code, profile.Name);

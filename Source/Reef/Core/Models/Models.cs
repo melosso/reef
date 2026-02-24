@@ -86,6 +86,7 @@ public class Profile
     public string? OutputDestinationConfig { get; set; } // JSON configuration
     public string? OutputPropertiesJson { get; set; } // Additional output properties
     public int? OutputDestinationId { get; set; } // FK to Destinations table (optional)
+    public int? OutputDestinationEndpointId { get; set; } // FK to DestinationEndpoints table (optional)
     public int? TemplateId { get; set; } // FK to QueryTemplates table (optional - for custom transformations)
     public string? TransformationOptionsJson { get; set; } // JSON options for SQL Server native transformations (ForJsonOptions, ForXmlOptions)
 

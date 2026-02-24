@@ -26,7 +26,7 @@ Server=localhost;Database=AdventureWorks;User Id=sa;Password=123;Connection Time
 ```
 
 ### Default Credentials
-- Username: `admin`
+- Username: `admin@reef.local`
 - Password: `admin123` (change immediately)
 
 ## License

@@ -190,11 +190,12 @@ public class DatabaseInitializer
                 OutputFormat TEXT NOT NULL DEFAULT 'JSON',
                 OutputDestinationType TEXT NULL,
                 OutputDestinationConfig TEXT NULL,
+                OutputDestinationEndpointId INTEGER NULL,
                 OutputPropertiesJson TEXT NULL,
                 OutputDestinationId INTEGER NULL,
                 TemplateId INTEGER NULL,
                 TransformationOptionsJson TEXT NULL,
-
+                
                 -- Pre-Processing
                 PreProcessType TEXT NULL,
                 PreProcessConfig TEXT NULL,
@@ -1038,8 +1039,8 @@ public class DatabaseInitializer
             // Create default admin user with BCrypt hashed password "admin123"
             // Force password change on first login for security
             const string insertUserSql = @"
-                INSERT INTO Users (Username, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
-                VALUES (@Username, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
+                INSERT INTO Users (Username, DisplayName, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
+                VALUES (@Username, @DisplayName, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
             ";
 
             var passwordHasher = new Reef.Core.Security.PasswordHasher();
@@ -1047,7 +1048,8 @@ public class DatabaseInitializer
 
             await connection.ExecuteAsync(insertUserSql, new
             {
-                Username = "admin",
+                Username = "admin@reef.local",
+                DisplayName = "Administrator",
                 PasswordHash = passwordHash,
                 Role = "Admin",
                 IsActive = 1,
@@ -1464,6 +1466,28 @@ public class DatabaseInitializer
             "CREATE UNIQUE INDEX IF NOT EXISTS UX_Profiles_Code ON Profiles(Code) WHERE Code != ''");
         await connection.ExecuteAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS UX_ImportProfiles_Code ON ImportProfiles(Code) WHERE Code != ''");
+
+        // DestinationEndpoints table — named sub-endpoints on a base Destination connection
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS DestinationEndpoints (
+                Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                DestinationId INTEGER NOT NULL REFERENCES Destinations(Id) ON DELETE CASCADE,
+                Name          TEXT NOT NULL,
+                PathSuffix    TEXT NULL,
+                Method        TEXT NULL,
+                UploadFormat  TEXT NULL,
+                ExtraHeaders  TEXT NULL,
+                RemotePath    TEXT NULL,
+                KeyPrefix     TEXT NULL,
+                SortOrder     INTEGER NOT NULL DEFAULT 0,
+                CreatedAt     TEXT NOT NULL,
+                ModifiedAt    TEXT NULL
+            )");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_destendpoints_destination ON DestinationEndpoints(DestinationId)");
+
+        // Add OutputDestinationEndpointId to Profiles
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "OutputDestinationEndpointId", "INTEGER NULL");
 
         // ProfileExecutionErrors table for per-send failure tracking (email, archive, etc.)
         await connection.ExecuteAsync(@"

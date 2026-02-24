@@ -6,6 +6,7 @@ using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
 using Reef.Core.DocumentGeneration;
 using Serilog;
+using Serilog.Context;
 using System.Diagnostics;
 
 namespace Reef.Core.Services;
@@ -103,6 +104,9 @@ public class ExecutionService
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Profile is disabled");
                 return (executionId, false, null, "Profile is disabled");
             }
+
+            // Push profile code into log context so all downstream messages (including destinations) carry it
+            using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
 
             var connection = await _connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)
@@ -1091,6 +1095,7 @@ public class ExecutionService
                 // Get destination configuration (priority: Job override > Profile destination > Profile inline config)
                 string? destinationConfig;
                 DestinationType destinationType;
+                Reef.Core.Models.Destination? resolvedDestination = null;
 
                 if (destinationOverrideId.HasValue)
                 {
@@ -1112,6 +1117,7 @@ public class ExecutionService
                         return (executionId, false, null, $"Destination {destination.Name} is not active");
                     }
 
+                    resolvedDestination = destination;
                     destinationType = destination.Type;
                     destinationConfig = destination.ConfigurationJson;
 
@@ -1137,6 +1143,7 @@ public class ExecutionService
                         return (executionId, false, null, $"Destination {destination.Name} is not active");
                     }
 
+                    resolvedDestination = destination;
                     destinationType = destination.Type;
                     destinationConfig = destination.ConfigurationJson;
 
@@ -1158,6 +1165,18 @@ public class ExecutionService
                         : DestinationType.Local;
 
                     Log.Debug("Using profile's destination: {DestinationType}", profile.OutputDestinationType);
+                }
+
+                // Apply endpoint override if the profile has one configured
+                if (profile.OutputDestinationEndpointId.HasValue && resolvedDestination != null)
+                {
+                    var ep = await _destinationService.GetEndpointByIdAsync(profile.OutputDestinationEndpointId.Value);
+                    if (ep != null)
+                    {
+                        destinationConfig = _destinationService.MergeWithEndpoint(resolvedDestination, ep);
+                        Log.Debug("Applied endpoint override '{EndpointName}' (ID {EndpointId}) to destination '{DestinationName}'",
+                            ep.Name, ep.Id, resolvedDestination.Name);
+                    }
                 }
 
                 // Save to destination with retry logic (handled in DestinationService)

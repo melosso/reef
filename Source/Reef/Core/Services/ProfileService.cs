@@ -213,7 +213,7 @@ public class ProfileService
                 INSERT INTO Profiles (
                     Name, ConnectionId, GroupId, Query, ScheduleType, ScheduleCron,
                     ScheduleIntervalMinutes, OutputFormat, OutputDestinationType,
-                    OutputDestinationConfig, OutputPropertiesJson, OutputDestinationId,
+                    OutputDestinationConfig, OutputPropertiesJson, OutputDestinationId, OutputDestinationEndpointId,
                     TemplateId, TransformationOptionsJson,
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure, PostProcessRollbackOnFailure, PostProcessOnZeroRows,
@@ -229,7 +229,7 @@ public class ProfileService
                 ) VALUES (
                     @Name, @ConnectionId, @GroupId, @Query, @ScheduleType, @ScheduleCron,
                     @ScheduleIntervalMinutes, @OutputFormat, @OutputDestinationType,
-                    @OutputDestinationConfig, @OutputPropertiesJson, @OutputDestinationId,
+                    @OutputDestinationConfig, @OutputPropertiesJson, @OutputDestinationId, @OutputDestinationEndpointId,
                     @TemplateId, @TransformationOptionsJson,
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure, @PostProcessRollbackOnFailure, @PostProcessOnZeroRows,
@@ -354,6 +354,7 @@ public class ProfileService
                     OutputDestinationConfig = @OutputDestinationConfig,
                     OutputPropertiesJson = @OutputPropertiesJson,
                     OutputDestinationId = @OutputDestinationId,
+                    OutputDestinationEndpointId = @OutputDestinationEndpointId,
                     TemplateId = @TemplateId,
                     TransformationOptionsJson = @TransformationOptionsJson,
                     PreProcessType = @PreProcessType,
