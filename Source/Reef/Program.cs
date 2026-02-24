@@ -49,8 +49,9 @@ public class Program
         }
 
         // Configure initial logger from appsettings.json
-        var loggerConfig = new LoggerConfiguration();
-        
+        var loggerConfig = new LoggerConfiguration()
+            .Enrich.FromLogContext();
+
         try
         {
             loggerConfig.ReadFrom.Configuration(tempConfig);
@@ -303,6 +304,12 @@ public class Program
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
+
+        // Import Profile services
+        services.AddScoped<ImportProfileService>();
+        services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
+        services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
+        services.AddScoped<ImportExecutionService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
 
@@ -633,6 +640,9 @@ public class Program
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
+
+        // Import Profile endpoints
+        ImportProfilesEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
         app.MapFallback(async context =>

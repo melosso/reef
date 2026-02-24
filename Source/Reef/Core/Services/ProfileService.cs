@@ -203,11 +203,17 @@ public class ProfileService
             profile.CreatedAt = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
 
+            // Generate unique short code (P-XXXX) with collision retry
+            if (string.IsNullOrEmpty(profile.Code))
+            {
+                profile.Code = await GenerateUniqueCodeAsync(connection);
+            }
+
             const string sql = @"
                 INSERT INTO Profiles (
                     Name, ConnectionId, GroupId, Query, ScheduleType, ScheduleCron,
                     ScheduleIntervalMinutes, OutputFormat, OutputDestinationType,
-                    OutputDestinationConfig, OutputPropertiesJson, OutputDestinationId,
+                    OutputDestinationConfig, OutputPropertiesJson, OutputDestinationId, OutputDestinationEndpointId,
                     TemplateId, TransformationOptionsJson,
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure, PostProcessRollbackOnFailure, PostProcessOnZeroRows,
@@ -219,11 +225,11 @@ public class ProfileService
                     DeltaSyncTrackDeletes, DeltaSyncRetentionDays, DeltaSyncResetOnSchemaChange, DeltaSyncRemoveNonPrintable, DeltaSyncReefIdNormalization,
                     ExcludeReefIdFromOutput, ExcludeSplitKeyFromOutput,
                     SplitEnabled, SplitKeyColumn, SplitFilenameTemplate, SplitBatchSize, PostProcessPerSplit, EmailGroupBySplitKey, FilenameTemplate,
-                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy
+                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
                 ) VALUES (
                     @Name, @ConnectionId, @GroupId, @Query, @ScheduleType, @ScheduleCron,
                     @ScheduleIntervalMinutes, @OutputFormat, @OutputDestinationType,
-                    @OutputDestinationConfig, @OutputPropertiesJson, @OutputDestinationId,
+                    @OutputDestinationConfig, @OutputPropertiesJson, @OutputDestinationId, @OutputDestinationEndpointId,
                     @TemplateId, @TransformationOptionsJson,
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure, @PostProcessRollbackOnFailure, @PostProcessOnZeroRows,
@@ -235,7 +241,7 @@ public class ProfileService
                     @DeltaSyncTrackDeletes, @DeltaSyncRetentionDays, @DeltaSyncResetOnSchemaChange, @DeltaSyncRemoveNonPrintable, @DeltaSyncReefIdNormalization,
                     @ExcludeReefIdFromOutput, @ExcludeSplitKeyFromOutput,
                     @SplitEnabled, @SplitKeyColumn, @SplitFilenameTemplate, @SplitBatchSize, @PostProcessPerSplit, @EmailGroupBySplitKey, @FilenameTemplate,
-                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy
+                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
                 );
                 SELECT last_insert_rowid();";
 
@@ -348,6 +354,7 @@ public class ProfileService
                     OutputDestinationConfig = @OutputDestinationConfig,
                     OutputPropertiesJson = @OutputPropertiesJson,
                     OutputDestinationId = @OutputDestinationId,
+                    OutputDestinationEndpointId = @OutputDestinationEndpointId,
                     TemplateId = @TemplateId,
                     TransformationOptionsJson = @TransformationOptionsJson,
                     PreProcessType = @PreProcessType,
@@ -523,6 +530,22 @@ public class ProfileService
             Log.Error(ex, "Error disabling profile {Id}", id);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Generate a unique P-XXXX code for a new profile, retrying on collision.
+    /// </summary>
+    private static async Task<string> GenerateUniqueCodeAsync(Microsoft.Data.Sqlite.SqliteConnection connection)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var code = Reef.Helpers.ProfileCodeGenerator.Generate();
+            var exists = await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Profiles WHERE Code = @Code", new { Code = code });
+            if (exists == 0) return code;
+        }
+        // Extremely unlikely to reach here; fall back to a GUID-based suffix
+        return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
     }
 
     /// <summary>

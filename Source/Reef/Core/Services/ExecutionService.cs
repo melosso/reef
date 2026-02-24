@@ -6,6 +6,7 @@ using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
 using Reef.Core.DocumentGeneration;
 using Serilog;
+using Serilog.Context;
 using System.Diagnostics;
 
 namespace Reef.Core.Services;
@@ -99,28 +100,31 @@ public class ExecutionService
 
             if (!profile.IsEnabled)
             {
-                Log.Warning("Profile {ProfileId} is disabled", profileId);
+                Log.Warning("Profile {ProfileCode} ({ProfileName}) is disabled", profile.Code, profile.Name);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Profile is disabled");
                 return (executionId, false, null, "Profile is disabled");
             }
 
+            // Push profile code into log context so all downstream messages (including destinations) carry it
+            using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
+
             var connection = await _connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)
             {
-                Log.Warning("Connection {ConnectionId} not found for profile {ProfileId}", profile.ConnectionId, profileId);
+                Log.Warning("Connection {ConnectionId} not found for profile {ProfileCode}", profile.ConnectionId, profile.Code);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Connection not found");
                 return (executionId, false, null, "Connection not found");
             }
 
             if (!connection.IsActive)
             {
-                Log.Warning("Connection {ConnectionId} is inactive", connection.Id);
+                Log.Warning("Connection {ConnectionId} is inactive for profile {ProfileCode}", connection.Id, profile.Code);
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, "Connection is inactive");
                 return (executionId, false, null, "Connection is inactive");
             }
 
-            Log.Debug("Starting execution of profile {ProfileName} (ID: {ProfileId}) triggered by {TriggeredBy}", 
-                profile.Name, profileId, triggeredBy);
+            Log.Debug("Starting execution of profile {ProfileCode} ({ProfileName}) triggered by {TriggeredBy}",
+                profile.Code, profile.Name, triggeredBy);
 
             // Check dependencies if profile has any
             if (!string.IsNullOrEmpty(profile.DependsOnProfileIds))
@@ -128,7 +132,7 @@ public class ExecutionService
                 var isDependenciesSatisfied = await ValidateProfileDependenciesAsync(profileId, profile.DependsOnProfileIds);
                 if (!isDependenciesSatisfied)
                 {
-                    Log.Warning("Profile {ProfileId} dependencies not satisfied", profileId);
+                    Log.Warning("Profile {ProfileCode} ({ProfileName}) dependencies not satisfied", profile.Code, profile.Name);
                     await UpdateExecutionRecordAsync(
                         executionId,
                         "Failed",
@@ -138,7 +142,7 @@ public class ExecutionService
                         "Profile dependencies not satisfied - one or more dependent profiles have not completed successfully");
                     return (executionId, false, null, "Dependencies not satisfied");
                 }
-                Log.Information("Profile {ProfileId} dependencies validated successfully", profileId);
+                Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
             
             // ===== PHASE 1: PRE-PROCESSING =====
@@ -258,7 +262,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Delta sync processing failed for profile {ProfileId}", profileId);
+                    Log.Error("Delta sync processing failed for profile {ProfileCode} ({ProfileName}): {Error}", profile.Code, profile.Name, ex.Message);
                     await UpdateExecutionRecordAsync(executionId, "Failed", originalRowCount, null, 
                         stopwatch.ElapsedMilliseconds, $"Delta sync error: {ex.Message}");
                     return (executionId, false, null, $"Delta sync error: {ex.Message}");
@@ -268,7 +272,7 @@ public class ExecutionService
             // Check if there are any rows to export (for both delta sync and regular profiles)
             if (rows.Count == 0)
             {
-                Log.Information("No rows to export for profile {ProfileId}", profileId);
+                Log.Information("No rows to export for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
 
                 var message = profile.DeltaSyncEnabled
                     ? "No changes detected by smart sync"
@@ -335,7 +339,7 @@ public class ExecutionService
                         var execution = new ProfileExecution { Id = executionId, StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, ExecutionTimeMs = stopwatch.ElapsedMilliseconds };
                         await _notificationService.SendExecutionSuccessAsync(execution, profile);
                     }
-                    catch (Exception ex) { Log.Error(ex, "Failed to send execution success notification"); }
+                    catch (Exception ex) { Log.Error("Failed to send execution success notification: {Error}", ex.Message); }
                 });
 
                 return (executionId, true, null, null);
@@ -345,7 +349,7 @@ public class ExecutionService
             // Skip email export if there's a destination override (test mode or manual override)
             if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
-                Log.Information("Profile {ProfileId} executing as email export (sending {RowCount} rows)", profile.Id, rows.Count);
+                Log.Information("Profile {ProfileCode} ({ProfileName}) executing as email export (sending {RowCount} rows)", profile.Code, profile.Name, rows.Count);
 
                 try
                 {
@@ -388,7 +392,7 @@ public class ExecutionService
                     // Check if email approval is required
                     if (profile.EmailApprovalRequired)
                     {
-                        Log.Information("Email approval required for profile {ProfileId}, storing {RowCount} emails for approval", profile.Id, rows.Count);
+                        Log.Information("Email approval required for profile {ProfileCode} ({ProfileName}), storing {RowCount} emails for approval", profile.Code, profile.Name, rows.Count);
 
                         try
                         {
@@ -402,7 +406,7 @@ public class ExecutionService
                                 }
                                 catch (Exception ex)
                                 {
-                                    Log.Warning(ex, "Failed to parse attachment configuration for profile {ProfileId}", profile.Id);
+                                    Log.Warning("Failed to parse attachment configuration for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                                 }
                             }
 
@@ -541,7 +545,7 @@ public class ExecutionService
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Failed to create pending email approvals for profile {ProfileId}", profile.Id);
+                            Log.Error("Failed to create pending email approvals for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                             stopwatch.Stop();
                             await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 $"Failed to store emails for approval: {ex.Message}");
@@ -550,7 +554,7 @@ public class ExecutionService
                     }
 
                     // Send emails directly (approval not required)
-                    var (emailSuccess, emailMessage, successCount, failureCount, splits) = await _emailExportService.ExportToEmailAsync(
+                    var (emailSuccess, emailMessage, successCount, failureCount, splits, emailFailures) = await _emailExportService.ExportToEmailAsync(
                         profile,
                         emailDestination,
                         emailTemplate,
@@ -576,6 +580,13 @@ public class ExecutionService
                         Log.Debug("Inserting {SplitCount} execution split records for execution {ExecutionId}", splits.Count, executionId);
                         await InsertExecutionSplitsAsync(executionId, splits);
                         Log.Debug("Successfully inserted {SplitCount} execution split records", splits.Count);
+                    }
+
+                    // Record per-recipient failures
+                    foreach (var (recipient, error) in emailFailures)
+                    {
+                        try { await AddExecutionErrorAsync(executionId, "Email", "EmailSend", recipient, error); }
+                        catch { /* non-blocking */ }
                     }
 
                     // Check if email export meets success threshold
@@ -647,7 +658,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Email export failed for profile {ProfileId}", profile.Id);
+                    Log.Error("Email export failed for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                     stopwatch.Stop();
                     await UpdateExecutionWithSplitSummaryAsync(
                         executionId,
@@ -840,7 +851,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Template transformation failed");
+                    Log.Error("Template transformation failed: {Error}", ex.Message);
                     await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, 
                         $"Template transformation error: {ex.Message}");
                     return (executionId, false, null, $"Template transformation error: {ex.Message}");
@@ -923,7 +934,7 @@ public class ExecutionService
                             }
                             catch (Exception ex)
                             {
-                                Log.Warning(ex, "Failed to get destination path, using temp directory");
+                                Log.Warning("Failed to get destination path, using temp directory: {Error}", ex.Message);
                             }
 
                             // Fall back to temp directory if we couldn't determine destination
@@ -1075,7 +1086,7 @@ public class ExecutionService
                             var execution = new ProfileExecution { Id = executionId, StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, RowCount = rows.Count, OutputPath = lastFinalPath, ExecutionTimeMs = stopwatch.ElapsedMilliseconds };
                             await _notificationService.SendExecutionSuccessAsync(execution, profile);
                         }
-                        catch (Exception ex) { Log.Error(ex, "Failed to send execution success notification"); }
+                        catch (Exception ex) { Log.Error("Failed to send execution success notification: {Error}", ex.Message); }
                     });
 
                     return (executionId, true, lastFinalPath, null);
@@ -1084,6 +1095,7 @@ public class ExecutionService
                 // Get destination configuration (priority: Job override > Profile destination > Profile inline config)
                 string? destinationConfig;
                 DestinationType destinationType;
+                Reef.Core.Models.Destination? resolvedDestination = null;
 
                 if (destinationOverrideId.HasValue)
                 {
@@ -1105,6 +1117,7 @@ public class ExecutionService
                         return (executionId, false, null, $"Destination {destination.Name} is not active");
                     }
 
+                    resolvedDestination = destination;
                     destinationType = destination.Type;
                     destinationConfig = destination.ConfigurationJson;
 
@@ -1130,6 +1143,7 @@ public class ExecutionService
                         return (executionId, false, null, $"Destination {destination.Name} is not active");
                     }
 
+                    resolvedDestination = destination;
                     destinationType = destination.Type;
                     destinationConfig = destination.ConfigurationJson;
 
@@ -1151,6 +1165,18 @@ public class ExecutionService
                         : DestinationType.Local;
 
                     Log.Debug("Using profile's destination: {DestinationType}", profile.OutputDestinationType);
+                }
+
+                // Apply endpoint override if the profile has one configured
+                if (profile.OutputDestinationEndpointId.HasValue && resolvedDestination != null)
+                {
+                    var ep = await _destinationService.GetEndpointByIdAsync(profile.OutputDestinationEndpointId.Value);
+                    if (ep != null)
+                    {
+                        destinationConfig = _destinationService.MergeWithEndpoint(resolvedDestination, ep);
+                        Log.Debug("Applied endpoint override '{EndpointName}' (ID {EndpointId}) to destination '{DestinationName}'",
+                            ep.Name, ep.Id, resolvedDestination.Name);
+                    }
                 }
 
                 // Save to destination with retry logic (handled in DestinationService)
@@ -1185,7 +1211,7 @@ public class ExecutionService
                     catch (Exception ex)
                     {
                         // Log but don't fail the execution - data was successfully exported
-                        Log.Error(ex, "Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}", profileId, executionId);
+                        Log.Error("Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}: {Error}", profileId, executionId, ex.Message);
                     }
                 }
 
@@ -1315,7 +1341,7 @@ public class ExecutionService
                     }
                     catch (Exception cleanupEx)
                     {
-                        Log.Warning(cleanupEx, "Failed to delete temporary file: {TempFilePath}", tempFilePath);
+                        Log.Warning("Failed to delete temporary file: {TempFilePath}: {Error}", tempFilePath, cleanupEx.Message);
                     }
                 }
             }
@@ -1323,7 +1349,7 @@ public class ExecutionService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.Error(ex, "Unexpected error executing profile {ProfileId}", profileId);
+            Log.Error("Unexpected error executing profile {ProfileId}: {Error}", profileId, ex.Message);
 
             if (executionId > 0)
             {
@@ -1464,8 +1490,8 @@ public class ExecutionService
                 catch (Exception ex)
                 {
                     // Log but don't fail the execution - data was successfully exported
-                    Log.Error(ex, "Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}", 
-                        profile.Id, executionId);
+                    Log.Error("Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}: {Error}",
+                        profile.Id, executionId, ex.Message);
                 }
             }
             
@@ -1487,7 +1513,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Split execution failed for profile {ProfileId}", profile.Id);
+            Log.Error("Split execution failed for profile {ProfileId}: {Error}", profile.Id, ex.Message);
             stopwatch.Stop();
             await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
                 stopwatch.ElapsedMilliseconds, ex.Message);
@@ -1506,7 +1532,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             ORDER BY pe.StartedAt DESC
@@ -1567,7 +1594,7 @@ public class ExecutionService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereConditions.Add("(p.Name LIKE @Search OR pe.Status LIKE @Search)");
+            whereConditions.Add("(p.Name LIKE @Search OR p.Code LIKE @Search OR pe.Status LIKE @Search)");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -1587,7 +1614,8 @@ public class ExecutionService
         var dataSql = $@"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             {whereClause}
@@ -1617,7 +1645,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.ProfileId = @ProfileId
@@ -1639,7 +1668,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.Id = @Id";
@@ -1657,7 +1687,8 @@ public class ExecutionService
         const string sql = @"
             SELECT
                 pe.*,
-                p.Name as ProfileName
+                p.Name as ProfileName,
+                p.Code as ProfileCode
             FROM ProfileExecutions pe
             LEFT JOIN Profiles p ON pe.ProfileId = p.Id
             WHERE pe.ProfileId = @ProfileId
@@ -1794,7 +1825,7 @@ public class ExecutionService
             catch (Exception ex)
             {
                 var errorMsg = $"Invalid pre-processing configuration: {ex.Message}";
-                Log.Error(ex, errorMsg);
+                Log.Error("{Message}", errorMsg);
                 await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", errorMsg, stopwatch.ElapsedMilliseconds);
                 return (false, errorMsg);
             }
@@ -1833,7 +1864,7 @@ public class ExecutionService
         {
             stopwatch.Stop();
             var error = $"Pre-processing exception: {ex.Message}";
-            Log.Error(ex, error);
+            Log.Error("{Message}", error);
             await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
@@ -1892,7 +1923,7 @@ public class ExecutionService
             catch (Exception ex)
             {
                 var errorMsg = $"Invalid post-processing configuration: {ex.Message}";
-                Log.Error(ex, errorMsg);
+                Log.Error("{Message}", errorMsg);
                 await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", errorMsg, stopwatch.ElapsedMilliseconds);
                 return (false, errorMsg);
             }
@@ -1931,7 +1962,7 @@ public class ExecutionService
         {
             stopwatch.Stop();
             var error = $"Post-processing exception: {ex.Message}";
-            Log.Error(ex, error);
+            Log.Error("{Message}", error);
             await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
@@ -2197,7 +2228,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error executing post-processing");
+            Log.Error("Error executing post-processing: {Error}", ex.Message);
             throw;
         }
     }
@@ -2280,7 +2311,7 @@ public class ExecutionService
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to delete original document: {DocumentPath}", documentPath);
+                        Log.Warning("Failed to delete original document: {DocumentPath}: {Error}", documentPath, ex.Message);
                     }
                     
                     Log.Debug("Split '{SplitKey}' document copied to {FilePath} ({FileSize} bytes)",
@@ -2366,7 +2397,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error during post-processing for split '{SplitKey}'", splitKey);
+                    Log.Error("Error during post-processing for split '{SplitKey}': {Error}", splitKey, ex.Message);
                     // Continue processing other splits
                 }
             }
@@ -2375,7 +2406,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing split '{SplitKey}'", splitKey);
+            Log.Error("Error processing split '{SplitKey}': {Error}", splitKey, ex.Message);
             
             if (splitRecordId > 0)
             {
@@ -2395,7 +2426,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Failed to delete temporary file: {FilePath}", tempFilePath);
+                    Log.Warning("Failed to delete temporary file: {FilePath}: {Error}", tempFilePath, ex.Message);
                 }
             }
         }
@@ -2623,7 +2654,7 @@ public class ExecutionService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to insert split record for execution {ExecutionId}: {SplitKey}", executionId, split.SplitKey);
+                Log.Error("Failed to insert split record for execution {ExecutionId}: {SplitKey}: {Error}", executionId, split.SplitKey, ex.Message);
                 throw;
             }
         }
@@ -2938,7 +2969,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to create email metadata file");
+            Log.Warning("Failed to create email metadata file: {Error}", ex.Message);
             // Don't fail the execution if metadata file creation fails
         }
     }
@@ -3035,5 +3066,30 @@ public class ExecutionService
             TotalRowsProcessed = deltaSyncResult.TotalRowsProcessed,
             NewHashState = filteredNewHashState
         };
+    }
+
+    private async Task AddExecutionErrorAsync(
+        int executionId, string errorType, string phase, string? detail, string message)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        await conn.ExecuteAsync(@"
+            INSERT INTO ProfileExecutionErrors
+                (ExecutionId, ErrorType, Phase, Detail, ErrorMessage, OccurredAt)
+            VALUES
+                (@ExecutionId, @ErrorType, @Phase, @Detail, @ErrorMessage, @OccurredAt)",
+            new { ExecutionId = executionId, ErrorType = errorType, Phase = phase,
+                  Detail = detail, ErrorMessage = message, OccurredAt = DateTime.UtcNow });
+    }
+
+    public async Task<List<ProfileExecutionError>> GetExecutionErrorsAsync(int executionId)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        var rows = await conn.QueryAsync<ProfileExecutionError>(@"
+            SELECT * FROM ProfileExecutionErrors
+            WHERE ExecutionId = @ExecutionId
+            ORDER BY OccurredAt", new { ExecutionId = executionId });
+        return rows.ToList();
     }
 }

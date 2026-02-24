@@ -237,4 +237,26 @@ public static class NotificationThrottlerExtensions
             "threshold",
             NotificationThrottler.CooldownPeriods.DatabaseSizeThreshold);
     }
+
+    /// <summary>
+    /// Check if import profile execution failure notification should be sent
+    /// </summary>
+    public static bool ShouldNotifyImportProfileFailure(this NotificationThrottler throttler, int profileId)
+    {
+        return throttler.ShouldNotify(
+            "ImportProfileFailure",
+            profileId.ToString(),
+            NotificationThrottler.CooldownPeriods.ProfileFailure);
+    }
+
+    /// <summary>
+    /// Check if import profile execution success notification should be sent
+    /// </summary>
+    public static bool ShouldNotifyImportProfileSuccess(this NotificationThrottler throttler, int profileId)
+    {
+        return throttler.ShouldNotify(
+            "ImportProfileSuccess",
+            profileId.ToString(),
+            NotificationThrottler.CooldownPeriods.ProfileSuccess);
+    }
 }

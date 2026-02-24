@@ -6,7 +6,10 @@ public class Job
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public JobType Type { get; set; }
-    public int? ProfileId { get; set; } // Link to profile for profile-based jobs
+    public int? ProfileId { get; set; } // FK to Profiles (export profiles)
+    public int? ImportProfileId { get; set; } // FK to ImportProfiles
+    [System.Obsolete("Use ImportProfileId for import profile jobs. ProfileType is kept in DB for backward compat only.")]
+    public string? ProfileType { get; set; }
     public int? DestinationId { get; set; } // Optional destination override
     public string? CustomActionJson { get; set; } // For custom job types
     

@@ -146,6 +146,7 @@
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
@@ -153,7 +154,7 @@
                                 </tr>
                             </thead>
                             <tbody id="dashboard-executions-tbody" class="bg-white divide-y divide-gray-200">
-                                <tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">Loading...</td></tr>
+                                <tr><td colspan="7" class="px-6 py-4 text-center text-gray-400">Loading...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -243,15 +244,33 @@
             const token = localStorage.getItem('reef_token');
             if (!token) return;
             try {
-                const [statsRes, executionsRes, connectionsRes] = await Promise.all([
+                const [statsRes, executionsRes, connectionsRes, importProfilesRes] = await Promise.all([
                     cachedFetch('/api/admin/metrics', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 3 * 60 * 1000 }),
-                    cachedFetch('/api/executions?pageSize=5', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 }),
-                    cachedFetch('/api/connections', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 })
+                    cachedFetch('/api/executions?pageSize=10', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 }),
+                    cachedFetch('/api/connections', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 }),
+                    cachedFetch('/api/profiles?type=import', { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 })
                 ]);
                 const stats = statsRes.ok ? await statsRes.json() : {};
                 const executionsResult = executionsRes.ok ? await executionsRes.json() : { data: [] };
-                const executions = executionsResult.data || executionsResult || [];
+                const exportExecutions = (executionsResult.data || executionsResult || []).map(e => ({ ...e, _type: 'export' }));
                 const connections = connectionsRes.ok ? await connectionsRes.json() : [];
+
+                // Load recent import executions (up to 3 per profile)
+                const importProfiles = importProfilesRes.ok ? await importProfilesRes.json() : [];
+                const importExecArrays = await Promise.all(importProfiles.map(p =>
+                    cachedFetch(`/api/profiles/${p.id}/executions?type=import&limit=3`, { headers: { 'Authorization': 'Bearer ' + token }, ttl: 2 * 60 * 1000 })
+                        .then(r => r.ok ? r.json() : [])
+                        .then(execs => execs.map(e => ({ ...e, _profileName: p.name, _profileCode: p.code, _type: 'import' })))
+                        .catch(() => [])
+                ));
+                const importExecutions = importExecArrays.flat()
+                    .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
+                    .slice(0, 5);
+
+                // Merge and sort, keep top 10
+                const executions = [...exportExecutions, ...importExecutions]
+                    .sort((a, b) => new Date(b.startedAt) - new Date(a.startedAt))
+                    .slice(0, 10);
                 document.getElementById('dashboard-users').textContent = stats.users ?? '-';
                 document.getElementById('dashboard-connections').textContent = stats.connections ?? '-';
                 document.getElementById('dashboard-profiles').textContent = stats.profiles && stats.profiles.total !== undefined ? stats.profiles.total : '-';
@@ -345,27 +364,46 @@
                 // Executions table
                 const tbody = document.getElementById('dashboard-executions-tbody');
                 if (executions.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-400">No recent executions</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-400">No recent executions</td></tr>';
                 } else {
-                    tbody.innerHTML = executions.map(exec => `
+                    tbody.innerHTML = executions.map(exec => {
+                        const isImport = exec._type === 'import';
+                        const profileName = isImport
+                            ? (exec._profileName || `Profile #${exec.importProfileId}`)
+                            : (exec.profileName || 'Unknown');
+                        const profileCode = isImport ? (exec._profileCode || '') : (exec.profileCode || '');
+                        const typeBadge = isImport
+                            ? '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Import</span>'
+                            : '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Export</span>';
+                        const detailUrl = isImport
+                            ? `/executions?importId=${exec.id}`
+                            : `/executions?id=${exec.id}`;
+                        const duration = isImport
+                            ? (exec.completedAt ? formatDuration(new Date(exec.completedAt) - new Date(exec.startedAt)) : '-')
+                            : formatDuration(exec.executionTimeMs);
+                        const startedAt = isImport ? exec.startedAt : exec.startedAt + 'Z';
+                        return `
                         <tr
-                            onclick="window.location.href='/executions?id=${exec.id}'"
-                            class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500"
+                            onclick="window.location.href='${detailUrl}'"
+                            class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent ${isImport ? 'hover:border-indigo-400' : 'hover:border-blue-500'}"
                         >
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.id}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors" title="Profile ID: ${exec.profileId}">${exec.profileName || 'Unknown'}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
+                                ${profileName}${profileCode ? ` <span class="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${escapeHtml(profileCode)}</span>` : ''}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">${typeBadge}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
                                 <span class="px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exec.status)}">${exec.status}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDate(exec.startedAt + 'Z')}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDuration(exec.executionTimeMs)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDate(startedAt)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${duration}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <a href="/executions?id=${exec.id}" onclick="event.stopPropagation()" class="text-blue-600 hover:text-blue-900 inline-flex items-center justify-center transition-transform hover:scale-110">
+                                <a href="${detailUrl}" onclick="event.stopPropagation()" class="text-blue-600 hover:text-blue-900 inline-flex items-center justify-center transition-transform hover:scale-110">
                                     <i data-lucide="eye" class="h-4 w-4"></i>
                                 </a>
                             </td>
                         </tr>
-                    `).join('');
+                    `}).join('');
                     queueLucideRender();
                 }
             } catch (e) {
@@ -377,7 +415,8 @@
             switch (status) {
                 case 'Success': return 'bg-green-100 text-green-800';
                 case 'Failed': return 'bg-red-100 text-red-800';
-                case 'Running': return 'bg-yellow-100 text-yellow-800';
+                case 'Running': return 'bg-blue-100 text-blue-800';
+                case 'PartialSuccess': return 'bg-yellow-100 text-yellow-800';
                 default: return 'bg-gray-100 text-gray-800';
             }
         }
@@ -547,6 +586,6 @@
     </div>
 
     <!-- Toast container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col items-end space-y-2"></div>
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col items-end space-y-2"></div>
 </body>
 </html>

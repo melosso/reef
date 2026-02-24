@@ -14,6 +14,7 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
+            background-color: #020617; /* slate-950 */
         }
 
         /* --- Animated Blob Background --- */
@@ -22,7 +23,7 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background-color: #111827;
+            background-color: #020617;
         }
 
         .blob {
@@ -34,36 +35,32 @@
         }
 
         .blob.color-1 {
-            background: #1e3a8a;
+            background: #1e3a8a; /* blue-900 */
             width: 450px;
             height: 450px;
             top: -100px;
             left: -150px;
-            /* Slowed down animation */
             animation: move-blob-1 35s infinite alternate ease-in-out;
         }
 
         .blob.color-2 {
-            background: #4c1d95;
+            background: #4c1d95; /* violet-900 */
             width: 350px;
             height: 350px;
             bottom: -50px;
             right: -100px;
-            /* Slowed down animation */
             animation: move-blob-2 40s infinite alternate ease-in-out;
         }
 
         .blob.color-3 {
-            background: #312e81;
+            background: #312e81; /* indigo-900 */
             width: 300px;
             height: 300px;
             top: 50%;
             left: 50%;
-            /* Slowed down animation */
             animation: move-blob-3 30s infinite alternate ease-in-out;
         }
 
-        /* Keyframes are unchanged, just the duration */
         @keyframes move-blob-1 {
             from { transform: translate(0, 0) scale(1); }
             to { transform: translate(150px, 200px) scale(1.2); }
@@ -79,8 +76,7 @@
             to { transform: translate(-20px, -200px) scale(1); }
         }
 
-
-        /* --- Fade-in animation for elements --- */
+        /* --- Fade-in animation --- */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -88,32 +84,8 @@
 
         .fade-in {
             animation: fadeIn 0.6s ease-out forwards;
-            animation-delay: 0.2s;
+            animation-delay: 0.1s;
             opacity: 0;
-        }
-
-        /* --- Slide-down animation for error messages --- */
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .error-slide-in {
-            animation: slideDown 0.3s ease-out forwards;
-        }
-
-        /* --- Spinner transitions --- */
-        #login-spinner {
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-        }
-
-        #login-spinner.hidden {
-            opacity: 0;
-            transform: scale(0.8);
-        }
-
-        #login-text {
-            transition: opacity 0.3s ease-in;
         }
 
         /* --- Hive Overlay --- */
@@ -136,9 +108,11 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 antialiased">
+<body class="text-slate-200 antialiased">
     <div class="background-container">
-
+        <div class="blob color-1"></div>
+        <div class="blob color-2"></div>
+        <div class="blob color-3"></div>
     </div>
     <svg class="hive-overlay" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -147,70 +121,83 @@
                      fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
             </pattern>
         </defs>
-
         <g>
             <rect width="200%" height="200%" fill="url(#hexPattern)"/>
         </g>
     </svg>
-    <div class="flex min-h-screen w-full flex-col items-center justify-center space-y-6 p-8">
 
-        <div class="fade-in flex flex-col items-center space-y-6 text-center">
+    <div class="relative z-10 flex min-h-screen w-full flex-col items-center justify-center p-8">
+        <div class="fade-in w-full max-w-md p-10 bg-slate-900/30 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-blue-900/20 text-center flex flex-col items-center">
+            
+            <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-full shadow-inner mb-6">
+                <i data-lucide="loader-2" class="h-10 w-10 animate-spin text-blue-400"></i>
+            </div>
 
-            <i data-lucide="loader-2" class="h-16 w-16 animate-spin text-blue-500"></i>
-
-            <h1 class="text-4xl font-bold tracking-tight text-white disable-select">
+            <h1 class="text-3xl font-bold tracking-tight text-slate-50 disable-select">
                 You've been logged out.
             </h1>
-            <p class="text-lg text-gray-400 disable-select">
+            <p class="mt-3 text-sm font-medium text-slate-400 disable-select">
                 Thanks for the hard work. We're redirecting you back...
             </p>
         </div>
-
     </div>
 
     <script>
-        // 1. Initialize the Lucide icon so it renders
-        queueLucideRender();
-
-        // 2. Call backend logout endpoint to clear cookie
-        (async function() {
-            try {
-                await fetch('/api/auth/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-            } catch (err) {
-                console.warn('Logout API call failed:', err);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Primary invocation via main.js, with native fallback
+            if (typeof window.queueLucideRender === 'function') {
+                window.queueLucideRender();
+            } else if (typeof window.lucide !== 'undefined' && window.lucide.createIcons) {
+                window.lucide.createIcons();
+            } else {
+                console.error('Lucide rendering engine failed to initialize.');
             }
-        })();
 
-        // 3. Perform the actual client-side logout by clearing session data
-        localStorage.removeItem('reef_token');
-        localStorage.removeItem('reef_username');
-        localStorage.removeItem('reef_role');
-        localStorage.removeItem('reef_display_name');
+            // Interactive parallax overlay execution
+            const hiveOverlay = document.querySelector('.hive-overlay');
+            if (hiveOverlay) {
+                const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                if (!isTouchDevice()) {
+                    window.addEventListener('mousemove', (e) => {
+                        const { clientX, clientY } = e;
+                        const { innerWidth, innerHeight } = window;
+                        const x = (clientX / innerWidth - 0.5) * 2; 
+                        const y = (clientY / innerHeight - 0.5) * 2;
+                        hiveOverlay.style.transform = `translate(${x * -15}px, ${y * -15}px)`;
+                    });
+                }
+            }
 
-        // 4. Set the total time to show this page (e.g., 2.5 seconds)
-        const redirectDelay = 2500;
-        const fadeOutTime = 500; // 0.5s fade-out
+            // Session termination sequence
+            (async function executeLogoff() {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (err) {
+                    console.warn('Backend logout API request failed:', err);
+                }
+            })();
 
-        // 5. Wait for the delay, then start the fade-out
-        setTimeout(() => {
+            // Client-side state clearance
+            localStorage.removeItem('reef_token');
+            localStorage.removeItem('reef_username');
+            localStorage.removeItem('reef_role');
+            localStorage.removeItem('reef_display_name');
 
-            // Add a CSS transition for opacity
-            document.body.style.transition = `opacity ${fadeOutTime}ms ease-in`;
-            // Trigger the fade-out
-            document.body.style.opacity = '0';
+            // Redirect timing parameters
+            const redirectDelay = 2500;
+            const fadeOutTime = 500; 
 
-            // Wait for the fade-out animation to finish, *then* redirect.
-            // This prevents a jarring "snap" before the page changes.
             setTimeout(() => {
-                window.location.href = '/index';
-            }, fadeOutTime);
-
-        }, redirectDelay - fadeOutTime); // Start fading out *before* the total delay is over
+                document.body.style.transition = `opacity ${fadeOutTime}ms ease-in`;
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = '/index';
+                }, fadeOutTime);
+            }, redirectDelay - fadeOutTime);
+        });
     </script>
 </body>
 </html>

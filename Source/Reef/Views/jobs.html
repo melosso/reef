@@ -5,7 +5,7 @@
                 <div>
                     <h1 class="text-2xl font-semibold text-gray-800">Jobs</h1>
                 </div>
-                <button id="newJobButton" onclick="openAddJobModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                <button id="newJobButton" onclick="openAddJobModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
                     <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                     New Job
                 </button>
@@ -378,9 +378,11 @@
                             <select id="job-profileId"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                                 <option value="">Select profile...</option>
+                                <optgroup label="Export Profiles" id="job-profileId-export-group"></optgroup>
+                                <optgroup label="Import Profiles" id="job-profileId-import-group"></optgroup>
                             </select>
                         </div>
-                        
+
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
                             <select id="job-destinationId"
@@ -604,51 +606,6 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        function formatDateTime(dateString) {
-            if (!dateString) return 'Never';
-            let date;
-            try {
-                // If already ends with Z or has timezone, don't add Z
-                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
-                    date = new Date(dateString);
-                } else {
-                    date = new Date(dateString + 'Z');
-                }
-                if (isNaN(date.getTime())) return 'Never';
-                return date.toLocaleString();
-            } catch {
-                return 'Never';
-            }
-        }
-
-        function formatRelativeTime(dateString) {
-            if (!dateString) return null;
-            let date;
-            try {
-                // If already ends with Z or has timezone, don't add Z
-                if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
-                    date = new Date(dateString);
-                } else {
-                    date = new Date(dateString + 'Z');
-                }
-                if (isNaN(date.getTime())) return null;
-            } catch {
-                return null;
-            }
-
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMins / 60);
-            const diffDays = Math.floor(diffHours / 24);
-
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 7) return `${diffDays}d ago`;
-            return null;
         }
 
         function showJobTab(tabName) {
@@ -1004,10 +961,13 @@
                 // Apply search filter across multiple fields
                 if (searchTerm) {
                     const jobName = (job.name || '').toLowerCase();
-                    const profileName = profiles.find(p => p.id === job.profileId)?.name || '';
-                    const profileNameLower = profileName.toLowerCase();
+                    const exportProfile = profiles.find(p => p.id === job.profileId);
+                    const importProfile = importProfilesList.find(p => p.id === job.importProfileId);
+                    const linkedProfile = exportProfile || importProfile;
+                    const profileNameLower = (linkedProfile?.name || job.profileName || '').toLowerCase();
+                    const profileCodeLower = (linkedProfile?.code || '').toLowerCase();
 
-                    if (!jobName.includes(searchTerm) && !profileNameLower.includes(searchTerm)) {
+                    if (!jobName.includes(searchTerm) && !profileNameLower.includes(searchTerm) && !profileCodeLower.includes(searchTerm)) {
                         return false;
                     }
                 }
@@ -1182,21 +1142,32 @@
 
         async function loadProfilesAndDestinations() {
             try {
-                const profilesResponse = await fetch('/api/profiles', {
-                    headers: getAuthHeaders()
-                });
+                const [profilesResponse, importProfilesResponse] = await Promise.all([
+                    fetch('/api/profiles', { headers: getAuthHeaders() }),
+                    fetch('/api/profiles?type=import', { headers: getAuthHeaders() })
+                ]);
+
+                const profileSelect = document.getElementById('job-profileId');
+                const exportGroup = document.getElementById('job-profileId-export-group');
+                const importGroup = document.getElementById('job-profileId-import-group');
+
                 if (profilesResponse.ok) {
                     const profiles = await profilesResponse.json();
-                    profilesCache = profiles; // Store for later reference
-                    const profileSelect = document.getElementById('job-profileId');
-                    profileSelect.innerHTML = '<option value="">Select profile...</option>' +
-                        profiles.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+                    profilesCache = profiles; // Store for later reference (used by updateDestinationFieldState)
+                    exportGroup.innerHTML = profiles.map(p => `<option value="export:${p.id}">${escapeHtml(p.name)}${p.code ? ` [${p.code}]` : ''}</option>`).join('');
+                }
 
-                    // Attach change event listener only once
-                    if (!profileSelectListenerAttached) {
-                        profileSelect.addEventListener('change', updateDestinationFieldState);
-                        profileSelectListenerAttached = true;
-                    }
+                if (importProfilesResponse.ok) {
+                    const importProfiles = await importProfilesResponse.json();
+                    importGroup.innerHTML = importProfiles.map(p => `<option value="import:${p.id}">${escapeHtml(p.name)}${p.code ? ` [${p.code}]` : ''}</option>`).join('');
+                }
+
+                // Attach change event listener only once
+                if (!profileSelectListenerAttached) {
+                    profileSelect.addEventListener('change', function() {
+                        updateDestinationFieldState();
+                    });
+                    profileSelectListenerAttached = true;
                 }
 
                 const destResponse = await fetch('/api/destinations', {
@@ -1218,13 +1189,21 @@
         }
 
         function updateDestinationFieldState() {
-            const profileId = document.getElementById('job-profileId').value;
+            const profileValue = document.getElementById('job-profileId').value;
+            const [profileTypePart, profileIdStr] = profileValue ? profileValue.split(':') : ['', ''];
+            const profileId = parseInt(profileIdStr) || null;
             const destSelect = document.getElementById('job-destinationId');
             const destContainer = destSelect.closest('div');
             const currentValue = destSelect.value;
 
-            if (profileId) {
-                const selectedProfile = profilesCache.find(p => p.id === parseInt(profileId));
+            if (profileValue) {
+                // Import profiles never restrict destination — always re-enable
+                if (profileTypePart === 'import') {
+                    destSelect.disabled = false;
+                    destContainer.style.opacity = '1';
+                    destContainer.style.pointerEvents = 'auto';
+                } else {
+                const selectedProfile = profilesCache.find(p => p.id === profileId);
 
                 // Check for isEmailExport property (handles both camelCase and PascalCase)
                 const isEmailProfile = selectedProfile && (selectedProfile.isEmailExport || selectedProfile.IsEmailExport);
@@ -1241,6 +1220,7 @@
                     destContainer.style.opacity = '1';
                     destContainer.style.pointerEvents = 'auto';
                 }
+                } // close else of profileTypePart check
             } else {
                 // No profile selected - enable destination field
                 destSelect.disabled = false;
@@ -1269,9 +1249,10 @@
             await checkAuth();
 
             try {
-                const [jobsResponse, profilesResponse, destinationsResponse] = await Promise.all([
+                const [jobsResponse, profilesResponse, importProfilesResponse, destinationsResponse] = await Promise.all([
                     fetch(API_BASE, { headers: getAuthHeaders() }),
                     fetch('/api/profiles', { headers: getAuthHeaders() }),
+                    fetch('/api/profiles?type=import', { headers: getAuthHeaders() }),
                     fetch('/api/destinations', { headers: getAuthHeaders() })
                 ]);
 
@@ -1283,17 +1264,23 @@
                     profiles = await profilesResponse.json();
                 }
 
+                let importProfilesList = [];
+                if (importProfilesResponse.ok) {
+                    importProfilesList = await importProfilesResponse.json();
+                }
+
                 if (destinationsResponse.ok) {
                     destinations = await destinationsResponse.json();
                 }
 
                 // Enrich jobs with profile names
                 allJobs.forEach(job => {
-                    if (job.profileId) {
+                    if (job.importProfileId) {
+                        const importProfile = importProfilesList.find(p => p.id === job.importProfileId);
+                        if (importProfile) job.profileName = importProfile.name;
+                    } else if (job.profileId) {
                         const profile = profiles.find(p => p.id === job.profileId);
-                        if (profile) {
-                            job.profileName = profile.name;
-                        }
+                        if (profile) job.profileName = profile.name;
                     }
                 });
 
@@ -1836,7 +1823,12 @@
                 document.getElementById('job-name').value = job.name || '';
                 document.getElementById('job-description').value = job.description || '';
                 document.getElementById('job-type').value = job.type || '';
-                document.getElementById('job-profileId').value = job.profileId || '';
+                const profileSelectValue = job.importProfileId
+                    ? `import:${job.importProfileId}`
+                    : job.profileId
+                        ? `export:${job.profileId}`
+                        : '';
+                document.getElementById('job-profileId').value = profileSelectValue;
                 document.getElementById('job-destinationId').value = job.destinationId || '';
 
                 // Update destination field state based on selected profile type
@@ -1987,11 +1979,17 @@
             }
 
             const jobName = document.getElementById('job-name').value;
+            const profileRaw = document.getElementById('job-profileId').value; // e.g. "import:3" or "export:5"
+            const [profileTypePart, profileIdPart] = profileRaw ? profileRaw.split(':') : ['', ''];
+            const parsedId = parseInt(profileIdPart) || null;
+            const profileId = profileTypePart === 'export' ? parsedId : null;
+            const importProfileId = profileTypePart === 'import' ? parsedId : null;
             const job = {
                 name: jobName,
                 description: document.getElementById('job-description').value,
                 type: document.getElementById('job-type').value,
-                profileId: parseInt(document.getElementById('job-profileId').value) || null,
+                profileId,
+                importProfileId,
                 destinationId: parseInt(document.getElementById('job-destinationId').value) || null,
                 scheduleType: scheduleType,
                 cronExpression: cronExpression,

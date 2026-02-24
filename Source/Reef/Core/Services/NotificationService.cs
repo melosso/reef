@@ -66,7 +66,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error retrieving notification settings from database");
+            Log.Error("Error retrieving notification settings from database: {Error}", ex.Message);
             return null;
         }
     }
@@ -89,7 +89,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error retrieving destination {DestinationId}", destinationId);
+            Log.Error("Error retrieving destination {DestinationId}: {Error}", destinationId, ex.Message);
             return null;
         }
     }
@@ -121,7 +121,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error updating email approval cooldown timestamp");
+            Log.Error("Error updating email approval cooldown timestamp: {Error}", ex.Message);
         }
     }
 
@@ -142,7 +142,7 @@ public class NotificationService
             // Check throttling - max once per 30 minutes per profile
             if (!_throttler.ShouldNotifyProfileSuccess(profile.Id))
             {
-                Log.Debug("Profile success notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Profile success notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -159,12 +159,12 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending success notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending success notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -185,7 +185,7 @@ public class NotificationService
             // Check throttling - max once per 5 minutes per profile (failures are more important)
             if (!_throttler.ShouldNotifyProfileFailure(profile.Id))
             {
-                Log.Debug("Profile failure notification throttled for profile {ProfileId}", profile.Id);
+                Log.Debug("Profile failure notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
                 return;
             }
 
@@ -202,12 +202,88 @@ public class NotificationService
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
             await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
-            Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileId})",
-                execution.Id, profile.Id);
+            Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending failure notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending failure notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Send notification for successful import profile execution
+    /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
+    /// </summary>
+    public async Task SendImportExecutionSuccessAsync(ImportProfileExecution execution, ImportProfile profile)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileSuccess)
+            {
+                return;
+            }
+
+            if (!_throttler.ShouldNotifyImportProfileSuccess(profile.Id))
+            {
+                Log.Debug("Import profile success notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
+                return;
+            }
+
+            var fallbackSubject = $"[Reef] Import '{profile.Name}' completed successfully";
+            var fallbackBody = BuildImportSuccessEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileSuccess", fallbackSubject, fallbackBody);
+
+            var context = BuildImportSuccessEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Error sending import success notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Send notification for failed import profile execution
+    /// Uses throttling to prevent excessive emails (max once per 5 minutes per profile)
+    /// </summary>
+    public async Task SendImportExecutionFailureAsync(ImportProfileExecution execution, ImportProfile profile)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileFailure)
+            {
+                return;
+            }
+
+            if (!_throttler.ShouldNotifyImportProfileFailure(profile.Id))
+            {
+                Log.Debug("Import profile failure notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
+                return;
+            }
+
+            var fallbackSubject = $"[Reef] Import '{profile.Name}' execution failed";
+            var fallbackBody = BuildImportFailureEmailBodyTemplate();
+            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileFailure", fallbackSubject, fallbackBody);
+
+            var context = BuildImportFailureEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
+            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
+            var renderedBody = await RenderEmailTemplateAsync(body, context);
+
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
+                execution.Id, profile.Code, profile.Name);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Error sending import failure notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -249,7 +325,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending job success notification for {JobName}", jobName);
+            Log.Error("Error sending job success notification for {JobName}: {Error}", jobName, ex.Message);
         }
     }
 
@@ -291,7 +367,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending job failure notification for {JobName}", jobName);
+            Log.Error("Error sending job failure notification for {JobName}: {Error}", jobName, ex.Message);
         }
     }
 
@@ -325,7 +401,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new user notification for {Username}", username);
+            Log.Error("Error sending new user notification for {Username}: {Error}", username, ex.Message);
         }
     }
 
@@ -359,7 +435,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new API key notification for {KeyName}", keyName);
+            Log.Error("Error sending new API key notification for {KeyName}: {Error}", keyName, ex.Message);
         }
     }
 
@@ -393,7 +469,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new webhook notification for {WebhookName}", webhookName);
+            Log.Error("Error sending new webhook notification for {WebhookName}: {Error}", webhookName, ex.Message);
         }
     }
 
@@ -443,7 +519,7 @@ public class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error sending debounced email approval notification");
+                    Log.Error("Error sending debounced email approval notification: {Error}", ex.Message);
                 }
             });
         }
@@ -518,7 +594,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new email approval notification");
+            Log.Error("Error sending new email approval notification: {Error}", ex.Message);
         }
     }
 
@@ -570,7 +646,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending database size notification");
+            Log.Error("Error sending database size notification: {Error}", ex.Message);
         }
     }
 
@@ -639,7 +715,7 @@ public class NotificationService
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Invalid recipient email address: {Email}", recipient);
+                        Log.Warning("Invalid recipient email address: {Email}: {Error}", recipient, ex.Message);
                     }
                 }
             }
@@ -694,7 +770,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending system notification");
+            Log.Error("Error sending system notification: {Error}", ex.Message);
         }
     }
 
@@ -883,6 +959,14 @@ public class NotificationService
 </body>
 </html>";
     }
+
+    private static string BuildImportSuccessEmailBodyTemplate() =>
+        "<p>Import profile <strong>{{ ProfileName }}</strong> completed successfully. " +
+        "Execution ID: {{ ExecutionId }}. Rows imported: {{ RowsImported }}. Rows failed: {{ RowsFailed }}.</p>";
+
+    private static string BuildImportFailureEmailBodyTemplate() =>
+        "<p>Import profile <strong>{{ ProfileName }}</strong> failed. " +
+        "Execution ID: {{ ExecutionId }}. Error: {{ ErrorMessage }}</p>";
 
     private string BuildJobSuccessEmailBody(string jobName, Dictionary<string, object> jobDetails)
     {
@@ -1389,7 +1473,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error rendering email template with Scriban");
+            Log.Error("Error rendering email template with Scriban: {Error}", ex.Message);
             return template; // Return original template on error
         }
     }
@@ -1429,7 +1513,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Error loading template {TemplateType} from database, using fallback", templateType);
+            Log.Warning("Error loading template {TemplateType} from database, using fallback: {Error}", templateType, ex.Message);
         }
 
         return (fallbackSubject, fallbackBody, null, null);
@@ -1458,6 +1542,36 @@ public class NotificationService
     }
 
     private ScriptObject BuildFailureEmailContext(ProfileExecution execution, Profile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ErrorMessage"] = execution.ErrorMessage ?? "Unknown error";
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildImportSuccessEmailContext(ImportProfileExecution execution, ImportProfile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
+    {
+        var context = new ScriptObject();
+        context["ProfileName"] = profile.Name;
+        context["ProfileId"] = profile.Id;
+        context["ExecutionId"] = execution.Id;
+        context["StartedAt"] = execution.StartedAt;
+        context["CompletedAt"] = execution.CompletedAt;
+        context["ExecutionTime"] = execution.CompletedAt.HasValue
+            ? $"{(execution.CompletedAt.Value - execution.StartedAt).TotalSeconds:F2}s"
+            : "N/A";
+        context["RowsImported"] = (execution.RowsInserted + execution.RowsUpdated).ToString();
+        context["RowsFailed"] = execution.RowsFailed.ToString();
+        AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
+        return context;
+    }
+
+    private ScriptObject BuildImportFailureEmailContext(ImportProfileExecution execution, ImportProfile profile, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;

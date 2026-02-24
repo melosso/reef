@@ -5,10 +5,10 @@
                 <div class="flex items-center justify-between px-6 py-3">
                     <h1 class="text-2xl font-semibold text-gray-900 disable-select">Destinations</h1>
                     <div class="flex space-x-3 items-center">
-                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out" aria-label="Help">
+                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 flex items-center justify-center transition-colors duration-150" aria-label="Help">
                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                         </button>
-                        <button onclick="openAddDestinationModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                        <button onclick="openAddDestinationModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
                             <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                             Add Destination
                         </button>
@@ -111,7 +111,83 @@
                            placeholder="production, aws">
                     <p class="text-xs text-gray-500 mt-1">Comma-separated tags</p>
                 </div>
-                
+
+                <!-- Endpoints section (shown only when editing HTTP/SFTP/FTP/S3 destinations) -->
+                <div id="endpoints-section" class="hidden border-t pt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-semibold text-gray-700">Endpoints</h4>
+                        <button type="button" onclick="showAddEndpointForm()"
+                                class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1">
+                            <i data-lucide="plus" class="w-3 h-3"></i> Add
+                        </button>
+                    </div>
+                    <div id="endpoints-list" class="space-y-2 mb-3"></div>
+                    <!-- Inline add/edit form -->
+                    <div id="endpoint-form" class="hidden border border-gray-200 rounded-md p-3 bg-gray-50 space-y-3">
+                        <input type="hidden" id="ep-id">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Name *</label>
+                            <input type="text" id="ep-name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                   placeholder="e.g. Items Webhook">
+                        </div>
+                        <div id="ep-http-fields" class="hidden space-y-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Path Suffix</label>
+                                <input type="text" id="ep-path-suffix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                       placeholder="triggers/webhook/600/Items">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Method</label>
+                                    <select id="ep-method" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option value="">Inherit (POST)</option>
+                                        <option value="GET">GET</option>
+                                        <option value="POST">POST</option>
+                                        <option value="PUT">PUT</option>
+                                        <option value="PATCH">PATCH</option>
+                                        <option value="DELETE">DELETE</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Upload Format</label>
+                                    <select id="ep-upload-format" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                        <option value="">Inherit</option>
+                                        <option value="raw">Raw/Binary</option>
+                                        <option value="multipart">Multipart</option>
+                                        <option value="json">JSON</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Extra Headers (JSON)</label>
+                                <textarea id="ep-extra-headers" rows="2"
+                                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                          placeholder='{"X-Tenant": "600"}'></textarea>
+                            </div>
+                        </div>
+                        <div id="ep-sftp-fields" class="hidden">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Remote Path</label>
+                            <input type="text" id="ep-remote-path" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                   placeholder="/exports/orders/">
+                        </div>
+                        <div id="ep-s3-fields" class="hidden">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Key Prefix</label>
+                            <input type="text" id="ep-key-prefix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                   placeholder="exports/tenant-600/">
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <button type="button" id="ep-test-btn" onclick="testEndpoint()"
+                                    class="hidden text-xs px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Test</button>
+                            <div class="flex gap-2 ml-auto">
+                                <button type="button" onclick="cancelEndpointForm()"
+                                        class="text-xs px-2 py-1 border border-gray-300 rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                                <button type="button" onclick="saveEndpoint()"
+                                        class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Save Endpoint</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex justify-end space-x-3 pt-4 border-t">
                     <button type="button" id="test-destination-btn" onclick="testDestination()" 
                             class="disabled px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center">
@@ -870,10 +946,18 @@
             }
             
             configFields.innerHTML = html;
-            
+
             // If HTTP type, also update auth fields
             if (type === 'Http') {
                 updateHttpAuthFields();
+            }
+
+            // Show endpoints section for applicable types
+            const endpointsSection = document.getElementById('endpoints-section');
+            if (endpointsSection) {
+                const supportsEndpoints = ['Http', 'Sftp', 'Ftp', 'S3'].includes(type);
+                endpointsSection.classList.toggle('hidden', !supportsEndpoints);
+                updateEndpointFormFields(type);
             }
         }
 
@@ -954,6 +1038,12 @@
             document.getElementById('add-destination-form').removeAttribute('data-edit-id');
             document.getElementById('add-destination-form').removeAttribute('data-is-active');
             document.getElementById('destination-options-menu').classList.add('hidden');
+            // Reset endpoints panel state
+            _currentEndpoints = [];
+            _currentDestinationId = null;
+            _currentDestinationType = null;
+            document.getElementById('endpoints-section').classList.add('hidden');
+            document.getElementById('endpoint-form').classList.add('hidden');
             updateConfigFields();
             queueLucideRender();
         }
@@ -1148,6 +1238,12 @@
             const type = document.getElementById('destination-type').value;
             if (!type) {
                 showToast('Please select a destination type', 'error');
+                return;
+            }
+
+            // Guard: HTTP destinations with named endpoints must be tested per-endpoint
+            if (type === 'Http' && _currentEndpoints.length > 0) {
+                showToast('This destination has named endpoints. Use the Test button on each endpoint row to test the specific URL.', 'warning');
                 return;
             }
 
@@ -1365,13 +1461,16 @@
                         // If HTTP destination, also populate auth fields
                         if (dest.type === 'Http' && config.AuthType) {
                             updateHttpAuthFields();
-                            // Re-populate auth fields after they're created
+                            // Re-populate auth fields after they're created.
+                            // NOTE: #http-auth-fields is nested inside #config-fields, so we check
+                            //       containment directly instead of using a negative querySelector.
                             setTimeout(() => {
+                                const authFieldsContainer = document.getElementById('http-auth-fields');
                                 Object.keys(config).forEach(key => {
                                     const fieldKey = key.charAt(0).toLowerCase() + key.slice(1);
                                     const field = document.getElementById(`config-${fieldKey}`);
-                                    if (field && !document.querySelector(`#config-fields #config-${fieldKey}`)) {
-                                        // This is an auth field
+                                    if (field && authFieldsContainer && authFieldsContainer.contains(field)) {
+                                        // This is an auth field inside #http-auth-fields
                                         const value = config[key];
                                         const isEncrypted = value === '[SECRET]';
 
@@ -1409,6 +1508,14 @@
 
                     document.getElementById('add-destination-modal').classList.remove('hidden');
                     queueLucideRender();
+
+                    // Load endpoints for applicable types
+                    const supportsEndpoints = ['Http', 'Sftp', 'Ftp', 'S3'].includes(dest.type);
+                    if (supportsEndpoints) {
+                        _currentDestinationId = id;
+                        _currentDestinationType = dest.type;
+                        await loadEndpoints(id);
+                    }
                 }
             } catch (error) {
                 showToast('Failed to load destination', 'error');
@@ -1701,6 +1808,219 @@
             queueLucideRender();
             initializeDestinations();
         });
+
+        // ─── Endpoint management ──────────────────────────────────────────────
+
+        let _currentEndpoints = [];
+        let _currentDestinationId = null;
+        let _currentDestinationType = null;
+
+        function updateEndpointFormFields(type) {
+            _currentDestinationType = type;
+            const http = document.getElementById('ep-http-fields');
+            const sftp = document.getElementById('ep-sftp-fields');
+            const s3   = document.getElementById('ep-s3-fields');
+            const testBtn = document.getElementById('ep-test-btn');
+            if (!http) return;
+            http.classList.add('hidden');
+            sftp.classList.add('hidden');
+            s3.classList.add('hidden');
+            if (type === 'Http') {
+                http.classList.remove('hidden');
+                if (testBtn) testBtn.classList.remove('hidden');
+            } else {
+                if (testBtn) testBtn.classList.add('hidden');
+                if (type === 'Sftp' || type === 'Ftp') sftp.classList.remove('hidden');
+                else if (type === 'S3') s3.classList.remove('hidden');
+            }
+        }
+
+        async function loadEndpoints(destinationId) {
+            _currentDestinationId = destinationId;
+            try {
+                const resp = await fetch(`/api/destinations/${destinationId}/endpoints`, { headers: getAuthHeaders() });
+                _currentEndpoints = resp.ok ? await resp.json() : [];
+            } catch { _currentEndpoints = []; }
+            renderEndpointsList();
+        }
+
+        function _syncTestConnectionBtn() {
+            const btn = document.getElementById('test-destination-btn');
+            if (!btn) return;
+            const hasHttpEndpoints = _currentDestinationType === 'Http' && _currentEndpoints.length > 0;
+            btn.disabled = hasHttpEndpoints;
+            if (hasHttpEndpoints) {
+                btn.title = 'This destination has named endpoints. Use the Test button on each endpoint row.';
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btn.title = '';
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function renderEndpointsList() {
+            const list = document.getElementById('endpoints-list');
+            if (!list) return;
+            _syncTestConnectionBtn();
+            if (_currentEndpoints.length === 0) {
+                list.innerHTML = '<p class="text-xs text-gray-400 italic">No endpoints yet. Add one to override the base config per profile.</p>';
+                return;
+            }
+            const isHttp = _currentDestinationType === 'Http';
+            list.innerHTML = _currentEndpoints.map(ep => {
+                const detail = ep.pathSuffix || ep.remotePath || ep.keyPrefix || '';
+                const method = ep.method ? `<span class="text-xs font-mono bg-blue-100 text-blue-700 px-1 rounded">${escapeHtml(ep.method)}</span> ` : '';
+                const testBtn = isHttp
+                    ? `<button type="button" onclick="testEndpointById(${ep.id}, this)" class="text-gray-500 hover:text-gray-700 text-xs px-1">Test</button>`
+                    : '';
+                return `<div class="flex items-center justify-between text-sm border border-gray-200 rounded px-2 py-1 bg-white">
+                    <span>${method}<span class="font-medium">${escapeHtml(ep.name)}</span>${detail ? ` <span class="text-gray-400 font-mono text-xs">${escapeHtml(detail)}</span>` : ''}</span>
+                    <div class="flex gap-1">
+                        ${testBtn}
+                        <button type="button" onclick="editEndpoint(${ep.id})" class="text-blue-600 hover:text-blue-800 text-xs px-1">Edit</button>
+                        <button type="button" onclick="deleteEndpoint(${ep.id})" class="text-red-500 hover:text-red-700 text-xs px-1">Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+            setTimeout(() => queueLucideRender(), 10);
+        }
+
+        function showAddEndpointForm() {
+            document.getElementById('ep-id').value = '';
+            document.getElementById('ep-name').value = '';
+            document.getElementById('ep-path-suffix').value = '';
+            document.getElementById('ep-method').value = '';
+            document.getElementById('ep-upload-format').value = '';
+            document.getElementById('ep-extra-headers').value = '';
+            document.getElementById('ep-remote-path').value = '';
+            document.getElementById('ep-key-prefix').value = '';
+            updateEndpointFormFields(_currentDestinationType);
+            document.getElementById('endpoint-form').classList.remove('hidden');
+        }
+
+        function editEndpoint(id) {
+            const ep = _currentEndpoints.find(e => e.id === id);
+            if (!ep) return;
+            document.getElementById('ep-id').value = ep.id;
+            document.getElementById('ep-name').value = ep.name || '';
+            document.getElementById('ep-path-suffix').value = ep.pathSuffix || '';
+            document.getElementById('ep-method').value = ep.method || '';
+            document.getElementById('ep-upload-format').value = ep.uploadFormat || '';
+            document.getElementById('ep-extra-headers').value = ep.extraHeaders || '';
+            document.getElementById('ep-remote-path').value = ep.remotePath || '';
+            document.getElementById('ep-key-prefix').value = ep.keyPrefix || '';
+            updateEndpointFormFields(_currentDestinationType);
+            document.getElementById('endpoint-form').classList.remove('hidden');
+        }
+
+        function cancelEndpointForm() {
+            document.getElementById('endpoint-form').classList.add('hidden');
+        }
+
+        // Shared helper: merge base HTTP config with endpoint fields and run the test
+        async function _runHttpEndpointTest(pathSuffix, method, btnEl) {
+            const type = document.getElementById('destination-type').value;
+            if (type !== 'Http') return;
+            const configJson = getConfigurationJson();
+            let mergedJson = configJson;
+            try {
+                const cfg = JSON.parse(configJson);
+                // getConfigurationJson() capitalises keys (e.g. Url, Method) — keep consistent
+                const baseUrl = (cfg.Url || cfg.url || '').replace(/\/+$/, '');
+                if (pathSuffix) {
+                    cfg.Url = baseUrl + '/' + pathSuffix.replace(/^\/+/, '');
+                    delete cfg.url; // remove any stale lowercase key
+                }
+                if (method) {
+                    cfg.Method = method;
+                    delete cfg.method;
+                }
+                mergedJson = JSON.stringify(cfg);
+            } catch (e) { /* use base config as-is */ }
+
+            if (btnEl) { btnEl.textContent = 'Testing…'; btnEl.disabled = true; }
+            try {
+                const resp = await fetch(`${API_BASE}/test`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ type, configurationJson: mergedJson })
+                });
+                const result = await resp.json();
+                if (result.success) showToast('Endpoint test successful!', 'success');
+                else showToast(`Endpoint test failed: ${result.message || 'Unknown error'}`, 'error');
+            } catch (err) {
+                showToast(`Test error: ${err.message}`, 'error');
+            } finally {
+                if (btnEl) { btnEl.textContent = 'Test'; btnEl.disabled = false; }
+            }
+        }
+
+        // Called from the inline add/edit form (unsaved endpoint)
+        async function testEndpoint() {
+            const btn = document.getElementById('ep-test-btn');
+            await _runHttpEndpointTest(
+                document.getElementById('ep-path-suffix').value.trim(),
+                document.getElementById('ep-method').value,
+                btn
+            );
+        }
+
+        // Called from the saved endpoint row
+        async function testEndpointById(epId, btnEl) {
+            const ep = _currentEndpoints.find(e => e.id === epId);
+            if (!ep) return;
+            await _runHttpEndpointTest(ep.pathSuffix || '', ep.method || '', btnEl);
+        }
+
+        async function saveEndpoint() {
+            const name = document.getElementById('ep-name').value.trim();
+            if (!name) { showToast('Endpoint name is required', 'error'); return; }
+            const epId = document.getElementById('ep-id').value;
+            const body = {
+                id: epId ? parseInt(epId) : 0,
+                destinationId: _currentDestinationId,
+                name,
+                pathSuffix:   document.getElementById('ep-path-suffix').value.trim() || null,
+                method:       document.getElementById('ep-method').value || null,
+                uploadFormat: document.getElementById('ep-upload-format').value || null,
+                extraHeaders: document.getElementById('ep-extra-headers').value.trim() || null,
+                remotePath:   document.getElementById('ep-remote-path').value.trim() || null,
+                keyPrefix:    document.getElementById('ep-key-prefix').value.trim() || null,
+                sortOrder: 0
+            };
+            try {
+                let resp;
+                if (epId) {
+                    resp = await fetch(`/api/destinations/${_currentDestinationId}/endpoints/${epId}`, {
+                        method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                    });
+                } else {
+                    resp = await fetch(`/api/destinations/${_currentDestinationId}/endpoints`, {
+                        method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                    });
+                }
+                if (!resp.ok) { const e = await resp.json(); throw new Error(e.message || 'Failed'); }
+                showToast(epId ? 'Endpoint updated' : 'Endpoint added', 'success');
+                cancelEndpointForm();
+                await loadEndpoints(_currentDestinationId);
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+            }
+        }
+
+        async function deleteEndpoint(id) {
+            if (!confirm('Delete this endpoint?')) return;
+            try {
+                const resp = await fetch(`/api/destinations/${_currentDestinationId}/endpoints/${id}`, {
+                    method: 'DELETE', headers: getAuthHeaders()
+                });
+                if (!resp.ok && resp.status !== 204) throw new Error('Failed to delete');
+                showToast('Endpoint deleted', 'success');
+                await loadEndpoints(_currentDestinationId);
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+            }
+        }
     </script>
 </body>
 </html>

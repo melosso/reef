@@ -241,14 +241,17 @@ function triggerWiggle() {
 function setUserSidebarInfo() {
     const username = safeGetItem('reef_username') || ' ';
     const displayName = safeGetItem('reef_display_name');
+    const role = safeGetItem('reef_role');
     const usernameDisplay = document.getElementById('username-display');
     const userInitial = document.getElementById('user-initial');
-    
+    const userRoleDisplay = document.getElementById('user-role-display');
+
     // Use display name if available, otherwise use username
     const nameToDisplay = displayName || username;
-    
+
     if (usernameDisplay) usernameDisplay.textContent = nameToDisplay.charAt(0).toUpperCase() + nameToDisplay.slice(1);
     if (userInitial) userInitial.textContent = nameToDisplay[0].toUpperCase();
+    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'Local User';
 }
 
 // -----------------------------
@@ -259,39 +262,47 @@ window.showToast = function(message, type = 'info', persistent = false) {
     if (!toastContainer) {
         toastContainer = document.createElement('div');
         toastContainer.id = 'toast-container';
-        toastContainer.className = 'fixed top-4 right-4 z-50 flex flex-col items-end space-y-2';
+        toastContainer.className = 'fixed top-4 right-4 z-[9999] flex flex-col items-end space-y-2';
         document.body.appendChild(toastContainer);
     }
 
+    const timestamp = new Date();
+    const timeStr = timestamp.toLocaleTimeString();
+
     const toast = document.createElement('div');
-    toast.className = `
-        flex items-center w-fit max-w-[90vw] sm:max-w-sm px-4 py-3 mb-2 rounded shadow text-white
-        ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800'}
-        opacity-0 transition-opacity duration-300
-    `;
+    toast.className = [
+        'flex items-center w-fit max-w-[90vw] sm:max-w-sm px-4 py-3 mb-2 rounded shadow text-white',
+        'cursor-pointer select-none',
+        type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : type === 'warning' ? 'bg-yellow-600' : 'bg-gray-800',
+        'opacity-0 transition-opacity duration-300'
+    ].join(' ');
+    toast.title = 'Click to copy · ' + timeStr;
 
-    // For error toasts, add a copy button
-    let actionButtons = '';
-    if (type === 'error') {
-        actionButtons = `
-            <button class="ml-2 text-white opacity-70 hover:opacity-100 transition-opacity"
-                    title="Copy error message to clipboard"
-                    onclick="copyErrorMessage(this, '${escapeForJS(message)}')"
-                    aria-label="Copy error">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-                </svg>
-            </button>
-        `;
-    }
+    toast.innerHTML = `
+        <span class="flex-1 pr-2">${message}</span>
+        <div class="flex items-center ml-2 gap-2 shrink-0">
+            <span class="text-xs opacity-60 tabular-nums">${timeStr}</span>
+            <button class="text-white opacity-60 hover:opacity-100 transition-opacity text-lg leading-none" data-dismiss aria-label="Close">×</button>
+        </div>`;
 
-    toast.innerHTML = `<span class="flex-1">${message}</span>
-                       <div class="flex items-center ml-4">
-                           ${actionButtons}
-                           <button class="text-white opacity-70 hover:opacity-100 transition-opacity"
-                                   onclick="fadeOut(this.closest('div[class*=flex][class*=items-center][class*=w-fit]'))"
-                                   aria-label="Close">×</button>
-                       </div>`;
+    // Click anywhere except dismiss button → copy message + timestamp
+    toast.addEventListener('click', function(e) {
+        if (e.target.closest('[data-dismiss]')) return;
+        const text = '[' + timestamp.toLocaleString() + '] ' + message;
+        copyToClipboard(text).then(ok => {
+            if (!ok) return;
+            // Brief ring feedback
+            toast.classList.add('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50');
+            setTimeout(() => toast.classList.remove('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50'), 500);
+        });
+    });
+
+    // Dismiss button
+    toast.querySelector('[data-dismiss]').addEventListener('click', function(e) {
+        e.stopPropagation();
+        dismissToast(toast);
+    });
+
     toastContainer.appendChild(toast);
 
     // Fade in
@@ -301,10 +312,15 @@ window.showToast = function(message, type = 'info', persistent = false) {
     });
 
     // Auto-remove after duration
-    const duration = type === 'success' ? 20000 : 8000; // errors auto-hide after 8s
-    if (!persistent) {
-        setTimeout(() => fadeOut(toast), duration);
-    }
+    const durationMap = { success: 3000, info: 4000, warning: 6000, error: 10000 };
+    const duration = durationMap[type] ?? 4000;
+    let autoTimer = persistent ? null : setTimeout(() => dismissToast(toast), duration);
+
+    // Pause auto-dismiss while the user hovers
+    toast.addEventListener('mouseenter', () => { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } });
+    toast.addEventListener('mouseleave', () => {
+        if (!persistent && !autoTimer) autoTimer = setTimeout(() => dismissToast(toast), 2000);
+    });
 };
 
 /**
@@ -334,6 +350,21 @@ window.copyErrorMessage = async function(button, message) {
 };
 
 /**
+ * Escape special characters for use in HTML
+ * @param {string} text - The text to escape
+ * @returns {string} - The escaped string
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make escapeHtml available globally
+window.escapeHtml = escapeHtml;
+
+/**
  * Escape special characters for use in HTML onclick attributes
  * @param {string} str - The string to escape
  * @returns {string} - The escaped string
@@ -351,6 +382,13 @@ function escapeForJS(str) {
 function fadeIn(el) {
     el.classList.remove('opacity-0');
     el.classList.add('opacity-100', 'transition', 'duration-300');
+}
+
+function dismissToast(el) {
+    if (!el || !el.parentNode) return;
+    el.classList.remove('opacity-100');
+    el.classList.add('opacity-0');
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 300);
 }
 
 function fadeOut(el) {
@@ -430,7 +468,7 @@ function showTooltip(el) {
     if (!tooltipEl) {
         tooltipEl = document.createElement('div');
         tooltipEl.className = `
-            fixed z-50 bg-gray-800 text-white text-sm px-2 py-1 rounded-lg shadow-lg
+            fixed z-[9999] bg-gray-800 text-white text-sm px-2 py-1 rounded-lg shadow-lg
             whitespace-pre-line max-w-xs break-words pointer-events-none
             transition-opacity duration-150 opacity-0
         `;
@@ -575,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceInteractions();
     enhanceTooltips();
     responsiveGrids();
+    setUserSidebarInfo();
 
     // Update approval badge if not on login page
     const menuLink = document.querySelector('a[href="/email-approvals"]');
@@ -697,3 +736,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'Never';
+    let date;
+    try {
+        // If already ends with Z or has timezone, don't add Z
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+            date = new Date(dateString);
+        } else {
+            date = new Date(dateString + 'Z');
+        }
+        if (isNaN(date.getTime())) return 'Never';
+        return date.toLocaleString();
+    } catch {
+        return 'Never';
+    }
+}
+
+function formatRelativeTime(dateString) {
+    if (!dateString) return null;
+    let date;
+    try {
+        // If already ends with Z or has timezone, don't add Z
+        if (/Z$|[+-]\d{2}:?\d{2}$/.test(dateString)) {
+            date = new Date(dateString);
+        } else {
+            date = new Date(dateString + 'Z');
+        }
+        if (isNaN(date.getTime())) return null;
+    } catch {
+        return null;
+    }
+
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return null;
+}

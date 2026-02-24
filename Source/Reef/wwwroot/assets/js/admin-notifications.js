@@ -98,6 +98,8 @@ function populateUI(settings) {
             recipientEmails: '',
             notifyOnProfileFailure: true,
             notifyOnProfileSuccess: false,
+            notifyOnImportProfileFailure: true,
+            notifyOnImportProfileSuccess: false,
             notifyOnJobFailure: true,
             notifyOnJobSuccess: false,
             notifyOnDatabaseSizeThreshold: true,
@@ -117,6 +119,8 @@ function populateUI(settings) {
     document.getElementById('notification-recipients').value = settings.recipientEmails || '';
     document.getElementById('notify-profile-failure').checked = settings.notifyOnProfileFailure;
     document.getElementById('notify-profile-success').checked = settings.notifyOnProfileSuccess;
+    document.getElementById('notify-import-profile-failure').checked = settings.notifyOnImportProfileFailure ?? true;
+    document.getElementById('notify-import-profile-success').checked = settings.notifyOnImportProfileSuccess ?? false;
     document.getElementById('notify-job-failure').checked = settings.notifyOnJobFailure;
     document.getElementById('notify-job-success').checked = settings.notifyOnJobSuccess;
     document.getElementById('notify-db-size').checked = settings.notifyOnDatabaseSizeThreshold;
@@ -207,6 +211,8 @@ async function saveNotificationSettings() {
         recipientEmails: document.getElementById('notification-recipients').value.trim() || null,
         notifyOnProfileFailure: document.getElementById('notify-profile-failure').checked,
         notifyOnProfileSuccess: document.getElementById('notify-profile-success').checked,
+        notifyOnImportProfileFailure: document.getElementById('notify-import-profile-failure').checked,
+        notifyOnImportProfileSuccess: document.getElementById('notify-import-profile-success').checked,
         notifyOnJobFailure: document.getElementById('notify-job-failure').checked,
         notifyOnJobSuccess: document.getElementById('notify-job-success').checked,
         notifyOnDatabaseSizeThreshold: document.getElementById('notify-db-size').checked,

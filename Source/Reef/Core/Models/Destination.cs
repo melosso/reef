@@ -119,3 +119,22 @@ public class DestinationTestResult
     public TimeSpan Duration { get; set; }
     public int? ResponseTimeMs { get; set; }
 }
+
+public class DestinationEndpoint
+{
+    public int Id { get; set; }
+    public int DestinationId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    // HTTP
+    public string? PathSuffix { get; set; }
+    public string? Method { get; set; }
+    public string? UploadFormat { get; set; }
+    public string? ExtraHeaders { get; set; } // JSON {"X-Tenant":"600"}
+    // SFTP / FTP
+    public string? RemotePath { get; set; }
+    // S3
+    public string? KeyPrefix { get; set; }
+    public int SortOrder { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ModifiedAt { get; set; }
+}

@@ -1402,4 +1402,128 @@ public class DestinationService
 
         return destinations;
     }
+
+    // ─── Endpoint CRUD ────────────────────────────────────────────────────────
+
+    public async Task<List<DestinationEndpoint>> GetEndpointsByDestinationIdAsync(int destinationId)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        var rows = await conn.QueryAsync<DestinationEndpoint>(
+            "SELECT * FROM DestinationEndpoints WHERE DestinationId = @Id ORDER BY SortOrder, Id",
+            new { Id = destinationId });
+        return rows.ToList();
+    }
+
+    public async Task<DestinationEndpoint?> GetEndpointByIdAsync(int id)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        return await conn.QuerySingleOrDefaultAsync<DestinationEndpoint>(
+            "SELECT * FROM DestinationEndpoints WHERE Id = @Id", new { Id = id });
+    }
+
+    public async Task<DestinationEndpoint> CreateEndpointAsync(DestinationEndpoint endpoint)
+    {
+        endpoint.CreatedAt = DateTime.UtcNow;
+        using var conn = new SqliteConnection(_connectionString);
+        const string sql = @"
+            INSERT INTO DestinationEndpoints
+                (DestinationId, Name, PathSuffix, Method, UploadFormat, ExtraHeaders, RemotePath, KeyPrefix, SortOrder, CreatedAt)
+            VALUES
+                (@DestinationId, @Name, @PathSuffix, @Method, @UploadFormat, @ExtraHeaders, @RemotePath, @KeyPrefix, @SortOrder, @CreatedAt);
+            SELECT last_insert_rowid();";
+        endpoint.Id = await conn.ExecuteScalarAsync<int>(sql, endpoint);
+        return endpoint;
+    }
+
+    public async Task UpdateEndpointAsync(DestinationEndpoint endpoint)
+    {
+        endpoint.ModifiedAt = DateTime.UtcNow;
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.ExecuteAsync(@"
+            UPDATE DestinationEndpoints SET
+                Name        = @Name,
+                PathSuffix  = @PathSuffix,
+                Method      = @Method,
+                UploadFormat = @UploadFormat,
+                ExtraHeaders = @ExtraHeaders,
+                RemotePath  = @RemotePath,
+                KeyPrefix   = @KeyPrefix,
+                SortOrder   = @SortOrder,
+                ModifiedAt  = @ModifiedAt
+            WHERE Id = @Id AND DestinationId = @DestinationId",
+            endpoint);
+    }
+
+    public async Task DeleteEndpointAsync(int id)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.ExecuteAsync("DELETE FROM DestinationEndpoints WHERE Id = @Id", new { Id = id });
+    }
+
+    /// <summary>
+    /// Returns a modified ConfigurationJson that merges the base Destination config with the
+    /// Endpoint's overrides. The returned JSON can be passed directly to SaveToDestinationAsync.
+    /// </summary>
+    public string MergeWithEndpoint(Destination dest, DestinationEndpoint ep)
+    {
+        var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+        switch (dest.Type)
+        {
+            case DestinationType.Http:
+            {
+                var cfg = System.Text.Json.JsonSerializer.Deserialize<Reef.Core.Destinations.HttpConfig>(
+                    dest.ConfigurationJson, opts)
+                    ?? throw new InvalidOperationException("Invalid HTTP destination configuration");
+
+                if (!string.IsNullOrWhiteSpace(ep.PathSuffix))
+                {
+                    var baseUrl = cfg.Url.TrimEnd('/') + "/";
+                    cfg.Url = new Uri(new Uri(baseUrl), ep.PathSuffix.TrimStart('/')).ToString();
+                }
+                if (!string.IsNullOrWhiteSpace(ep.Method))
+                    cfg.Method = ep.Method;
+                if (!string.IsNullOrWhiteSpace(ep.UploadFormat))
+                    cfg.UploadFormat = ep.UploadFormat;
+                if (!string.IsNullOrWhiteSpace(ep.ExtraHeaders))
+                {
+                    var extra = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
+                        ep.ExtraHeaders, opts);
+                    if (extra != null)
+                    {
+                        cfg.Headers = cfg.Headers == null
+                            ? extra
+                            : cfg.Headers.Concat(extra).ToDictionary(k => k.Key, v => v.Value);
+                    }
+                }
+                return System.Text.Json.JsonSerializer.Serialize(cfg);
+            }
+
+            case DestinationType.Sftp:
+            case DestinationType.Ftp:
+            {
+                var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
+                    dest.ConfigurationJson, opts)
+                    ?? throw new InvalidOperationException("Invalid SFTP/FTP destination configuration");
+
+                if (!string.IsNullOrWhiteSpace(ep.RemotePath))
+                    cfg.RemotePath = ep.RemotePath;
+                return System.Text.Json.JsonSerializer.Serialize(cfg);
+            }
+
+            case DestinationType.S3:
+            {
+                var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
+                    dest.ConfigurationJson, opts)
+                    ?? throw new InvalidOperationException("Invalid S3 destination configuration");
+
+                if (!string.IsNullOrWhiteSpace(ep.KeyPrefix))
+                    cfg.Prefix = ep.KeyPrefix;
+                return System.Text.Json.JsonSerializer.Serialize(cfg);
+            }
+
+            default:
+                return dest.ConfigurationJson;
+        }
+    }
 }

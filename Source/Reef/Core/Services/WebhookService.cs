@@ -149,6 +149,85 @@ public class WebhookService
     }
 
     /// <summary>
+    /// Get webhook trigger by ID
+    /// </summary>
+    public async Task<WebhookTrigger?> GetByIdAsync(int id)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection(_connectionString);
+            const string sql = "SELECT * FROM WebhookTriggers WHERE Id = @Id";
+            return await connection.QueryFirstOrDefaultAsync<WebhookTrigger>(sql, new { Id = id });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving webhook {Id}", id);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get webhook triggers by import profile ID
+    /// </summary>
+    public async Task<List<WebhookTrigger>> GetByImportProfileIdAsync(int importProfileId)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection(_connectionString);
+            const string sql = "SELECT * FROM WebhookTriggers WHERE ImportProfileId = @ImportProfileId";
+            var webhooks = await connection.QueryAsync<WebhookTrigger>(sql, new { ImportProfileId = importProfileId });
+            return webhooks.ToList();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error retrieving webhooks for import profile {ImportProfileId}", importProfileId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Create webhook trigger for an import profile
+    /// </summary>
+    public async Task<(int WebhookId, string Token)> CreateWebhookForImportProfileAsync(int importProfileId)
+    {
+        try
+        {
+            var token = GenerateWebhookToken();
+            var tokenHash = ComputeTokenHash(token);
+
+            await using var connection = new SqliteConnection(_connectionString);
+            const string sql = @"
+                INSERT INTO WebhookTriggers (ProfileId, JobId, ImportProfileId, Token, IsActive, CreatedAt)
+                VALUES (NULL, NULL, @ImportProfileId, @TokenHash, 1, datetime('now'));
+                SELECT last_insert_rowid();";
+
+            var webhookId = await connection.ExecuteScalarAsync<int>(sql, new
+            {
+                ImportProfileId = importProfileId,
+                TokenHash = tokenHash
+            });
+
+            Log.Information("Created webhook trigger {WebhookId} for import profile {ImportProfileId}", webhookId, importProfileId);
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _notificationService.SendNewWebhookNotificationAsync($"Webhook for Import Profile {importProfileId}");
+                }
+                catch (Exception notifEx) { Log.Error(notifEx, "Failed to send webhook creation notification"); }
+            });
+
+            return (webhookId, token);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error creating webhook for import profile {ImportProfileId}", importProfileId);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Get webhook triggers by job ID
     /// </summary>
     public async Task<List<WebhookTrigger>> GetByJobIdAsync(int jobId)

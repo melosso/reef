@@ -46,17 +46,47 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
         group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
+
+        // Unified import profile execution endpoints (use ?type=import)
+        group.MapPost("/{id:int}/execute", ExecuteProfile);
+        group.MapGet("/{id:int}/executions", GetProfileExecutions);
     }
 
     /// <summary>
-    /// GET /api/profiles - Get all profiles (optionally filtered by templateId)
+    /// GET /api/profiles - Get all profiles (optionally filtered by templateId or type)
+    /// ?type=export (default) — export profiles only
+    /// ?type=import            — import profiles only
+    /// ?type=all               — both, each with a profileType field
     /// </summary>
     private static async Task<IResult> GetAllProfiles(
         [FromQuery] int? templateId,
-        [FromServices] ProfileService service)
+        [FromQuery] string? type,
+        [FromServices] ProfileService service,
+        [FromServices] ImportProfileService importProfileService)
     {
         try
         {
+            bool wantImport = string.Equals(type, "import", StringComparison.OrdinalIgnoreCase);
+            bool wantAll    = string.Equals(type, "all",    StringComparison.OrdinalIgnoreCase);
+
+            if (wantImport)
+            {
+                var importProfiles = await importProfileService.GetAllAsync();
+                return Results.Ok(importProfiles);
+            }
+
+            if (wantAll)
+            {
+                var exportProfiles = await service.GetAllAsync();
+                var importProfiles = await importProfileService.GetAllAsync();
+
+                var combined = new List<object>();
+                combined.AddRange(exportProfiles.Select(p => new { profileType = "export", profile = (object)p }));
+                combined.AddRange(importProfiles.Select(p => new { profileType = "import", profile = (object)p }));
+                return Results.Ok(combined);
+            }
+
+            // Default: export profiles only
             var profiles = await service.GetAllAsync();
 
             // Filter by templateId if provided - check both TemplateId and EmailTemplateId
@@ -75,12 +105,22 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// GET /api/profiles/{id} - Get profile by ID
+    /// GET /api/profiles/{id} - Get profile by ID (?type=import for import profiles)
     /// </summary>
-    private static async Task<IResult> GetProfileById(int id, [FromServices] ProfileService service)
+    private static async Task<IResult> GetProfileById(
+        int id,
+        [FromQuery] string? type,
+        [FromServices] ProfileService service,
+        [FromServices] ImportProfileService importProfileService)
     {
         try
         {
+            if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+            {
+                var importProfile = await importProfileService.GetByIdAsync(id);
+                return importProfile != null ? Results.Ok(importProfile) : Results.NotFound();
+            }
+
             var profile = await service.GetByIdAsync(id);
             return profile != null ? Results.Ok(profile) : Results.NotFound();
         }
@@ -92,14 +132,84 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// POST /api/profiles - Create a new profile
+    /// POST /api/profiles - Create a new profile (export or import, based on profileType in body)
     /// </summary>
     private static async Task<IResult> CreateProfile(
-        [FromBody] Profile profile,
+        HttpContext context,
         [FromServices] ProfileService service,
-        [FromServices] AuditService auditService,
-        HttpContext context)
+        [FromServices] ImportProfileService importProfileService,
+        [FromServices] AuditService auditService)
     {
+        // Read body once to determine type
+        string json;
+        try
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            json = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error reading request body");
+            return Results.BadRequest(new { error = "Error reading request body" });
+        }
+
+        if (string.IsNullOrWhiteSpace(json))
+            return Results.BadRequest(new { error = "Request body is required" });
+
+        System.Text.Json.JsonElement root;
+        try { root = System.Text.Json.JsonDocument.Parse(json).RootElement; }
+        catch { return Results.BadRequest(new { error = "Invalid JSON in request body" }); }
+
+        var profileType = root.TryGetProperty("profileType", out var pt) ? pt.GetString() : "export";
+
+        if (string.Equals(profileType, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var importProfile = System.Text.Json.JsonSerializer.Deserialize<ImportProfile>(json, opts);
+                if (importProfile == null) return Results.BadRequest(new { error = "Invalid import profile data" });
+                if (string.IsNullOrWhiteSpace(importProfile.Name)) return Results.BadRequest(new { error = "Name is required" });
+
+                bool isLocalFile = importProfile.TargetType?.Equals("LocalFile", StringComparison.OrdinalIgnoreCase) == true;
+                if (!isLocalFile && string.IsNullOrWhiteSpace(importProfile.TargetTable))
+                    return Results.BadRequest(new { error = "TargetTable is required" });
+                if (!isLocalFile && (!importProfile.TargetConnectionId.HasValue || importProfile.TargetConnectionId.Value <= 0))
+                    return Results.BadRequest(new { error = "TargetConnectionId is required" });
+                if (isLocalFile && string.IsNullOrWhiteSpace(importProfile.LocalTargetPath))
+                    return Results.BadRequest(new { error = "LocalTargetPath is required for LocalFile target" });
+
+                importProfile.Hash = "";
+                var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
+                var impId = await importProfileService.CreateAsync(importProfile, userId);
+                var created = await importProfileService.GetByIdAsync(impId);
+                return Results.Created($"/api/profiles/{impId}?type=import", created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error creating import profile");
+                return Results.Problem("Error creating import profile");
+            }
+        }
+
+        // Export profile path (original logic)
+        Profile profile;
+        try
+        {
+            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            profile = System.Text.Json.JsonSerializer.Deserialize<Profile>(json, opts)
+                ?? throw new InvalidOperationException("Invalid profile data");
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+
         try
         {
             // Validate required fields
@@ -198,18 +308,33 @@ public static class ProfilesEndpoints
             {
                 if (string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
                 {
-                    return Results.BadRequest(new { 
-                        error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true" 
+                    return Results.BadRequest(new {
+                        error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true"
                     });
                 }
-                
+
                 // Validate ReefId column name format (basic SQL identifier validation)
                 if (!System.Text.RegularExpressions.Regex.IsMatch(profile.DeltaSyncReefIdColumn, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 {
-                    return Results.BadRequest(new { 
-                        error = "DeltaSyncReefIdColumn must be a valid SQL identifier" 
+                    return Results.BadRequest(new {
+                        error = "DeltaSyncReefIdColumn must be a valid SQL identifier"
                     });
                 }
+            }
+
+            // Validate email recipient configuration
+            if (profile.IsEmailExport && profile.UseHardcodedRecipients)
+            {
+                if (string.IsNullOrWhiteSpace(profile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = "Hardcoded recipient email is required." });
+                if (!IsValidEmail(profile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = $"'{profile.EmailRecipientsHardcoded}' is not a valid email address." });
+            }
+            if (profile.IsEmailExport && profile.UseHardcodedCc
+                && !string.IsNullOrWhiteSpace(profile.EmailCcHardcoded)
+                && !IsValidEmail(profile.EmailCcHardcoded))
+            {
+                return Results.BadRequest(new { error = $"CC address '{profile.EmailCcHardcoded}' is not a valid email address." });
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
@@ -236,15 +361,67 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// PUT /api/profiles/{id} - Update an existing profile
+    /// PUT /api/profiles/{id} - Update an existing profile (?type=import for import profiles)
     /// </summary>
     private static async Task<IResult> UpdateProfile(
         int id,
-        [FromBody] Profile profile,
+        HttpContext context,
+        [FromQuery] string? type,
         [FromServices] ProfileService service,
-        [FromServices] AuditService auditService,
-        HttpContext context)
+        [FromServices] ImportProfileService importProfileService,
+        [FromServices] AuditService auditService)
     {
+        // Read body once
+        string json;
+        try
+        {
+            using var reader = new StreamReader(context.Request.Body);
+            json = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error reading request body for profile update");
+            return Results.BadRequest(new { error = "Error reading request body" });
+        }
+
+        // Handle import profile update
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var importProfile = System.Text.Json.JsonSerializer.Deserialize<ImportProfile>(json, opts);
+                if (importProfile == null) return Results.BadRequest(new { error = "Invalid import profile data" });
+                importProfile.Id = id;
+                importProfile.Hash = "";
+                var ok = await importProfileService.UpdateAsync(importProfile);
+                if (!ok) return Results.NotFound();
+                return Results.Ok(await importProfileService.GetByIdAsync(id));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error updating import profile {Id}", id);
+                return Results.Problem("Error updating import profile");
+            }
+        }
+
+        // Export profile update (original logic)
+        Profile profile;
+        try
+        {
+            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            profile = System.Text.Json.JsonSerializer.Deserialize<Profile>(json, opts)
+                ?? throw new InvalidOperationException("Invalid profile data");
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { error = ex.Message });
+        }
+
         try
         {
             var existingProfile = await service.GetByIdAsync(id);
@@ -268,6 +445,7 @@ public static class ProfilesEndpoints
             existingProfile.OutputFormat = profile.OutputFormat;
             existingProfile.TemplateId = profile.TemplateId;
             existingProfile.OutputDestinationId = profile.OutputDestinationId;
+            existingProfile.OutputDestinationEndpointId = profile.OutputDestinationEndpointId;
             existingProfile.OutputDestinationType = profile.OutputDestinationType;
             existingProfile.OutputDestinationConfig = profile.OutputDestinationConfig;
             existingProfile.OutputPropertiesJson = profile.OutputPropertiesJson;
@@ -334,17 +512,32 @@ public static class ProfilesEndpoints
             existingProfile.EmailApprovalRequired = profile.EmailApprovalRequired;
             existingProfile.EmailApprovalRoles = profile.EmailApprovalRoles;
 
+            // Validate email recipient configuration
+            if (existingProfile.IsEmailExport && existingProfile.UseHardcodedRecipients)
+            {
+                if (string.IsNullOrWhiteSpace(existingProfile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = "Hardcoded recipient email is required." });
+                if (!IsValidEmail(existingProfile.EmailRecipientsHardcoded))
+                    return Results.BadRequest(new { error = $"'{existingProfile.EmailRecipientsHardcoded}' is not a valid email address." });
+            }
+            if (existingProfile.IsEmailExport && existingProfile.UseHardcodedCc
+                && !string.IsNullOrWhiteSpace(existingProfile.EmailCcHardcoded)
+                && !IsValidEmail(existingProfile.EmailCcHardcoded))
+            {
+                return Results.BadRequest(new { error = $"CC address '{existingProfile.EmailCcHardcoded}' is not a valid email address." });
+            }
+
             var success = await service.UpdateAsync(existingProfile);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Profile", id, "Updated", username,
                     System.Text.Json.JsonSerializer.Serialize(new { profile.Name, profile.ConnectionId, profile.Query }));
-                
+
                 return Results.Ok(new { message = "Profile updated successfully" });
             }
-            
+
             return Results.NotFound();
         }
         catch (InvalidOperationException ex)
@@ -360,14 +553,30 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// DELETE /api/profiles/{id} - Delete a profile
+    /// DELETE /api/profiles/{id} - Delete a profile (?type=import for import profiles)
     /// </summary>
     private static async Task<IResult> DeleteProfile(
         int id,
+        [FromQuery] string? type,
         [FromServices] ProfileService service,
+        [FromServices] ImportProfileService importProfileService,
         [FromServices] AuditService auditService,
         HttpContext context)
     {
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var ok = await importProfileService.DeleteAsync(id);
+                return ok ? Results.NoContent() : Results.NotFound();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error deleting import profile {Id}", id);
+                return Results.Problem("Error deleting import profile");
+            }
+        }
+
         try
         {
             var profile = await service.GetByIdAsync(id);
@@ -377,16 +586,16 @@ public static class ProfilesEndpoints
             }
 
             var success = await service.DeleteAsync(id);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Profile", id, "Deleted", username,
                     System.Text.Json.JsonSerializer.Serialize(new { profile.Name }));
-                
+
                 return Results.Ok(new { message = "Profile deleted successfully" });
             }
-            
+
             return Results.NotFound();
         }
         catch (Exception ex)
@@ -397,26 +606,34 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// POST /api/profiles/{id}/enable - Enable a profile
+    /// POST /api/profiles/{id}/enable - Enable a profile (?type=import for import profiles)
     /// </summary>
     private static async Task<IResult> EnableProfile(
         int id,
+        [FromQuery] string? type,
         [FromServices] ProfileService service,
+        [FromServices] ImportProfileService importProfileService,
         [FromServices] AuditService auditService,
         HttpContext context)
     {
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try { return await importProfileService.SetEnabledAsync(id, true) ? Results.Ok() : Results.NotFound(); }
+            catch (Exception ex) { Log.Error(ex, "Error enabling import profile {Id}", id); return Results.Problem("Error enabling import profile"); }
+        }
+
         try
         {
             var success = await service.EnableAsync(id);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Profile", id, "Enabled", username, (string?)null);
-                
+
                 return Results.Ok(new { message = "Profile enabled successfully" });
             }
-            
+
             return Results.NotFound();
         }
         catch (Exception ex)
@@ -427,26 +644,34 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// POST /api/profiles/{id}/disable - Disable a profile
+    /// POST /api/profiles/{id}/disable - Disable a profile (?type=import for import profiles)
     /// </summary>
     private static async Task<IResult> DisableProfile(
         int id,
+        [FromQuery] string? type,
         [FromServices] ProfileService service,
+        [FromServices] ImportProfileService importProfileService,
         [FromServices] AuditService auditService,
         HttpContext context)
     {
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try { return await importProfileService.SetEnabledAsync(id, false) ? Results.Ok() : Results.NotFound(); }
+            catch (Exception ex) { Log.Error(ex, "Error disabling import profile {Id}", id); return Results.Problem("Error disabling import profile"); }
+        }
+
         try
         {
             var success = await service.DisableAsync(id);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Profile", id, "Disabled", username, (string?)null);
-                
+
                 return Results.Ok(new { message = "Profile disabled successfully" });
             }
-            
+
             return Results.NotFound();
         }
         catch (Exception ex)
@@ -492,6 +717,62 @@ public static class ProfilesEndpoints
             Log.Error(ex, "Error getting profiles for group {GroupId}", groupId);
             return Results.Problem("Error retrieving profiles");
         }
+    }
+
+    // ===== Unified Import/Export Execution Endpoints =====
+
+    /// <summary>
+    /// POST /api/profiles/{id}/execute?type=import — Execute an import profile
+    /// </summary>
+    private static async Task<IResult> ExecuteProfile(
+        int id,
+        [FromQuery] string? type,
+        [FromServices] ImportProfileService importProfileSvc,
+        [FromServices] ImportExecutionService importExecSvc,
+        HttpContext context,
+        CancellationToken ct)
+    {
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var profile = await importProfileSvc.GetByIdAsync(id);
+                if (profile is null) return Results.NotFound();
+                var triggeredBy = context.User?.Identity?.Name ?? "API";
+                var exec = await importExecSvc.ExecuteAsync(id, triggeredBy, ct);
+                return Results.Ok(exec);
+            }
+            catch (OperationCanceledException) { return Results.StatusCode(499); }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error executing import profile {Id}", id);
+                return Results.Problem($"Error executing import profile: {ex.Message}");
+            }
+        }
+
+        return Results.BadRequest(new { error = "type=import query parameter is required for this endpoint" });
+    }
+
+    /// <summary>
+    /// GET /api/profiles/{id}/executions?type=import — Get executions for an import profile
+    /// </summary>
+    private static async Task<IResult> GetProfileExecutions(
+        int id,
+        [FromServices] ImportProfileService importProfileSvc,
+        [FromQuery] string? type = null,
+        [FromQuery] int limit = 50)
+    {
+        if (string.Equals(type, "import", StringComparison.OrdinalIgnoreCase))
+        {
+            try { return Results.Ok(await importProfileSvc.GetExecutionsAsync(id, limit)); }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Error getting executions for import profile {Id}", id);
+                return Results.Problem($"Error getting executions: {ex.Message}");
+            }
+        }
+
+        return Results.BadRequest(new { error = "type=import query parameter is required for this endpoint" });
     }
 
     // ===== Delta Sync Endpoints =====
@@ -1419,4 +1700,9 @@ public static class ProfilesEndpoints
         public int ConnectionId { get; set; }
         public string Query { get; set; } = string.Empty;
     }
+
+    private static bool IsValidEmail(string? email) =>
+        !string.IsNullOrWhiteSpace(email) &&
+        System.Text.RegularExpressions.Regex.IsMatch(email.Trim(),
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
 }

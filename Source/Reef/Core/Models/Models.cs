@@ -86,6 +86,7 @@ public class Profile
     public string? OutputDestinationConfig { get; set; } // JSON configuration
     public string? OutputPropertiesJson { get; set; } // Additional output properties
     public int? OutputDestinationId { get; set; } // FK to Destinations table (optional)
+    public int? OutputDestinationEndpointId { get; set; } // FK to DestinationEndpoints table (optional)
     public int? TemplateId { get; set; } // FK to QueryTemplates table (optional - for custom transformations)
     public string? TransformationOptionsJson { get; set; } // JSON options for SQL Server native transformations (ForJsonOptions, ForXmlOptions)
 
@@ -158,6 +159,9 @@ public class Profile
     public int SplitBatchSize { get; set; } = 1; // Number of rows per file (1 = one file per split key, N = batch N rows per file)
     public bool PostProcessPerSplit { get; set; } = false; // Run post-processing for each split
     public bool EmailGroupBySplitKey { get; set; } = false; // For email exports: group rows by split key (one email per split key value)
+
+    // Unique human-readable short code, e.g. "P-A3F1" (set on creation, immutable)
+    public string Code { get; set; } = "";
 }
 
 /// <summary>
@@ -169,6 +173,7 @@ public class ProfileExecution
     public int ProfileId { get; set; }
     public int? JobId { get; set; } // Optional: Which job triggered this execution
     public string? ProfileName { get; set; } // Profile name from JOIN with Profiles table
+    public string? ProfileCode { get; set; } // Profile code from JOIN with Profiles table
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
     public string Status { get; set; } = "Running"; // Running, Success, Failed
@@ -243,6 +248,20 @@ public class ProfileExecutionSplit
 }
 
 /// <summary>
+/// Per-send failure record for email export or other split-based executions
+/// </summary>
+public class ProfileExecutionError
+{
+    public int      Id           { get; set; }
+    public int      ExecutionId  { get; set; }
+    public string   ErrorType    { get; set; } = "Unknown";
+    public string?  Phase        { get; set; }
+    public string?  Detail       { get; set; }  // e.g. recipient address
+    public string   ErrorMessage { get; set; } = "";
+    public DateTime OccurredAt   { get; set; }
+}
+
+/// <summary>
 /// Webhook trigger entity for external integrations
 /// </summary>
 public class WebhookTrigger
@@ -250,6 +269,7 @@ public class WebhookTrigger
     public int Id { get; set; }
     public int? ProfileId { get; set; } // Nullable to support Job webhooks
     public int? JobId { get; set; } // Nullable to support Profile webhooks
+    public int? ImportProfileId { get; set; } // Nullable to support Import Profile webhooks
     public required string Token { get; set; } // Unique webhook token
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -737,6 +757,8 @@ public class NotificationSettings
     public bool NotifyOnJobSuccess { get; set; } = false;
     public bool NotifyOnProfileFailure { get; set; } = true;
     public bool NotifyOnProfileSuccess { get; set; } = false;
+    public bool NotifyOnImportProfileFailure { get; set; } = true;
+    public bool NotifyOnImportProfileSuccess { get; set; } = false;
     public bool NotifyOnDatabaseSizeThreshold { get; set; } = true;
     public long DatabaseSizeThresholdBytes { get; set; } = 1_073_741_824; // 1 GB default
     public bool NotifyOnNewUser { get; set; } = false;

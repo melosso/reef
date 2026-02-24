@@ -48,6 +48,12 @@ public class DatabaseInitializer
         // Delta Sync Table
         await CreateDeltaSyncStateTableAsync(connection);
 
+        // Import Profile Tables
+        await CreateImportProfilesTableAsync(connection);
+        await CreateImportProfileExecutionsTableAsync(connection);
+        await CreateImportExecutionErrorsTableAsync(connection);
+        await CreateImportDeltaSyncStateTableAsync(connection);
+
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
 
@@ -184,11 +190,12 @@ public class DatabaseInitializer
                 OutputFormat TEXT NOT NULL DEFAULT 'JSON',
                 OutputDestinationType TEXT NULL,
                 OutputDestinationConfig TEXT NULL,
+                OutputDestinationEndpointId INTEGER NULL,
                 OutputPropertiesJson TEXT NULL,
                 OutputDestinationId INTEGER NULL,
                 TemplateId INTEGER NULL,
                 TransformationOptionsJson TEXT NULL,
-
+                
                 -- Pre-Processing
                 PreProcessType TEXT NULL,
                 PreProcessConfig TEXT NULL,
@@ -262,6 +269,7 @@ public class DatabaseInitializer
                 CreatedBy TEXT NULL,
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
+                Code TEXT NOT NULL DEFAULT '',
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
@@ -405,13 +413,15 @@ public class DatabaseInitializer
                     Id INTEGER PRIMARY KEY AUTOINCREMENT,
                     ProfileId INTEGER NULL,
                     JobId INTEGER NULL,
+                    ImportProfileId INTEGER NULL,
                     Token TEXT NOT NULL UNIQUE,
                     IsActive INTEGER NOT NULL DEFAULT 1,
                     CreatedAt TEXT NOT NULL,
                     LastTriggeredAt TEXT NULL,
                     TriggerCount INTEGER NOT NULL DEFAULT 0,
                     FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
-                    FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE CASCADE
+                    FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
                 );
 
                 CREATE INDEX idx_webhooks_token ON WebhookTriggers(Token);
@@ -600,6 +610,8 @@ public class DatabaseInitializer
                 Description TEXT NOT NULL DEFAULT '',
                 Type INTEGER NOT NULL,
                 ProfileId INTEGER NULL,
+                ProfileType TEXT NULL,
+                ImportProfileId INTEGER NULL,
                 DestinationId INTEGER NULL,
                 CustomActionJson TEXT NULL,
 
@@ -639,6 +651,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
 
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
                 FOREIGN KEY (DestinationId) REFERENCES Destinations(Id) ON DELETE SET NULL
             );
 
@@ -801,6 +814,8 @@ public class DatabaseInitializer
                 NotifyOnJobSuccess INTEGER NOT NULL DEFAULT 0,
                 NotifyOnProfileFailure INTEGER NOT NULL DEFAULT 1,
                 NotifyOnProfileSuccess INTEGER NOT NULL DEFAULT 0,
+                NotifyOnImportProfileFailure INTEGER NOT NULL DEFAULT 1,
+                NotifyOnImportProfileSuccess INTEGER NOT NULL DEFAULT 0,
                 NotifyOnDatabaseSizeThreshold INTEGER NOT NULL DEFAULT 1,
                 DatabaseSizeThresholdBytes INTEGER NOT NULL DEFAULT 1073741824,
                 NotifyOnNewUser INTEGER NOT NULL DEFAULT 0,
@@ -1024,8 +1039,8 @@ public class DatabaseInitializer
             // Create default admin user with BCrypt hashed password "admin123"
             // Force password change on first login for security
             const string insertUserSql = @"
-                INSERT INTO Users (Username, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
-                VALUES (@Username, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
+                INSERT INTO Users (Username, DisplayName, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
+                VALUES (@Username, @DisplayName, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
             ";
 
             var passwordHasher = new Reef.Core.Security.PasswordHasher();
@@ -1033,7 +1048,8 @@ public class DatabaseInitializer
 
             await connection.ExecuteAsync(insertUserSql, new
             {
-                Username = "admin",
+                Username = "admin@reef.local",
+                DisplayName = "Administrator",
                 PasswordHash = passwordHash,
                 Role = "Admin",
                 IsActive = 1,
@@ -1402,8 +1418,91 @@ public class DatabaseInitializer
         // Add EmailGroupBySplitKey for email export grouping
         await AddColumnIfNotExistsAsync(connection, "Profiles", "EmailGroupBySplitKey", "INTEGER NOT NULL DEFAULT 0");
 
-        // If future migrations are needed for compatibility:
-        // Example: await AddColumnIfNotExistsAsync(connection, "Profiles", "NewColumn", "TEXT NULL DEFAULT 'value'");
+        // Import Profile tables (idempotent - safe to call on existing databases)
+        await CreateImportProfilesTableAsync(connection);
+        await CreateImportProfileExecutionsTableAsync(connection);
+        await CreateImportExecutionErrorsTableAsync(connection);
+        await CreateImportDeltaSyncStateTableAsync(connection);
+
+        // LocalFile target columns (migration for existing ImportProfiles rows)
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "TargetType", "TEXT NOT NULL DEFAULT 'Database'");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetPath", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetFormat", "TEXT NULL DEFAULT 'CSV'");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "LocalTargetWriteMode", "TEXT NULL DEFAULT 'Overwrite'");
+
+        // Allow NULL on TargetConnectionId (required for LocalFile target type)
+        await MigrateImportProfilesTargetConnectionNullableAsync(connection);
+
+        // Add ImportProfileId to WebhookTriggers for import profile webhook support
+        await AddColumnIfNotExistsAsync(connection, "WebhookTriggers", "ImportProfileId",
+            "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
+
+        // Add ProfileType to Jobs (legacy discriminator — retained for backward compat, ignored in new code)
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "ProfileType", "TEXT NULL");
+
+        // Add proper ImportProfileId FK column to Jobs (replaces ProfileType discriminator)
+        await AddColumnIfNotExistsAsync(connection, "Jobs", "ImportProfileId", "INTEGER NULL");
+
+        // Migrate: for import jobs that stored the ID in ProfileId+ProfileType, move ID to ImportProfileId
+        await connection.ExecuteAsync(@"
+            UPDATE Jobs
+            SET ImportProfileId = ProfileId, ProfileId = NULL
+            WHERE ProfileType = 'import'
+              AND ProfileId IS NOT NULL
+              AND ImportProfileId IS NULL");
+
+        // Import profile notification flags
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnImportProfileFailure", "INTEGER NOT NULL DEFAULT 1");
+        await AddColumnIfNotExistsAsync(connection, "NotificationSettings", "NotifyOnImportProfileSuccess", "INTEGER NOT NULL DEFAULT 0");
+
+        // Seed import profile notification templates if not yet present (for existing DBs)
+        await SeedImportProfileNotificationTemplatesAsync(connection);
+
+        // Add Code column to Profiles and ImportProfiles for unique short-code identification
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "Code", "TEXT NOT NULL DEFAULT ''");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfiles", "Code", "TEXT NOT NULL DEFAULT ''");
+        await BackfillProfileCodesAsync(connection);
+        await connection.ExecuteAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS UX_Profiles_Code ON Profiles(Code) WHERE Code != ''");
+        await connection.ExecuteAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS UX_ImportProfiles_Code ON ImportProfiles(Code) WHERE Code != ''");
+
+        // DestinationEndpoints table — named sub-endpoints on a base Destination connection
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS DestinationEndpoints (
+                Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                DestinationId INTEGER NOT NULL REFERENCES Destinations(Id) ON DELETE CASCADE,
+                Name          TEXT NOT NULL,
+                PathSuffix    TEXT NULL,
+                Method        TEXT NULL,
+                UploadFormat  TEXT NULL,
+                ExtraHeaders  TEXT NULL,
+                RemotePath    TEXT NULL,
+                KeyPrefix     TEXT NULL,
+                SortOrder     INTEGER NOT NULL DEFAULT 0,
+                CreatedAt     TEXT NOT NULL,
+                ModifiedAt    TEXT NULL
+            )");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_destendpoints_destination ON DestinationEndpoints(DestinationId)");
+
+        // Add OutputDestinationEndpointId to Profiles
+        await AddColumnIfNotExistsAsync(connection, "Profiles", "OutputDestinationEndpointId", "INTEGER NULL");
+
+        // ProfileExecutionErrors table for per-send failure tracking (email, archive, etc.)
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS ProfileExecutionErrors (
+                Id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                ExecutionId INTEGER NOT NULL,
+                ErrorType   TEXT    NOT NULL DEFAULT 'Unknown',
+                Phase       TEXT,
+                Detail      TEXT,
+                ErrorMessage TEXT   NOT NULL DEFAULT '',
+                OccurredAt  TEXT    NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (ExecutionId) REFERENCES ProfileExecutions(Id) ON DELETE CASCADE
+            )");
+        await connection.ExecuteAsync(
+            "CREATE INDEX IF NOT EXISTS idx_prof_exec_errors_exec ON ProfileExecutionErrors(ExecutionId)");
 
         Log.Debug("Database schema migrations completed");
     }
@@ -2819,6 +2918,745 @@ public class DatabaseInitializer
   </table>
 </body>
 </html>";
+    }
+
+    // ── Import Profile Tables ───────────────────────────────────────────────────
+
+    private async Task CreateImportProfilesTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportProfiles (
+                Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                Name                    TEXT    NOT NULL,
+                GroupId                 INTEGER NULL,
+
+                -- Source
+                SourceType              TEXT    NOT NULL DEFAULT 'Local',
+                SourceDestinationId     INTEGER NULL,
+                SourceConfig            TEXT    NULL,
+                SourceFilePath          TEXT    NULL,
+                SourceFilePattern       TEXT    NULL,
+                SourceFileSelection     TEXT    NOT NULL DEFAULT 'Latest',
+                ArchiveAfterImport      INTEGER NOT NULL DEFAULT 0,
+                ArchivePath             TEXT    NULL,
+
+                -- HTTP-specific source options
+                HttpMethod              TEXT    NULL DEFAULT 'GET',
+                HttpBodyTemplate        TEXT    NULL,
+                HttpPaginationEnabled   INTEGER NOT NULL DEFAULT 0,
+                HttpPaginationConfig    TEXT    NULL,
+                HttpDataRootPath        TEXT    NULL,
+
+                -- Format / Parsing
+                SourceFormat            TEXT    NOT NULL DEFAULT 'CSV',
+                FormatConfig            TEXT    NULL,
+
+                -- Column mapping
+                ColumnMappingsJson      TEXT    NULL,
+                AutoMapColumns          INTEGER NOT NULL DEFAULT 1,
+                SkipUnmappedColumns     INTEGER NOT NULL DEFAULT 1,
+
+                -- Target
+                TargetType              TEXT    NOT NULL DEFAULT 'Database',
+                TargetConnectionId      INTEGER NULL,
+                TargetTable             TEXT    NOT NULL DEFAULT '',
+                LocalTargetPath         TEXT    NULL,
+                LocalTargetFormat       TEXT    NULL DEFAULT 'CSV',
+                LocalTargetWriteMode    TEXT    NULL DEFAULT 'Overwrite',
+                LoadStrategy            TEXT    NOT NULL DEFAULT 'Upsert',
+                UpsertKeyColumns        TEXT    NULL,
+                BatchSize               INTEGER NOT NULL DEFAULT 500,
+                CommandTimeoutSeconds   INTEGER NOT NULL DEFAULT 120,
+
+                -- Delta Sync
+                DeltaSyncEnabled        INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncReefIdColumn   TEXT    NULL,
+                DeltaSyncHashAlgorithm  TEXT    NULL DEFAULT 'SHA256',
+                DeltaSyncTrackDeletes   INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncDeleteStrategy TEXT    NULL DEFAULT 'SoftDelete',
+                DeltaSyncDeleteColumn   TEXT    NULL,
+                DeltaSyncDeleteValue    TEXT    NULL,
+                DeltaSyncRetentionDays  INTEGER NULL,
+
+                -- Failure handling
+                OnSourceFailure         TEXT    NOT NULL DEFAULT 'Fail',
+                OnParseFailure          TEXT    NOT NULL DEFAULT 'SkipRow',
+                OnRowFailure            TEXT    NOT NULL DEFAULT 'SkipRow',
+                OnConstraintViolation   TEXT    NOT NULL DEFAULT 'SkipRow',
+                MaxFailedRowsBeforeAbort INTEGER NOT NULL DEFAULT 0,
+                MaxFailedRowsPercent    INTEGER NOT NULL DEFAULT 0,
+                RollbackOnAbort         INTEGER NOT NULL DEFAULT 1,
+                RetryCount              INTEGER NOT NULL DEFAULT 3,
+
+                -- Pre/Post processing
+                PreProcessType          TEXT    NULL,
+                PreProcessConfig        TEXT    NULL,
+                PreProcessRollbackOnFailure INTEGER NOT NULL DEFAULT 1,
+                PostProcessType         TEXT    NULL,
+                PostProcessConfig       TEXT    NULL,
+                PostProcessSkipOnFailure INTEGER NOT NULL DEFAULT 1,
+
+                -- Scheduling
+                ScheduleType            TEXT    NULL,
+                ScheduleCron            TEXT    NULL,
+                ScheduleIntervalMinutes INTEGER NULL,
+
+                -- Notifications
+                NotificationConfig      TEXT    NULL,
+
+                -- Meta
+                IsEnabled               INTEGER NOT NULL DEFAULT 1,
+                Hash                    TEXT    NOT NULL DEFAULT '',
+                CreatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                UpdatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                CreatedBy               INTEGER NULL,
+                LastExecutedAt          TEXT    NULL,
+                Code                    TEXT    NOT NULL DEFAULT '',
+
+                FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
+                FOREIGN KEY (TargetConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId);
+            CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportProfiles table ready");
+    }
+
+    /// <summary>
+    /// Migrate ImportProfiles.TargetConnectionId from NOT NULL to NULL so that LocalFile profiles
+    /// can be stored without a database connection reference. Uses the SQLite table-rename pattern.
+    /// Each DDL step is executed as an individual statement to avoid multi-statement SQL issues.
+    /// Recovery logic handles partial migrations from previous failed attempts.
+    /// </summary>
+    private async Task MigrateImportProfilesTargetConnectionNullableAsync(SqliteConnection connection)
+    {
+        // ── Recovery: handle partial failures from a previous migration attempt ──
+        var oldTableExists = (await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ImportProfiles_old'")) > 0;
+        var newTableExists = (await connection.ExecuteScalarAsync<long>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ImportProfiles'")) > 0;
+
+        if (oldTableExists && newTableExists)
+        {
+            // RENAME + CREATE + INSERT all completed but DROP TABLE failed — clean up
+            Log.Warning("Stale ImportProfiles_old table found — dropping it to complete previous migration");
+            await connection.ExecuteAsync("DROP TABLE IF EXISTS ImportProfiles_old");
+            return;
+        }
+
+        if (oldTableExists && !newTableExists)
+        {
+            // RENAME succeeded but CREATE/INSERT failed — complete migration from the old table
+            Log.Warning("Recovering from partial ImportProfiles migration (old table exists, new table missing)");
+            await CompleteImportProfilesMigrationFromOldTableAsync(connection);
+            return;
+        }
+
+        // ── Normal path: check if migration is needed ──
+        var cols = await connection.QueryAsync("PRAGMA table_info(ImportProfiles)");
+        var col = cols.FirstOrDefault(c => (string)c.name == "TargetConnectionId");
+        if (col == null) return; // Column not found — nothing to do
+        if ((long)(col.notnull ?? 0L) == 0)
+            return; // Already nullable — nothing to do
+
+        Log.Information("Migrating ImportProfiles.TargetConnectionId to nullable (LocalFile support)...");
+
+        // Get all existing column names so we can copy data safely
+        var allCols = (await connection.QueryAsync("PRAGMA table_info(ImportProfiles)"))
+            .Select(c => (string)c.name)
+            .ToList();
+        var colList = string.Join(", ", allCols);
+
+        await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            // Execute each DDL statement individually — multi-statement strings are unreliable
+            // across different SQLite driver versions
+            await connection.ExecuteAsync("ALTER TABLE ImportProfiles RENAME TO ImportProfiles_old");
+            await connection.ExecuteAsync(BuildImportProfilesCreateTableSql());
+            await connection.ExecuteAsync($"INSERT INTO ImportProfiles ({colList}) SELECT {colList} FROM ImportProfiles_old");
+            await connection.ExecuteAsync("DROP TABLE ImportProfiles_old");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled)");
+
+            Log.Information("ImportProfiles.TargetConnectionId migration completed");
+        }
+        finally
+        {
+            await connection.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+    }
+
+    /// <summary>
+    /// Completes an ImportProfiles migration that was partially executed (old table exists, new table missing).
+    /// </summary>
+    private async Task CompleteImportProfilesMigrationFromOldTableAsync(SqliteConnection connection)
+    {
+        var oldCols = (await connection.QueryAsync("PRAGMA table_info(ImportProfiles_old)"))
+            .Select(c => (string)c.name)
+            .ToList();
+        var colList = string.Join(", ", oldCols);
+
+        await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            await connection.ExecuteAsync(BuildImportProfilesCreateTableSql());
+            await connection.ExecuteAsync($"INSERT INTO ImportProfiles ({colList}) SELECT {colList} FROM ImportProfiles_old");
+            await connection.ExecuteAsync("DROP TABLE ImportProfiles_old");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_name      ON ImportProfiles(Name)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_group      ON ImportProfiles(GroupId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_connection ON ImportProfiles(TargetConnectionId)");
+            await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled)");
+
+            Log.Information("ImportProfiles migration recovery completed successfully");
+        }
+        finally
+        {
+            await connection.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+    }
+
+    /// <summary>
+    /// Returns the CREATE TABLE SQL for the ImportProfiles table with nullable TargetConnectionId.
+    /// Shared between the normal migration path and the recovery path.
+    /// </summary>
+    private static string BuildImportProfilesCreateTableSql() => @"
+        CREATE TABLE ImportProfiles (
+            Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+            Name                    TEXT    NOT NULL,
+            GroupId                 INTEGER NULL,
+
+            SourceType              TEXT    NOT NULL DEFAULT 'Local',
+            SourceDestinationId     INTEGER NULL,
+            SourceConfig            TEXT    NULL,
+            SourceFilePath          TEXT    NULL,
+            SourceFilePattern       TEXT    NULL,
+            SourceFileSelection     TEXT    NOT NULL DEFAULT 'Latest',
+            ArchiveAfterImport      INTEGER NOT NULL DEFAULT 0,
+            ArchivePath             TEXT    NULL,
+            HttpMethod              TEXT    NULL DEFAULT 'GET',
+            HttpBodyTemplate        TEXT    NULL,
+            HttpPaginationEnabled   INTEGER NOT NULL DEFAULT 0,
+            HttpPaginationConfig    TEXT    NULL,
+            HttpDataRootPath        TEXT    NULL,
+
+            SourceFormat            TEXT    NOT NULL DEFAULT 'CSV',
+            FormatConfig            TEXT    NULL,
+
+            ColumnMappingsJson      TEXT    NULL,
+            AutoMapColumns          INTEGER NOT NULL DEFAULT 1,
+            SkipUnmappedColumns     INTEGER NOT NULL DEFAULT 1,
+
+            TargetType              TEXT    NOT NULL DEFAULT 'Database',
+            TargetConnectionId      INTEGER NULL,
+            TargetTable             TEXT    NOT NULL DEFAULT '',
+            LocalTargetPath         TEXT    NULL,
+            LocalTargetFormat       TEXT    NULL DEFAULT 'CSV',
+            LocalTargetWriteMode    TEXT    NULL DEFAULT 'Overwrite',
+            LoadStrategy            TEXT    NOT NULL DEFAULT 'Upsert',
+            UpsertKeyColumns        TEXT    NULL,
+            BatchSize               INTEGER NOT NULL DEFAULT 500,
+            CommandTimeoutSeconds   INTEGER NOT NULL DEFAULT 120,
+
+            DeltaSyncEnabled        INTEGER NOT NULL DEFAULT 0,
+            DeltaSyncReefIdColumn   TEXT    NULL,
+            DeltaSyncHashAlgorithm  TEXT    NULL DEFAULT 'SHA256',
+            DeltaSyncTrackDeletes   INTEGER NOT NULL DEFAULT 0,
+            DeltaSyncDeleteStrategy TEXT    NULL DEFAULT 'SoftDelete',
+            DeltaSyncDeleteColumn   TEXT    NULL,
+            DeltaSyncDeleteValue    TEXT    NULL,
+            DeltaSyncRetentionDays  INTEGER NULL,
+
+            OnSourceFailure         TEXT    NOT NULL DEFAULT 'Fail',
+            OnParseFailure          TEXT    NOT NULL DEFAULT 'SkipRow',
+            OnRowFailure            TEXT    NOT NULL DEFAULT 'SkipRow',
+            OnConstraintViolation   TEXT    NOT NULL DEFAULT 'SkipRow',
+            MaxFailedRowsBeforeAbort INTEGER NOT NULL DEFAULT 0,
+            MaxFailedRowsPercent    INTEGER NOT NULL DEFAULT 0,
+            RollbackOnAbort         INTEGER NOT NULL DEFAULT 1,
+            RetryCount              INTEGER NOT NULL DEFAULT 3,
+
+            PreProcessType          TEXT    NULL,
+            PreProcessConfig        TEXT    NULL,
+            PreProcessRollbackOnFailure INTEGER NOT NULL DEFAULT 1,
+            PostProcessType         TEXT    NULL,
+            PostProcessConfig       TEXT    NULL,
+            PostProcessSkipOnFailure INTEGER NOT NULL DEFAULT 1,
+
+            ScheduleType            TEXT    NULL,
+            ScheduleCron            TEXT    NULL,
+            ScheduleIntervalMinutes INTEGER NULL,
+
+            NotificationConfig      TEXT    NULL,
+
+            IsEnabled               INTEGER NOT NULL DEFAULT 1,
+            Hash                    TEXT    NOT NULL DEFAULT '',
+            CreatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+            UpdatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+            CreatedBy               INTEGER NULL,
+            LastExecutedAt          TEXT    NULL,
+
+            FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
+            FOREIGN KEY (TargetConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT
+        )";
+
+    private async Task CreateImportProfileExecutionsTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportProfileExecutions (
+                Id                      INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId         INTEGER NOT NULL,
+                Status                  TEXT    NOT NULL DEFAULT 'Running',
+                TriggeredBy             TEXT    NULL,
+                StartedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
+                CompletedAt             TEXT    NULL,
+
+                -- Row counters
+                TotalRowsRead           INTEGER NOT NULL DEFAULT 0,
+                RowsInserted            INTEGER NOT NULL DEFAULT 0,
+                RowsUpdated             INTEGER NOT NULL DEFAULT 0,
+                RowsSkipped             INTEGER NOT NULL DEFAULT 0,
+                RowsDeleted             INTEGER NOT NULL DEFAULT 0,
+                RowsFailed              INTEGER NOT NULL DEFAULT 0,
+
+                -- Progress / Diagnostics
+                CurrentPhase            TEXT    NULL,
+                ErrorMessage            TEXT    NULL,
+                StackTrace              TEXT    NULL,
+                ExecutionLog            TEXT    NULL,
+                FilesProcessed          INTEGER NOT NULL DEFAULT 0,
+                BytesProcessed          INTEGER NOT NULL DEFAULT 0,
+
+                -- Delta sync counters
+                DeltaSyncNewRows        INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncChangedRows    INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncUnchangedRows  INTEGER NOT NULL DEFAULT 0,
+                DeltaSyncDeletedRows    INTEGER NOT NULL DEFAULT 0,
+
+                -- Phase timing (JSON object keyed by phase name)
+                PhaseTimingsJson        TEXT    NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_impexec_profile  ON ImportProfileExecutions(ImportProfileId);
+            CREATE INDEX IF NOT EXISTS idx_impexec_started  ON ImportProfileExecutions(StartedAt DESC);
+            CREATE INDEX IF NOT EXISTS idx_impexec_status   ON ImportProfileExecutions(Status);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportProfileExecutions table ready");
+    }
+
+    private async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportExecutionErrors (
+                Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                ExecutionId   INTEGER NOT NULL,
+                RowNumber     INTEGER NULL,
+                ReefId        TEXT    NULL,
+                ErrorType     TEXT    NOT NULL DEFAULT 'Unknown',
+                ErrorMessage  TEXT    NOT NULL,
+                RowDataJson   TEXT    NULL,
+                Phase         TEXT    NULL,
+                OccurredAt    TEXT    NOT NULL DEFAULT (datetime('now')),
+
+                FOREIGN KEY (ExecutionId) REFERENCES ImportProfileExecutions(Id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_imperrors_execution ON ImportExecutionErrors(ExecutionId);
+            CREATE INDEX IF NOT EXISTS idx_imperrors_phase     ON ImportExecutionErrors(ExecutionId, Phase);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportExecutionErrors table ready");
+    }
+
+    private async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportDeltaSyncState (
+                Id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId     INTEGER NOT NULL,
+                ReefId              TEXT    NOT NULL,
+                RowHash             TEXT    NOT NULL,
+                LastSeenExecutionId INTEGER NOT NULL,
+                FirstSeenAt         TEXT    NOT NULL DEFAULT (datetime('now')),
+                LastSeenAt          TEXT    NOT NULL DEFAULT (datetime('now')),
+                IsDeleted           INTEGER NOT NULL DEFAULT 0,
+                DeletedAt           TEXT    NULL,
+
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
+                UNIQUE (ImportProfileId, ReefId)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_impdelta_profile_reef ON ImportDeltaSyncState(ImportProfileId, ReefId);
+            CREATE INDEX IF NOT EXISTS idx_impdelta_profile_hash ON ImportDeltaSyncState(ImportProfileId, RowHash);
+            CREATE INDEX IF NOT EXISTS idx_impdelta_deleted      ON ImportDeltaSyncState(ImportProfileId, IsDeleted);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportDeltaSyncState table ready");
+    }
+
+    /// <summary>
+    /// Seed import profile notification templates for existing databases that already have other templates.
+    /// Uses INSERT OR IGNORE so it's safe to run on every startup.
+    /// </summary>
+    private async Task SeedImportProfileNotificationTemplatesAsync(SqliteConnection connection)
+    {
+        try
+        {
+            const string insertSql = @"
+                INSERT OR IGNORE INTO NotificationEmailTemplate (TemplateType, Subject, HtmlBody, IsDefault, CTAButtonText, CreatedAt, UpdatedAt)
+                VALUES (@TemplateType, @Subject, @HtmlBody, @IsDefault, @CTAButtonText, @CreatedAt, @UpdatedAt)";
+
+            var templates = new[]
+            {
+                new { TemplateType = "ImportProfileSuccess", Subject = "[Reef] Import '{{ ProfileName }}' completed successfully", CTAButtonText = "View Execution" },
+                new { TemplateType = "ImportProfileFailure", Subject = "[Reef] Import '{{ ProfileName }}' execution failed", CTAButtonText = "View Execution" },
+            };
+
+            foreach (var template in templates)
+            {
+                var htmlBody = template.TemplateType switch
+                {
+                    "ImportProfileSuccess" => BuildImportProfileSuccessEmailBody(),
+                    "ImportProfileFailure" => BuildImportProfileFailureEmailBody(),
+                    _ => BuildSimpleNotificationTemplate(template.TemplateType)
+                };
+
+                await connection.ExecuteAsync(insertSql, new
+                {
+                    template.TemplateType,
+                    template.Subject,
+                    HtmlBody = htmlBody,
+                    IsDefault = 1,
+                    template.CTAButtonText,
+                    CreatedAt = DateTime.UtcNow.ToString("o"),
+                    UpdatedAt = DateTime.UtcNow.ToString("o")
+                });
+            }
+
+            Log.Debug("Import profile notification templates seeded (INSERT OR IGNORE)");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Error seeding import profile notification email templates");
+        }
+    }
+
+    /// <summary>
+    /// Build default email body for ImportProfileSuccess notification
+    /// </summary>
+    private static string BuildImportProfileSuccessEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Import Execution Success</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Import {{ ProfileName }} completed successfully.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px;"">
+                  Import completed successfully
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Import profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> has completed successfully.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution Time
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionTime }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Rows Imported
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ RowsImported }}
+                  </td>
+                </tr>
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; border-top:1px solid #eef1f7; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Rows Failed
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; border-top:1px solid #eef1f7; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ RowsFailed }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Build default email body for ImportProfileFailure notification
+    /// </summary>
+    private static string BuildImportProfileFailureEmailBody()
+    {
+        return @"
+<!doctype html>
+<html lang=""en"">
+<head>
+  <meta charset=""utf-8"">
+  <meta name=""viewport"" content=""width=device-width,initial-scale=1"">
+  <meta name=""x-apple-disable-message-reformatting"">
+  <title>Import Execution Failed</title>
+  <style>
+    @media (max-width: 620px) {
+      .container { width: 100% !important; }
+      .px { padding-left: 16px !important; padding-right: 16px !important; }
+      .stack { display: block !important; width: 100% !important; }
+      .right { text-align: left !important; }
+    }
+  </style>
+</head>
+
+<body style=""margin:0; padding:0; background:#f6f7fb;"">
+  <div style=""display:none; font-size:1px; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;"">
+    Import {{ ProfileName }} execution failed.
+  </div>
+
+  <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%"" style=""background:#f6f7fb;"">
+    <tr>
+      <td align=""center"" style=""padding:24px 12px;"">
+        <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""600"" class=""container""
+               style=""width:600px; max-width:600px; background:#ffffff; border:1px solid #e9ecf3; border-radius:14px; overflow:hidden;"">
+          <tr>
+            <td class=""px"" style=""padding:22px 24px 10px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#111827;"">
+                <div style=""font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#6b7280;"">
+                  System Notification By <span style=""font-weight:600;"">Reef</span>
+                </div>
+                <div style=""font-size:20px; line-height:1.25; font-weight:650; margin-top:6px; color:#dc2626;"">
+                  Import execution failed
+                </div>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#374151; font-size:14px; line-height:1.6;"">
+                Import profile <strong style=""color:#111827;"">{{ ProfileName }}</strong> encountered an error during execution.
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""background:#fef2f2; border:1px solid #fecaca; border-radius:12px;"">
+                <tr>
+                  <td style=""padding:14px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:1.6; color:#7f1d1d;"">
+                    <strong>Error:</strong> {{ ErrorMessage }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 18px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" width=""100%""
+                     style=""border:1px solid #eef1f7; border-radius:12px;"">
+                <tr>
+                  <td class=""stack"" style=""padding:14px 16px; width:40%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#6b7280;"">
+                    Execution ID
+                  </td>
+                  <td class=""stack right"" align=""right""
+                      style=""padding:14px 16px; width:60%; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; color:#111827; font-weight:600;"">
+                    {{ ExecutionId }}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {{~ if EnableCTA ~}}
+          <tr>
+            <td class=""px"" style=""padding:6px 24px 22px 24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" border=""0"" align=""left"">
+                <tr>
+                  <td bgcolor=""#111827"" style=""border-radius:10px;"">
+                    <a href=""{{ CTAUrl }}""
+                       target=""_blank""
+                       style=""display:inline-block; padding:12px 16px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px; font-weight:650; color:#ffffff; text-decoration:none; border-radius:10px;"">
+                      {{ CTAButtonText }}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td class=""px"" style=""padding:0 24px 22px 24px;"">
+              <div style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:1.6; color:#6b7280;"">
+                If the button doesn't work, use this link:
+                <a href=""{{ CTAUrl }}"" target=""_blank"" style=""color:#111827; text-decoration:underline;"">
+                  {{ CTAUrl }}
+                </a>
+              </div>
+            </td>
+          </tr>
+          {{~ end ~}}
+        </table>
+
+        <div style=""height:14px; line-height:14px; font-size:14px;"">&nbsp;</div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>";
+    }
+
+    /// <summary>
+    /// Back-fill unique short codes for any Profiles or ImportProfiles rows that have Code=''.
+    /// Runs per-row with collision retry — safe for live data.
+    /// </summary>
+    private async Task BackfillProfileCodesAsync(SqliteConnection connection)
+    {
+        // Back-fill export profiles
+        var exportIds = (await connection.QueryAsync<int>(
+            "SELECT Id FROM Profiles WHERE Code = '' OR Code IS NULL")).ToList();
+
+        foreach (var id in exportIds)
+        {
+            string code;
+            int attempts = 0;
+            do
+            {
+                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                attempts++;
+            }
+            while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Profiles WHERE Code = @Code AND Id != @Id", new { Code = code, Id = id }) > 0);
+
+            await connection.ExecuteAsync("UPDATE Profiles SET Code = @Code WHERE Id = @Id", new { Code = code, Id = id });
+        }
+
+        if (exportIds.Count > 0)
+            Log.Information("Back-filled codes for {Count} export profile(s)", exportIds.Count);
+
+        // Back-fill import profiles
+        var importIds = (await connection.QueryAsync<int>(
+            "SELECT Id FROM ImportProfiles WHERE Code = '' OR Code IS NULL")).ToList();
+
+        foreach (var id in importIds)
+        {
+            string code;
+            int attempts = 0;
+            do
+            {
+                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                attempts++;
+            }
+            while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM ImportProfiles WHERE Code = @Code AND Id != @Id", new { Code = code, Id = id }) > 0);
+
+            await connection.ExecuteAsync("UPDATE ImportProfiles SET Code = @Code WHERE Id = @Id", new { Code = code, Id = id });
+        }
+
+        if (importIds.Count > 0)
+            Log.Information("Back-filled codes for {Count} import profile(s)", importIds.Count);
     }
 
     /// <summary>

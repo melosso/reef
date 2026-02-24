@@ -59,7 +59,7 @@ mkdir -p exports && docker compose up -d
 
 Access at **http://localhost:8085**
 
-Upon starting the first time, you can login with the default credentials `admin` / `admin123`. After you log in, follow the steps to change your password right away.
+Upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. After you log in, follow the steps to change your password right away.
 
 ### Windows Installation
 
@@ -83,7 +83,7 @@ Download the latest release from Releases.
 
 4. Open browser → **http://localhost:8085**
 
-As mentioned hereabove, upon starting the first time, you can login with the default credentials `admin` / `admin123`. You will be prompted to change them immediately.
+As mentioned hereabove, upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. You will be prompted to change them immediately.
 
 ---
 
