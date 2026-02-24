@@ -95,7 +95,7 @@ public class ImportExecutionService
             exec.Status = "Failed";
             exec.ErrorMessage = ex.Message;
             exec.StackTrace = ex.StackTrace;
-            Log.Error(ex, "ImportExecution {Id} failed in phase '{Phase}'", exec.Id, exec.CurrentPhase);
+            Log.Error("ImportExecution {Id} failed in phase '{Phase}': {Error}", exec.Id, exec.CurrentPhase, ex.Message);
         }
         finally
         {
@@ -108,7 +108,7 @@ public class ImportExecutionService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "ImportExecution {Id}: failed to update execution record", exec.Id);
+                Log.Error("ImportExecution {Id}: failed to update execution record: {Error}", exec.Id, ex.Message);
             }
             try
             {
@@ -116,7 +116,7 @@ public class ImportExecutionService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "ImportExecution {Id}: failed to update LastExecutedAt on profile {ProfileCode}", exec.Id, profile.Code);
+                Log.Error("ImportExecution {Id}: failed to update LastExecutedAt on profile {ProfileCode}: {Error}", exec.Id, profile.Code, ex.Message);
             }
 
             Log.Information(
@@ -135,7 +135,7 @@ public class ImportExecutionService
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "ImportExecution {Id}: failed to send notification", exec.Id);
+                Log.Warning("ImportExecution {Id}: failed to send notification: {Error}", exec.Id, ex.Message);
             }
         }
 
@@ -221,7 +221,7 @@ public class ImportExecutionService
             await TimedPhaseAsync("GetSchema", exec, phaseTimings, ct, async () =>
             {
                 try { tableSchema = await _databaseImportTarget.GetTableSchemaAsync(connection!, profile.TargetTable!, ct); }
-                catch (Exception ex) { Log.Warning(ex, "Could not retrieve schema for {Table}", profile.TargetTable); }
+                catch (Exception ex) { Log.Warning("Could not retrieve schema for {Table}: {Error}", profile.TargetTable, ex.Message); }
             });
         }
 
@@ -384,7 +384,7 @@ public class ImportExecutionService
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "ImportExecution {Id}: archive failed for {File}", exec.Id, file.Identifier);
+                        Log.Warning("ImportExecution {Id}: archive failed for {File}: {Error}", exec.Id, file.Identifier, ex.Message);
                         try
                         {
                             await _profileService.AddExecutionErrorAsync(new ImportExecutionError
@@ -435,7 +435,7 @@ public class ImportExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "ImportExecution {Id}: post-process failed", exec.Id);
+                    Log.Warning("ImportExecution {Id}: post-process failed: {Error}", exec.Id, ex.Message);
                     if (!profile.PostProcessSkipOnFailure)
                         throw;
                 }
@@ -465,8 +465,8 @@ public class ImportExecutionService
             catch (Exception ex)
             {
                 lastEx = ex;
-                Log.Warning(ex, "ImportExecution {Id}: source fetch attempt {Attempt}/{Max} failed",
-                    exec.Id, attempt, maxAttempts);
+                Log.Warning("ImportExecution {Id}: source fetch attempt {Attempt}/{Max} failed: {Error}",
+                    exec.Id, attempt, maxAttempts, ex.Message);
 
                 if (attempt < maxAttempts)
                     await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)), ct);
@@ -514,7 +514,7 @@ public class ImportExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "ImportExecution {Id}: batch write failed", exec.Id);
+            Log.Error("ImportExecution {Id}: batch write failed: {Error}", exec.Id, ex.Message);
             await _profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
                 ExecutionId = exec.Id,

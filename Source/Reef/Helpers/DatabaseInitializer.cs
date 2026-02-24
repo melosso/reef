@@ -268,6 +268,7 @@ public class DatabaseInitializer
                 CreatedBy TEXT NULL,
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
+                Code TEXT NOT NULL DEFAULT '',
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
@@ -609,6 +610,7 @@ public class DatabaseInitializer
                 Type INTEGER NOT NULL,
                 ProfileId INTEGER NULL,
                 ProfileType TEXT NULL,
+                ImportProfileId INTEGER NULL,
                 DestinationId INTEGER NULL,
                 CustomActionJson TEXT NULL,
 
@@ -648,6 +650,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
 
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
                 FOREIGN KEY (DestinationId) REFERENCES Destinations(Id) ON DELETE SET NULL
             );
 
@@ -2984,6 +2987,7 @@ public class DatabaseInitializer
                 UpdatedAt               TEXT    NOT NULL DEFAULT (datetime('now')),
                 CreatedBy               INTEGER NULL,
                 LastExecutedAt          TEXT    NULL,
+                Code                    TEXT    NOT NULL DEFAULT '',
 
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
                 FOREIGN KEY (TargetConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT

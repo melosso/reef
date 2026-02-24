@@ -324,6 +324,12 @@ public class HttpApiSource : IImportSource
         {
             req.Headers.Authorization = new AuthenticationHeaderValue("Basic", config.AuthToken);
         }
+        else if (config.AuthType?.Equals("ApiKey", StringComparison.OrdinalIgnoreCase) == true
+                 && !string.IsNullOrWhiteSpace(config.ApiKeyHeader)
+                 && !string.IsNullOrWhiteSpace(config.AuthToken))
+        {
+            req.Headers.TryAddWithoutValidation(config.ApiKeyHeader, config.AuthToken);
+        }
 
         // Custom headers
         if (config.Headers != null)
@@ -365,6 +371,7 @@ public class HttpApiSource : IImportSource
         public string Method { get; set; } = "GET";
         public string? AuthType { get; init; }
         public string? AuthToken { get; init; }
+        public string? ApiKeyHeader { get; init; }
         public Dictionary<string, string>? Headers { get; init; }
         public string? Body { get; set; }
     }

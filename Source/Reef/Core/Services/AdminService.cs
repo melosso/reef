@@ -191,12 +191,29 @@ public class AdminService
             }
 
             // Get total count
-            var countSql = $"SELECT COUNT(*) FROM AuditLog {whereClause}";
+            var countSql = $"SELECT COUNT(*) FROM AuditLog al {whereClause}";
             var totalCount = await conn.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // Get paginated results
+            // Get paginated results — join Profiles/ImportProfiles to resolve EntityCode + EntityName
             var offset = (page - 1) * pageSize;
-            var sql = $"SELECT * FROM AuditLog {whereClause} ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @Offset";
+            var sql = $@"
+                SELECT
+                    al.*,
+                    CASE
+                        WHEN al.EntityType = 'Profile'       THEN p.Code
+                        WHEN al.EntityType = 'ImportProfile' THEN ip.Code
+                        ELSE NULL
+                    END AS EntityCode,
+                    CASE
+                        WHEN al.EntityType = 'Profile'       THEN p.Name
+                        WHEN al.EntityType = 'ImportProfile' THEN ip.Name
+                        ELSE NULL
+                    END AS EntityName
+                FROM AuditLog al
+                LEFT JOIN Profiles      p  ON al.EntityType = 'Profile'       AND al.EntityId = p.Id
+                LEFT JOIN ImportProfiles ip ON al.EntityType = 'ImportProfile' AND al.EntityId = ip.Id
+                {whereClause}
+                ORDER BY al.Timestamp DESC LIMIT @PageSize OFFSET @Offset";
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
 

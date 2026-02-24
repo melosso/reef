@@ -70,8 +70,8 @@ public class QueryExecutor
             catch (Microsoft.Data.SqlClient.SqlException ex) when (IsTransientSqlError(ex))
             {
                 exceptions.Add(ex);
-                Log.Warning(ex, "Transient SQL error on attempt {Attempt} for connection {ConnectionName}",
-                    attempt + 1, connection.Name);
+                Log.Warning("Transient SQL error on attempt {Attempt} for connection {ConnectionName}: {ErrorMessage}",
+                    attempt + 1, connection.Name, ex.Message);
 
                 if (attempt < maxRetries)
                 {
@@ -86,8 +86,8 @@ public class QueryExecutor
             catch (MySqlConnector.MySqlException ex) when (IsTransientMySqlError(ex))
             {
                 exceptions.Add(ex);
-                Log.Warning(ex, "Transient MySQL error on attempt {Attempt} for connection {ConnectionName}",
-                    attempt + 1, connection.Name);
+                Log.Warning("Transient MySQL error on attempt {Attempt} for connection {ConnectionName}: {ErrorMessage}",
+                    attempt + 1, connection.Name, ex.Message);
 
                 if (attempt < maxRetries)
                 {
@@ -100,8 +100,8 @@ public class QueryExecutor
             catch (Npgsql.NpgsqlException ex) when (IsTransientPostgreSqlError(ex))
             {
                 exceptions.Add(ex);
-                Log.Warning(ex, "Transient PostgreSQL error on attempt {Attempt} for connection {ConnectionName}",
-                    attempt + 1, connection.Name);
+                Log.Warning("Transient PostgreSQL error on attempt {Attempt} for connection {ConnectionName}: {ErrorMessage}",
+                    attempt + 1, connection.Name, ex.Message);
 
                 if (attempt < maxRetries)
                 {
@@ -115,7 +115,7 @@ public class QueryExecutor
             {
                 // Non-transient errors fail immediately
                 totalStopwatch.Stop();
-                Log.Error(ex, "Non-recoverable query execution error on connection {ConnectionName}", connection.Name);
+                Log.Error("Non-recoverable query execution error on connection {ConnectionName}: {ErrorMessage}", connection.Name, ex.Message);
                 return (false, new List<Dictionary<string, object>>(), ex.Message, totalStopwatch.ElapsedMilliseconds);
             }
 
@@ -147,7 +147,7 @@ public class QueryExecutor
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to decrypt connection string for connection {ConnectionId}", connection.Id);
+                Log.Error("Failed to decrypt connection string for connection {ConnectionId}: {ErrorMessage}", connection.Id, ex.Message);
                 return (false, new List<Dictionary<string, object>>(), "Failed to decrypt connection string", stopwatch.ElapsedMilliseconds);
             }
 
@@ -191,7 +191,7 @@ public class QueryExecutor
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.Error(ex, "Error executing query on connection {ConnectionName}", connection.Name);
+            Log.Error("Error executing query on connection {ConnectionName}: {Error}", connection.Name, ex.Message);
             throw; // Re-throw for retry logic to handle
         }
     }
@@ -263,7 +263,7 @@ public class QueryExecutor
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to decrypt connection string for connection {ConnectionId}", connection.Id);
+                Log.Error("Failed to decrypt connection string for connection {ConnectionId}: {ErrorMessage}", connection.Id, ex.Message);
                 return (false, 0, "Failed to decrypt connection string", stopwatch.ElapsedMilliseconds);
             }
 
@@ -306,7 +306,7 @@ public class QueryExecutor
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.Error(ex, "Error executing command on connection {ConnectionName}", connection.Name);
+            Log.Error("Error executing command on connection {ConnectionName}: {Error}", connection.Name, ex.Message);
             return (false, 0, ex.Message, stopwatch.ElapsedMilliseconds);
         }
     }
@@ -479,7 +479,7 @@ public class QueryExecutor
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Failed to decrypt connection string for connection {ConnectionId}", connection.Id);
+                    Log.Error("Failed to decrypt connection string for connection {ConnectionId}: {ErrorMessage}", connection.Id, ex.Message);
                     return (false, "Failed to decrypt connection string", stopwatch.ElapsedMilliseconds);
                 }
             }
@@ -540,7 +540,7 @@ public class QueryExecutor
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.Error(ex, "Connection test failed for {ConnectionName}", connection.Name);
+            Log.Error("Connection test failed for {ConnectionName}: {Error}", connection.Name, ex.Message);
             return (false, ex.Message, stopwatch.ElapsedMilliseconds);
         }
     }

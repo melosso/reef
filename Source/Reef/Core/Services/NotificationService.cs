@@ -66,7 +66,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error retrieving notification settings from database");
+            Log.Error("Error retrieving notification settings from database: {Error}", ex.Message);
             return null;
         }
     }
@@ -89,7 +89,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error retrieving destination {DestinationId}", destinationId);
+            Log.Error("Error retrieving destination {DestinationId}: {Error}", destinationId, ex.Message);
             return null;
         }
     }
@@ -121,7 +121,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error updating email approval cooldown timestamp");
+            Log.Error("Error updating email approval cooldown timestamp: {Error}", ex.Message);
         }
     }
 
@@ -164,7 +164,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending success notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending success notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -207,7 +207,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending failure notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending failure notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -245,7 +245,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending import success notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending import success notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -283,7 +283,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending import failure notification for execution {ExecutionId}", execution.Id);
+            Log.Error("Error sending import failure notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
         }
     }
 
@@ -325,7 +325,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending job success notification for {JobName}", jobName);
+            Log.Error("Error sending job success notification for {JobName}: {Error}", jobName, ex.Message);
         }
     }
 
@@ -367,7 +367,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending job failure notification for {JobName}", jobName);
+            Log.Error("Error sending job failure notification for {JobName}: {Error}", jobName, ex.Message);
         }
     }
 
@@ -401,7 +401,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new user notification for {Username}", username);
+            Log.Error("Error sending new user notification for {Username}: {Error}", username, ex.Message);
         }
     }
 
@@ -435,7 +435,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new API key notification for {KeyName}", keyName);
+            Log.Error("Error sending new API key notification for {KeyName}: {Error}", keyName, ex.Message);
         }
     }
 
@@ -469,7 +469,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new webhook notification for {WebhookName}", webhookName);
+            Log.Error("Error sending new webhook notification for {WebhookName}: {Error}", webhookName, ex.Message);
         }
     }
 
@@ -519,7 +519,7 @@ public class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error sending debounced email approval notification");
+                    Log.Error("Error sending debounced email approval notification: {Error}", ex.Message);
                 }
             });
         }
@@ -594,7 +594,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending new email approval notification");
+            Log.Error("Error sending new email approval notification: {Error}", ex.Message);
         }
     }
 
@@ -646,7 +646,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending database size notification");
+            Log.Error("Error sending database size notification: {Error}", ex.Message);
         }
     }
 
@@ -715,7 +715,7 @@ public class NotificationService
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Invalid recipient email address: {Email}", recipient);
+                        Log.Warning("Invalid recipient email address: {Email}: {Error}", recipient, ex.Message);
                     }
                 }
             }
@@ -770,7 +770,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending system notification");
+            Log.Error("Error sending system notification: {Error}", ex.Message);
         }
     }
 
@@ -1473,7 +1473,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error rendering email template with Scriban");
+            Log.Error("Error rendering email template with Scriban: {Error}", ex.Message);
             return template; // Return original template on error
         }
     }
@@ -1513,7 +1513,7 @@ public class NotificationService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Error loading template {TemplateType} from database, using fallback", templateType);
+            Log.Warning("Error loading template {TemplateType} from database, using fallback: {Error}", templateType, ex.Message);
         }
 
         return (fallbackSubject, fallbackBody, null, null);

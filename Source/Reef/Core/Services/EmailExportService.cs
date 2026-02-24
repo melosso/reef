@@ -234,7 +234,7 @@ public class EmailExportService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Failed to parse attachment configuration for profile {ProfileId}", profile.Id);
+                    Log.Warning("Failed to parse attachment configuration for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                 }
             }
 
@@ -428,7 +428,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to export query results as email from profile {ProfileId}: {Error}",
+            Log.Error("Failed to export query results as email from profile {ProfileId}: {Error}",
                 profile.Id, ex.Message);
             return (false, $"Email export failed: {ex.Message}", 0, 0, new List<ProfileExecutionSplit>(), new List<(string, string)>());
         }
@@ -508,7 +508,7 @@ public class EmailExportService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Failed to process hardcoded subject template: {Subject}", profile.EmailSubjectHardcoded);
+                    Log.Warning("Failed to process hardcoded subject template: {Subject}: {Error}", profile.EmailSubjectHardcoded, ex.Message);
                     subject = profile.EmailSubjectHardcoded?.Trim();
                 }
             }
@@ -827,7 +827,7 @@ public class EmailExportService
                             }
                             catch (Exception ex)
                             {
-                                Log.Error(ex, "OAuth2 authentication failed for {Server}", smtpHost);
+                                Log.Error("OAuth2 authentication failed for {Server}: {Error}", smtpHost, ex.Message);
                                 throw;
                             }
                         }
@@ -845,7 +845,7 @@ public class EmailExportService
                             }
                             catch (Exception ex)
                             {
-                                Log.Error(ex, "Basic authentication failed for {Server}", smtpHost);
+                                Log.Error("Basic authentication failed for {Server}: {Error}", smtpHost, ex.Message);
                                 throw;
                             }
                         }
@@ -867,7 +867,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to send email batch from profile {ProfileId}: {Error}",
+            Log.Error("Failed to send email batch from profile {ProfileId}: {Error}",
                 profile.Id, ex.Message);
             return (false, ex.Message);
         }
@@ -915,7 +915,7 @@ public class EmailExportService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "OAuth2 authentication failed");
+                    Log.Error("OAuth2 authentication failed: {Error}", ex.Message);
                     throw;
                 }
             }
@@ -996,7 +996,7 @@ public class EmailExportService
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Error resolving attachments for row in profile '{ProfileName}'", profile.Name);
+                Log.Warning("Error resolving attachments for row in profile '{ProfileName}': {Error}", profile.Name, ex.Message);
                 // Continue with other rows
             }
         }
@@ -1216,7 +1216,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to generate DocumentTemplate attachment for profile {ProfileId}", profile.Id);
+            Log.Error("Failed to generate DocumentTemplate attachment for profile {ProfileId}: {Error}", profile.Id, ex.Message);
         }
 
         return attachments;
@@ -1426,7 +1426,7 @@ public class EmailExportService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Failed to generate combined DocumentTemplate attachment for profile {ProfileId} (approval flow)", profile.Id);
+                    Log.Error("Failed to generate combined DocumentTemplate attachment for profile {ProfileId} (approval flow): {Error}", profile.Id, ex.Message);
                 }
             }
 
@@ -1435,7 +1435,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error generating DocumentTemplate attachments for approval in profile {ProfileId}", profile.Id);
+            Log.Error("Error generating DocumentTemplate attachments for approval in profile {ProfileId}: {Error}", profile.Id, ex.Message);
         }
 
         return preGeneratedAttachments;
@@ -1491,7 +1491,7 @@ public class EmailExportService
             }
             catch (Exception ex)
             {
-                Log.Warning(ex, "Error attaching file '{Filename}'", attachment.Filename);
+                Log.Warning("Error attaching file '{Filename}': {Error}", attachment.Filename, ex.Message);
             }
         }
     }
@@ -1589,7 +1589,7 @@ public class EmailExportService
                             }
                             catch (Exception ex)
                             {
-                                Log.Warning(ex, "Failed to process hardcoded subject template for approval: {Subject}", profile.EmailSubjectHardcoded);
+                                Log.Warning("Failed to process hardcoded subject template for approval: {Subject}: {Error}", profile.EmailSubjectHardcoded, ex.Message);
                                 subject = profile.EmailSubjectHardcoded?.Trim();
                             }
                         }
@@ -1647,7 +1647,7 @@ public class EmailExportService
                     {
                         var errorMsg = $"Failed to render grouped email for split key '{group.Key}': {ex.Message}";
                         errors.Add(errorMsg);
-                        Log.Error(ex, errorMsg);
+                        Log.Error("{Message}", errorMsg);
                     }
                 }
             }
@@ -1702,7 +1702,7 @@ public class EmailExportService
                         }
                         catch (Exception ex)
                         {
-                            Log.Warning(ex, "Failed to parse hardcoded subject template in approval flow (per-row), using raw value");
+                            Log.Warning("Failed to parse hardcoded subject template in approval flow (per-row), using raw value: {Error}", ex.Message);
                             subject = profile.EmailSubjectHardcoded;
                         }
                     }
@@ -1786,7 +1786,7 @@ public class EmailExportService
                 {
                     var errorMsg = $"Failed to render email: {ex.Message}";
                     errors.Add(errorMsg);
-                    Log.Error(ex, errorMsg);
+                    Log.Error("{Message}", errorMsg);
                 }
             }
             }
@@ -1795,7 +1795,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Failed to render emails for approval from profile {ProfileId}", profile.Id);
+            Log.Error("Failed to render emails for approval from profile {ProfileId}: {Error}", profile.Id, ex.Message);
             errors.Add(ex.Message);
             return (renderedEmails, errors);
         }

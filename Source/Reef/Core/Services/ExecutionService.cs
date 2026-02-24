@@ -258,7 +258,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Delta sync processing failed for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
+                    Log.Error("Delta sync processing failed for profile {ProfileCode} ({ProfileName}): {Error}", profile.Code, profile.Name, ex.Message);
                     await UpdateExecutionRecordAsync(executionId, "Failed", originalRowCount, null, 
                         stopwatch.ElapsedMilliseconds, $"Delta sync error: {ex.Message}");
                     return (executionId, false, null, $"Delta sync error: {ex.Message}");
@@ -335,7 +335,7 @@ public class ExecutionService
                         var execution = new ProfileExecution { Id = executionId, StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, ExecutionTimeMs = stopwatch.ElapsedMilliseconds };
                         await _notificationService.SendExecutionSuccessAsync(execution, profile);
                     }
-                    catch (Exception ex) { Log.Error(ex, "Failed to send execution success notification"); }
+                    catch (Exception ex) { Log.Error("Failed to send execution success notification: {Error}", ex.Message); }
                 });
 
                 return (executionId, true, null, null);
@@ -402,7 +402,7 @@ public class ExecutionService
                                 }
                                 catch (Exception ex)
                                 {
-                                    Log.Warning(ex, "Failed to parse attachment configuration for profile {ProfileId}", profile.Id);
+                                    Log.Warning("Failed to parse attachment configuration for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                                 }
                             }
 
@@ -541,7 +541,7 @@ public class ExecutionService
                         }
                         catch (Exception ex)
                         {
-                            Log.Error(ex, "Failed to create pending email approvals for profile {ProfileId}", profile.Id);
+                            Log.Error("Failed to create pending email approvals for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                             stopwatch.Stop();
                             await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 $"Failed to store emails for approval: {ex.Message}");
@@ -654,7 +654,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Email export failed for profile {ProfileId}", profile.Id);
+                    Log.Error("Email export failed for profile {ProfileId}: {Error}", profile.Id, ex.Message);
                     stopwatch.Stop();
                     await UpdateExecutionWithSplitSummaryAsync(
                         executionId,
@@ -847,7 +847,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Template transformation failed");
+                    Log.Error("Template transformation failed: {Error}", ex.Message);
                     await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, 
                         $"Template transformation error: {ex.Message}");
                     return (executionId, false, null, $"Template transformation error: {ex.Message}");
@@ -930,7 +930,7 @@ public class ExecutionService
                             }
                             catch (Exception ex)
                             {
-                                Log.Warning(ex, "Failed to get destination path, using temp directory");
+                                Log.Warning("Failed to get destination path, using temp directory: {Error}", ex.Message);
                             }
 
                             // Fall back to temp directory if we couldn't determine destination
@@ -1082,7 +1082,7 @@ public class ExecutionService
                             var execution = new ProfileExecution { Id = executionId, StartedAt = DateTime.UtcNow, CompletedAt = DateTime.UtcNow, RowCount = rows.Count, OutputPath = lastFinalPath, ExecutionTimeMs = stopwatch.ElapsedMilliseconds };
                             await _notificationService.SendExecutionSuccessAsync(execution, profile);
                         }
-                        catch (Exception ex) { Log.Error(ex, "Failed to send execution success notification"); }
+                        catch (Exception ex) { Log.Error("Failed to send execution success notification: {Error}", ex.Message); }
                     });
 
                     return (executionId, true, lastFinalPath, null);
@@ -1192,7 +1192,7 @@ public class ExecutionService
                     catch (Exception ex)
                     {
                         // Log but don't fail the execution - data was successfully exported
-                        Log.Error(ex, "Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}", profileId, executionId);
+                        Log.Error("Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}: {Error}", profileId, executionId, ex.Message);
                     }
                 }
 
@@ -1322,7 +1322,7 @@ public class ExecutionService
                     }
                     catch (Exception cleanupEx)
                     {
-                        Log.Warning(cleanupEx, "Failed to delete temporary file: {TempFilePath}", tempFilePath);
+                        Log.Warning("Failed to delete temporary file: {TempFilePath}: {Error}", tempFilePath, cleanupEx.Message);
                     }
                 }
             }
@@ -1330,7 +1330,7 @@ public class ExecutionService
         catch (Exception ex)
         {
             stopwatch.Stop();
-            Log.Error(ex, "Unexpected error executing profile {ProfileId}", profileId);
+            Log.Error("Unexpected error executing profile {ProfileId}: {Error}", profileId, ex.Message);
 
             if (executionId > 0)
             {
@@ -1471,8 +1471,8 @@ public class ExecutionService
                 catch (Exception ex)
                 {
                     // Log but don't fail the execution - data was successfully exported
-                    Log.Error(ex, "Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}", 
-                        profile.Id, executionId);
+                    Log.Error("Failed to commit delta sync state for profile {ProfileId}, execution {ExecutionId}: {Error}",
+                        profile.Id, executionId, ex.Message);
                 }
             }
             
@@ -1494,7 +1494,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Split execution failed for profile {ProfileId}", profile.Id);
+            Log.Error("Split execution failed for profile {ProfileId}: {Error}", profile.Id, ex.Message);
             stopwatch.Stop();
             await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
                 stopwatch.ElapsedMilliseconds, ex.Message);
@@ -1575,7 +1575,7 @@ public class ExecutionService
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            whereConditions.Add("(p.Name LIKE @Search OR pe.Status LIKE @Search)");
+            whereConditions.Add("(p.Name LIKE @Search OR p.Code LIKE @Search OR pe.Status LIKE @Search)");
             parameters.Add("Search", $"%{search}%");
         }
 
@@ -1806,7 +1806,7 @@ public class ExecutionService
             catch (Exception ex)
             {
                 var errorMsg = $"Invalid pre-processing configuration: {ex.Message}";
-                Log.Error(ex, errorMsg);
+                Log.Error("{Message}", errorMsg);
                 await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", errorMsg, stopwatch.ElapsedMilliseconds);
                 return (false, errorMsg);
             }
@@ -1845,7 +1845,7 @@ public class ExecutionService
         {
             stopwatch.Stop();
             var error = $"Pre-processing exception: {ex.Message}";
-            Log.Error(ex, error);
+            Log.Error("{Message}", error);
             await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
@@ -1904,7 +1904,7 @@ public class ExecutionService
             catch (Exception ex)
             {
                 var errorMsg = $"Invalid post-processing configuration: {ex.Message}";
-                Log.Error(ex, errorMsg);
+                Log.Error("{Message}", errorMsg);
                 await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", errorMsg, stopwatch.ElapsedMilliseconds);
                 return (false, errorMsg);
             }
@@ -1943,7 +1943,7 @@ public class ExecutionService
         {
             stopwatch.Stop();
             var error = $"Post-processing exception: {ex.Message}";
-            Log.Error(ex, error);
+            Log.Error("{Message}", error);
             await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
@@ -2209,7 +2209,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error executing post-processing");
+            Log.Error("Error executing post-processing: {Error}", ex.Message);
             throw;
         }
     }
@@ -2292,7 +2292,7 @@ public class ExecutionService
                     }
                     catch (Exception ex)
                     {
-                        Log.Warning(ex, "Failed to delete original document: {DocumentPath}", documentPath);
+                        Log.Warning("Failed to delete original document: {DocumentPath}: {Error}", documentPath, ex.Message);
                     }
                     
                     Log.Debug("Split '{SplitKey}' document copied to {FilePath} ({FileSize} bytes)",
@@ -2378,7 +2378,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex, "Error during post-processing for split '{SplitKey}'", splitKey);
+                    Log.Error("Error during post-processing for split '{SplitKey}': {Error}", splitKey, ex.Message);
                     // Continue processing other splits
                 }
             }
@@ -2387,7 +2387,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing split '{SplitKey}'", splitKey);
+            Log.Error("Error processing split '{SplitKey}': {Error}", splitKey, ex.Message);
             
             if (splitRecordId > 0)
             {
@@ -2407,7 +2407,7 @@ public class ExecutionService
                 }
                 catch (Exception ex)
                 {
-                    Log.Warning(ex, "Failed to delete temporary file: {FilePath}", tempFilePath);
+                    Log.Warning("Failed to delete temporary file: {FilePath}: {Error}", tempFilePath, ex.Message);
                 }
             }
         }
@@ -2635,7 +2635,7 @@ public class ExecutionService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Failed to insert split record for execution {ExecutionId}: {SplitKey}", executionId, split.SplitKey);
+                Log.Error("Failed to insert split record for execution {ExecutionId}: {SplitKey}: {Error}", executionId, split.SplitKey, ex.Message);
                 throw;
             }
         }
@@ -2950,7 +2950,7 @@ public class ExecutionService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Failed to create email metadata file");
+            Log.Warning("Failed to create email metadata file: {Error}", ex.Message);
             // Don't fail the execution if metadata file creation fails
         }
     }

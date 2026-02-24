@@ -961,10 +961,13 @@
                 // Apply search filter across multiple fields
                 if (searchTerm) {
                     const jobName = (job.name || '').toLowerCase();
-                    const profileName = profiles.find(p => p.id === job.profileId)?.name || '';
-                    const profileNameLower = profileName.toLowerCase();
+                    const exportProfile = profiles.find(p => p.id === job.profileId);
+                    const importProfile = importProfilesList.find(p => p.id === job.importProfileId);
+                    const linkedProfile = exportProfile || importProfile;
+                    const profileNameLower = (linkedProfile?.name || job.profileName || '').toLowerCase();
+                    const profileCodeLower = (linkedProfile?.code || '').toLowerCase();
 
-                    if (!jobName.includes(searchTerm) && !profileNameLower.includes(searchTerm)) {
+                    if (!jobName.includes(searchTerm) && !profileNameLower.includes(searchTerm) && !profileCodeLower.includes(searchTerm)) {
                         return false;
                     }
                 }

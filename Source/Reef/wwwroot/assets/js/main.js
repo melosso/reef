@@ -241,14 +241,17 @@ function triggerWiggle() {
 function setUserSidebarInfo() {
     const username = safeGetItem('reef_username') || ' ';
     const displayName = safeGetItem('reef_display_name');
+    const role = safeGetItem('reef_role');
     const usernameDisplay = document.getElementById('username-display');
     const userInitial = document.getElementById('user-initial');
-    
+    const userRoleDisplay = document.getElementById('user-role-display');
+
     // Use display name if available, otherwise use username
     const nameToDisplay = displayName || username;
-    
+
     if (usernameDisplay) usernameDisplay.textContent = nameToDisplay.charAt(0).toUpperCase() + nameToDisplay.slice(1);
     if (userInitial) userInitial.textContent = nameToDisplay[0].toUpperCase();
+    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'System User';
 }
 
 // -----------------------------

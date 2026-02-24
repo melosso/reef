@@ -1677,8 +1677,26 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <input id="imp-sftp-user" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Password</label>
-                                    <input id="imp-sftp-pass" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <label class="block text-sm font-medium text-gray-700">Authentication</label>
+                                    <select id="imp-sftp-auth-type" onchange="toggleSftpImportAuth()" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="password">Password</option>
+                                        <option value="privatekey">Private Key (SSH)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="imp-sftp-password-auth">
+                                <label class="block text-sm font-medium text-gray-700">Password</label>
+                                <input id="imp-sftp-pass" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Leave blank to keep existing">
+                            </div>
+                            <div id="imp-sftp-privatekey-auth" class="hidden space-y-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Private Key (PEM format)</label>
+                                    <textarea id="imp-sftp-private-key" rows="6" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;MIIEpAIBAAKCAQEA...&#10;-----END RSA PRIVATE KEY-----"></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">Supports RSA, DSA, ECDSA, ED25519. Leave blank to keep existing.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Passphrase (if encrypted)</label>
+                                    <input id="imp-sftp-private-key-passphrase" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Leave blank if key is not encrypted or to keep existing">
                                 </div>
                             </div>
                             <div>
@@ -1721,12 +1739,24 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                         <option value="">None</option>
                                         <option value="Bearer">Bearer Token</option>
                                         <option value="Basic">Basic Auth</option>
+                                        <option value="ApiKey">API Key</option>
                                     </select>
                                 </div>
                             </div>
-                            <div id="imp-http-auth-row" class="hidden">
-                                <label class="block text-sm font-medium text-gray-700">Auth Token / Credentials</label>
-                                <input id="imp-http-auth-token" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm">
+                            <div id="imp-http-auth-row" class="hidden space-y-3">
+                                <div id="imp-http-api-key-header-row" class="hidden">
+                                    <label class="block text-sm font-medium text-gray-700">API Key Header Name</label>
+                                    <input id="imp-http-api-key-header" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="X-API-Key">
+                                </div>
+                                <div>
+                                    <label id="imp-http-auth-token-label" class="block text-sm font-medium text-gray-700">Auth Token / Credentials</label>
+                                    <input id="imp-http-auth-token" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="Leave blank to keep existing">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Custom Headers (JSON)</label>
+                                <textarea id="imp-http-headers" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder='{"X-Custom-Header": "value", "X-Client-ID": "reef"}'></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Optional: JSON object with custom request headers</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 flex items-center">
@@ -4413,10 +4443,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('imp-sftp-path').value = srcConfig.path || srcConfig.remotePath || '';
             document.getElementById('imp-sftp-pattern').value = p.sourceFilePattern || '';
             document.getElementById('imp-sftp-selection').value = p.sourceFileSelection || 'Latest';
+            document.getElementById('imp-sftp-auth-type').value = srcConfig.authType || 'password';
+            toggleSftpImportAuth();
         } else if (p.sourceType === 'Http') {
             document.getElementById('imp-http-url').value = srcConfig.url || '';
             document.getElementById('imp-http-method').value = p.httpMethod || 'GET';
             document.getElementById('imp-http-auth-type').value = srcConfig.authType || '';
+            document.getElementById('imp-http-api-key-header').value = srcConfig.apiKeyHeader || '';
+            document.getElementById('imp-http-headers').value = srcConfig.headers ? JSON.stringify(srcConfig.headers, null, 2) : '';
             document.getElementById('imp-http-data-root').value = p.httpDataRootPath || '';
             document.getElementById('imp-http-pagination').checked = p.httpPaginationEnabled || false;
             document.getElementById('imp-pagination-config').value = p.httpPaginationConfig || '';
@@ -4503,18 +4537,35 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         // Build source config JSON
         let sourceConfig = '{}';
         if (sourceType === 'Sftp') {
-            sourceConfig = JSON.stringify({
+            const sftpAuthType = document.getElementById('imp-sftp-auth-type').value || 'password';
+            const sftpCfg = {
                 host: document.getElementById('imp-sftp-host').value,
                 port: parseInt(document.getElementById('imp-sftp-port').value) || 22,
                 username: document.getElementById('imp-sftp-user').value,
-                password: document.getElementById('imp-sftp-pass').value,
+                authType: sftpAuthType,
                 path: document.getElementById('imp-sftp-path').value,
-            });
+            };
+            if (sftpAuthType === 'privatekey') {
+                const pk = document.getElementById('imp-sftp-private-key').value;
+                const pp = document.getElementById('imp-sftp-private-key-passphrase').value;
+                if (pk) sftpCfg.privateKey = pk;
+                if (pp) sftpCfg.privateKeyPassphrase = pp;
+            } else {
+                const pw = document.getElementById('imp-sftp-pass').value;
+                if (pw) sftpCfg.password = pw;
+            }
+            sourceConfig = JSON.stringify(sftpCfg);
         } else if (sourceType === 'Http') {
+            const httpAuthType = document.getElementById('imp-http-auth-type').value;
+            const headersRaw = document.getElementById('imp-http-headers').value.trim();
+            let httpHeaders;
+            try { if (headersRaw) httpHeaders = JSON.parse(headersRaw); } catch {}
             sourceConfig = JSON.stringify({
                 url: document.getElementById('imp-http-url').value,
-                authType: document.getElementById('imp-http-auth-type').value || undefined,
+                authType: httpAuthType || undefined,
                 authToken: document.getElementById('imp-http-auth-token').value || undefined,
+                apiKeyHeader: httpAuthType === 'ApiKey' ? (document.getElementById('imp-http-api-key-header').value || undefined) : undefined,
+                headers: httpHeaders,
             });
         }
 
@@ -4667,9 +4718,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('imp-archive-path-row').classList.toggle('hidden', !checked);
     }
 
+    function toggleSftpImportAuth() {
+        const t = document.getElementById('imp-sftp-auth-type').value;
+        document.getElementById('imp-sftp-password-auth').classList.toggle('hidden', t !== 'password');
+        document.getElementById('imp-sftp-privatekey-auth').classList.toggle('hidden', t !== 'privatekey');
+    }
+
     function toggleHttpAuth() {
         const t = document.getElementById('imp-http-auth-type').value;
         document.getElementById('imp-http-auth-row').classList.toggle('hidden', !t);
+        document.getElementById('imp-http-api-key-header-row').classList.toggle('hidden', t !== 'ApiKey');
+        const label = document.getElementById('imp-http-auth-token-label');
+        if (label) label.textContent = t === 'ApiKey' ? 'API Key Value' : 'Auth Token / Credentials';
     }
 
     function togglePaginationConfig() {
@@ -4989,18 +5049,35 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         const sourceType = document.getElementById('imp-source-type').value;
         let sourceConfig = '{}';
         if (sourceType === 'Sftp') {
-            sourceConfig = JSON.stringify({
+            const sftpAuthType = document.getElementById('imp-sftp-auth-type').value || 'password';
+            const sftpCfg = {
                 host: document.getElementById('imp-sftp-host').value,
                 port: parseInt(document.getElementById('imp-sftp-port').value) || 22,
                 username: document.getElementById('imp-sftp-user').value,
-                password: document.getElementById('imp-sftp-pass').value,
+                authType: sftpAuthType,
                 path: document.getElementById('imp-sftp-path').value,
-            });
+            };
+            if (sftpAuthType === 'privatekey') {
+                const pk = document.getElementById('imp-sftp-private-key').value;
+                const pp = document.getElementById('imp-sftp-private-key-passphrase').value;
+                if (pk) sftpCfg.privateKey = pk;
+                if (pp) sftpCfg.privateKeyPassphrase = pp;
+            } else {
+                const pw = document.getElementById('imp-sftp-pass').value;
+                if (pw) sftpCfg.password = pw;
+            }
+            sourceConfig = JSON.stringify(sftpCfg);
         } else if (sourceType === 'Http') {
+            const httpAuthType = document.getElementById('imp-http-auth-type').value;
+            const headersRaw = document.getElementById('imp-http-headers').value.trim();
+            let httpHeaders;
+            try { if (headersRaw) httpHeaders = JSON.parse(headersRaw); } catch {}
             sourceConfig = JSON.stringify({
                 url: document.getElementById('imp-http-url').value,
-                authType: document.getElementById('imp-http-auth-type').value || undefined,
+                authType: httpAuthType || undefined,
                 authToken: document.getElementById('imp-http-auth-token').value || undefined,
+                apiKeyHeader: httpAuthType === 'ApiKey' ? (document.getElementById('imp-http-api-key-header').value || undefined) : undefined,
+                headers: httpHeaders,
             });
         }
 
@@ -5091,18 +5168,35 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         const sourceType = document.getElementById('imp-source-type').value;
         let sourceConfig = '{}';
         if (sourceType === 'Sftp') {
-            sourceConfig = JSON.stringify({
+            const sftpAuthType = document.getElementById('imp-sftp-auth-type').value || 'password';
+            const sftpCfg = {
                 host: document.getElementById('imp-sftp-host').value,
                 port: parseInt(document.getElementById('imp-sftp-port').value) || 22,
                 username: document.getElementById('imp-sftp-user').value,
-                password: document.getElementById('imp-sftp-pass').value,
+                authType: sftpAuthType,
                 path: document.getElementById('imp-sftp-path').value,
-            });
+            };
+            if (sftpAuthType === 'privatekey') {
+                const pk = document.getElementById('imp-sftp-private-key').value;
+                const pp = document.getElementById('imp-sftp-private-key-passphrase').value;
+                if (pk) sftpCfg.privateKey = pk;
+                if (pp) sftpCfg.privateKeyPassphrase = pp;
+            } else {
+                const pw = document.getElementById('imp-sftp-pass').value;
+                if (pw) sftpCfg.password = pw;
+            }
+            sourceConfig = JSON.stringify(sftpCfg);
         } else if (sourceType === 'Http') {
+            const httpAuthType = document.getElementById('imp-http-auth-type').value;
+            const headersRaw = document.getElementById('imp-http-headers').value.trim();
+            let httpHeaders;
+            try { if (headersRaw) httpHeaders = JSON.parse(headersRaw); } catch {}
             sourceConfig = JSON.stringify({
                 url: document.getElementById('imp-http-url').value,
-                authType: document.getElementById('imp-http-auth-type').value || undefined,
+                authType: httpAuthType || undefined,
                 authToken: document.getElementById('imp-http-auth-token').value || undefined,
+                apiKeyHeader: httpAuthType === 'ApiKey' ? (document.getElementById('imp-http-api-key-header').value || undefined) : undefined,
+                headers: httpHeaders,
             });
         }
 
