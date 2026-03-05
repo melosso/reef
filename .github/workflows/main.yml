@@ -13,13 +13,14 @@ env:
   SOLUTION_PATH: 'Source/Reef.sln'
   PROJECT_PATH: 'Source/Reef/Reef.csproj'
   SOURCE_DIR: 'Source/Reef'
-  DEPLOYMENT_PATH: 'Deployment'
+  PUBLISH_WIN: 'publish_win'
+  PUBLISH_LIN: 'publish_lin'
 
 jobs:
   build-and-release:
     name: Build and Release
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,11 +32,6 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
       - name: Install dependencies
         run: |
           dotnet tool install -g dotnet-project-licenses
@@ -46,11 +42,6 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ github.event.inputs.tag_name }}" -m "Release ${{ github.event.inputs.tag_name }}"
           git push origin "${{ github.event.inputs.tag_name }}"
-
-      - name: Clean deployment directory
-        run: |
-          rm -rf ${{ env.DEPLOYMENT_PATH }}
-          mkdir -p ${{ env.DEPLOYMENT_PATH }}
 
       - name: Restore and build
         run: |
@@ -65,7 +56,7 @@ jobs:
           echo "Building solution..."
           dotnet build ${{ env.SOLUTION_PATH }} -c Release --no-restore
 
-      - name: Publish application
+      - name: Publish Windows (win-x64)
         run: |
           dotnet publish ${{ env.PROJECT_PATH }} \
             -c Release \
@@ -75,47 +66,79 @@ jobs:
             -p:DebugType=None \
             -p:DebugSymbols=false \
             --framework net9.0 \
-            -o ${{ env.DEPLOYMENT_PATH }}
+            -o ${{ env.PUBLISH_WIN }}
+
+      - name: Publish Linux (linux-x64)
+        run: |
+          dotnet publish ${{ env.PROJECT_PATH }} \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -p:PublishSingleFile=true \
+            -p:DebugType=None \
+            -p:DebugSymbols=false \
+            --framework net9.0 \
+            -o ${{ env.PUBLISH_LIN }}
 
       - name: Create deployment structure
         run: |
-          cd ${{ env.DEPLOYMENT_PATH }}
-          
-          # Create required folders
-          mkdir -p exports log .core license/packages
-          
-          # Remove unnecessary files
-          rm -f *.pdb *.xml *.deps.json web.config *.Development.json \
-                *.staticwebassets.endpoints.json
-          
-          # Copy documentation
-          cp ../LICENSE license/LICENSE.txt || true
-          cp ../README.md . || true
-          
-          # Create source reference
-          echo "https://github.com/${{ github.repository }}" > license/source.txt
+          for dir in ${{ env.PUBLISH_WIN }} ${{ env.PUBLISH_LIN }}; do
+            mkdir -p "$dir/exports" "$dir/log" "$dir/.core" "$dir/license/packages"
+            cp LICENSE "$dir/license/LICENSE.txt" || true
+            cp README.md "$dir/" || true
+            echo "https://github.com/${{ github.repository }}" > "$dir/license/source.txt"
+          done
+
+      - name: Shared cleanup
+        run: |
+          for dir in ${{ env.PUBLISH_WIN }} ${{ env.PUBLISH_LIN }}; do
+            # Debug files
+            rm -f "$dir"/*.pdb "$dir"/*.xml "$dir"/*.deps.json
+
+            # Language/locale satellite assembly folders (e.g. cs/, de/, pt-BR/, zh-Hans/)
+            find "$dir" -mindepth 1 -maxdepth 1 -type d \
+              -regextype posix-extended -regex '.*/[a-z]{2}(-[A-Za-z]{2,4})?' \
+              -exec rm -rf {} + || true
+
+            # Endpoint and environment-specific files
+            rm -f "$dir"/*.staticwebassets.endpoints.json \
+                  "$dir"/appsettings.Development.json
+
+            # IIS meta file (not used)
+            rm -f "$dir"/web.config
+          done
 
       - name: Generate third-party licenses
         run: |
           dotnet-project-licenses \
             --input ${{ env.PROJECT_PATH }} \
             --export-license-texts \
-            --output-directory ${{ env.DEPLOYMENT_PATH }}/license/packages \
-            || echo "⚠️  Warning: Could not generate package licenses"
+            --output-directory ${{ env.PUBLISH_WIN }}/license/packages \
+            || echo "Warning: Could not generate package licenses"
+          cp -r ${{ env.PUBLISH_WIN }}/license/packages \
+                ${{ env.PUBLISH_LIN }}/license/
 
-      - name: Create service management script
+      - name: Create version files
         run: |
-          cat > ${{ env.DEPLOYMENT_PATH }}/Reef.bat << 'EOFBAT'
+          for dir in ${{ env.PUBLISH_WIN }} ${{ env.PUBLISH_LIN }}; do
+            echo "${{ github.event.inputs.tag_name }}" > "$dir/.version.txt"
+            echo "Built: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$dir/.version.txt"
+            echo "Commit: ${{ github.sha }}" >> "$dir/.version.txt"
+          done
+
+      - name: Create Windows service script
+        run: |
+          cat > ${{ env.PUBLISH_WIN }}/Reef.bat << 'EOFBAT'
           @echo off
           setlocal enabledelayedexpansion
-          
+
           set SERVICE_NAME=ReefExportService
           set DISPLAY_NAME=Reef Export Service
           set DESCRIPTION=Enterprise data export and automation service
           set EXE_PATH=%~dp0Reef.exe
-          
+
           if "%1"=="" goto :usage
-          
+
           if /i "%1"=="install" goto :install
           if /i "%1"=="uninstall" goto :uninstall
           if /i "%1"=="start" goto :start
@@ -124,14 +147,14 @@ jobs:
           if /i "%1"=="status" goto :status
           if /i "%1"=="test" goto :test
           goto :usage
-          
+
           :install
             echo Installing Reef Service...
             sc create "%SERVICE_NAME%" ^
               binPath= "\"%EXE_PATH%\"" ^
               start= auto ^
               displayname= "%DISPLAY_NAME%"
-            
+
             if !ERRORLEVEL! EQU 0 (
               sc description "%SERVICE_NAME%" "%DESCRIPTION%"
               echo ✓ Service installed successfully
@@ -140,26 +163,26 @@ jobs:
               echo ✗ Installation failed. Run as Administrator.
             )
             goto :eof
-          
+
           :uninstall
             echo Stopping service...
             sc stop "%SERVICE_NAME%" >nul 2>&1
             timeout /t 3 /nobreak >nul
-            
+
             echo Uninstalling Reef Service...
             sc delete "%SERVICE_NAME%"
-            
+
             if !ERRORLEVEL! EQU 0 (
               echo ✓ Service uninstalled successfully
             ) else (
               echo ✗ Uninstall failed. Run as Administrator.
             )
             goto :eof
-          
+
           :start
             echo Starting Reef Service...
             sc start "%SERVICE_NAME%"
-            
+
             if !ERRORLEVEL! EQU 0 (
               echo ✓ Service started successfully
               echo Access web UI at: http://localhost:8085
@@ -167,24 +190,24 @@ jobs:
               echo ✗ Failed to start service
             )
             goto :eof
-          
+
           :stop
             echo Stopping Reef Service...
             sc stop "%SERVICE_NAME%"
-            
+
             if !ERRORLEVEL! EQU 0 (
               echo ✓ Service stopped successfully
             ) else (
               echo ✗ Failed to stop service
             )
             goto :eof
-          
+
           :restart
             call :stop
             timeout /t 3 /nobreak >nul
             call :start
             goto :eof
-          
+
           :status
             echo Reef Service Status:
             echo ====================
@@ -197,7 +220,7 @@ jobs:
               echo No logs found
             )
             goto :eof
-          
+
           :test
             echo Running Reef in console mode...
             echo Press Ctrl+C to stop
@@ -206,7 +229,7 @@ jobs:
             echo.
             "%EXE_PATH%"
             goto :eof
-          
+
           :usage
             echo Reef Export Service Manager
             echo ============================
@@ -225,59 +248,55 @@ jobs:
             goto :eof
           EOFBAT
 
-      - name: Create README
+      - name: Create Windows README
         run: |
-          cat > ${{ env.DEPLOYMENT_PATH }}/README.txt << 'EOFREADME'
+          cat > ${{ env.PUBLISH_WIN }}/README.txt << 'EOFREADME'
           ╔═══════════════════════════════════════════════════════════╗
           ║                  REEF EXPORT SERVICE                      ║
           ║                      Version 2.0                          ║
           ╚═══════════════════════════════════════════════════════════╝
-          
+
           PREREQUISITES
           =============
-          
+
           ** REQUIRED: .NET 9.0 Runtime **
           Download from: https://dotnet.microsoft.com/download/dotnet/9.0
           Install "ASP.NET Core Runtime 9.0.x" for Windows x64
-          
+
           QUICK START
           ===========
-          
+
           1. TEST MODE (Recommended First)
              Run: Reef.bat test
              Access: http://localhost:8085
              Stop: Press Ctrl+C
-          
+
           2. INSTALL AS WINDOWS SERVICE
              Run as Administrator: Reef.bat install
              Start service: Reef.bat start
              Access: http://localhost:8085
-          
+
           3. DEFAULT LOGIN
              Username: admin
              Password: (set on first login)
-          
+
           CONFIGURATION
           =============
-          
+
           Required Configuration:
           - Set encryption key (HIGHLY RECOMMENDED):
             Set Windows environment variable:
             REEF_ENCRYPTION_KEY=your-secure-random-key-here
-          
+
           - Edit appsettings.json for:
             * Port (default: 8085)
             * JWT secret
             * SMTP settings
             * Export path
-          
-          Optional:
-          - Edit appsettings.Development.json for development
-          - Create .env file in deployment folder
-          
+
           SERVICE MANAGEMENT
           ==================
-          
+
           Reef.bat commands:
             install   - Install Windows service (requires Admin)
             start     - Start the service
@@ -286,78 +305,192 @@ jobs:
             status    - Show status and recent logs
             uninstall - Remove Windows service (requires Admin)
             test      - Run in console mode
-          
+
           FOLDER STRUCTURE
           ================
-          
+
           exports/     - Exported data files (configurable)
           log/         - Application logs (Serilog)
           .core/       - Encryption keys (DO NOT DELETE)
           wwwroot/     - Web UI static files
           Reef.db      - SQLite database
-          
+
           TROUBLESHOOTING
           ===============
-          
+
           Service won't start:
           1. Run: Reef.bat test (check console errors)
           2. Check logs in: log/reef-YYYYMMDD.log
           3. Verify port 8085 is available
           4. Ensure REEF_ENCRYPTION_KEY is set
-          
+
           Web UI not accessible:
           1. Check service status: Reef.bat status
           2. Verify firewall allows port 8085
           3. Try: http://localhost:8085/health
-          
-          Database issues:
-          1. Check Reef.db exists and is writable
-          2. Check file permissions
-          3. Review logs for SQLite errors
-          
+
           SECURITY NOTES
           ==============
-          
-          ⚠️  IMPORTANT:
+
           - Set REEF_ENCRYPTION_KEY environment variable
           - Change default JWT secret in appsettings.json
           - Use HTTPS in production (reverse proxy)
           - Backup Reef.db regularly
           - Backup .core/ folder (encryption keys)
           - Limit network access to port 8085
-          
+
           DOCUMENTATION
           =============
-          
-          Full documentation: https://github.com/hawkinslabdev/reef
+
+          Full documentation: https://github.com/${{ github.repository }}
           API Reference: http://localhost:8085/
-          
+
           LICENSE
           =======
-          
+
           AGPL-3.0-or-later
           See license/LICENSE.txt
-          
+
           SUPPORT
           =======
-          
-          Issues: https://github.com/hawkinslabdev/reef/issues
+
+          Issues: https://github.com/${{ github.repository }}/issues
           EOFREADME
 
-      - name: Create version file
+      - name: Create Linux README
         run: |
-          echo "${{ github.event.inputs.tag_name }}" > ${{ env.DEPLOYMENT_PATH }}/.version.txt
-          echo "Built: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> ${{ env.DEPLOYMENT_PATH }}/.version.txt
-          echo "Commit: ${{ github.sha }}" >> ${{ env.DEPLOYMENT_PATH }}/.version.txt
+          cat > ${{ env.PUBLISH_LIN }}/README.txt << 'EOFREADME'
+          ╔═══════════════════════════════════════════════════════════╗
+          ║                  REEF EXPORT SERVICE                      ║
+          ║                      Version 2.0                          ║
+          ╚═══════════════════════════════════════════════════════════╝
 
-      - name: Create deployment archive
+          PREREQUISITES
+          =============
+
+          ** REQUIRED: .NET 9.0 Runtime **
+          Download from: https://dotnet.microsoft.com/download/dotnet/9.0
+          Install "ASP.NET Core Runtime 9.0.x" for Linux x64
+
+          Or via package manager (Debian/Ubuntu):
+            sudo apt-get install -y dotnet-runtime-9.0
+
+          QUICK START
+          ===========
+
+          1. Make the binary executable (if not already):
+             chmod +x ./Reef
+
+          2. TEST MODE (Recommended First)
+             Run: ./Reef
+             Access: http://localhost:8085
+             Stop: Press Ctrl+C
+
+          3. DEFAULT LOGIN
+             Username: admin
+             Password: (set on first login)
+
+          CONFIGURATION
+          =============
+
+          Required Configuration:
+          - Set encryption key (HIGHLY RECOMMENDED):
+            export REEF_ENCRYPTION_KEY=your-secure-random-key-here
+
+          - Edit appsettings.json for:
+            * Port (default: 8085)
+            * JWT secret
+            * SMTP settings
+            * Export path
+
+          SYSTEMD SERVICE (Optional)
+          ==========================
+
+          Create /etc/systemd/system/reef.service:
+
+            [Unit]
+            Description=Reef Export Service
+            After=network.target
+
+            [Service]
+            Type=notify
+            WorkingDirectory=/opt/reef
+            ExecStart=/opt/reef/Reef
+            Restart=always
+            RestartSec=10
+            Environment=REEF_ENCRYPTION_KEY=your-key-here
+
+            [Install]
+            WantedBy=multi-user.target
+
+          Then:
+            sudo systemctl daemon-reload
+            sudo systemctl enable reef
+            sudo systemctl start reef
+
+          FOLDER STRUCTURE
+          ================
+
+          exports/     - Exported data files (configurable)
+          log/         - Application logs (Serilog)
+          .core/       - Encryption keys (DO NOT DELETE)
+          wwwroot/     - Web UI static files
+          Reef.db      - SQLite database
+
+          TROUBLESHOOTING
+          ===============
+
+          Service won't start:
+          1. Run: ./Reef (check console errors)
+          2. Check logs in: log/reef-YYYYMMDD.log
+          3. Verify port 8085 is available
+          4. Ensure REEF_ENCRYPTION_KEY is set
+
+          Web UI not accessible:
+          1. Check service status: systemctl status reef
+          2. Verify firewall allows port 8085
+          3. Try: http://localhost:8085/health
+
+          SECURITY NOTES
+          ==============
+
+          - Set REEF_ENCRYPTION_KEY environment variable
+          - Change default JWT secret in appsettings.json
+          - Use HTTPS in production (reverse proxy recommended: nginx/caddy)
+          - Backup Reef.db regularly
+          - Backup .core/ folder (encryption keys)
+          - Limit network access to port 8085
+
+          DOCUMENTATION
+          =============
+
+          Full documentation: https://github.com/${{ github.repository }}
+          API Reference: http://localhost:8085/
+
+          LICENSE
+          =======
+
+          AGPL-3.0-or-later
+          See license/LICENSE.txt
+
+          SUPPORT
+          =======
+
+          Issues: https://github.com/${{ github.repository }}/issues
+          EOFREADME
+
+      - name: Set Linux binary permissions
+        run: chmod +x ${{ env.PUBLISH_LIN }}/Reef
+
+      - name: Create archives and checksums
         run: |
-          cd ${{ env.DEPLOYMENT_PATH }}
-          zip -r ../Reef-${{ github.event.inputs.tag_name }}-win-x64.zip .
-          cd ..
-          # Create checksums
-          sha256sum Reef-${{ github.event.inputs.tag_name }}-win-x64.zip > \
-            Reef-${{ github.event.inputs.tag_name }}-win-x64.zip.sha256
+          TAG="${{ github.event.inputs.tag_name }}"
+
+          ( cd ${{ env.PUBLISH_WIN }} && zip -r "../Reef-${TAG}-Windows_x64.zip" . )
+          sha256sum "Reef-${TAG}-Windows_x64.zip" > "Reef-${TAG}-Windows_x64.zip.sha256"
+
+          ( cd ${{ env.PUBLISH_LIN }} && zip -r "../Reef-${TAG}-Linux_x64.zip" . )
+          sha256sum "Reef-${TAG}-Linux_x64.zip" > "Reef-${TAG}-Linux_x64.zip.sha256"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -368,8 +501,10 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            Reef-${{ github.event.inputs.tag_name }}-win-x64.zip
-            Reef-${{ github.event.inputs.tag_name }}-win-x64.zip.sha256
+            Reef-${{ github.event.inputs.tag_name }}-Windows_x64.zip
+            Reef-${{ github.event.inputs.tag_name }}-Windows_x64.zip.sha256
+            Reef-${{ github.event.inputs.tag_name }}-Linux_x64.zip
+            Reef-${{ github.event.inputs.tag_name }}-Linux_x64.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -377,5 +512,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reef-${{ github.event.inputs.tag_name }}
-          path: Reef-${{ github.event.inputs.tag_name }}-win-x64.zip
+          path: |
+            Reef-${{ github.event.inputs.tag_name }}-Windows_x64.zip
+            Reef-${{ github.event.inputs.tag_name }}-Linux_x64.zip
           retention-days: 90
