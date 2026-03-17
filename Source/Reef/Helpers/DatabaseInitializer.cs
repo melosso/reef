@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Dapper;
 using Serilog;
 using Reef.Core.Services;
+using Reef.Helpers;
 
 namespace Reef.Core.Data;
 
@@ -53,6 +54,7 @@ public class DatabaseInitializer
         await CreateImportProfileExecutionsTableAsync(connection);
         await CreateImportExecutionErrorsTableAsync(connection);
         await CreateImportDeltaSyncStateTableAsync(connection);
+        await CreateImportOutputTargetsTableAsync(connection);
 
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
@@ -1503,6 +1505,9 @@ public class DatabaseInitializer
             )");
         await connection.ExecuteAsync(
             "CREATE INDEX IF NOT EXISTS idx_prof_exec_errors_exec ON ProfileExecutionErrors(ExecutionId)");
+
+        // Add OutputTargetsJson column to ImportProfileExecutions for fan-out results
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "OutputTargetsJson", "TEXT NULL");
 
         Log.Debug("Database schema migrations completed");
     }
@@ -3242,6 +3247,9 @@ public class DatabaseInitializer
                 -- Phase timing (JSON object keyed by phase name)
                 PhaseTimingsJson        TEXT    NULL,
 
+                -- Fan-out output target results (JSON array)
+                OutputTargetsJson       TEXT    NULL,
+
                 FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
             );
 
@@ -3253,7 +3261,7 @@ public class DatabaseInitializer
         Log.Debug("✓ ImportProfileExecutions table ready");
     }
 
-    private async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
+    private static async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
     {
         const string sql = @"
             CREATE TABLE IF NOT EXISTS ImportExecutionErrors (
@@ -3277,7 +3285,7 @@ public class DatabaseInitializer
         Log.Debug("✓ ImportExecutionErrors table ready");
     }
 
-    private async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
+    private static async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
     {
         const string sql = @"
             CREATE TABLE IF NOT EXISTS ImportDeltaSyncState (
@@ -3303,11 +3311,35 @@ public class DatabaseInitializer
         Log.Debug("✓ ImportDeltaSyncState table ready");
     }
 
+    private static async Task CreateImportOutputTargetsTableAsync(SqliteConnection connection)
+    {
+        const string sql = @"
+            CREATE TABLE IF NOT EXISTS ImportOutputTargets (
+                Id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                ImportProfileId       INTEGER NOT NULL,
+                DestinationId         INTEGER NOT NULL,
+                DestinationEndpointId INTEGER NULL,
+                OutputFormat          TEXT    NOT NULL DEFAULT 'JSON',
+                FilenameTemplate      TEXT    NULL,
+                IsEnabled             INTEGER NOT NULL DEFAULT 1,
+                SortOrder             INTEGER NOT NULL DEFAULT 0,
+                OnFailure             TEXT    NOT NULL DEFAULT 'Warn',
+                CreatedAt             TEXT    NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE,
+                FOREIGN KEY (DestinationId)   REFERENCES Destinations(Id)   ON DELETE RESTRICT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_impoutputs_profile ON ImportOutputTargets(ImportProfileId);
+        ";
+        await connection.ExecuteAsync(sql);
+        Log.Debug("✓ ImportOutputTargets table ready");
+    }
+
     /// <summary>
     /// Seed import profile notification templates for existing databases that already have other templates.
     /// Uses INSERT OR IGNORE so it's safe to run on every startup.
     /// </summary>
-    private async Task SeedImportProfileNotificationTemplatesAsync(SqliteConnection connection)
+    private static async Task SeedImportProfileNotificationTemplatesAsync(SqliteConnection connection)
     {
         try
         {
@@ -3612,7 +3644,7 @@ public class DatabaseInitializer
     /// Back-fill unique short codes for any Profiles or ImportProfiles rows that have Code=''.
     /// Runs per-row with collision retry — safe for live data.
     /// </summary>
-    private async Task BackfillProfileCodesAsync(SqliteConnection connection)
+    private static async Task BackfillProfileCodesAsync(SqliteConnection connection)
     {
         // Back-fill export profiles
         var exportIds = (await connection.QueryAsync<int>(
@@ -3624,7 +3656,7 @@ public class DatabaseInitializer
             int attempts = 0;
             do
             {
-                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                code = ProfileCodeGenerator.Generate();
                 attempts++;
             }
             while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
@@ -3646,7 +3678,7 @@ public class DatabaseInitializer
             int attempts = 0;
             do
             {
-                code = Reef.Helpers.ProfileCodeGenerator.Generate();
+                code = ProfileCodeGenerator.Generate();
                 attempts++;
             }
             while (attempts < 20 && await connection.ExecuteScalarAsync<int>(
@@ -3662,7 +3694,7 @@ public class DatabaseInitializer
     /// <summary>
     /// Helper method to add a column to a table if it doesn't already exist
     /// </summary>
-    private async Task AddColumnIfNotExistsAsync(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
+    private static async Task AddColumnIfNotExistsAsync(SqliteConnection connection, string tableName, string columnName, string columnDefinition)
     {
         try
         {

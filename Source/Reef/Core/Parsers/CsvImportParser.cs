@@ -23,22 +23,20 @@ public class CsvImportParser : IImportParser
         using var reader = new StreamReader(content, encoding, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
 
         // Skip header rows if configured
-        for (int i = 0; i < config.SkipRows && !reader.EndOfStream; i++)
+        for (int i = 0; i < config.SkipRows; i++)
         {
-            await reader.ReadLineAsync(ct);
+            if (await reader.ReadLineAsync(ct) == null) break;
         }
 
         List<string>? headers = null;
         int lineNumber = config.SkipRows;
+        string? line;
 
-        while (!reader.EndOfStream)
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-
-            var line = await reader.ReadLineAsync(ct);
             lineNumber++;
 
-            if (line == null) break;
             if (config.TrimWhitespace) line = line.Trim();
             if (string.IsNullOrEmpty(line)) continue;
 

@@ -46,6 +46,13 @@ public static class ImportProfilesEndpoints
         // ── Delta Sync ─────────────────────────────────────────────────
         g.MapGet("/{id:int}/delta-sync/stats",    GetDeltaSyncStats);
         g.MapDelete("/{id:int}/delta-sync/reset", ResetDeltaSync);
+
+        // ── Output Targets ─────────────────────────────────────────────
+        g.MapGet("/{id:int}/output-targets",              GetOutputTargets);
+        g.MapPost("/{id:int}/output-targets",             AddOutputTarget);
+        g.MapPut("/{id:int}/output-targets/{tid:int}",    UpdateOutputTarget);
+        g.MapDelete("/{id:int}/output-targets/{tid:int}", DeleteOutputTarget);
+        g.MapPost("/{id:int}/output-targets/reorder",     ReorderOutputTargets);
     }
 
     // ── CRUD Handlers ──────────────────────────────────────────────────
@@ -468,6 +475,74 @@ public static class ImportProfilesEndpoints
             return Results.Ok(new { message = $"Delta sync state reset. {deleted} hash entries removed." });
         }
         catch (Exception ex) { return ServerError($"resetting delta sync for {id}", ex); }
+    }
+
+    // ── Output Target Handlers ─────────────────────────────────────────
+
+    private static async Task<IResult> GetOutputTargets(
+        int id,
+        [FromServices] ImportProfileService svc)
+    {
+        try { return Results.Ok(await svc.GetOutputTargetsAsync(id)); }
+        catch (Exception ex) { return ServerError($"getting output targets for profile {id}", ex); }
+    }
+
+    private static async Task<IResult> AddOutputTarget(
+        int id,
+        [FromBody] ImportOutputTarget target,
+        [FromServices] ImportProfileService svc)
+    {
+        try
+        {
+            target.ImportProfileId = id;
+            var newId = await svc.AddOutputTargetAsync(target);
+            var targets = await svc.GetOutputTargetsAsync(id);
+            var created = targets.FirstOrDefault(t => t.Id == newId);
+            return Results.Created($"/api/import-profiles/{id}/output-targets/{newId}", created);
+        }
+        catch (Exception ex) { return ServerError($"adding output target to profile {id}", ex); }
+    }
+
+    private static async Task<IResult> UpdateOutputTarget(
+        int id,
+        int tid,
+        [FromBody] ImportOutputTarget target,
+        [FromServices] ImportProfileService svc)
+    {
+        try
+        {
+            target.Id = tid;
+            target.ImportProfileId = id;
+            var ok = await svc.UpdateOutputTargetAsync(target);
+            return ok ? Results.Ok(target) : Results.NotFound();
+        }
+        catch (Exception ex) { return ServerError($"updating output target {tid}", ex); }
+    }
+
+    private static async Task<IResult> DeleteOutputTarget(
+        int id,
+        int tid,
+        [FromServices] ImportProfileService svc)
+    {
+        try
+        {
+            var ok = await svc.DeleteOutputTargetAsync(tid);
+            return ok ? Results.NoContent() : Results.NotFound();
+        }
+        catch (Exception ex) { return ServerError($"deleting output target {tid}", ex); }
+    }
+
+    private static async Task<IResult> ReorderOutputTargets(
+        int id,
+        [FromBody] ReorderOutputTargetsRequest req,
+        [FromServices] ImportProfileService svc)
+    {
+        try
+        {
+            await svc.ReorderOutputTargetsAsync(id, req.Ids);
+            return Results.Ok(new { message = "Reordered" });
+        }
+        catch (Exception ex) { return ServerError($"reordering output targets for profile {id}", ex); }
     }
 
     // ── Helpers ────────────────────────────────────────────────────────

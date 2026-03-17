@@ -61,10 +61,10 @@ public class JsonImportParser : IImportParser
         using var reader = new StreamReader(content, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
         int lineNumber = 0;
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             lineNumber++;
 
             if (string.IsNullOrWhiteSpace(line)) continue;

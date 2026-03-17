@@ -1614,6 +1614,34 @@
                             </details>` : ''}
                         </div>` : ''}
 
+                        <!-- Output Targets -->
+                        ${(() => {
+                            if (!exec.outputTargetsJson) return '';
+                            let targets = [];
+                            try { targets = JSON.parse(exec.outputTargetsJson); } catch { return ''; }
+                            if (!targets.length) return '';
+                            const statusBadge = s => {
+                                const colors = { Success: 'bg-green-100 text-green-700', Failed: 'bg-red-100 text-red-700', Skipped: 'bg-gray-100 text-gray-600' };
+                                const icons  = { Success: '✓', Failed: '✗', Skipped: '–' };
+                                return `<span class="text-xs font-semibold px-2 py-0.5 rounded ${colors[s]||'bg-gray-100 text-gray-500'}">${icons[s]||''} ${s}</span>`;
+                            };
+                            return `<div>
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Output Targets</p>
+                                <div class="space-y-2">
+                                    ${targets.map(t => `
+                                        <div class="flex items-start justify-between border border-gray-100 rounded-lg px-3 py-2 bg-white">
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-800">${escapeHtml(t.destinationName || 'Destination #' + t.destinationId)}</span>
+                                                ${t.finalPath ? `<p class="text-xs font-mono text-gray-500 mt-0.5 truncate max-w-xs">${escapeHtml(t.finalPath)}</p>` : ''}
+                                                ${t.errorMessage ? `<p class="text-xs text-red-500 mt-0.5">${escapeHtml(t.errorMessage)}</p>` : ''}
+                                                <p class="text-xs text-gray-400">${t.rowsWritten ?? 0} rows</p>
+                                            </div>
+                                            ${statusBadge(t.status)}
+                                        </div>`).join('')}
+                                </div>
+                            </div>`;
+                        })()}
+
                         <!-- Row errors -->
                         ${errors.length > 0 ? `
                         <div>

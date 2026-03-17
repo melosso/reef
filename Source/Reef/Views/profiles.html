@@ -1566,13 +1566,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300" data-tab="imp-failures" onclick="showImportTab('imp-failures')">
                         <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>Failures
                     </button>
+                    <button type="button" id="imp-output-targets-tab-btn" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300 opacity-50 cursor-not-allowed" data-tab="imp-output-targets" onclick="showImportTab('imp-output-targets')" disabled title="Save the profile first to configure output targets">
+                        <i data-lucide="send" class="w-4 h-4 inline mr-1"></i>Output Targets
+                    </button>
                     <button type="button" id="imp-webhooks-tab-btn" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-gray-300 opacity-50 cursor-not-allowed" data-tab="imp-webhooks" onclick="showImportTab('imp-webhooks')" disabled title="Save the profile first to enable webhooks">
                         <i data-lucide="link" class="w-4 h-4 inline mr-1"></i>Webhooks
                     </button>
                 </nav>
             </div>
 
-            <form id="import-profile-form" onsubmit="saveImportProfile(event)">
+            <form id="import-profile-form" onsubmit="saveImportProfile(event)" novalidate>
                 <input type="hidden" id="imp-id" value="">
 
                 <!-- ── General Tab ────────────────────────────────────────── -->
@@ -1613,7 +1616,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Configure where Reef reads data from. Use <strong>Local File</strong> for server-accessible paths, <strong>SFTP</strong> for remote file servers, or <strong>HTTP API</strong> to pull data from REST endpoints.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Configure where Reef reads data from. Supported sources: <strong>Local File</strong>, <strong>SFTP/FTP</strong>, <strong>HTTP API</strong>, <strong>AWS S3</strong>, <strong>Azure Blob Storage</strong>, and <strong>Network Share (SMB/UNC)</strong>.</p></div>
                             </div>
                         </div>
 
@@ -1623,6 +1626,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <option value="Local">Local File / Disk</option>
                                 <option value="Sftp">SFTP / FTP</option>
                                 <option value="Http">HTTP / REST API</option>
+                                <option value="S3">AWS S3 / S3-Compatible</option>
+                                <option value="AzureBlob">Azure Blob Storage</option>
+                                <option value="NetworkShare">Network Share (SMB/UNC)</option>
                             </select>
                         </div>
 
@@ -1727,8 +1733,26 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                         <option value="Latest">Latest</option>
                                         <option value="Oldest">Oldest</option>
                                         <option value="All">All matching</option>
+                                        <option value="Exact">Exact path</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex items-center space-x-2">
+                                    <i data-lucide="archive" class="w-4 h-4 text-gray-500"></i>
+                                    <div>
+                                        <label for="imp-sftp-archive-after" class="text-sm font-medium text-gray-900">Archive after import</label>
+                                        <p class="text-xs text-gray-500">Move processed files to an archive folder on the remote server</p>
+                                    </div>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="imp-sftp-archive-after" class="sr-only peer" onchange="toggleSftpArchivePath()">
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div id="imp-sftp-archive-path-row" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Archive Path (Remote)</label>
+                                <input id="imp-sftp-archive-path" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="/uploads/archive">
                             </div>
                         </div>
 
@@ -1741,7 +1765,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Method</label>
-                                    <select id="imp-http-method" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <select id="imp-http-method" onchange="onImportHttpMethodChange()" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                                         <option value="GET">GET</option>
                                         <option value="POST">POST</option>
                                     </select>
@@ -1755,6 +1779,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                         <option value="ApiKey">API Key</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div id="imp-http-body-row" class="hidden">
+                                <label class="block text-sm font-medium text-gray-700">Request Body (Scriban template)</label>
+                                <textarea id="imp-http-body" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder='{"from":"{{now | date.to_string &quot;%Y-%m-%d&quot;}}", "filter": "active"}'></textarea>
+                                <p class="text-xs text-gray-500 mt-1">Scriban template evaluated at runtime. Sent as the POST body with Content-Type: application/json.</p>
                             </div>
                             <div id="imp-http-auth-row" class="hidden space-y-3">
                                 <div id="imp-http-api-key-header-row" class="hidden">
@@ -1798,6 +1827,134 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                         </div>
 
+                        <!-- S3 source config -->
+                        <div id="imp-s3-config" class="hidden space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Bucket Name <span class="text-red-500">*</span></label>
+                                    <input id="imp-s3-bucket" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="my-bucket">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Region</label>
+                                    <input id="imp-s3-region" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="us-east-1">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Access Key</label>
+                                    <input id="imp-s3-access-key" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Leave blank to keep existing">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Secret Key</label>
+                                    <input id="imp-s3-secret-key" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Leave blank to keep existing">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 flex items-center">
+                                    Key Prefix
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Optional path prefix within the bucket (e.g. imports/orders/)"><i data-lucide="info" class="w-4 h-4"></i></span>
+                                </label>
+                                <input id="imp-s3-prefix" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="imports/orders/">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 flex items-center">
+                                    Service URL
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Optional. Override endpoint for MinIO, Cloudflare R2, or other S3-compatible storage."><i data-lucide="info" class="w-4 h-4"></i></span>
+                                </label>
+                                <input id="imp-s3-service-url" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="https://s3.example.com">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Pattern</label>
+                                    <input id="imp-s3-pattern" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="*.csv">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Selection</label>
+                                    <select id="imp-s3-selection" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="Latest">Latest</option>
+                                        <option value="Oldest">Oldest</option>
+                                        <option value="All">All matching</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Azure Blob source config -->
+                        <div id="imp-azure-config" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Connection String <span class="text-red-500">*</span></label>
+                                <input id="imp-azure-conn-str" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="Leave blank to keep existing">
+                                <p class="text-xs text-gray-500 mt-1">Azure Storage account connection string or SAS URL</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Container Name <span class="text-red-500">*</span></label>
+                                <input id="imp-azure-container" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="my-container">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 flex items-center">
+                                    Blob Prefix / Path
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Optional path prefix within the container (e.g. orders/2024/)"><i data-lucide="info" class="w-4 h-4"></i></span>
+                                </label>
+                                <input id="imp-azure-prefix" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="orders/2024/">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Pattern</label>
+                                    <input id="imp-azure-pattern" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="*.csv">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Selection</label>
+                                    <select id="imp-azure-selection" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="Latest">Latest</option>
+                                        <option value="Oldest">Oldest</option>
+                                        <option value="All">All matching</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Network Share source config -->
+                        <div id="imp-netshare-config" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">UNC Path <span class="text-red-500">*</span></label>
+                                <input id="imp-netshare-unc" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="\\server\share or /mnt/share">
+                                <p class="text-xs text-gray-500 mt-1">On Linux, the share must already be mounted. On Windows, use <code>\\server\share</code> format.</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Subdirectory (optional)</label>
+                                <input id="imp-netshare-subfolder" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="orders/incoming">
+                            </div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Username (optional)</label>
+                                    <input id="imp-netshare-username" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Password (optional)</label>
+                                    <input id="imp-netshare-password" type="password" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Leave blank if not required">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Domain (optional)</label>
+                                    <input id="imp-netshare-domain" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Pattern</label>
+                                    <input id="imp-netshare-pattern" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="*.csv">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">File Selection</label>
+                                    <select id="imp-netshare-selection" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                                        <option value="Latest">Latest</option>
+                                        <option value="Oldest">Oldest</option>
+                                        <option value="All">All matching</option>
+                                        <option value="Exact">Exact path</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="border-t border-gray-200 pt-3 flex gap-2">
                             <button type="button" onclick="testImportSource()" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md flex items-center">
                                 <i data-lucide="wifi" class="h-4 w-4 mr-1"></i>Test Source
@@ -1816,7 +1973,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Select the format of your source data. CSV/TSV covers spreadsheet-style files; JSON/JSONL covers API responses and document stores; XML for SOAP or feed-based sources; YAML for config-style data.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Select the format of your source data. CSV/TSV covers spreadsheet-style files; JSON/JSONL covers API responses and document stores; XML for SOAP or feed-based sources; YAML for config-style data. Use <strong>Binary / File Passthrough</strong> to forward raw files directly to Output Targets without parsing.</p></div>
                             </div>
                         </div>
 
@@ -1829,6 +1986,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <option value="JSONL">JSONL (JSON Lines)</option>
                                 <option value="XML">XML</option>
                                 <option value="YAML">YAML</option>
+                                <option value="Binary">Binary / File Passthrough</option>
                             </select>
                         </div>
 
@@ -1913,6 +2071,17 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <span class="ml-1 text-gray-400 cursor-help" data-tooltip="XPath selecting the repeating element that represents one data row. E.g. //Order, //ns:Customer"><i data-lucide="info" class="w-4 h-4"></i></span>
                                 </label>
                                 <input id="imp-xml-element" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono" placeholder="//Order">
+                            </div>
+                        </div>
+
+                        <!-- Binary passthrough info -->
+                        <div id="imp-binary-info" class="hidden">
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                                <i data-lucide="file-symlink" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm font-medium text-blue-800">Binary / File Passthrough</p>
+                                    <p class="text-sm text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2110,7 +2279,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">When Smart Sync is on, Reef only writes rows that have changed since the last import — skipping unchanged data to save time and reduce load. Your source data must include a column that uniquely identifies each row.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">When Smart Sync is on, Reef hashes each record and only writes rows that are <strong>new or changed</strong> since the last run — skipping identical data to reduce load. You must specify a field that is <strong>unique per record</strong> in your source data (e.g. <code class="bg-blue-100 text-blue-900 rounded px-1">OrderId</code> in CSV/JSON, an element name in XML). Reef stores a hash fingerprint per ID and compares it each run.</p></div>
                             </div>
                         </div>
 
@@ -2132,10 +2301,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div id="imp-delta-rows" class="space-y-4 opacity-50 pointer-events-none">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 flex items-center">
-                                    Row ID Column <span class="text-red-500 ml-1">*</span>
-                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Column in source data that uniquely identifies each row. Used to detect which rows have changed between runs."><i data-lucide="info" class="w-4 h-4"></i></span>
+                                    Unique ID Field <span class="text-red-500 ml-1">*</span>
+                                    <span class="ml-1 text-gray-400 cursor-help" data-tooltip="The field name that uniquely identifies each record in your source data. CSV: use a column header (e.g. OrderId). JSON: a top-level key in each object (e.g. id). XML: an element name inside each record (e.g. OrderNumber). Reef uses this to track which records have changed between runs."><i data-lucide="info" class="w-4 h-4"></i></span>
                                 </label>
-                                <input id="imp-delta-id-col" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono" placeholder="OrderId or guid">
+                                <input id="imp-delta-id-col" type="text" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono" placeholder="e.g. OrderId, id, SKU">
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
@@ -2357,6 +2526,75 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
 
+
+                <!-- ── Output Targets Tab ────────────────────────────────── -->
+                <div id="imp-output-targets" class="import-tab-pane hidden">
+                    <div class="space-y-4">
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Output targets fan-out parsed rows to additional destinations after the primary database write. Use them to create backup files, push data to HTTP APIs, upload to S3, or any other configured destination.</p></div>
+                            </div>
+                        </div>
+
+                        <div id="imp-outputTargetsList" class="space-y-3">
+                            <p class="text-gray-500 text-center py-4">Save the profile to configure output targets.</p>
+                        </div>
+
+                        <button id="imp-addOutputTargetBtn" onclick="openAddOutputTargetPanel()"
+                                class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:border-gray-400 hover:bg-gray-50 hidden">
+                            <i data-lucide="plus-circle" class="w-4 h-4 inline mr-2"></i>
+                            Add Output Target
+                        </button>
+
+                        <!-- Inline add/edit panel -->
+                        <div id="imp-outputTargetPanel" class="hidden border border-gray-200 rounded-lg p-4 bg-gray-50 space-y-3">
+                            <h4 class="text-sm font-semibold text-gray-700">Output Target</h4>
+                            <input type="hidden" id="imp-ot-id" value="">
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Destination <span class="text-red-500">*</span></label>
+                                <select id="imp-ot-destination-id" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    <option value="">— select destination —</option>
+                                </select>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Output Format</label>
+                                    <select id="imp-ot-format" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="JSON">JSON</option>
+                                        <option value="CSV">CSV</option>
+                                        <option value="JSONL">JSONL</option>
+                                        <option value="XML">XML</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">On Failure</label>
+                                    <select id="imp-ot-on-failure" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <option value="Warn">Warn (continue)</option>
+                                        <option value="Fail">Fail (abort execution)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Filename Template
+                                    <span class="text-xs text-gray-400 font-normal ml-1">tokens: {profile} {timestamp} {date} {guid}</span>
+                                </label>
+                                <input id="imp-ot-filename-template" type="text" placeholder="{profile}_{timestamp}.json"
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            </div>
+
+                            <div class="flex justify-end gap-2">
+                                <button type="button" onclick="closeOutputTargetPanel()"
+                                        class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-100">Cancel</button>
+                                <button type="button" onclick="saveOutputTarget()"
+                                        class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">Save Target</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ── Webhooks Tab ───────────────────────────────────────── -->
                 <div id="imp-webhooks" class="import-tab-pane hidden">
@@ -3816,9 +4054,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         onImportSourceTypeChange();
         onImportFormatChange();
 
-        // Webhooks tab: disable for new profiles, enable for existing
+        // Output Targets tab + Webhooks tab: disable for new profiles, enable for existing
+        const impOutputTargetsTabBtn = document.getElementById('imp-output-targets-tab-btn');
         const impWebhooksTabBtn = document.getElementById('imp-webhooks-tab-btn');
         if (profileId) {
+            impOutputTargetsTabBtn.disabled = false;
+            impOutputTargetsTabBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            impOutputTargetsTabBtn.title = '';
+            document.getElementById('imp-addOutputTargetBtn').classList.remove('hidden');
+            loadImportOutputTargets(profileId);
+
             impWebhooksTabBtn.disabled = false;
             impWebhooksTabBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             impWebhooksTabBtn.title = '';
@@ -3828,6 +4073,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('impDeltaSyncAdvancedPanel').classList.remove('hidden');
             loadImportDeltaSyncStats();
         } else {
+            impOutputTargetsTabBtn.disabled = true;
+            impOutputTargetsTabBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            impOutputTargetsTabBtn.title = 'Save the profile first to configure output targets';
+            document.getElementById('imp-addOutputTargetBtn').classList.add('hidden');
+            document.getElementById('imp-outputTargetsList').innerHTML = '<p class="text-gray-500 text-center py-4">Save the profile to configure output targets.</p>';
+
             impWebhooksTabBtn.disabled = true;
             impWebhooksTabBtn.classList.add('opacity-50', 'cursor-not-allowed');
             impWebhooksTabBtn.title = 'Save the profile first to enable webhooks';
@@ -4497,7 +4748,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('imp-sftp-pattern').value = p.sourceFilePattern || '';
             document.getElementById('imp-sftp-selection').value = p.sourceFileSelection || 'Latest';
             document.getElementById('imp-sftp-auth-type').value = srcConfig.authType || 'password';
+            document.getElementById('imp-sftp-archive-after').checked = p.archiveAfterImport || false;
+            document.getElementById('imp-sftp-archive-path').value = p.archivePath || '';
             toggleSftpImportAuth();
+            toggleSftpArchivePath();
         } else if (p.sourceType === 'Http') {
             document.getElementById('imp-http-url').value = srcConfig.url || '';
             document.getElementById('imp-http-method').value = p.httpMethod || 'GET';
@@ -4505,10 +4759,31 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             document.getElementById('imp-http-api-key-header').value = srcConfig.apiKeyHeader || '';
             document.getElementById('imp-http-headers').value = srcConfig.headers ? JSON.stringify(srcConfig.headers, null, 2) : '';
             document.getElementById('imp-http-data-root').value = p.httpDataRootPath || '';
+            document.getElementById('imp-http-body').value = p.httpBodyTemplate || '';
             document.getElementById('imp-http-pagination').checked = p.httpPaginationEnabled || false;
             document.getElementById('imp-pagination-config').value = p.httpPaginationConfig || '';
             toggleHttpAuth();
             togglePaginationConfig();
+            onImportHttpMethodChange();
+        } else if (p.sourceType === 'S3') {
+            document.getElementById('imp-s3-bucket').value = srcConfig.bucketName || '';
+            document.getElementById('imp-s3-region').value = srcConfig.region || '';
+            document.getElementById('imp-s3-prefix').value = srcConfig.prefix || '';
+            document.getElementById('imp-s3-service-url').value = srcConfig.serviceUrl || '';
+            document.getElementById('imp-s3-pattern').value = p.sourceFilePattern || '';
+            document.getElementById('imp-s3-selection').value = p.sourceFileSelection || 'Latest';
+        } else if (p.sourceType === 'AzureBlob') {
+            document.getElementById('imp-azure-container').value = srcConfig.container || srcConfig.containerName || '';
+            document.getElementById('imp-azure-prefix').value = srcConfig.path || srcConfig.blobPrefix || '';
+            document.getElementById('imp-azure-pattern').value = p.sourceFilePattern || '';
+            document.getElementById('imp-azure-selection').value = p.sourceFileSelection || 'Latest';
+        } else if (p.sourceType === 'NetworkShare') {
+            document.getElementById('imp-netshare-unc').value = srcConfig.uncPath || srcConfig.basePath || '';
+            document.getElementById('imp-netshare-subfolder').value = srcConfig.subFolder || '';
+            document.getElementById('imp-netshare-username').value = srcConfig.username || '';
+            document.getElementById('imp-netshare-domain').value = srcConfig.domain || '';
+            document.getElementById('imp-netshare-pattern').value = p.sourceFilePattern || '';
+            document.getElementById('imp-netshare-selection').value = p.sourceFileSelection || 'Latest';
         } else {
             document.getElementById('imp-source-file-path').value = p.sourceFilePath || '';
             document.getElementById('imp-source-file-pattern').value = p.sourceFilePattern || '';
@@ -4620,6 +4895,36 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 apiKeyHeader: httpAuthType === 'ApiKey' ? (document.getElementById('imp-http-api-key-header').value || undefined) : undefined,
                 headers: httpHeaders,
             });
+        } else if (sourceType === 'S3') {
+            const s3Cfg = {
+                bucketName: document.getElementById('imp-s3-bucket').value,
+                region: document.getElementById('imp-s3-region').value || undefined,
+                prefix: document.getElementById('imp-s3-prefix').value || undefined,
+                serviceUrl: document.getElementById('imp-s3-service-url').value || undefined,
+            };
+            const ak = document.getElementById('imp-s3-access-key').value;
+            const sk = document.getElementById('imp-s3-secret-key').value;
+            if (ak) s3Cfg.accessKey = ak;
+            if (sk) s3Cfg.secretKey = sk;
+            sourceConfig = JSON.stringify(s3Cfg);
+        } else if (sourceType === 'AzureBlob') {
+            const azCfg = {
+                container: document.getElementById('imp-azure-container').value,
+                path: document.getElementById('imp-azure-prefix').value || undefined,
+            };
+            const cs = document.getElementById('imp-azure-conn-str').value;
+            if (cs) azCfg.connectionString = cs;
+            sourceConfig = JSON.stringify(azCfg);
+        } else if (sourceType === 'NetworkShare') {
+            const nsCfg = {
+                uncPath: document.getElementById('imp-netshare-unc').value,
+                subFolder: document.getElementById('imp-netshare-subfolder').value || undefined,
+                username: document.getElementById('imp-netshare-username').value || undefined,
+                domain: document.getElementById('imp-netshare-domain').value || undefined,
+            };
+            const pw = document.getElementById('imp-netshare-password').value;
+            if (pw) nsCfg.password = pw;
+            sourceConfig = JSON.stringify(nsCfg);
         }
 
         // Build format config JSON
@@ -4660,12 +4965,24 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             sourceConfig,
             sourceFilePath: sourceType === 'Local' ? document.getElementById('imp-source-file-path').value : null,
             sourceFilePattern: sourceType === 'Local' ? document.getElementById('imp-source-file-pattern').value :
-                               sourceType === 'Sftp' ? document.getElementById('imp-sftp-pattern').value : null,
+                               sourceType === 'Sftp' ? document.getElementById('imp-sftp-pattern').value :
+                               sourceType === 'S3' ? document.getElementById('imp-s3-pattern').value :
+                               sourceType === 'AzureBlob' ? document.getElementById('imp-azure-pattern').value :
+                               sourceType === 'NetworkShare' ? document.getElementById('imp-netshare-pattern').value : null,
             sourceFileSelection: sourceType === 'Local' ? document.getElementById('imp-source-file-selection').value :
-                                 sourceType === 'Sftp' ? document.getElementById('imp-sftp-selection').value : 'Latest',
-            archiveAfterImport: document.getElementById('imp-archive-after').checked,
-            archivePath: document.getElementById('imp-archive-path').value || null,
+                                 sourceType === 'Sftp' ? document.getElementById('imp-sftp-selection').value :
+                                 sourceType === 'S3' ? document.getElementById('imp-s3-selection').value :
+                                 sourceType === 'AzureBlob' ? document.getElementById('imp-azure-selection').value :
+                                 sourceType === 'NetworkShare' ? document.getElementById('imp-netshare-selection').value : 'Latest',
+            archiveAfterImport: sourceType === 'Sftp'
+                ? document.getElementById('imp-sftp-archive-after').checked
+                : document.getElementById('imp-archive-after').checked,
+            archivePath: sourceType === 'Sftp'
+                ? (document.getElementById('imp-sftp-archive-path').value || null)
+                : (document.getElementById('imp-archive-path').value || null),
             httpMethod: sourceType === 'Http' ? document.getElementById('imp-http-method').value : null,
+            httpBodyTemplate: sourceType === 'Http' && document.getElementById('imp-http-method').value === 'POST'
+                ? (document.getElementById('imp-http-body').value || null) : null,
             httpPaginationEnabled: sourceType === 'Http' ? document.getElementById('imp-http-pagination').checked : false,
             httpPaginationConfig: sourceType === 'Http' && document.getElementById('imp-http-pagination').checked
                 ? document.getElementById('imp-pagination-config').value || null : null,
@@ -4675,7 +4992,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             columnMappingsJson: columnMappings.length ? JSON.stringify(columnMappings) : null,
             autoMapColumns: document.getElementById('imp-auto-map').checked,
             skipUnmappedColumns: document.getElementById('imp-skip-unmapped').checked,
-            targetType: document.getElementById('imp-target-type').value || 'Database',
+            targetType: fmt === 'Binary' ? null : (document.getElementById('imp-target-type').value || 'Database'),
             targetConnectionId: parseInt(document.getElementById('imp-target-connection').value) || null,
             targetTable: document.getElementById('imp-target-table').value || '',
             localTargetPath: document.getElementById('imp-local-target-path').value || null,
@@ -4756,7 +5073,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('imp-local-config').classList.toggle('hidden', t !== 'Local');
         document.getElementById('imp-sftp-config').classList.toggle('hidden', t !== 'Sftp');
         document.getElementById('imp-http-config').classList.toggle('hidden', t !== 'Http');
-        // Auto-set format to JSON for HTTP sources if still on the default CSV
+        document.getElementById('imp-s3-config').classList.toggle('hidden', t !== 'S3');
+        document.getElementById('imp-azure-config').classList.toggle('hidden', t !== 'AzureBlob');
+        document.getElementById('imp-netshare-config').classList.toggle('hidden', t !== 'NetworkShare');
+        // Auto-set format to JSON for HTTP sources
         if (t === 'Http') {
             const fmtEl = document.getElementById('imp-source-format');
             if (fmtEl.value === 'CSV') {
@@ -4769,6 +5089,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     function toggleArchivePath() {
         const checked = document.getElementById('imp-archive-after').checked;
         document.getElementById('imp-archive-path-row').classList.toggle('hidden', !checked);
+    }
+
+    function toggleSftpArchivePath() {
+        const checked = document.getElementById('imp-sftp-archive-after').checked;
+        document.getElementById('imp-sftp-archive-path-row').classList.toggle('hidden', !checked);
+    }
+
+    function onImportHttpMethodChange() {
+        const method = document.getElementById('imp-http-method').value;
+        document.getElementById('imp-http-body-row').classList.toggle('hidden', method !== 'POST');
     }
 
     function toggleSftpImportAuth() {
@@ -4794,9 +5124,21 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
     function onImportFormatChange() {
         const fmt = document.getElementById('imp-source-format').value;
+        const isBinary = fmt === 'Binary';
         document.getElementById('imp-csv-options').classList.toggle('hidden', !['CSV','TSV'].includes(fmt));
         document.getElementById('imp-json-options').classList.toggle('hidden', !['JSON','JSONL'].includes(fmt));
         document.getElementById('imp-xml-options').classList.toggle('hidden', fmt !== 'XML');
+        document.getElementById('imp-binary-info').classList.toggle('hidden', !isBinary);
+
+        // Grey-out Target/Mapping/SmartSync/Failures tabs for Binary passthrough
+        const binaryIrrelevantTabs = ['imp-target', 'imp-mapping', 'imp-sync', 'imp-failures'];
+        binaryIrrelevantTabs.forEach(tabId => {
+            const btn = document.querySelector(`#import-profile-modal [data-tab="${tabId}"]`);
+            if (btn) {
+                btn.classList.toggle('opacity-50', isBinary);
+                btn.classList.toggle('pointer-events-none', isBinary);
+            }
+        });
     }
 
     // ── Target / Load Strategy ────────────────────────────────────────
@@ -4837,6 +5179,188 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     function toggleDeleteColumns() {
         const strat = document.getElementById('imp-delete-strategy').value;
         document.getElementById('imp-soft-delete-cols').classList.toggle('hidden', strat !== 'SoftDelete');
+    }
+
+    // ── Import Output Targets ─────────────────────────────────────────
+
+    let _impOutputTargets = [];
+    let _impEditingTargetId = null;
+    let _impAvailableDestinations = [];
+
+    async function loadImportOutputTargets(profileId) {
+        try {
+            const [targetsRes, destsRes] = await Promise.all([
+                fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets`, { headers: getAuthHeaders() }),
+                fetch(`${API_BASE}/api/destinations`, { headers: getAuthHeaders() })
+            ]);
+            _impOutputTargets = targetsRes.ok ? await targetsRes.json() : [];
+            _impAvailableDestinations = destsRes.ok ? (await destsRes.json()).filter(d => d.type !== 'Email') : [];
+            renderImportOutputTargets();
+        } catch (e) {
+            console.error('loadImportOutputTargets error', e);
+        }
+    }
+
+    function renderImportOutputTargets() {
+        const list = document.getElementById('imp-outputTargetsList');
+        if (_impOutputTargets.length === 0) {
+            list.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No output targets configured.</p>';
+            return;
+        }
+        const formatBadge = f => {
+            const colors = { JSON:'bg-blue-100 text-blue-700', CSV:'bg-green-100 text-green-700', JSONL:'bg-purple-100 text-purple-700', XML:'bg-orange-100 text-orange-700' };
+            return `<span class="text-xs px-2 py-0.5 rounded ${colors[f]||'bg-gray-100 text-gray-600'}">${f}</span>`;
+        };
+        list.innerHTML = _impOutputTargets.map((t, idx) => `
+            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="flex flex-col gap-1">
+                        <button onclick="moveOutputTarget(${idx}, -1)" class="text-gray-400 hover:text-gray-600 disabled:opacity-30" ${idx===0?'disabled':''}><i data-lucide="chevron-up" class="w-3 h-3"></i></button>
+                        <button onclick="moveOutputTarget(${idx}, 1)" class="text-gray-400 hover:text-gray-600 disabled:opacity-30" ${idx===_impOutputTargets.length-1?'disabled':''}><i data-lucide="chevron-down" class="w-3 h-3"></i></button>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-gray-800">${escapeHtml(t.destinationName || 'Destination #' + t.destinationId)}</span>
+                        <span class="ml-2 text-xs text-gray-400">${t.destinationType || ''}</span>
+                        <div class="mt-1 flex items-center gap-2">
+                            ${formatBadge(t.outputFormat || 'JSON')}
+                            ${t.onFailure === 'Fail' ? '<span class="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700">Fail on error</span>' : ''}
+                            ${t.filenameTemplate ? `<span class="text-xs text-gray-500 font-mono">${escapeHtml(t.filenameTemplate)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" ${t.isEnabled?'checked':''} onchange="toggleOutputTarget(${t.id}, this.checked)">
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <button onclick="editOutputTarget(${t.id})" class="text-gray-400 hover:text-blue-600"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="deleteOutputTarget(${t.id})" class="text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            </div>
+        `).join('');
+        queueLucideRender();
+    }
+
+    function openAddOutputTargetPanel() {
+        _impEditingTargetId = null;
+        document.getElementById('imp-ot-id').value = '';
+        document.getElementById('imp-ot-destination-id').value = '';
+        document.getElementById('imp-ot-format').value = 'JSON';
+        document.getElementById('imp-ot-on-failure').value = 'Warn';
+        document.getElementById('imp-ot-filename-template').value = '';
+        populateOutputTargetDestinations();
+        document.getElementById('imp-outputTargetPanel').classList.remove('hidden');
+    }
+
+    function editOutputTarget(id) {
+        const t = _impOutputTargets.find(x => x.id === id);
+        if (!t) return;
+        _impEditingTargetId = id;
+        document.getElementById('imp-ot-id').value = id;
+        populateOutputTargetDestinations(t.destinationId);
+        document.getElementById('imp-ot-format').value = t.outputFormat || 'JSON';
+        document.getElementById('imp-ot-on-failure').value = t.onFailure || 'Warn';
+        document.getElementById('imp-ot-filename-template').value = t.filenameTemplate || '';
+        document.getElementById('imp-outputTargetPanel').classList.remove('hidden');
+    }
+
+    function closeOutputTargetPanel() {
+        document.getElementById('imp-outputTargetPanel').classList.add('hidden');
+        _impEditingTargetId = null;
+    }
+
+    function populateOutputTargetDestinations(selectedId) {
+        const sel = document.getElementById('imp-ot-destination-id');
+        sel.innerHTML = '<option value="">— select destination —</option>';
+        _impAvailableDestinations.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.id;
+            opt.textContent = `${d.name} (${d.type})`;
+            if (selectedId && d.id === selectedId) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    async function saveOutputTarget() {
+        const profileId = parseInt(document.getElementById('imp-id').value);
+        const destId = parseInt(document.getElementById('imp-ot-destination-id').value);
+        if (!destId) { alert('Please select a destination.'); return; }
+
+        const payload = {
+            importProfileId: profileId,
+            destinationId: destId,
+            outputFormat: document.getElementById('imp-ot-format').value,
+            onFailure: document.getElementById('imp-ot-on-failure').value,
+            filenameTemplate: document.getElementById('imp-ot-filename-template').value || null,
+            isEnabled: true,
+            sortOrder: _impEditingTargetId ? (_impOutputTargets.find(t => t.id === _impEditingTargetId)?.sortOrder ?? 0) : _impOutputTargets.length
+        };
+
+        try {
+            let res;
+            if (_impEditingTargetId) {
+                res = await fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets/${_impEditingTargetId}`, {
+                    method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...payload, id: _impEditingTargetId })
+                });
+            } else {
+                res = await fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets`, {
+                    method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
+            if (res.ok) {
+                closeOutputTargetPanel();
+                await loadImportOutputTargets(profileId);
+            } else {
+                const err = await res.json().catch(() => ({}));
+                alert('Failed to save output target: ' + (err.detail || err.error || res.statusText));
+            }
+        } catch (e) {
+            alert('Error saving output target: ' + e.message);
+        }
+    }
+
+    async function deleteOutputTarget(id) {
+        if (!confirm('Delete this output target?')) return;
+        const profileId = parseInt(document.getElementById('imp-id').value);
+        try {
+            const res = await fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets/${id}`, {
+                method: 'DELETE', headers: getAuthHeaders()
+            });
+            if (res.ok || res.status === 204) await loadImportOutputTargets(profileId);
+            else alert('Failed to delete output target');
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    async function toggleOutputTarget(id, enabled) {
+        const profileId = parseInt(document.getElementById('imp-id').value);
+        const t = _impOutputTargets.find(x => x.id === id);
+        if (!t) return;
+        try {
+            await fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets/${id}`, {
+                method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...t, isEnabled: enabled })
+            });
+            t.isEnabled = enabled;
+        } catch (e) { console.error(e); }
+    }
+
+    async function moveOutputTarget(idx, dir) {
+        const profileId = parseInt(document.getElementById('imp-id').value);
+        const newIdx = idx + dir;
+        if (newIdx < 0 || newIdx >= _impOutputTargets.length) return;
+        [_impOutputTargets[idx], _impOutputTargets[newIdx]] = [_impOutputTargets[newIdx], _impOutputTargets[idx]];
+        const orderedIds = _impOutputTargets.map(t => t.id);
+        try {
+            await fetch(`${API_BASE}/api/import-profiles/${profileId}/output-targets/reorder`, {
+                method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: orderedIds })
+            });
+            renderImportOutputTargets();
+        } catch (e) { console.error(e); }
     }
 
     // ── Import Profile Webhooks ───────────────────────────────────────

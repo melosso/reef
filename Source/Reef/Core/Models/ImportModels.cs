@@ -219,7 +219,54 @@ public class ImportProfileExecution
 
     /// <summary>JSON object keyed by phase name, value = elapsed ms</summary>
     public string? PhaseTimingsJson { get; set; }
+
+    /// <summary>JSON array of ImportOutputTargetResult — results from fan-out output targets</summary>
+    public string? OutputTargetsJson { get; set; }
 }
+
+// ===== Import Output Target Models =====
+
+/// <summary>
+/// A destination to which parsed import rows are fanned out after the primary DB write.
+/// Mirrors the ImportOutputTargets table.
+/// </summary>
+public class ImportOutputTarget
+{
+    public int Id { get; set; }
+    public int ImportProfileId { get; set; }
+    public int DestinationId { get; set; }
+    public int? DestinationEndpointId { get; set; }
+
+    /// <summary>JSON, CSV, JSONL, or XML</summary>
+    public string OutputFormat { get; set; } = "JSON";
+
+    /// <summary>Template for the output filename. Tokens: {profile}, {timestamp}, {date}, {guid}</summary>
+    public string? FilenameTemplate { get; set; }
+
+    public bool IsEnabled { get; set; } = true;
+    public int SortOrder { get; set; }
+
+    /// <summary>Warn | Fail — what to do when this target fails</summary>
+    public string OnFailure { get; set; } = "Warn";
+
+    public DateTime CreatedAt { get; set; }
+
+    // ── Joined (not stored in DB) ──────────────────────────────────────
+    public string? DestinationName { get; set; }
+    public string? DestinationType { get; set; }
+}
+
+/// <summary>
+/// Result from writing rows to a single fan-out output target.
+/// Serialised into ImportProfileExecution.OutputTargetsJson.
+/// </summary>
+public record ImportOutputTargetResult(
+    int DestinationId,
+    string DestinationName,
+    string Status,        // Success | Failed | Skipped
+    string? FinalPath,
+    string? ErrorMessage,
+    int RowsWritten);
 
 /// <summary>
 /// Individual row-level write error stored for audit/review — mirrors ImportExecutionErrors table.
@@ -478,6 +525,14 @@ public class PreviewImportRequest
     public bool HttpPaginationEnabled { get; set; }
     public string? HttpPaginationConfig { get; set; }
     public string? HttpDataRootPath { get; set; }
+}
+
+/// <summary>
+/// Request body for reordering output targets
+/// </summary>
+public class ReorderOutputTargetsRequest
+{
+    public List<int> Ids { get; set; } = new();
 }
 
 /// <summary>

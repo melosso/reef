@@ -90,7 +90,7 @@ public class SendGridEmailProvider : IEmailProvider
             if (message.Attachments.Any())
             {
                 var attachment = message.Attachments.First();
-                if (attachment is MimePart mimePart)
+                if (attachment is MimePart mimePart && mimePart.Content is not null)
                 {
                     using (var memoryStream = new MemoryStream())
                     {

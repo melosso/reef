@@ -36,6 +36,8 @@ public class ImportExecutionService
     private readonly DatabaseImportTarget _databaseImportTarget;
     private readonly LocalFileImportTarget _localFileImportTarget;
     private readonly NotificationService _notificationService;
+    private readonly DestinationSourceAdapter _sourceAdapter;
+    private readonly ImportFileOutputService _fileOutputService;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
 
     public ImportExecutionService(
@@ -44,7 +46,9 @@ public class ImportExecutionService
         DatabaseConfig reefDbConfig,
         DatabaseImportTarget databaseImportTarget,
         LocalFileImportTarget localFileImportTarget,
-        NotificationService notificationService)
+        NotificationService notificationService,
+        DestinationSourceAdapter sourceAdapter,
+        ImportFileOutputService fileOutputService)
     {
         _profileService = profileService;
         _connectionService = connectionService;
@@ -52,6 +56,8 @@ public class ImportExecutionService
         _databaseImportTarget = databaseImportTarget;
         _localFileImportTarget = localFileImportTarget;
         _notificationService = notificationService;
+        _sourceAdapter = sourceAdapter;
+        _fileOutputService = fileOutputService;
     }
 
     // ── Public Entry Points ────────────────────────────────────────────
@@ -79,7 +85,7 @@ public class ImportExecutionService
         // Push profile code into log context so all downstream messages carry it
         using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
 
-        Log.Information("ImportExecution {Id} started for profile {ProfileCode} ({ProfileName})",
+        Log.Information("ImportExecution {Id} started for profile {Code} ({ProfileName})",
             exec.Id, profile.Code, profile.Name);
 
         try
@@ -179,11 +185,26 @@ public class ImportExecutionService
         }
 
         // ── Phase 3: Fetch source files ─────────────────────────────
+        // Resolve SourceDestinationId → source config if needed
+        ImportProfile resolvedProfile = profile;
+        if (profile.SourceDestinationId.HasValue)
+        {
+            resolvedProfile = await _sourceAdapter.ResolveSourceConfigAsync(profile, ct);
+        }
+
         List<ImportSourceFile> sourceFiles = null!;
         await TimedPhaseAsync("FetchSource", exec, phaseTimings, ct, async () =>
         {
-            sourceFiles = await FetchWithRetryAsync(profile, exec, ct);
+            sourceFiles = await FetchWithRetryAsync(resolvedProfile, exec, ct);
         });
+
+        // ── Binary passthrough: skip all parse/map/write phases ──────
+        if (profile.SourceFormat.Equals("Binary", StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecuteBinaryPassthroughAsync(profile, exec, resolvedProfile,
+                sourceFiles, phaseTimings, ct);
+            return;
+        }
 
         // ── Phase 4 + 5 + 6 + 7: Parse → Map → Delta → Write ────────
         // Parse is streaming; batches are collected then written
@@ -245,6 +266,12 @@ public class ImportExecutionService
 
         bool isFullReplace = profile.LoadStrategy.Equals("FullReplace", StringComparison.OrdinalIgnoreCase);
         var allRowsForFullReplace = isFullReplace ? new List<Dictionary<string, object?>>() : null;
+
+        // Pre-load output targets so we know whether to collect rows (avoids memory cost when not needed)
+        var outputTargets = await _profileService.GetOutputTargetsAsync(profile.Id);
+        var enabledTargets = outputTargets.Where(t => t.IsEnabled).ToList();
+        bool hasFileOutputTargets = enabledTargets.Count > 0;
+        var collectedRows = hasFileOutputTargets ? new List<Dictionary<string, object?>>() : null;
 
         await TimedPhaseAsync("ParseAndWrite", exec, phaseTimings, ct, async () =>
         {
@@ -313,6 +340,10 @@ public class ImportExecutionService
                         }
                     }
 
+                    // Collect rows for fan-out output targets (opt-in; only when targets are configured)
+                    if (hasFileOutputTargets)
+                        collectedRows!.Add(mapped);
+
                     // Check abort thresholds
                     if (ShouldAbort(profile, exec))
                     {
@@ -367,11 +398,48 @@ public class ImportExecutionService
                 ErrorType    = "Configuration",
                 Phase        = "DeltaSync",
                 ErrorMessage =
-                    $"Smart Sync is enabled but column '{profile.DeltaSyncReefIdColumn}' " +
-                    $"was not found in any of the {exec.TotalRowsRead} row(s) processed. " +
-                    "Check the ReefId Column setting in Smart Sync.",
+                    $"Smart Sync is enabled but the unique ID field '{profile.DeltaSyncReefIdColumn}' " +
+                    $"was not found in any of the {exec.TotalRowsRead} record(s) processed. " +
+                    "Check the 'Unique ID Field' setting on the Smart Sync tab. For CSV this must match a column header; for JSON a top-level key; for XML an element name.",
                 OccurredAt   = DateTime.UtcNow
             });
+        }
+
+        // ── Phase 8b: Fan-out to output targets ───────────────────────
+        if (hasFileOutputTargets && collectedRows is { Count: > 0 })
+        {
+            await TimedPhaseAsync("FanOut", exec, phaseTimings, ct, async () =>
+            {
+                var fanOutRows = (IReadOnlyList<Dictionary<string, object?>>)collectedRows;
+
+                // Also include FullReplace rows if applicable
+                if (isFullReplace && allRowsForFullReplace is { Count: > 0 })
+                    fanOutRows = allRowsForFullReplace;
+
+                var targetResults = await _fileOutputService.FanOutAsync(
+                    fanOutRows, enabledTargets, profile, ct);
+
+                exec.OutputTargetsJson = JsonSerializer.Serialize(targetResults);
+
+                var hardFails = targetResults
+                    .Where(r => r.Status == "Failed")
+                    .Join(enabledTargets,
+                          r => r.DestinationId,
+                          t => t.DestinationId,
+                          (r, t) => (Result: r, Target: t))
+                    .Where(x => x.Target.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (hardFails.Count > 0)
+                {
+                    var names = string.Join(", ", hardFails.Select(x => x.Result.DestinationName));
+                    throw new InvalidOperationException($"Output target(s) failed (OnFailure=Fail): {names}");
+                }
+            });
+        }
+        else if (hasFileOutputTargets)
+        {
+            Log.Debug("ImportExecution {Id}: output targets configured but no rows collected to fan-out", exec.Id);
         }
 
         // ── Phase 9: Archive source files ─────────────────────────────
@@ -379,12 +447,12 @@ public class ImportExecutionService
         {
             await TimedPhaseAsync("Archive", exec, phaseTimings, ct, async () =>
             {
-                var source = ImportSourceFactory.Create(profile.SourceType);
+                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
                 foreach (var file in sourceFiles)
                 {
                     try
                     {
-                        await source.ArchiveAsync(profile, file.Identifier, ct);
+                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
                     }
                     catch (Exception ex)
                     {
@@ -442,6 +510,78 @@ public class ImportExecutionService
                     Log.Warning("ImportExecution {Id}: post-process failed: {Error}", exec.Id, ex.Message);
                     if (!profile.PostProcessSkipOnFailure)
                         throw;
+                }
+            });
+        }
+    }
+
+    // ── Binary Passthrough ─────────────────────────────────────────────
+
+    private async Task ExecuteBinaryPassthroughAsync(
+        ImportProfileWithNames profile,
+        ImportProfileExecution exec,
+        ImportProfile resolvedProfile,
+        List<ImportSourceFile> sourceFiles,
+        Dictionary<string, long> phaseTimings,
+        CancellationToken ct)
+    {
+        var outputTargets = await _profileService.GetOutputTargetsAsync(profile.Id);
+        var enabledTargets = outputTargets.Where(t => t.IsEnabled).ToList();
+
+        if (enabledTargets.Count == 0)
+        {
+            Log.Warning("ImportExecution {Id}: Binary passthrough — no enabled output targets configured", exec.Id);
+        }
+
+        if (enabledTargets.Count > 0)
+        {
+            await TimedPhaseAsync("FanOut", exec, phaseTimings, ct, async () =>
+            {
+                var targetResults = await _fileOutputService.FanOutRawAsync(sourceFiles, enabledTargets, profile, ct);
+                exec.OutputTargetsJson = System.Text.Json.JsonSerializer.Serialize(targetResults);
+
+                exec.FilesProcessed = sourceFiles.Count;
+                exec.BytesProcessed = sourceFiles.Sum(f => f.SizeBytes ?? 0);
+                exec.RowsInserted = 0;
+
+                var hardFails = targetResults
+                    .Where(r => r.Status == "Failed")
+                    .Join(enabledTargets,
+                          r => r.DestinationId,
+                          t => t.DestinationId,
+                          (r, t) => (Result: r, Target: t))
+                    .Where(x => x.Target.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (hardFails.Count > 0)
+                {
+                    var names = string.Join(", ", hardFails.Select(x => x.Result.DestinationName));
+                    throw new InvalidOperationException($"Output target(s) failed (OnFailure=Fail): {names}");
+                }
+            });
+        }
+        else
+        {
+            exec.FilesProcessed = sourceFiles.Count;
+            exec.BytesProcessed = sourceFiles.Sum(f => f.SizeBytes ?? 0);
+        }
+
+        // Archive phase
+        if (profile.ArchiveAfterImport)
+        {
+            await TimedPhaseAsync("Archive", exec, phaseTimings, ct, async () =>
+            {
+                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
+                foreach (var file in sourceFiles)
+                {
+                    try
+                    {
+                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("ImportExecution {Id}: archive failed for {File}: {Error}", exec.Id, file.Identifier, ex.Message);
+                    }
                 }
             });
         }

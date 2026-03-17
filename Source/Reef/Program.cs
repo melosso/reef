@@ -309,6 +309,8 @@ public class Program
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
+        services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
+        services.AddScoped<ImportFileOutputService>();
         services.AddScoped<ImportExecutionService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
@@ -469,15 +471,19 @@ public class Program
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
 
-        // Serve HTML views from Views folder
+        // Serve HTML views from Views folder (try both casings for Linux compatibility)
         var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
+        if (!Directory.Exists(viewsFolder))
+            viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
         if (!Directory.Exists(viewsFolder))
         {
             var parentDir = Directory.GetParent(AppContext.BaseDirectory);
             var projectRoot = parentDir?.Parent?.Parent?.FullName;
             if (projectRoot != null)
             {
-                viewsFolder = Path.Combine(projectRoot, "views");
+                viewsFolder = Path.Combine(projectRoot, "Views");
+                if (!Directory.Exists(viewsFolder))
+                    viewsFolder = Path.Combine(projectRoot, "views");
             }
         }
 
@@ -649,12 +655,16 @@ public class Program
         {
             var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
             if (!Directory.Exists(viewsFolder))
+                viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
+            if (!Directory.Exists(viewsFolder))
             {
                 var parentDir = Directory.GetParent(AppContext.BaseDirectory);
                 var projectRoot = parentDir?.Parent?.Parent?.FullName;
                 if (projectRoot != null)
                 {
-                    viewsFolder = Path.Combine(projectRoot, "views");
+                    viewsFolder = Path.Combine(projectRoot, "Views");
+                    if (!Directory.Exists(viewsFolder))
+                        viewsFolder = Path.Combine(projectRoot, "views");
                 }
             }
 
