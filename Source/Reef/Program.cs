@@ -647,13 +647,9 @@ public class Program
         WebhooksEndpoints.Map(app);
         SystemInfoEndpoints.Map(app);
         AdminEndpoints.Map(app);
-
-        // New endpoints for Jobs, Destinations, and Query Templates (extension methods)
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
-
-        // Import Profile endpoints
         ImportProfilesEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
