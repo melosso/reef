@@ -679,7 +679,7 @@ public class NotificationService
             var emailConfig = JsonSerializer.Deserialize<EmailDestinationConfiguration>(decryptedConfig);
             if (emailConfig == null) return false;
 
-            // Send directly to the user — not to system notification recipients
+            // Send directly to the user, not to system notification recipients
             emailConfig.ToAddresses = [recipientEmail];
 
             var message = new MimeKit.MimeMessage();

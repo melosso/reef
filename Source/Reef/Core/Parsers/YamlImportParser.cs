@@ -122,7 +122,7 @@ public class YamlImportParser : IImportParser
             return result;
         }
 
-        // Scalar value — wrap it
+        // Scalar value
         return new Dictionary<string, object?> { ["value"] = node };
     }
 

@@ -42,7 +42,7 @@ public static class AuthEndpoints
     private static readonly ConcurrentDictionary<string, MfaAttemptTracker> _mfaAttempts = new();
 
     private static readonly TimeSpan _cleanupInterval = TimeSpan.FromMinutes(1);
-    private static DateTime _lastCleanup = DateTime.UtcNow;
+    private static long _lastCleanupTicks = DateTime.UtcNow.Ticks;
 
     private static string GetClientFingerprint(HttpContext context)
     {
@@ -114,9 +114,11 @@ public static class AuthEndpoints
     private static void CleanupExpiredSessions()
     {
         var now = DateTime.UtcNow;
-        if (now - _lastCleanup < _cleanupInterval) return;
-        
-        _lastCleanup = now;
+        var lastTicks = Interlocked.Read(ref _lastCleanupTicks);
+        if (now.Ticks - lastTicks < _cleanupInterval.Ticks) return;
+
+        // Only one thread runs cleanup per interval, if CAS fails, another thread won
+        if (Interlocked.CompareExchange(ref _lastCleanupTicks, now.Ticks, lastTicks) != lastTicks) return;
         
         var expiredSessions = _mfaSessions
             .Where(kvp => kvp.Value.Expires < now)
@@ -149,31 +151,30 @@ public static class AuthEndpoints
     private static bool CheckRateLimit(string sessionId, string code)
     {
         CleanupExpiredSessions();
-        
-        if (!_mfaAttempts.TryGetValue(sessionId, out var tracker))
-        {
-            _mfaAttempts[sessionId] = new MfaAttemptTracker(1, DateTime.UtcNow, [code]);
-            return true;
-        }
-        
-        if (tracker.Count >= MaxMfaAttempts)
-        {
-            if (tracker.FirstAttempt.AddMinutes(MfaLockoutMinutes) > DateTime.UtcNow)
+
+        var now = DateTime.UtcNow;
+
+        var result = _mfaAttempts.AddOrUpdate(
+            sessionId,
+            _ => new MfaAttemptTracker(1, now, [code]),
+            (_, existing) =>
             {
-                Log.Warning("MFA rate limit exceeded for session {SessionId}", sessionId);
-                return false;
-            }
-            _mfaAttempts.TryRemove(sessionId, out _);
-            _mfaAttempts[sessionId] = new MfaAttemptTracker(1, DateTime.UtcNow, [code]);
-            return true;
+                // Reset tracker if the lockout window has expired
+                if (existing.FirstAttempt.AddMinutes(MfaLockoutMinutes) <= now)
+                    return new MfaAttemptTracker(1, now, [code]);
+
+                return new MfaAttemptTracker(
+                    existing.Count + 1,
+                    existing.FirstAttempt,
+                    new HashSet<string>(existing.AttemptedCodes) { code });
+            });
+
+        if (result.Count > MaxMfaAttempts)
+        {
+            Log.Warning("MFA rate limit exceeded for session {SessionId}", sessionId);
+            return false;
         }
-        
-        var newTracker = new MfaAttemptTracker(
-            tracker.Count + 1, 
-            tracker.FirstAttempt, 
-            new HashSet<string>(tracker.AttemptedCodes) { code });
-        _mfaAttempts[sessionId] = newTracker;
-        
+
         return true;
     }
 
@@ -256,7 +257,11 @@ public static class AuthEndpoints
 
                     // Generate and send a cryptographically secure 6-digit OTP
                     emailOtp = GenerateSecureOtp();
-                    _ = Task.Run(async () => await notificationService.SendMfaOtpEmailAsync(user.Email, emailOtp));
+                    _ = Task.Run(async () =>
+                    {
+                        try { await notificationService.SendMfaOtpEmailAsync(user.Email, emailOtp); }
+                        catch (Exception ex) { Log.Warning("Failed to send MFA OTP email to {Email}: {Error}", user.Email, ex.Message); }
+                    });
                 }
 
                 _mfaSessions[sessionId] = new MfaPendingSession(user.Username, expiry, user.MfaMethod, emailOtp, fingerprint);

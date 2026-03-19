@@ -100,10 +100,8 @@ public static class AccountEndpoints
         return Results.Ok(new { success = true });
     }
 
-    // ── GET /api/account/mfa/totp/setup ──────────────────────────────────────
-    // Generates a new TOTP secret and returns a QR code PNG (base64) + manual key.
-    // The secret is NOT saved yet — only saved after the user confirms with a valid code.
-
+    // GET /api/account/mfa/totp/setup
+    // Generates a new TOTP secret and returns a QR code PNG (base64) + manual key. This is NOT saved yet but only saved after the user confirms with a valid code.
     private static async Task<IResult> SetupTotp(
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig)

@@ -7,7 +7,6 @@ namespace Reef.Core.Parsers;
 
 /// <summary>
 /// Streaming CSV/TSV parser.
-/// Does not require an external library — uses StreamReader with RFC-4180 compliant field parsing.
 /// </summary>
 public class CsvImportParser : IImportParser
 {
