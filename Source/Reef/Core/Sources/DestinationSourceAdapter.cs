@@ -29,7 +29,7 @@ public class DestinationSourceAdapter(DestinationService destinationService)
         var dest = await destinationService.GetByIdForExecutionAsync(profile.SourceDestinationId.Value);
         if (dest is null)
         {
-            Log.Warning("DestinationSourceAdapter: destination {Id} not found — using inline source config",
+            Log.Warning("DestinationSourceAdapter: destination {Id} not found, using inline source config",
                 profile.SourceDestinationId.Value);
             return profile;
         }
@@ -218,7 +218,7 @@ public class DestinationSourceAdapter(DestinationService destinationService)
                         merged[prop.Name] = JsonSerializer.Deserialize<object?>(prop.Value.GetRawText());
                     }
                 }
-                catch { /* invalid override JSON — ignore */ }
+                catch { /* invalid override JSON so ignore */ }
             }
 
             return JsonSerializer.Serialize(merged);

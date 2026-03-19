@@ -1,4 +1,4 @@
-// Theme — runs synchronously so dark class is applied before first paint ──
+// Theme 
 // Pages that should never use dark mode (light-only auth pages)
 (function () {
     const noDarkModePaths = ['/index', '/otp', '/logoff'];
@@ -14,6 +14,21 @@
         document.documentElement.classList.add('dark');
     }
 })();
+
+// Auth fallbacks (in case auth.js hasn't loaded or hasn't executed yet)
+window.clearAuth = window.clearAuth || function() {
+    localStorage.removeItem('reef_token');
+    localStorage.removeItem('reef_username');
+    localStorage.removeItem('reef_role');
+    localStorage.removeItem('reef_display_name');
+};
+window.redirectToLogin = window.redirectToLogin || function() {
+    window.location.href = '/logoff';
+};
+window.logout = window.logout || function() {
+    window.clearAuth();
+    window.redirectToLogin();
+};
 
 window.toggleTheme = function () {
     const noDarkModePaths = ['/index', '/otp', '/logoff'];
@@ -39,6 +54,28 @@ function syncThemeToggleButton(isDark) {
         queueLucideRender();
     }
 }
+
+// -----------------------------
+// User menu toggle (global, available on every layout page)
+// -----------------------------
+let userMenuExpanded = false;
+
+window.toggleUserMenu = function () {
+    const menu = document.getElementById('user-menu');
+    const chevron = document.getElementById('chevron-icon');
+    if (!menu) return;
+    userMenuExpanded = !userMenuExpanded;
+    if (userMenuExpanded) {
+        menu.classList.remove('user-menu-collapsed');
+        menu.classList.add('user-menu-expanded');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    } else {
+        menu.classList.remove('user-menu-expanded');
+        menu.classList.add('user-menu-collapsed');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+    queueLucideRender();
+};
 
 // -----------------------------
 // Safe LocalStorage Access
@@ -285,7 +322,7 @@ function setUserSidebarInfo() {
         if (initialSpan) initialSpan.textContent = nameToDisplay[0].toUpperCase();
         else userInitial.textContent = nameToDisplay[0].toUpperCase();
     }
-    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'Local User';
+    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'Reef Admin' : 'Local User';
 }
 
 // -----------------------------
@@ -438,7 +475,7 @@ function fadeOut(el) {
 /**
  * Render Lucide icons synchronously so they are present before first paint.
  * Calling this from an inline <script> block during body parsing means the
- * browser hasn't painted yet — icons appear on the very first frame with no
+ * browser hasn't painted yet, icons appear on the very first frame with no
  * pop-in flash. Safe to call multiple times; already-converted icons are skipped.
  */
 window.queueLucideRender = function() {
@@ -515,7 +552,7 @@ window.showConfirmModal = function({ title, message, confirmText = 'Confirm', ca
         });
 
         document.body.appendChild(overlay);
-        // Default focus: cancel button — safer default for destructive actions
+        // Default focus: cancel button, safer default for destructive actions
         overlay.querySelector('#reef-confirm-cancel').focus();
     });
 };
@@ -543,7 +580,7 @@ function closeModalOnClickOutside(event, modalId, closeFunction) {
     if (event.target === modal) closeFunction();
 }
 
-// Global ESC key handler — closes the topmost visible page modal
+// Global ESC key handler, closes the topmost visible page modal
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Escape') return;
     // showConfirmModal manages its own ESC; skip if it's open

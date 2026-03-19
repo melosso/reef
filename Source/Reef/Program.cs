@@ -187,6 +187,10 @@ public class Program
             var transformationOptionsStats = await transformationOptionsMigration.GetStatsAsync();
             Log.Debug("TransformationOptions Migration Stats: {@Stats}", transformationOptionsStats);
 
+            // Run MFA migration to add MFA columns to Users table
+            var mfaMigration = new MfaMigration(connectionString);
+            await mfaMigration.ApplyAsync();
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
@@ -494,7 +498,7 @@ public class Program
             // Pages served as static files (no layout injection)
             var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "index.html", "logoff.html", "404.html"
+                "index.html", "logoff.html", "404.html", "otp.html"
             };
 
             // Authenticated pages that get the shared layout
@@ -510,12 +514,13 @@ public class Program
                 "executions.html",
                 "email-approvals.html",
                 "documentation.html",
-                "admin.html"
+                "admin.html",
+                "account.html"
             };
 
             var navPages = new[] { "dashboard", "connections", "destinations", "templates",
                                    "profiles", "jobs", "groups", "executions",
-                                   "email-approvals", "documentation", "admin" };
+                                   "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
             var layoutTemplate = File.Exists(layoutPath)
@@ -633,6 +638,7 @@ public class Program
 
         // API endpoints
         AuthEndpoints.Map(app);
+        AccountEndpoints.Map(app);
         ConnectionsEndpoints.Map(app);
         ProfilesEndpoints.Map(app);
         GroupsEndpoints.Map(app);

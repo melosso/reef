@@ -1,0 +1,243 @@
+<!--REEF:TITLE-->Account · Reef<!--/REEF:TITLE-->
+<!--REEF:SCRIPTS--><script src="/assets/js/account.js"></script><!--/REEF:SCRIPTS-->
+<div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+        <div class="flex items-center px-6 h-16">
+            <h1 class="text-xl font-semibold text-slate-900 disable-select">Account</h1>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- Settings sidebar -->
+        <aside class="w-52 bg-white border-r border-slate-200 shrink-0 overflow-y-auto">
+            <div class="p-3 pt-4 space-y-4">
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Personal</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-profile" onclick="showTab('profile')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm bg-slate-100 text-slate-900 font-medium text-left">
+                            <i data-lucide="user" class="h-4 w-4 shrink-0"></i>
+                            Profile
+                        </button>
+                        <button id="tab-appearance" onclick="showTab('appearance')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="sun-moon" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Appearance
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Security</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-password" onclick="showTab('password')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="lock" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Password
+                        </button>
+                        <button id="tab-mfa" onclick="showTab('mfa')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="shield-check" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            2FA Security
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50">
+            <div class="p-6 max-w-2xl">
+
+                <!-- Profile -->
+                <div id="content-profile" class="tab-content hidden">
+                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <div class="px-6 py-4 border-b border-slate-100">
+                            <h2 class="text-base font-semibold text-slate-900">Profile</h2>
+                            <p class="mt-0.5 text-sm text-slate-500">Update your display name and email address.</p>
+                        </div>
+                        <div class="px-6 py-5 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                                <input type="text" id="profile-username" disabled
+                                    class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-400 cursor-not-allowed select-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Display name</label>
+                                <input type="text" id="profile-display-name"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
+                                    placeholder="Your full name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Email address</label>
+                                <input type="email" id="profile-email"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
+                                    placeholder="you@example.com">
+                                <p class="mt-1 text-xs text-slate-500">Used for email-based two-factor authentication.</p>
+                            </div>
+                            <div id="profile-feedback" class="empty:hidden"></div>
+                        </div>
+                        <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
+                            <button onclick="saveProfile()"
+                                class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">
+                                Save changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Appearance -->
+                <div id="content-appearance" class="tab-content hidden">
+                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <div class="px-6 py-4 border-b border-slate-100">
+                            <h2 class="text-base font-semibold text-slate-900">Appearance</h2>
+                            <p class="mt-0.5 text-sm text-slate-500">Choose how Reef looks for you.</p>
+                        </div>
+                        <div class="px-6 py-5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-700">Theme</p>
+                                    <p class="text-xs text-slate-500 mt-0.5">Switch between light and dark mode.</p>
+                                </div>
+                                <button id="theme-toggle-btn" onclick="toggleTheme()"
+                                    class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                    aria-label="Toggle dark mode">
+                                    <i data-lucide="moon" class="h-4 w-4"></i>
+                                    <span class="theme-toggle-label">Dark mode</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div id="content-password" class="tab-content hidden">
+                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <div class="px-6 py-4 border-b border-slate-100">
+                            <h2 class="text-base font-semibold text-slate-900">Change password</h2>
+                            <p class="mt-0.5 text-sm text-slate-500">You will be signed out after changing your password.</p>
+                        </div>
+                        <div class="px-6 py-5 space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Current password</label>
+                                <input type="password" id="current-password"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
+                                    placeholder="••••••••" autocomplete="current-password">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">New password</label>
+                                <input type="password" id="new-password"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
+                                    placeholder="••••••••" autocomplete="new-password">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Confirm new password</label>
+                                <input type="password" id="confirm-password"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
+                                    placeholder="••••••••" autocomplete="new-password">
+                            </div>
+                            <div id="password-feedback" class="empty:hidden"></div>
+                        </div>
+                        <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
+                            <button onclick="changePassword()"
+                                class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">
+                                Update password
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Factor Auth -->
+                <div id="content-mfa" class="tab-content hidden">
+
+                    <!-- Active status banner -->
+                    <div id="mfa-status-banner" class="hidden mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-lg">
+                        <i data-lucide="shield-check" class="h-5 w-5 text-green-600 shrink-0"></i>
+                        <div>
+                            <p class="text-sm font-medium text-green-800">Two-factor authentication is enabled</p>
+                            <p id="mfa-method-label" class="text-xs text-green-700"></p>
+                        </div>
+                        <button onclick="disableMfa()" class="ml-auto h-8 px-3 border border-red-200 bg-white text-sm font-medium text-red-600 rounded-md hover:bg-red-50 transition-colors">
+                            Disable
+                        </button>
+                    </div>
+
+                    <!-- Authenticator app -->
+                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm mb-4">
+                        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-900">Authenticator app</h2>
+                                <p class="mt-0.5 text-sm text-slate-500">Use your preferred TOTP, e.g. Authy, Google Authenticator, 1Password…</p>
+                            </div>
+                            <div id="totp-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</div>
+                        </div>
+
+                        <!-- Setup flow -->
+                        <div id="totp-setup-flow" class="hidden px-6 py-5 space-y-5 border-b border-slate-100">
+                            <div class="flex gap-6 items-start">
+                                <div>
+                                    <p class="text-sm font-medium text-slate-700 mb-2">1. Scan with your authenticator app</p>
+                                    <div id="totp-qr-container" class="w-40 h-40 bg-slate-100 rounded-md flex items-center justify-center">
+                                        <i data-lucide="loader-2" class="h-6 w-6 text-slate-400 animate-spin"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-slate-700 mb-2">Or enter the key manually</p>
+                                    <code id="totp-manual-key" class="block text-sm font-mono bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-slate-700 tracking-widest break-all select-all"></code>
+                                    <p class="mt-2 text-xs text-slate-500">TOTP · SHA-1 · 6 digits · 30 s</p>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-slate-700 mb-2">2. Enter the 6-digit code to confirm</p>
+                                <div class="flex items-center gap-3">
+                                    <input type="text" id="totp-verify-code" maxlength="6" inputmode="numeric"
+                                        class="w-36 h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm font-mono rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] tracking-widest"
+                                        placeholder="000000">
+                                    <button onclick="confirmTotp()"
+                                        class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">
+                                        Verify &amp; activate
+                                    </button>
+                                    <button onclick="cancelTotpSetup()"
+                                        class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                                        Cancel
+                                    </button>
+                                </div>
+                                <div id="totp-verify-feedback" class="mt-2 empty:hidden"></div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <p id="totp-status-text" class="text-sm text-slate-500">Not configured</p>
+                            <button id="totp-setup-btn" onclick="startTotpSetup()"
+                                class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                                Set up
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Email OTP -->
+                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h2 class="text-base font-semibold text-slate-900">Email one-time code</h2>
+                                <p class="mt-0.5 text-sm text-slate-500">A 6-digit code is sent to your email at each sign-in.</p>
+                            </div>
+                            <div id="email-mfa-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</div>
+                        </div>
+                        <div class="px-6 py-4 flex items-center justify-between">
+                            <p id="email-mfa-status-text" class="text-sm text-slate-500">Not configured</p>
+                            <button id="email-mfa-btn" onclick="enableEmailMfa()"
+                                class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                                Enable
+                            </button>
+                        </div>
+                        <div id="email-mfa-feedback" class="px-6 pb-4 empty:hidden"></div>
+                    </div>
+
+                </div><!-- /mfa -->
+
+            </div><!-- /max-w -->
+        </main>
+    </div><!-- /flex -->
+</div>
+
+<script>
+    queueLucideRender();
+    if (typeof init === 'function') init();
+</script>

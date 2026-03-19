@@ -54,9 +54,9 @@ public static class ProfilesEndpoints
 
     /// <summary>
     /// GET /api/profiles - Get all profiles (optionally filtered by templateId or type)
-    /// ?type=export (default) — export profiles only
-    /// ?type=import            — import profiles only
-    /// ?type=all               — both, each with a profileType field
+    /// ?type=export (default), export profiles only
+    /// ?type=import           , import profiles only
+    /// ?type=all              , both, each with a profileType field
     /// </summary>
     private static async Task<IResult> GetAllProfiles(
         [FromQuery] int? templateId,
@@ -719,10 +719,10 @@ public static class ProfilesEndpoints
         }
     }
 
-    // ===== Unified Import/Export Execution Endpoints =====
+    // Import/Export Execution Endpoints
 
     /// <summary>
-    /// POST /api/profiles/{id}/execute?type=import — Execute an import profile
+    /// POST /api/profiles/{id}/execute?type=import, Execute an import profile
     /// </summary>
     private static async Task<IResult> ExecuteProfile(
         int id,
@@ -754,7 +754,7 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
-    /// GET /api/profiles/{id}/executions?type=import — Get executions for an import profile
+    /// GET /api/profiles/{id}/executions?type=import, Get executions for an import profile
     /// </summary>
     private static async Task<IResult> GetProfileExecutions(
         int id,

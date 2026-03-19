@@ -651,6 +651,87 @@ public class NotificationService
     }
 
     /// <summary>
+    /// Send a two-factor authentication OTP code to a specific user email address.
+    /// Uses the configured system notification destination but overrides the recipient.
+    /// </summary>
+    public async Task<bool> SendMfaOtpEmailAsync(string recipientEmail, string otp)
+    {
+        try
+        {
+            var settings = await GetNotificationSettingsAsync();
+            if (settings == null || settings.DestinationId <= 0)
+            {
+                Log.Warning("Cannot send MFA OTP email: notification settings not configured");
+                return false;
+            }
+
+            var destination = await GetDestinationAsync(settings.DestinationId);
+            if (destination == null)
+            {
+                Log.Warning("Cannot send MFA OTP email: notification destination not found");
+                return false;
+            }
+
+            var decryptedConfig = destination.ConfigurationJson;
+            if (_encryptionService.IsEncrypted(decryptedConfig))
+                decryptedConfig = _encryptionService.Decrypt(decryptedConfig);
+
+            var emailConfig = JsonSerializer.Deserialize<EmailDestinationConfiguration>(decryptedConfig);
+            if (emailConfig == null) return false;
+
+            // Send directly to the user — not to system notification recipients
+            emailConfig.ToAddresses = [recipientEmail];
+
+            var message = new MimeKit.MimeMessage();
+            message.From.Add(new MimeKit.MailboxAddress(emailConfig.FromName ?? "Reef", emailConfig.FromAddress));
+            message.To.Add(MimeKit.MailboxAddress.Parse(recipientEmail));
+            message.Subject = "[Reef] Your sign-in code";
+            message.Body = new MimeKit.BodyBuilder
+            {
+                HtmlBody = $@"<!DOCTYPE html><html><body style=""font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;margin:0;padding:40px 20px"">
+<div style=""max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 2px 8px rgba(0,0,0,.08)"">
+  <p style=""margin:0 0 8px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#64748b"">Reef · Sign-in verification</p>
+  <h1 style=""margin:0 0 24px;font-size:22px;font-weight:700;color:#0f172a"">Your one-time code</h1>
+  <div style=""background:#f1f5f9;border-radius:8px;padding:24px;text-align:center;margin-bottom:24px"">
+    <span style=""font-size:38px;font-weight:700;letter-spacing:14px;font-family:'Courier New',monospace;color:#0f172a"">{otp}</span>
+  </div>
+  <p style=""margin:0 0 8px;font-size:14px;color:#475569"">Enter this code in the sign-in prompt. It expires in <strong>5 minutes</strong>.</p>
+  <p style=""margin:0;font-size:13px;color:#94a3b8"">If you did not attempt to sign in, you can ignore this email.</p>
+</div>
+</body></html>"
+            }.ToMessageBody();
+
+            string providerType = emailConfig.EmailProvider?.ToLower() ?? "";
+            if (string.IsNullOrEmpty(providerType))
+            {
+                if (!string.IsNullOrEmpty(emailConfig.ResendApiKey)) providerType = "resend";
+                else if (!string.IsNullOrEmpty(emailConfig.SendGridApiKey)) providerType = "sendgrid";
+                else providerType = "smtp";
+            }
+
+            IEmailProvider emailProvider = providerType switch
+            {
+                "resend" => new ResendEmailProvider(),
+                "sendgrid" => new SendGridEmailProvider(),
+                _ => new SmtpEmailProvider()
+            };
+
+            var result = await emailProvider.SendEmailAsync(message, emailConfig);
+            if (!result.Success)
+                Log.Warning("Failed to send MFA OTP email to {Email}: {Error}", recipientEmail, result.ErrorMessage);
+            else
+                Log.Information("MFA OTP email sent to {Email}", recipientEmail);
+
+            return result.Success;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Error sending MFA OTP email to {Email}: {Error}", recipientEmail, ex.Message);
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Core method to send system notification via EmailDestination
     /// </summary>
     private async Task SendSystemNotificationAsync(string subject, string body, NotificationSettings settings)

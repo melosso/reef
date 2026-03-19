@@ -293,7 +293,7 @@ public class DatabaseImportTarget : IImportTarget
                 }
                 else if (context.OnConstraintViolation == "Overwrite")
                 {
-                    // Fall through to update — try UPDATE as fallback
+                    // Fall through to update
                     try
                     {
                         var updated = await TryUpdateAsync(db, tx, table, connType, mappedRow, context, ct);
@@ -590,7 +590,7 @@ RETURNING xmax";
     {
         if (!mappings.Any())
         {
-            // No mappings defined — pass row through as-is
+            // No mappings defined, pass row through as-is
             return new Dictionary<string, object?>(sourceRow, StringComparer.OrdinalIgnoreCase);
         }
 

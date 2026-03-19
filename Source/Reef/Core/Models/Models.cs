@@ -18,6 +18,12 @@ public class User
     public bool IsDeleted { get; set; } = false;
     public DateTime? DeletedAt { get; set; }
     public string? DeletedBy { get; set; }
+    public string? Email { get; set; }
+    public bool MfaEnabled { get; set; } = false;
+    public string? MfaMethod { get; set; } // "totp" or "email"
+    public string? TotpSecret { get; set; } // base32-encoded TOTP secret
+    public string? PendingTotpSecret { get; set; } // in-flight during setup, before confirmation
+    public string? BackupCodes { get; set; } // JSON array of SHA-256 hashed backup codes
 }
 
 /// <summary>

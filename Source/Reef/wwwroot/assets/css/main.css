@@ -12,13 +12,13 @@ body {
 }
 
 /* ── SPA view transitions */
-/* Keep the sidebar visually stable — it is a persistent shell element that
+/* Keep the sidebar visually stable, it is a persistent shell element that
    should not participate in the content cross-fade. */
 #sidebar {
     view-transition-name: sidebar;
 }
 /* ── Sidebar active nav indicator */
-/* Use box-shadow (inset) for the left-rail accent — zero layout impact. */
+/* Use box-shadow (inset) for the left-rail accent, zero layout impact. */
 #sidebar nav a[href] {
     box-shadow: inset 2px 0 0 transparent;
     transition: box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
@@ -36,24 +36,26 @@ body {
     animation-duration: 120ms;
     animation-timing-function: ease-out;
 }
-/* User menu collapse/expand using grid-template-rows — GPU-composited, no layout thrashing.
+/* User menu collapse/expand using grid-template-rows, GPU-composited, no layout thrashing.
    The inner wrapper uses overflow:hidden + min-height:0 to collapse correctly. */
 #user-menu {
+    display: grid;
     overflow: hidden;
+    transition: grid-template-rows 0.25s ease-out, opacity 0.2s ease-out;
 }
 #user-menu > div {
     overflow: hidden;
     min-height: 0;
 }
-.user-menu-expanded {
-    display: grid;
+#user-menu.user-menu-expanded {
     grid-template-rows: 1fr;
-    transition: grid-template-rows 0.25s ease-out;
+    opacity: 1;
+    pointer-events: auto;
 }
-.user-menu-collapsed {
-    display: grid;
+#user-menu.user-menu-collapsed {
     grid-template-rows: 0fr;
-    transition: grid-template-rows 0.25s ease-out;
+    opacity: 0;
+    pointer-events: none;
 }
 .disable-select {
     -webkit-user-select: none;
@@ -138,7 +140,7 @@ button[data-tooltip] {
 }
 
 /* ── Interaction system */
-/* Tier 1 — primary action buttons (bg-slate-900): lift + shadow on hover.
+/* Tier 1, primary action buttons (bg-slate-900): lift + shadow on hover.
    Gives a consistent "press-able" feel across all header CTAs. */
 button.bg-slate-900:not(:disabled):hover {
     transform: translateY(-1px);
@@ -150,7 +152,7 @@ button.bg-slate-900:not(:disabled):active {
     box-shadow: none;
     transition: transform 0.08s ease-out;
 }
-/* Tier 2 — submit/confirm buttons (modal save, confirm dialogs): active press feedback. */
+/* Tier 2, submit/confirm buttons (modal save, confirm dialogs): active press feedback. */
 button[type="submit"]:not(:disabled):active {
     transform: scale(0.97);
     transition: transform 0.08s ease-out;
@@ -158,7 +160,7 @@ button[type="submit"]:not(:disabled):active {
 
 /* ── Dark mode */
 /* Class-based dark mode. 'dark' is added to <html> by main.js on load.
-   The sidebar (bg-slate-900) is already dark — no overrides needed there.
+   The sidebar (bg-slate-900) is already dark, no overrides needed there.
    Specificity (.dark .utility) beats single-class Tailwind utilities. */
 
 /* Base */
@@ -192,7 +194,7 @@ button[type="submit"]:not(:disabled):active {
 .dark .shadow                { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5); }
 .dark .shadow-lg             { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5); }
 
-/* Form elements — dark bg with lightened borders */
+/* Form elements, dark bg with lightened borders */
 .dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
 .dark textarea,
 .dark select {
@@ -210,7 +212,7 @@ button[type="submit"]:not(:disabled):active {
     outline: none;
 }
 
-/* Modal overlay — darken the scrim */
+/* Modal overlay, darken the scrim */
 .dark .bg-gray-600           { background-color: #020617; }
 
 /* Code blocks */
@@ -265,7 +267,7 @@ button[type="submit"]:not(:disabled):active {
 .dark .bg-emerald-50         { background-color: #022c22; }
 .dark .bg-emerald-100        { background-color: #052e16; }
 
-/* Text — dark-shade variants become invisible on dark tinted surfaces */
+/* Text, dark-shade variants become invisible on dark tinted surfaces */
 .dark .text-blue-900         { color: #bfdbfe; }
 .dark .text-red-900          { color: #fecaca; }
 .dark .text-green-900        { color: #bbf7d0; }
@@ -283,7 +285,7 @@ button[type="submit"]:not(:disabled):active {
 .dark .text-emerald-700      { color: #6ee7b7; }
 .dark .text-emerald-800      { color: #a7f3d0; }
 
-/* Borders — light tint borders invisible on dark backgrounds */
+/* Borders, light tint borders invisible on dark backgrounds */
 .dark .border-blue-200       { border-color: #1e3a5f; }
 .dark .border-blue-300       { border-color: #1d4ed8; }
 .dark .border-blue-400       { border-color: #2563eb; }
@@ -331,7 +333,7 @@ button[type="submit"]:not(:disabled):active {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
-    /* reef-reveal sets visibility:visible — keep body visible even if
+    /* reef-reveal sets visibility:visible, keep body visible even if
        the animation is collapsed to near-zero duration. */
     body {
         visibility: visible;

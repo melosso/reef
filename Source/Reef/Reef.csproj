@@ -41,6 +41,8 @@
     <PackageReference Include="MySqlConnector" Version="2.4.0" />
     <PackageReference Include="NCrontab" Version="3.4.0" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
+    <PackageReference Include="Otp.NET" Version="1.4.0" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="Scriban" Version="6.5.0" />
     <PackageReference Include="Serilog" Version="4.3.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />

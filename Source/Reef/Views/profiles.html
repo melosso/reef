@@ -2,7 +2,7 @@
 <!--REEF:SCRIPTS--><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 h-16">
                     <h1 class="text-xl font-semibold text-slate-900 disable-select">Profiles</h1>
                     <div class="flex items-center gap-2">
                         <div class="relative">
@@ -2093,7 +2093,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Choose where imported data is written. <strong>Database Connection</strong> inserts or upserts rows into a table. <strong>Local File</strong> saves the parsed data as CSV/JSON on the server — useful for transforming or archiving API responses.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Choose where imported data is written. <strong>Database Connection</strong> inserts or upserts rows into a table. <strong>Local File</strong> saves the parsed data as CSV/JSON on the server, useful for transforming or archiving API responses.</p></div>
                             </div>
                         </div>
 
@@ -2279,7 +2279,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">When Smart Sync is on, Reef hashes each record and only writes rows that are <strong>new or changed</strong> since the last run — skipping identical data to reduce load. You must specify a field that is <strong>unique per record</strong> in your source data (e.g. <code class="bg-blue-100 text-blue-900 rounded px-1">OrderId</code> in CSV/JSON, an element name in XML). Reef stores a hash fingerprint per ID and compares it each run.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">When Smart Sync is on, Reef hashes each record and only writes rows that are <strong>new or changed</strong> since the last run, skipping identical data to reduce load. You must specify a field that is <strong>unique per record</strong> in your source data (e.g. <code class="bg-blue-100 text-blue-900 rounded px-1">OrderId</code> in CSV/JSON, an element name in XML). Reef stores a hash fingerprint per ID and compares it each run.</p></div>
                             </div>
                         </div>
 
@@ -2602,7 +2602,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
                             <div class="flex">
                                 <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Webhooks allow external systems to trigger this import profile via HTTP POST. Each webhook has a unique, secret URL — keep it safe.</p></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Webhooks allow external systems to trigger this import profile via HTTP POST. Each webhook has a unique, secret URL. Keep it safe.</p></div>
                             </div>
                         </div>
 
@@ -3392,7 +3392,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 const _srcPrimary = p.sourceDestinationName ? escapeHtml(p.sourceDestinationName) : escapeHtml(_srcTypeLabel);
                 const _srcSub = p.sourceDestinationName ? `<div class="text-xs text-gray-400">${escapeHtml(_srcTypeLabel)}</div>` : '';
 
-                // Destination column: DB connection + table, or LocalFile (format only — filename is too specific)
+                // Destination column: DB connection + table, or LocalFile (format only, filename is too specific)
                 const _destCell = (() => {
                     if (p.targetType === 'LocalFile') {
                         const _fmt = escapeHtml(p.localTargetFormat || 'CSV');
@@ -3552,6 +3552,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
 
                 window.showToast('Profile deleted successfully', 'success');
+                clearApiCache('/api/profiles');
                 if (isImport) {
                     await loadImportProfiles();
                 } else {
@@ -6235,6 +6236,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }
 
                 showMessage(`Profile ${profileId ? 'updated' : 'created'} successfully`, 'success');
+                clearApiCache('/api/profiles');
                 closeProfileModal();
                 await loadProfiles();
                 // Apply filters (respecting current filter selections) and render

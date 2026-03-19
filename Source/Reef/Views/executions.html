@@ -2,7 +2,7 @@
 <!--REEF:SCRIPTS--><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 h-16">
                     <h1 class="text-xl font-semibold text-slate-900 disable-select">Executions</h1>
                     <div class="flex items-center gap-2">
                         <button onclick="refreshExecutions()" class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
@@ -1309,33 +1309,6 @@
                 console.error('Failed to copy');
                 showMessage('Failed to copy to clipboard', 'error');
             }
-        }
-
-        let userMenuExpanded = false;
-
-        // Toggle user menu
-        function toggleUserMenu() {
-            const menu = document.getElementById('user-menu');
-            const chevron = document.getElementById('chevron-icon');
-            userMenuExpanded = !userMenuExpanded;
-            
-            if (userMenuExpanded) {
-                menu.classList.remove('user-menu-collapsed');
-                menu.classList.add('user-menu-expanded');
-                chevron.style.transform = 'rotate(180deg)';
-            } else {
-                menu.classList.remove('user-menu-expanded');
-                menu.classList.add('user-menu-collapsed');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-            
-            // Re-render icons after DOM update
-            setTimeout(() => queueLucideRender(), 50);
-        }
-
-        function logout() {
-            clearAuth();
-            redirectToLogin();
         }
 
         window.addEventListener('DOMContentLoaded', init);

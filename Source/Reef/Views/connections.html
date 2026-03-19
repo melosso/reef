@@ -3,7 +3,7 @@
     <script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 h-16">
                     <h1 class="text-xl font-semibold text-slate-900 disable-select">Connections</h1>
                     <div class="flex items-center gap-2">
                         <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Help">
@@ -169,33 +169,6 @@
     </script>
     <script>
         function checkAuth() {
-                    }
-
-        let userMenuExpanded = false;
-
-        // Toggle user menu
-        function toggleUserMenu() {
-            const menu = document.getElementById('user-menu');
-            const chevron = document.getElementById('chevron-icon');
-            userMenuExpanded = !userMenuExpanded;
-            
-            if (userMenuExpanded) {
-                menu.classList.remove('user-menu-collapsed');
-                menu.classList.add('user-menu-expanded');
-                chevron.style.transform = 'rotate(180deg)';
-            } else {
-                menu.classList.remove('user-menu-expanded');
-                menu.classList.add('user-menu-collapsed');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-            
-            // Re-render icons after DOM update
-            setTimeout(() => queueLucideRender(), 50);
-        }
-
-        function logout() {
-            clearAuth();
-            redirectToLogin();
         }
 
         function openAddConnectionModal() {
@@ -303,6 +276,7 @@
                 
                 if (updateResponse.ok) {
                     showToast(`Connection ${action}d successfully`, 'success');
+                    clearApiCache('/api/connections');
                     closeAddConnectionModal();
                     await loadConnections();
                 } else {
@@ -376,6 +350,7 @@
                 }
                 // Reload connections to update last tested date
                 if (typeof loadConnections === 'function') {
+                    clearApiCache('/api/connections');
                     await loadConnections();
                 }
                 if (btn && spinner && btnText) {
@@ -586,7 +561,8 @@
                         testConnectionInBackground(savedConnection.id, name, type, connectionString);
                     }
 
-                    // Reload connections list
+                    // Clear cache and reload connections list
+                    clearApiCache('/api/connections');
                     await loadConnections();
                 } else {
                     let error;
@@ -631,6 +607,7 @@
                 }
 
                 // Refresh the connection list to show test results
+                clearApiCache('/api/connections');
                 await loadConnections();
             } catch (error) {
                 console.warn('Background connection test error:', error);

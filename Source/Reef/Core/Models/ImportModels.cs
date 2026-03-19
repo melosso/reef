@@ -67,14 +67,14 @@ public class ImportProfile
     /// <summary>Target type: Database (default) or LocalFile</summary>
     public string TargetType { get; set; } = "Database";
 
-    /// <summary>FK to Connections table (target database) — required when TargetType=Database, NULL for LocalFile</summary>
+    /// <summary>FK to Connections table (target database), required when TargetType=Database, NULL for LocalFile</summary>
     public int? TargetConnectionId { get; set; }
 
-    /// <summary>Target table name — required when TargetType=Database</summary>
+    /// <summary>Target table name, required when TargetType=Database</summary>
     public required string TargetTable { get; set; }
 
     // LOCAL FILE TARGET 
-    /// <summary>Absolute path to write output file — required when TargetType=LocalFile</summary>
+    /// <summary>Absolute path to write output file, required when TargetType=LocalFile</summary>
     public string? LocalTargetPath { get; set; }
 
     /// <summary>Output format for LocalFile target: CSV, JSON, JSONL</summary>
@@ -182,7 +182,7 @@ public class ImportProfileWithNames : ImportProfile
 // ===== Import Execution Models =====
 
 /// <summary>
-/// Execution record for an import profile run — mirrors ImportProfileExecutions table schema.
+/// Execution record for an import profile run, mirrors ImportProfileExecutions table schema.
 /// </summary>
 public class ImportProfileExecution
 {
@@ -220,7 +220,7 @@ public class ImportProfileExecution
     /// <summary>JSON object keyed by phase name, value = elapsed ms</summary>
     public string? PhaseTimingsJson { get; set; }
 
-    /// <summary>JSON array of ImportOutputTargetResult — results from fan-out output targets</summary>
+    /// <summary>JSON array of ImportOutputTargetResult, results from fan-out output targets</summary>
     public string? OutputTargetsJson { get; set; }
 }
 
@@ -246,7 +246,7 @@ public class ImportOutputTarget
     public bool IsEnabled { get; set; } = true;
     public int SortOrder { get; set; }
 
-    /// <summary>Warn | Fail — what to do when this target fails</summary>
+    /// <summary>Warn | Fail, what to do when this target fails</summary>
     public string OnFailure { get; set; } = "Warn";
 
     public DateTime CreatedAt { get; set; }
@@ -269,7 +269,7 @@ public record ImportOutputTargetResult(
     int RowsWritten);
 
 /// <summary>
-/// Individual row-level write error stored for audit/review — mirrors ImportExecutionErrors table.
+/// Individual row-level write error stored for audit/review, mirrors ImportExecutionErrors table.
 /// </summary>
 public class ImportExecutionError
 {

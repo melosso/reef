@@ -213,14 +213,4 @@ async function resetTemplateToDefault() {
  * Initialize email templates when tab is shown
  * Hook into the admin tab system
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // Override the showTab function to load templates when needed
-    const originalShowTab = window.showTab;
-    window.showTab = function(tabName) {
-        originalShowTab(tabName);
-        if (tabName === 'email-templates') {
-            // Tab is now visible - user can select and edit templates
-            console.log('Email Templates tab opened');
-        }
-    };
-});
+// Tab visibility is handled by showTab() in admin.html

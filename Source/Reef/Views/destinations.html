@@ -2,7 +2,7 @@
 <!--REEF:SCRIPTS--><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 h-16">
                     <h1 class="text-xl font-semibold text-slate-900 disable-select">Destinations</h1>
                     <div class="flex items-center gap-2">
                         <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Help">
@@ -1120,6 +1120,7 @@
                 
                 if (updateResponse.ok) {
                     showToast(`Destination ${action}d successfully`, 'success');
+                    clearApiCache('/api/destinations');
                     closeAddDestinationModal();
                     await loadDestinations();
                 } else {
@@ -1554,6 +1555,7 @@
 
                 if (response.ok) {
                     showToast('Destination deleted successfully', 'success');
+                    clearApiCache('/api/destinations');
                     loadDestinations();
                 } else {
                     const error = await response.json();
@@ -1634,6 +1636,7 @@
                 });
 
                 if (response.ok) {
+                    clearApiCache('/api/destinations');
                     closeAddDestinationModal();
                     await loadDestinations();
                     showToast(isEdit ? 'Destination updated successfully' : 'Destination created successfully', 'success');
@@ -1652,29 +1655,6 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        let userMenuExpanded = false;
-
-        // Toggle user menu
-        function toggleUserMenu() {
-            const menu = document.getElementById('user-menu');
-            const chevron = document.getElementById('chevron-icon');
-            userMenuExpanded = !userMenuExpanded;
-            
-            if (userMenuExpanded) {
-                menu.classList.remove('user-menu-collapsed');
-                menu.classList.add('user-menu-expanded');
-                chevron.style.transform = 'rotate(180deg)';
-            } else {
-                menu.classList.remove('user-menu-expanded');
-                menu.classList.add('user-menu-collapsed');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-            
-            // Re-render icons after DOM update
-            setTimeout(() => queueLucideRender(), 50);
-        }
-
         function toggleFtpAdvanced(event) {
             event.preventDefault();
             const panel = document.getElementById('ftpAdvanced');
@@ -1808,11 +1788,6 @@
                     oauth2Auth.classList.add('hidden');
                 }
             }
-        }
-
-        function logout() {
-            clearAuth();
-            redirectToLogin();
         }
 
         function initializeDestinations() {
@@ -2021,6 +1996,7 @@
                 }
                 if (!resp.ok) { const e = await resp.json(); throw new Error(e.message || 'Failed'); }
                 showToast(epId ? 'Endpoint updated' : 'Endpoint added', 'success');
+                clearApiCache('/api/destinations');
                 cancelEndpointForm();
                 await loadEndpoints(_currentDestinationId);
             } catch (err) {
@@ -2043,6 +2019,7 @@
                 });
                 if (!resp.ok && resp.status !== 204) throw new Error('Failed to delete');
                 showToast('Endpoint deleted', 'success');
+                clearApiCache('/api/destinations');
                 await loadEndpoints(_currentDestinationId);
             } catch (err) {
                 showToast(`Error: ${err.message}`, 'error');

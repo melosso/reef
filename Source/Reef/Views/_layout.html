@@ -23,21 +23,19 @@
 <div class="flex h-screen overflow-hidden">
     <div id="sidebar" class="hidden md:flex md:flex-col md:w-60 bg-slate-900 text-slate-400 border-r border-slate-800">
         <div class="flex items-center justify-left px-6 h-16 border-b border-slate-800">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-blue-500" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
-                <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
-                <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
-            </svg>
-            <div class="flex items-center ml-3 select-none mt-0.5">
-                <span class="text-slate-100 text-lg font-bold tracking-tight">
-                Reef
-                </span>
-                <span id="beta-tag" 
-                    onclick="triggerWiggle()" 
-                    class="ml-3 px-2 py-0.5 rounded border border-slate-700 bg-slate-800/50 text-slate-500 text-[10px] uppercase font-bold tracking-widest leading-none cursor-pointer select-none inline-block transition-transform">
+            <a href="#" class="flex items-center gap-2.5 select-none" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                </svg>
+                <span class="text-sm font-semibold text-slate-100 tracking-tight">Reef</span>
+                <span id="beta-tag"
+                    onclick="triggerWiggle()"
+                    class="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-800/50 text-slate-500 text-[10px] uppercase font-bold tracking-widest leading-none cursor-pointer select-none transition-transform">
                     beta
                 </span>
-            </div>
+            </a>
         </div>
 
         <nav class="flex-1 px-3 py-4 overflow-y-auto space-y-6">
@@ -166,20 +164,23 @@
                 </svg>
             </button>
 
-            <div id="user-menu" class="overflow-hidden user-menu-collapsed">
+            <div id="user-menu" class="user-menu-collapsed">
                 <div class="px-2 pb-3 space-y-1">
-                    <button id="theme-toggle-btn" onclick="toggleTheme()" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors" aria-label="Toggle dark mode">
-                        <i data-lucide="moon" class="h-4 w-4"></i>
-                        <span class="ml-3 text-xs font-medium theme-toggle-label">Dark mode</span>
-                    </button>
+                    <a href="/account" class="flex items-center px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="8" r="4"/>
+                            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                        </svg>
+                        <span class="ml-3 text-xs font-medium">Account</span>
+                    </a>
                     <a href="/admin" class="flex items-center px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                             <circle cx="12" cy="12" r="3"/>
                         </svg>
                         <span class="ml-3 text-xs font-medium">Settings</span>
                     </a>
-                    <button onclick="logout()" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors">
+                    <button onclick="logout()" class="w-full flex items-center px-3 py-2 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors transition duration-200 ease-in-out active:scale-95">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                             <polyline points="16 17 21 12 16 7"/>

@@ -3,6 +3,14 @@
 let authCache = { token: null, valid: false };
 let refreshPromise = null;
 
+/** 
+ * Logout 
+ */
+function logout() {
+    clearAuth();
+    redirectToLogin();
+}
+
 /**
  * Fast synchronous auth check - prevents page flicker
  * Returns true if we should show the page (either authenticated or cached valid session)
@@ -296,6 +304,7 @@ setInterval(async () => {
 // Expose globally
 window.requireAuth = requireAuth;
 window.refreshToken = refreshToken;
+window.logout = logout;
 window.clearAuth = clearAuth;
 window.redirectToLogin = redirectToLogin;
 window.redirectIfAuthenticated = redirectIfAuthenticated;

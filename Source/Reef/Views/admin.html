@@ -25,7 +25,7 @@
     </style><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
     <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-        <div class="px-6 py-4">
+        <div class="flex items-center px-6 h-16">
             <h1 class="text-xl font-semibold text-slate-900 disable-select">Settings</h1>
         </div>
     </header>
@@ -135,73 +135,73 @@
                         <!-- Key Metrics Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <!-- Version Card -->
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
-                                    <div class="text-sm font-medium text-gray-600">Version</div>
+                                    <div class="text-sm font-medium text-slate-600">Version</div>
                                     <i data-lucide="package" class="h-4 w-4 text-blue-500"></i>
                                 </div>
-                                <div class="text-lg font-semibold text-gray-900" id="system-version">--</div>
-                                <div class="text-xs text-gray-500 mt-1" id="system-environment">--</div>
+                                <div class="text-lg font-semibold text-slate-900" id="system-version">--</div>
+                                <div class="text-xs text-slate-500 mt-1" id="system-environment">--</div>
                             </div>
 
                             <!-- Uptime Card -->
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
-                                    <div class="text-sm font-medium text-gray-600">Uptime</div>
+                                    <div class="text-sm font-medium text-slate-600">Uptime</div>
                                     <i data-lucide="clock" class="h-4 w-4 text-green-500"></i>
                                 </div>
-                                <div class="text-lg font-semibold text-gray-900" id="system-uptime">--</div>
-                                <div class="text-xs text-gray-500 mt-1">Last restart</div>
+                                <div class="text-lg font-semibold text-slate-900" id="system-uptime">--</div>
+                                <div class="text-xs text-slate-500 mt-1">Last restart</div>
                             </div>
 
                             <!-- Server Time Card -->
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
-                                    <div class="text-sm font-medium text-gray-600 flex items-center">
+                                    <div class="text-sm font-medium text-slate-600 flex items-center">
                                         <span class="cursor-help" data-tooltip="Time is shown in UTC and is not affected by user time zone settings." data-tooltip-position="top">Server Time</span>
                                     </div>
                                     <i data-lucide="server" class="h-4 w-4 text-purple-500"></i>
                                 </div>
-                                <div class="text-lg font-semibold text-gray-900" id="system-time">--:--:--</div>
-                                <div class="text-xs text-gray-500 mt-1" id="system-date">--</div>
+                                <div class="text-lg font-semibold text-slate-900" id="system-time">--:--:--</div>
+                                <div class="text-xs text-slate-500 mt-1" id="system-date">--</div>
                             </div>
 
                             <!-- License Card -->
-                            <div class="bg-white rounded-lg border border-gray-200 p-4">
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
-                                    <div class="text-sm font-medium text-gray-600">License</div>
+                                    <div class="text-sm font-medium text-slate-600">License</div>
                                     <i data-lucide="shield" class="h-4 w-4 text-orange-500"></i>
                                 </div>
-                                <div class="text-lg font-semibold text-gray-900">AGPL 3.0</div>
-                                <div class="text-xs text-gray-500 mt-1">Open Source</div>
+                                <div class="text-lg font-semibold text-slate-900">AGPL 3.0</div>
+                                <div class="text-xs text-slate-500 mt-1">Open Source</div>
                             </div>
                         </div>
 
                         <!-- Detailed Information -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <!-- System Details -->
-                            <div class="bg-white rounded-lg border border-gray-200">
-                                <div class="px-4 py-3 border-b border-gray-200">
-                                    <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                            <div class="bg-white rounded-lg border border-slate-200">
+                                <div class="px-4 py-3 border-b border-slate-200">
+                                    <h3 class="text-base font-semibold text-slate-900 flex items-center">
                                         <i data-lucide="cpu" class="h-4 w-4 mr-2 text-blue-500"></i>
                                         System Information
                                     </h3>
                                 </div>
                                 <div class="p-4 space-y-3">
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Version</span>
+                                        <span class="text-sm text-slate-600">Version</span>
                                         <span class="text-sm font-medium" id="system-version-detail">--</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Environment</span>
+                                        <span class="text-sm text-slate-600">Environment</span>
                                         <span class="text-sm font-medium" id="system-environment-detail">--</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Last Updated</span>
+                                        <span class="text-sm text-slate-600">Last Updated</span>
                                         <span class="text-sm font-medium" id="system-timestamp">--</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Repository</span>
+                                        <span class="text-sm text-slate-600">Repository</span>
                                         <a href="https://github.com/melosso/reef" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
                                             GitHub
                                             <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
@@ -211,28 +211,28 @@
                             </div>
 
                             <!-- License Details -->
-                            <div class="bg-white rounded-lg border border-gray-200">
-                                <div class="px-4 py-3 border-b border-gray-200">
-                                    <h3 class="text-base font-semibold text-gray-900 flex items-center">
+                            <div class="bg-white rounded-lg border border-slate-200">
+                                <div class="px-4 py-3 border-b border-slate-200">
+                                    <h3 class="text-base font-semibold text-slate-900 flex items-center">
                                         <i data-lucide="file-text" class="h-4 w-4 mr-2 text-green-500"></i>
                                         License Information
                                     </h3>
                                 </div>
                                 <div class="p-4 space-y-3">
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Type</span>
+                                        <span class="text-sm text-slate-600">Type</span>
                                         <span class="text-sm font-medium">AGPL 3.0</span>
                                     </div>
                                     <div class="flex justify-between items-start">
-                                        <span class="text-sm text-gray-600">Description</span>
-                                        <span class="text-sm text-gray-900 text-right max-w-xs">Open source with copyleft provisions</span>
+                                        <span class="text-sm text-slate-600">Description</span>
+                                        <span class="text-sm text-slate-900 text-right max-w-xs">Open source with copyleft provisions</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Source Code</span>
+                                        <span class="text-sm text-slate-600">Source Code</span>
                                         <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Required</span>
                                     </div>
                                     <div class="flex justify-between items-center">
-                                        <span class="text-sm text-gray-600">Full License</span>
+                                        <span class="text-sm text-slate-600">Full License</span>
                                         <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
                                             View
                                             <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
@@ -243,11 +243,11 @@
                         </div>
 
                         <!-- Quick Actions -->
-                        <div class="mt-6 bg-gray-50 rounded-lg border border-gray-200 p-4">
+                        <div class="mt-6 bg-slate-50 rounded-lg border border-slate-200 p-4">
                             <div class="flex items-center justify-between disable-select">
                                 <div>
-                                    <h4 class="text-sm font-semibold text-gray-900 mb-1">Need help?</h4>
-                                    <p class="text-sm text-gray-600">Check our documentation or get support</p>
+                                    <h4 class="text-sm font-semibold text-slate-900 mb-1">Need help?</h4>
+                                    <p class="text-sm text-slate-600">Check our documentation or get support</p>
                                 </div>
                                 <div class="flex space-x-2">
                                     <a href="https://github.com/melosso/reef/wiki" target="_blank" class="h-9 px-3 text-sm border border-slate-200 rounded-md hover:bg-white flex items-center text-slate-700 transition-colors">
@@ -264,15 +264,15 @@
                     </div>
 
                     <!-- System Metrics Tab -->
-                    <div id="content-metrics" class="tab-content relative">
+                    <div id="content-metrics" class="tab-content hidden relative">
                         <!-- Permission Blur Overlay -->
                         <div id="metrics-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -282,59 +282,59 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div class="text-gray-600 text-sm font-medium">Total Profiles</div>
+                                    <div class="text-slate-600 text-sm font-medium">Total Profiles</div>
                                     <i data-lucide="file-code" class="h-5 w-5 text-blue-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-gray-900" id="metric-total-profiles">--</div>
-                                <div class="text-sm text-gray-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
+                                <div class="text-3xl font-bold text-slate-900" id="metric-total-profiles">--</div>
+                                <div class="text-sm text-slate-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
                             </div>
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div class="text-gray-600 text-sm font-medium">Total Executions</div>
+                                    <div class="text-slate-600 text-sm font-medium">Total Executions</div>
                                     <i data-lucide="activity" class="h-5 w-5 text-green-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-gray-900" id="metric-total-executions">--</div>
-                                <div class="text-sm text-gray-500 mt-1"><span id="metric-success-rate">--</span>% success rate</div>
+                                <div class="text-3xl font-bold text-slate-900" id="metric-total-executions">--</div>
+                                <div class="text-sm text-slate-500 mt-1"><span id="metric-success-rate">--</span>% success rate</div>
                             </div>
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div class="text-gray-600 text-sm font-medium">Failed (24h)</div>
+                                    <div class="text-slate-600 text-sm font-medium">Failed (24h)</div>
                                     <i data-lucide="alert-circle" class="h-5 w-5 text-red-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-gray-900" id="metric-failed-24h">--</div>
-                                <div class="text-sm text-gray-500 mt-1">Last 24 hours</div>
+                                <div class="text-3xl font-bold text-slate-900" id="metric-failed-24h">--</div>
+                                <div class="text-sm text-slate-500 mt-1">Last 24 hours</div>
                             </div>
                             <div class="bg-white rounded-lg shadow p-6">
                                 <div class="flex items-center justify-between mb-4">
-                                    <div class="text-gray-600 text-sm font-medium">System Uptime</div>
+                                    <div class="text-slate-600 text-sm font-medium">System Uptime</div>
                                     <i data-lucide="server" class="h-5 w-5 text-purple-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-gray-900" id="metric-uptime">--</div>
-                                <div class="text-sm text-gray-500 mt-1">days</div>
+                                <div class="text-3xl font-bold text-slate-900" id="metric-uptime">--</div>
+                                <div class="text-sm text-slate-500 mt-1">days</div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div class="bg-white rounded-lg shadow">
-                                <div class="p-6 border-b border-gray-200">
-                                    <h3 class="text-lg font-semibold text-gray-900">Recent Statistics (7 Days)</h3>
+                                <div class="p-6 border-b border-slate-200">
+                                    <h3 class="text-lg font-semibold text-slate-900">Recent Statistics (7 Days)</h3>
                                 </div>
                                 <div class="p-6">
                                     <div class="space-y-4">
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Total Executions</span>
+                                            <span class="text-slate-600">Total Executions</span>
                                             <span class="font-semibold" id="stats-7d-total">--</span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Successful</span>
+                                            <span class="text-slate-600">Successful</span>
                                             <span class="font-semibold text-green-600" id="stats-7d-success">--</span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Failed</span>
+                                            <span class="text-slate-600">Failed</span>
                                             <span class="font-semibold text-red-600" id="stats-7d-failed">--</span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Average Duration</span>
+                                            <span class="text-slate-600">Average Duration</span>
                                             <span class="font-semibold" id="stats-7d-duration">--</span>
                                         </div>
                                     </div>
@@ -342,17 +342,17 @@
                             </div>
 
                             <div class="bg-white rounded-lg shadow">
-                                <div class="p-6 border-b border-gray-200">
-                                    <h3 class="text-lg font-semibold text-gray-900">Storage Usage</h3>
+                                <div class="p-6 border-b border-slate-200">
+                                    <h3 class="text-lg font-semibold text-slate-900">Storage Usage</h3>
                                 </div>
                                 <div class="p-6">
                                     <div class="space-y-4">
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Database Size</span>
+                                            <span class="text-slate-600">Database Size</span>
                                             <span class="font-semibold" id="storage-db-size">--</span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-gray-600">Exports Size</span>
+                                            <span class="text-slate-600">Exports Size</span>
                                             <span class="font-semibold" id="storage-exports-size">--</span>
                                         </div>
                                     </div>
@@ -369,8 +369,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -378,9 +378,9 @@
                         </div>
 
                         <div class="bg-white rounded-lg shadow mb-6">
-                            <div class="p-6 border-b border-gray-200">
+                            <div class="p-6 border-b border-slate-200">
                                 <div class="flex items-center justify-between disable-select">
-                                    <h3 class="text-lg font-semibold text-gray-900">Audit</h3>
+                                    <h3 class="text-lg font-semibold text-slate-900">Audit</h3>
                                     <div class="flex space-x-2">
                                         <select id="filter-entity-type" onchange="applyAuditFilters()" class="h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">All Entity Types</option>
@@ -401,24 +401,24 @@
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full">
-                                    <thead class="bg-gray-50">
+                                    <thead class="bg-slate-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Entity</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Performed By</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Changes</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Timestamp</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Entity</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Action</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Performed By</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Changes</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200" id="audit-logs-table">
+                                    <tbody class="bg-white divide-y divide-slate-200" id="audit-logs-table">
                                         <tr>
-                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                            <td colspan="5" class="px-6 py-4 text-center text-slate-500">Loading...</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                             <!-- Pagination -->
-                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-slate-200">
                                 <div class="flex-1 flex justify-between sm:hidden">
                                     <button onclick="previousAuditPage()" id="audit-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Previous
@@ -429,11 +429,11 @@
                                 </div>
                                 <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                                     <div class="flex items-center space-x-4">
-                                        <p class="text-sm text-gray-700">
+                                        <p class="text-sm text-slate-700">
                                             Showing <span id="audit-showing-from" class="font-medium">1</span> to <span id="audit-showing-to" class="font-medium">50</span> of <span id="audit-total-count" class="font-medium">0</span> results
                                         </p>
                                         <div class="flex items-center space-x-2">
-                                            <label for="audit-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                            <label for="audit-page-size-select" class="text-sm text-slate-700">Per page:</label>
                                             <select id="audit-page-size-select" onchange="changeAuditPageSize()" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white outline-none">
                                                 <option value="25">25</option>
                                                 <option value="50" selected>50</option>
@@ -459,8 +459,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -468,9 +468,9 @@
                         </div>
 
                         <div class="bg-white rounded-lg shadow mb-6">
-                            <div class="p-6 border-b border-gray-200">
+                            <div class="p-6 border-b border-slate-200">
                                 <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-lg font-semibold text-gray-900 disable-select">Logging</h3>
+                                    <h3 class="text-lg font-semibold text-slate-900 disable-select">Logging</h3>
                                     <div class="flex space-x-2">
                                         <select id="filter-log-level" onchange="applyLogFilters()" class="h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">All Levels</option>
@@ -480,29 +480,29 @@
                                             <option value="Error">Error</option>
                                             <option value="Fatal">Fatal</option>
                                         </select>
-                                        <label class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
+                                        <label class="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg">
                                             <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
-                                            <span class="text-sm text-gray-700">Auto-refresh</span>
+                                            <span class="text-sm text-slate-700">Auto-refresh</span>
                                         </label>
-                                        <button onclick="loadLogs()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center">
+                                        <button onclick="loadLogs()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 flex items-center">
                                             <i data-lucide="rotate-cw" class="h-4 w-4 mr-2"></i>
                                             Refresh
                                         </button>
                                     </div>
                                 </div>
-                                <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                <div class="flex items-center justify-between text-sm text-slate-600 mb-2">
                                     <span id="log-info-text">Showing latest logs (newest first)</span>
-                                    <span id="log-last-update" class="text-xs text-gray-500"></span>
+                                    <span id="log-last-update" class="text-xs text-slate-500"></span>
                                 </div>
                             </div>
                             <!-- Log Output Area -->
-                            <div class="bg-gray-900 text-gray-50 p-4 overflow-y-scroll max-h-[60vh]">
+                            <div class="bg-slate-900 text-slate-50 p-4 overflow-y-scroll max-h-[60vh]">
                                 <div id="log-console-output" class="font-mono text-xs">
-                                    <div class="text-center text-gray-400 py-4">Loading application logs...</div>
+                                    <div class="text-center text-slate-400 py-4">Loading application logs...</div>
                                 </div>
                             </div>
                             <!-- Pagination -->
-                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
+                            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-slate-200">
                                 <div class="flex-1 flex justify-between sm:hidden">
                                     <button onclick="previousLogPage()" id="log-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Previous
@@ -513,11 +513,11 @@
                                 </div>
                                 <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                                     <div class="flex items-center space-x-4">
-                                        <p class="text-sm text-gray-700">
+                                        <p class="text-sm text-slate-700">
                                             Showing <span id="log-showing-from" class="font-medium">1</span> to <span id="log-showing-to" class="font-medium">100</span> of <span id="log-total-count" class="font-medium">0</span> results
                                         </p>
                                         <div class="flex items-center space-x-2">
-                                            <label for="log-page-size-select" class="text-sm text-gray-700">Per page:</label>
+                                            <label for="log-page-size-select" class="text-sm text-slate-700">Per page:</label>
                                             <select id="log-page-size-select" onchange="changeLogPageSize()" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white outline-none">
                                                 <option value="50">50</option>
                                                 <option value="100" selected>100</option>
@@ -543,8 +543,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -552,9 +552,9 @@
                         </div>
 
                         <div class="bg-white rounded-lg shadow">
-                            <div class="p-6 border-b border-gray-200">
+                            <div class="p-6 border-b border-slate-200">
                                 <div class="flex items-center justify-between disable-select">
-                                    <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
+                                    <h3 class="text-lg font-semibold text-slate-900">User Management</h3>
                                     <div class="flex gap-2">
                                         <button onclick="openUserHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
@@ -568,19 +568,19 @@
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full">
-                                    <thead class="bg-gray-50">
+                                    <thead class="bg-slate-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Username</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Role</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Last Seen</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200" id="users-table">
+                                    <tbody class="bg-white divide-y divide-slate-200" id="users-table">
                                         <tr>
-                                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                            <td colspan="6" class="px-6 py-4 text-center text-slate-500">Loading...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -596,8 +596,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -605,9 +605,9 @@
                         </div>
 
                         <div class="bg-white rounded-lg shadow">
-                            <div class="p-6 border-b border-gray-200">
+                            <div class="p-6 border-b border-slate-200">
                                 <div class="flex items-center justify-between disable-select">
-                                    <h3 class="text-lg font-semibold text-gray-900">API Key Management</h3>
+                                    <h3 class="text-lg font-semibold text-slate-900">API Key Management</h3>
                                     <div class="flex gap-2">
                                         <button onclick="openApiKeyHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
@@ -621,18 +621,18 @@
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full">
-                                    <thead class="bg-gray-50">
+                                    <thead class="bg-slate-50">
                                         <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expires</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Used</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Expires</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Last Used</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200" id="apikeys-table">
+                                    <tbody class="bg-white divide-y divide-slate-200" id="apikeys-table">
                                         <tr>
-                                            <td colspan="5" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                                            <td colspan="5" class="px-6 py-4 text-center text-slate-500">Loading...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -648,8 +648,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     Notification settings can only be configured by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -657,20 +657,20 @@
                         </div>
 
                         <div id="notifications-content" class="bg-white rounded-lg shadow">
-                            <div class="p-6 border-b border-gray-200">
-                                <h3 class="text-lg font-semibold text-gray-900">System Notifications</h3>
-                                <p class="text-sm text-gray-600 mt-1">Configure email notifications for system events</p>
+                            <div class="p-6 border-b border-slate-200">
+                                <h3 class="text-lg font-semibold text-slate-900">System Notifications</h3>
+                                <p class="text-sm text-slate-600 mt-1">Configure email notifications for system events</p>
                             </div>
                             <div class="p-6 space-y-6">
                                 <!-- Master Toggle -->
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <h4 class="text-base font-semibold text-gray-900">Enable System Notifications</h4>
-                                        <p class="text-sm text-gray-600 mt-1">Turn on/off all system notifications</p>
+                                        <h4 class="text-base font-semibold text-slate-900">Enable System Notifications</h4>
+                                        <p class="text-sm text-slate-600 mt-1">Turn on/off all system notifications</p>
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="notify-enabled" onchange="handleNotificationChange()" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                 </div>
 
@@ -678,18 +678,18 @@
 
                                 <!-- Destination Selection -->
                                 <div>
-                                    <label for="notification-destination" class="block text-sm font-semibold text-gray-900 mb-2">Email Destination</label>
+                                    <label for="notification-destination" class="block text-sm font-semibold text-slate-900 mb-2">Email Destination</label>
                                     <select id="notification-destination" onchange="handleDestinationChange()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="">Select a destination...</option>
                                     </select>
-                                    <p class="text-sm text-gray-600 mt-1">Choose an Email destination to send notifications through</p>
+                                    <p class="text-sm text-slate-600 mt-1">Choose an Email destination to send notifications through</p>
                                 </div>
 
                                 <!-- Recipient Emails -->
                                 <div>
-                                    <label for="notification-recipients" class="block text-sm font-semibold text-gray-900 mb-2">Recipients</label>
+                                    <label for="notification-recipients" class="block text-sm font-semibold text-slate-900 mb-2">Recipients</label>
                                     <input type="text" id="notification-recipients" placeholder="admin@example.com; ops@example.com" onchange="handleNotificationChange()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
-                                    <p class="text-sm text-gray-600 mt-1">Specify email recipients for system notifications (semicolon-separated).</p>
+                                    <p class="text-sm text-slate-600 mt-1">Specify email recipients for system notifications (semicolon-separated).</p>
                                 </div>
 
                                 <hr class="my-6 border-slate-200">
@@ -712,7 +712,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -722,7 +722,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -744,7 +744,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -754,7 +754,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -776,7 +776,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -786,7 +786,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -811,7 +811,7 @@
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-email-approval" onchange="handleNotificationChange()" class="sr-only peer">
-                                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <p class="text-xs text-slate-500 mb-2">Notify when new emails are pending approval</p>
@@ -846,7 +846,7 @@
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-db-size" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
                                                 <p class="text-xs text-slate-500 mb-2">Notify when database exceeds limit</p>
@@ -866,7 +866,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-api-key" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -876,7 +876,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-user" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -886,7 +886,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-webhook" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -902,20 +902,20 @@
                                             <i data-lucide="external-link" class="h-5 w-5 text-indigo-600"></i>
                                         </div>
                                         <div>
-                                            <h4 class="text-base font-semibold text-gray-900">Instance Exposure</h4>
-                                            <p class="text-xs text-gray-600">Include links to your external Reef instance in emails</p>
+                                            <h4 class="text-base font-semibold text-slate-900">Instance Exposure</h4>
+                                            <p class="text-xs text-slate-600">Include links to your external Reef instance in emails</p>
                                         </div>
                                     </div>
                                     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 space-y-4">
                                         <!-- Enable Instance Exposure Toggle -->
                                         <div class="flex items-center justify-between">
                                             <div>
-                                                <h5 class="font-semibold text-gray-900">Expose instance in template</h5>
-                                                <p class="text-sm text-gray-600">Enable action buttons and links to your external Reef instance</p>
+                                                <h5 class="font-semibold text-slate-900">Expose instance in template</h5>
+                                                <p class="text-sm text-slate-600">Enable action buttons and links to your external Reef instance</p>
                                             </div>
                                             <label class="relative inline-flex items-center cursor-pointer">
                                                 <input type="checkbox" id="enable-cta" onchange="handleNotificationChange(); toggleCTASettings();" class="sr-only peer">
-                                                <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                             </label>
                                         </div>
 
@@ -923,10 +923,10 @@
                                         <div id="cta-settings" class="hidden space-y-3 pt-3 border-t border-indigo-300">
                                             <!-- Instance URL -->
                                             <div>
-                                                <label for="cta-url" class="block text-sm font-semibold text-gray-900 mb-2">Instance URL</label>
-                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono" onchange="handleNotificationChange()">
-                                                <p class="text-xs text-gray-500 mt-1">
-                                                    External URL where Reef is accessible. Available as <code class="bg-gray-100 px-1 rounded text-xs">{CTAUrl}</code> in all templates.
+                                                <label for="cta-url" class="block text-sm font-semibold text-slate-900 mb-2">Instance URL</label>
+                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono" onchange="handleNotificationChange()">
+                                                <p class="text-xs text-slate-500 mt-1">
+                                                    External URL where Reef is accessible. Available as <code class="bg-slate-100 px-1 rounded text-xs">{CTAUrl}</code> in all templates.
                                                 </p>
                                             </div>
 
@@ -944,12 +944,12 @@
 
                                 <!-- Action Buttons -->
                                 <div class="flex justify-end gap-3">
-                                    <button id="test-notification-btn" onclick="sendTestNotification()" class="h-9 px-3 text-sm border border-slate-200 rounded-md hover:bg-white flex items-center text-slate-700 transition-colors transition duration-200 ease-in-out active:scale-95">
-                                        <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
+                                    <button id="test-notification-btn" onclick="sendTestNotification()" class="h-9 px-4 text-sm border border-slate-200 rounded-md flex items-center gap-2 text-slate-700 hover:bg-slate-50 transition-colors">
+                                        <i data-lucide="mail" class="h-4 w-4"></i>
                                         Test Notification
                                     </button>
-                                    <button onclick="saveNotificationSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center">
-                                        <i data-lucide="save" class="h-4 w-4 mr-2"></i>
+                                    <button onclick="saveNotificationSettings()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors flex items-center gap-2">
+                                        <i data-lucide="save" class="h-4 w-4"></i>
                                         Save Settings
                                     </button>
                                 </div>
@@ -965,8 +965,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -974,16 +974,16 @@
                         </div>
 
                         <div class="bg-white rounded-lg shadow">
-                            <div class="p-6 border-b border-gray-200">
-                                <h3 class="text-lg font-semibold text-gray-900">Email Templates</h3>
-                                <p class="text-sm text-gray-600 mt-1">Customize email templates for system notifications</p>
+                            <div class="p-6 border-b border-slate-200">
+                                <h3 class="text-lg font-semibold text-slate-900">Email Templates</h3>
+                                <p class="text-sm text-slate-600 mt-1">Customize email templates for system notifications</p>
                             </div>
 
                             <div class="p-6">
                                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                                     <!-- Template List -->
                                     <div class="lg:col-span-1">
-                                        <label class="block text-sm font-semibold text-gray-900 mb-3">Select Template</label>
+                                        <label class="block text-sm font-semibold text-slate-900 mb-3">Select Template</label>
                                         <select id="template-type" onchange="loadTemplate()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">Choose a template...</option>
                                             <option value="ProfileSuccess">Profile Success</option>
@@ -1003,25 +1003,25 @@
                                         <div id="template-editor" class="hidden">
                                             <!-- Subject Editor -->
                                             <div class="mb-6">
-                                                <label class="block text-sm font-semibold text-gray-900 mb-2">Email Subject</label>
+                                                <label class="block text-sm font-semibold text-slate-900 mb-2">Email Subject</label>
                                                 <input type="text" id="template-subject" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm" placeholder="Email subject with optional placeholders">
                                             </div>
 
                                             <!-- CTA Configuration -->
                                             <div class="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Call-to-Action Button</h4>
+                                                <h4 class="text-sm font-semibold text-slate-900 mb-3">Call-to-Action Button</h4>
                                                 <div class="space-y-3">
                                                     <!-- Button Text -->
                                                     <div>
-                                                        <label class="block text-xs font-medium text-gray-700 mb-1">Button Text</label>
+                                                        <label class="block text-xs font-medium text-slate-700 mb-1">Button Text</label>
                                                         <input type="text" id="template-cta-button-text" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="e.g., View Execution, Open Dashboard">
-                                                        <p class="text-xs text-gray-500 mt-1">Text displayed on the action button (uses global Instance URL)</p>
+                                                        <p class="text-xs text-slate-500 mt-1">Text displayed on the action button (uses global Instance URL)</p>
                                                     </div>
                                                     <!-- URL Override (Optional) -->
                                                     <div>
-                                                        <label class="block text-xs font-medium text-gray-700 mb-1">URL Override (Optional)</label>
+                                                        <label class="block text-xs font-medium text-slate-700 mb-1">URL Override (Optional)</label>
                                                         <input type="text" id="template-cta-url-override" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave empty to use global Instance URL">
-                                                        <p class="text-xs text-gray-500 mt-1">Override the global Instance URL for this template only. Supports placeholders.</p>
+                                                        <p class="text-xs text-slate-500 mt-1">Override the global Instance URL for this template only. Supports placeholders.</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1029,7 +1029,7 @@
                                             <!-- HTML Body Editor -->
                                             <div class="mb-6">
                                                 <div class="flex items-center justify-between mb-2">
-                                                    <label class="block text-sm font-semibold text-gray-900">HTML Body</label>
+                                                    <label class="block text-sm font-semibold text-slate-900">HTML Body</label>
                                                     <button onclick="showTemplatePreview()" class="text-xs px-2 py-1 border border-slate-200 rounded text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1">
                                                         <i data-lucide="external-link" class="h-3 w-3"></i>Preview
                                                     </button>
@@ -1051,8 +1051,8 @@
 
                                         <!-- No Template Selected Message -->
                                         <div id="template-empty" class="text-center py-12">
-                                            <i data-lucide="mail" class="h-12 w-12 text-gray-400 mx-auto mb-3"></i>
-                                            <p class="text-gray-500 font-medium">Select a template to begin editing</p>
+                                            <i data-lucide="mail" class="h-12 w-12 text-slate-400 mx-auto mb-3"></i>
+                                            <p class="text-slate-500 font-medium">Select a template to begin editing</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1110,8 +1110,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">Admin Only</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
+                                <p class="text-slate-600 mb-6">
                                     This section can only be accessed by administrators.
                                     Contact your system administrator for assistance.
                                 </p>
@@ -1124,8 +1124,8 @@
                                 <div class="mb-6">
                                     <i data-lucide="shield-alert" class="h-16 w-16 text-red-600 mx-auto mb-4"></i>
                                 </div>
-                                <h2 class="text-2xl font-bold text-gray-900 mb-3 disable-select">This isn't a playground</h2>
-                                <p class="text-gray-600 mb-6">
+                                <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">This isn't a playground</h2>
+                                <p class="text-slate-600 mb-6">
                                     Actions here can permanently destroy data.
                                     Only proceed if you're ready to own the consequences.
                                 </p>
@@ -1143,14 +1143,14 @@
                         <div id="danger-zone-content">
                             <!-- Audit Log Cleanup Section -->
                             <div class="bg-white rounded-lg shadow mb-6">
-                                <div class="p-6 border-b border-gray-200">
+                                <div class="p-6 border-b border-slate-200">
                                     <div class="flex items-center justify-between disable-select">
                                         <div>
-                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                            <h3 class="text-lg font-semibold text-slate-900 flex items-center">
                                                 <i data-lucide="file-clock" class="h-5 w-5 mr-2 text-blue-600"></i>
                                                 Audit Log Cleanup
                                             </h3>
-                                            <p class="text-sm text-gray-500 mt-1">Remove old audit logs to free up space</p>
+                                            <p class="text-sm text-slate-500 mt-1">Remove old audit logs to free up space</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1183,14 +1183,14 @@
 
                             <!-- Execution Log Cleanup Section -->
                             <div class="bg-white rounded-lg shadow mb-6">
-                                <div class="p-6 border-b border-gray-200">
+                                <div class="p-6 border-b border-slate-200">
                                     <div class="flex items-center justify-between disable-select">
                                         <div>
-                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                            <h3 class="text-lg font-semibold text-slate-900 flex items-center">
                                                 <i data-lucide="activity" class="h-5 w-5 mr-2 text-green-600"></i>
                                                 Execution Log Cleanup
                                             </h3>
-                                            <p class="text-sm text-gray-500 mt-1">Manage execution history and logs</p>
+                                            <p class="text-sm text-slate-500 mt-1">Manage execution history and logs</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1220,20 +1220,20 @@
                                     </div>
 
                                     <!-- Advanced Options Accordion -->
-                                    <div class="border border-gray-200 rounded-lg">
+                                    <div class="border border-slate-200 rounded-lg">
                                         <button 
                                             onclick="toggleExecutionAdvanced()" 
                                             type="button"
-                                            class="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition-colors"
+                                            class="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
                                         >
                                             <div class="flex items-center">
-                                                <i data-lucide="settings" class="h-4 w-4 mr-2 text-gray-600"></i>
-                                                <span class="text-sm font-medium text-gray-700">Advanced Options</span>
+                                                <i data-lucide="settings" class="h-4 w-4 mr-2 text-slate-600"></i>
+                                                <span class="text-sm font-medium text-slate-700">Advanced Options</span>
                                             </div>
-                                            <i data-lucide="chevron-down" id="executionAdvancedChevron" class="h-4 w-4 text-gray-400 transition-transform"></i>
+                                            <i data-lucide="chevron-down" id="executionAdvancedChevron" class="h-4 w-4 text-slate-400 transition-transform"></i>
                                         </button>
                                         
-                                        <div id="executionAdvanced" class="hidden border-t border-gray-200 p-4 bg-gray-50">
+                                        <div id="executionAdvanced" class="hidden border-t border-slate-200 p-4 bg-slate-50">
                                             <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
                                                 <div class="flex">
                                                     <div class="flex-shrink-0">
@@ -1258,14 +1258,14 @@
 
                             <!-- Database Reset Section -->
                             <div class="bg-white rounded-lg shadow mb-6">
-                                <div class="p-6 border-b border-gray-200">
+                                <div class="p-6 border-b border-slate-200">
                                     <div class="flex items-center justify-between disable-select">
                                         <div>
-                                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                            <h3 class="text-lg font-semibold text-slate-900 flex items-center">
                                                 <i data-lucide="trash-2" class="h-5 w-5 mr-2 text-red-600"></i>
                                                 Reset Database
                                             </h3>
-                                            <p class="text-sm text-gray-500 mt-1">Completely wipe and reinitialize the database</p>
+                                            <p class="text-sm text-slate-500 mt-1">Completely wipe and reinitialize the database</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1291,19 +1291,19 @@
     </div>
 
     <!-- Database Reset Confirmation Modal -->
-    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
-            <div class="p-6 border-b border-gray-200">
+            <div class="p-6 border-b border-slate-200">
                 <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
                     <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
                     Confirm Reset
                 </h3>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">
+                <p class="text-sm text-slate-600 mb-4">
                     You're about to reset Reef. This action cannot be undone. To proceed, please type the following text:
                 </p>
-                <div class="bg-gray-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="reset-confirmation-string">
+                <div class="bg-slate-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="reset-confirmation-string">
                     --
                 </div>
                 <input 
@@ -1313,7 +1313,7 @@
                     class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                 />
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeResetModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmReset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disable">Reset Database</button>
             </div>
@@ -1321,19 +1321,19 @@
     </div>
 
     <!-- Clear All Executions Confirmation Modal -->
-    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
-            <div class="p-6 border-b border-gray-200">
+            <div class="p-6 border-b border-slate-200">
                 <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
                     <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
                     Clear All Execution Logs
                 </h3>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">
+                <p class="text-sm text-slate-600 mb-4">
                     This will delete ALL execution logs. To proceed, please type the following text:
                 </p>
-                <div class="bg-gray-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="clear-all-confirmation-string">
+                <div class="bg-slate-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="clear-all-confirmation-string">
                     --
                 </div>
                 <input 
@@ -1343,7 +1343,7 @@
                     class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                 />
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeClearAllModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmClearAll()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Clear All Logs</button>
             </div>
@@ -1351,16 +1351,16 @@
     </div>
 
     <!-- Clear Old Audits Confirmation Modal -->
-    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-gray-900 flex items-center">
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
                     <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-blue-600"></i>
                     Clear Old Audit Logs
                 </h3>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">
+                <p class="text-sm text-slate-600 mb-4">
                     You are about to delete audit logs older than <strong id="audit-confirm-days">--</strong> days. 
                     This action cannot be undone.
                 </p>
@@ -1370,7 +1370,7 @@
                     </p>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeClearOldAuditsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmClearOldAudits()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Audits</button>
             </div>
@@ -1378,16 +1378,16 @@
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
-    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-gray-900 flex items-center">
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
                     <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-green-600"></i>
                     Clear Old Execution Logs
                 </h3>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">
+                <p class="text-sm text-slate-600 mb-4">
                     You are about to delete execution logs older than <strong id="execution-confirm-days">--</strong> days. 
                     This action cannot be undone.
                 </p>
@@ -1397,7 +1397,7 @@
                     </p>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeClearOldExecutionsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmClearOldExecutions()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Executions</button>
             </div>
@@ -1405,10 +1405,10 @@
     </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="addUserModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="addUserModal-title" class="text-lg font-semibold text-gray-900">Add New User</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="addUserModal-title" class="text-lg font-semibold text-slate-900">Add New User</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-4">
@@ -1429,7 +1429,7 @@
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeAddUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="createUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Create User</button>
             </div>
@@ -1437,27 +1437,27 @@
     </div>
 
     <!-- Edit User Modal -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="editUserModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
-            <div class="p-6 border-b border-gray-200">
+            <div class="p-6 border-b border-slate-200">
                 <div class="flex items-center justify-between">
-                    <h3 id="editUserModal-title" class="text-lg font-semibold text-gray-900">Edit User</h3>
+                    <h3 id="editUserModal-title" class="text-lg font-semibold text-slate-900">Edit User</h3>
                     <div class="flex items-center space-x-2">
                         <!-- More Options Menu (only visible when editing) -->
                         <div id="user-more-options" class="relative">
-                            <button type="button" onclick="toggleUserOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1 transition duration-200 ease-in-out active:scale-95">
+                            <button type="button" onclick="toggleUserOptionsMenu()" class="text-slate-400 hover:text-slate-600 p-1 transition duration-200 ease-in-out active:scale-95">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="more-vertical" class="lucide lucide-more-vertical h-6 w-6"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                             </button>
-                            <div id="user-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                            <div id="user-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-slate-200">
                                 <div class="py-1">
-                                    <button type="button" onclick="toggleUserActiveStatus()" id="user-toggle-button" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center transition duration-200 ease-in-out active:scale-95">
+                                    <button type="button" onclick="toggleUserActiveStatus()" id="user-toggle-button" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 flex items-center transition duration-200 ease-in-out active:scale-95">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="power" class="lucide lucide-power h-4 w-4 mr-2"><path d="M12 2v10"></path><path d="M18.4 6.6a9 9 0 1 1-12.77.04"></path></svg>
                                         <span id="user-toggle-text">Disable</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="closeEditUserModal()" class="text-gray-400 hover:text-gray-600 transition duration-200 ease-in-out active:scale-95">
+                        <button onclick="closeEditUserModal()" class="text-slate-400 hover:text-slate-600 transition duration-200 ease-in-out active:scale-95">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="x" class="lucide lucide-x h-6 w-6"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
                         </button>
                     </div>
@@ -1497,7 +1497,7 @@
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeEditUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="updateUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Update User</button>
             </div>
@@ -1505,10 +1505,10 @@
     </div>
 
     <!-- Change Username Modal -->
-    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-gray-900">Change Username</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-slate-900">Change Username</h3>
             </div>
             <div class="p-6">
                 <input type="hidden" id="change-username-user-id">
@@ -1523,7 +1523,7 @@
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeChangeUsernameModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="changeUsername()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Change Username</button>
             </div>
@@ -1531,10 +1531,10 @@
     </div>
 
     <!-- Add API Key Modal -->
-    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-gray-900">Add API Key</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-slate-900">Add API Key</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-4">
@@ -1556,7 +1556,7 @@
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeAddApiKeyModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="createApiKey()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Add</button>
             </div>
@@ -1564,14 +1564,14 @@
     </div>
 
     <!-- API Key Display Modal -->
-    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-gray-900">API Key Generated</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-slate-900">API Key Generated</h3>
             </div>
             <div class="p-6">
-                <p class="text-sm text-gray-600 mb-4">Save this API key securely. You won't be able to see it again!</p>
-                <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                <p class="text-sm text-slate-600 mb-4">Save this API key securely. You won't be able to see it again!</p>
+                <div class="bg-slate-50 p-4 rounded-lg mb-4">
                     <code class="text-sm font-mono break-all" id="generated-api-key"></code>
                 </div>
                 <button onclick="copyApiKey()" class="w-full h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center">
@@ -1579,17 +1579,17 @@
                     Copy to Clipboard
                 </button>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end">
+            <div class="p-6 border-t border-slate-200 flex justify-end">
                 <button onclick="closeApiKeyDisplayModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- User Roles Help Modal -->
-    <div id="userHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="userHelpModal-title" class="text-lg font-semibold text-gray-900">About Users</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="userHelpModal-title" class="text-lg font-semibold text-slate-900">About Users</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-6">
@@ -1600,11 +1600,11 @@
                                 <i data-lucide="shield" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-900">Administrator</h4>
-                                <p class="text-sm text-gray-600">Full system access and control</p>
+                                <h4 class="font-semibold text-slate-900">Administrator</h4>
+                                <p class="text-sm text-slate-600">Full system access and control</p>
                             </div>
                         </div>
-                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                        <ul class="space-y-2 text-sm text-slate-700 ml-11">
                             <li class="flex items-start">
                                 <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>Access all admin settings (metrics, logs, audit, users, API keys, notifications, email templates)</span>
@@ -1629,17 +1629,17 @@
                     </div>
 
                     <!-- User Section -->
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
                         <div class="flex items-start gap-3 mb-3">
-                            <div class="h-8 w-8 rounded-lg bg-gray-400 flex items-center justify-center flex-shrink-0">
+                            <div class="h-8 w-8 rounded-lg bg-slate-400 flex items-center justify-center flex-shrink-0">
                                 <i data-lucide="user" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-900">Standard User</h4>
-                                <p class="text-sm text-gray-600">Limited access to core features</p>
+                                <h4 class="font-semibold text-slate-900">Standard User</h4>
+                                <p class="text-sm text-slate-600">Limited access to core features</p>
                             </div>
                         </div>
-                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                        <ul class="space-y-2 text-sm text-slate-700 ml-11">
                             <li class="flex items-start">
                                 <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>Create and run data export profiles</span>
@@ -1652,11 +1652,11 @@
                                 <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>View system dashboard</span>
                             </li>
-                            <li class="flex items-start text-gray-500">
+                            <li class="flex items-start text-slate-500">
                                 <i data-lucide="x" class="h-4 w-4 text-red-400 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>No access to admin settings or configurations</span>
                             </li>
-                            <li class="flex items-start text-gray-500">
+                            <li class="flex items-start text-slate-500">
                                 <i data-lucide="x" class="h-4 w-4 text-red-400 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>Cannot manage users or system settings</span>
                             </li>
@@ -1664,17 +1664,17 @@
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end">
+            <div class="p-6 border-t border-slate-200 flex justify-end">
                 <button onclick="closeUserHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- API Key Help Modal -->
-    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
-            <div class="p-6 border-b border-gray-200">
-                <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-gray-900">About API Keys</h3>
+            <div class="p-6 border-b border-slate-200">
+                <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-slate-900">About API Keys</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-6">
@@ -1685,11 +1685,11 @@
                                 <i data-lucide="key" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-900">What are API Keys?</h4>
-                                <p class="text-sm text-gray-600">Secure tokens for programmatic access</p>
+                                <h4 class="font-semibold text-slate-900">What are API Keys?</h4>
+                                <p class="text-sm text-slate-600">Secure tokens for programmatic access</p>
                             </div>
                         </div>
-                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                        <ul class="space-y-2 text-sm text-slate-700 ml-11">
                             <li class="flex items-start">
                                 <i data-lucide="check" class="h-4 w-4 text-green-600 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>API Keys allow programmatic access to the system without exposing passwords</span>
@@ -1716,11 +1716,11 @@
                                 <i data-lucide="shield-alert" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-900">Best Practices</h4>
-                                <p class="text-sm text-gray-600">Keep your keys secure</p>
+                                <h4 class="font-semibold text-slate-900">Best Practices</h4>
+                                <p class="text-sm text-slate-600">Keep your keys secure</p>
                             </div>
                         </div>
-                        <ul class="space-y-2 text-sm text-gray-700 ml-11">
+                        <ul class="space-y-2 text-sm text-slate-700 ml-11">
                             <li class="flex items-start">
                                 <i data-lucide="alert-circle" class="h-4 w-4 text-amber-600 mr-2 flex-shrink-0 mt-0.5"></i>
                                 <span>Make sure to only share API keys with trusted parties</span>
@@ -1747,14 +1747,14 @@
                                 <i data-lucide="lightbulb" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
-                                <h4 class="font-semibold text-gray-900">Did you know?</h4>
-                                <p class="text-sm text-gray-700">Webhooks are a separate way to trigger profiles and jobs. Find them in the Profiles or Jobs pages.</p>
+                                <h4 class="font-semibold text-slate-900">Did you know?</h4>
+                                <p class="text-sm text-slate-700">Webhooks are a separate way to trigger profiles and jobs. Find them in the Profiles or Jobs pages.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="p-6 border-t border-gray-200 flex justify-end">
+            <div class="p-6 border-t border-slate-200 flex justify-end">
                 <button onclick="closeApiKeyHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
@@ -1765,24 +1765,24 @@
     </script>
     <script>
         const API_BASE = window.location.origin;
-        let currentTab = 'metrics';
-        let logRefreshInterval = null;
-        let userMenuExpanded = false;
+        var currentTab = 'metrics';
+        var logRefreshInterval = null;
+        var userMenuExpanded = false;
 
         // Audit logs pagination variables
-        let auditCurrentPage = 1;
-        let auditPageSize = 50;
-        let auditTotalCount = 0;
-        let auditTotalPages = 0;
+        var auditCurrentPage = 1;
+        var auditPageSize = 50;
+        var auditTotalCount = 0;
+        var auditTotalPages = 0;
 
         // Console logs pagination variables
-        let logCurrentPage = 1;
-        let logPageSize = 100;
-        let logTotalCount = 0;
-        let logTotalPages = 0;
+        var logCurrentPage = 1;
+        var logPageSize = 100;
+        var logTotalCount = 0;
+        var logTotalPages = 0;
 
         // Handle tab parameter from URL query string
-        window.addEventListener('DOMContentLoaded', function() {
+        function initAdmin() {
             const urlParams = new URLSearchParams(window.location.search);
             const tabParam = urlParams.get('tab');
             if (tabParam) {
@@ -1799,7 +1799,13 @@
             if (currentTab !== 'danger') {
                 queueLucideRender();
             }
-        });
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', initAdmin);
+        } else {
+            initAdmin();
+        }
 
         // Toggle user menu
         function toggleUserMenu() {
@@ -1821,11 +1827,6 @@
             setTimeout(() => queueLucideRender(), 50);
         }
 
-        function logout() {
-            clearAuth();
-            redirectToLogin();
-        }
-
         function getLogLevelColor(level) {
             switch (level.toUpperCase()) {
                 case 'FATAL': return 'text-white bg-red-800 px-2 py-0.5 rounded';
@@ -1833,8 +1834,8 @@
                 case 'WARNING': return 'text-yellow-500';
                 case 'INFORMATION': return 'text-green-500';
                 case 'DEBUG': return 'text-blue-400';
-                case 'VERBOSE': return 'text-gray-400';
-                default: return 'text-gray-300';
+                case 'VERBOSE': return 'text-slate-400';
+                default: return 'text-slate-300';
             }
         }
 
@@ -1886,6 +1887,7 @@
             else if (tab === 'users') loadUsers();
             else if (tab === 'apikeys') loadApiKeys();
             else if (tab === 'system') loadSystemInfo();
+            else if (tab === 'notifications' && typeof window.loadNotificationSettings === 'function') loadNotificationSettings();
         }
 
         /**
@@ -1971,24 +1973,24 @@
                 const tbody = document.getElementById('audit-logs-table');
                 
                 if (!Array.isArray(logs) || logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No audit logs found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-slate-500">No audit logs found</td></tr>';
                     renderAuditPagination();
                     return;
                 }
                 
                 tbody.innerHTML = logs.map(log => `
                     <tr>
-                        <td class="px-6 py-4 text-sm text-gray-900">${new Date(log.Timestamp).toLocaleString()}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">
+                        <td class="px-6 py-4 text-sm text-slate-900">${new Date(log.Timestamp).toLocaleString()}</td>
+                        <td class="px-6 py-4 text-sm text-slate-900">
                             ${log.EntityType}
                             ${log.EntityCode
                                 ? `<span class="ml-1 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${log.EntityCode}</span>`
-                                : `<span class="text-gray-400">#${log.EntityId}</span>`}
-                            ${log.EntityName ? `<div class="text-xs text-gray-400 truncate max-w-xs">${log.EntityName}</div>` : ''}
+                                : `<span class="text-slate-400">#${log.EntityId}</span>`}
+                            ${log.EntityName ? `<div class="text-xs text-slate-400 truncate max-w-xs">${log.EntityName}</div>` : ''}
                         </td>
                         <td class="px-6 py-4 text-sm"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">${log.Action}</span></td>
-                        <td class="px-6 py-4 text-sm text-gray-900">${log.PerformedBy}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">${log.Changes || '-'}</td>
+                        <td class="px-6 py-4 text-sm text-slate-900">${log.PerformedBy}</td>
+                        <td class="px-6 py-4 text-sm text-slate-500">${log.Changes || '-'}</td>
                     </tr>
                 `).join('');
                 
@@ -2092,7 +2094,7 @@
         // Updated function to load Serilog logs with pagination
         async function loadLogs() {
             const consoleOutput = document.getElementById('log-console-output');
-            consoleOutput.innerHTML = '<div class="text-center text-gray-400 py-4">Fetching logs...</div>';
+            consoleOutput.innerHTML = '<div class="text-center text-slate-400 py-4">Fetching logs...</div>';
             
             try {
                 const logLevel = document.getElementById('filter-log-level').value;
@@ -2115,7 +2117,7 @@
                 console.log('Logs loaded:', logs.length, 'of', logTotalCount);
                 
                 if (logs.length === 0) {
-                    consoleOutput.innerHTML = '<div class="text-center text-gray-400 py-4">No application log entries found.</div>';
+                    consoleOutput.innerHTML = '<div class="text-center text-slate-400 py-4">No application log entries found.</div>';
                     renderLogPagination();
                     updateLogInfo(0);
                     return;
@@ -2140,7 +2142,7 @@
                         <div class="log-row">
                             <span class="log-time">${time}</span>
                             <span class="${levelClass} font-bold text-xs">${level.toUpperCase().substring(0,4)}</span>
-                            <span class="log-message text-gray-300">${escapeHtml(message)}</span>
+                            <span class="log-message text-slate-300">${escapeHtml(message)}</span>
                         </div>
                     `;
                 }).join('');
@@ -2420,7 +2422,7 @@
                 const tbody = document.getElementById('apikeys-table');
 
                 if (!apiKeys || apiKeys.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-gray-500">No API keys created</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-slate-500">No API keys created</td></tr>';
                     return;
                 }
 
@@ -2431,10 +2433,10 @@
 
                     return `
                         <tr>
-                            <td class="px-6 py-4 text-sm font-medium text-gray-900">${escapeHtml(key.name)}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">${createdDate}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">${expiresDate}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">${lastUsedDate}</td>
+                            <td class="px-6 py-4 text-sm font-medium text-slate-900">${escapeHtml(key.name)}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">${createdDate}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">${expiresDate}</td>
+                            <td class="px-6 py-4 text-sm text-slate-600">${lastUsedDate}</td>
                             <td class="px-6 py-4 text-sm">
                                 <button onclick="deleteApiKey(${key.id}, '${key.name.replace(/'/g, "\\'")}');" class="text-red-600 hover:text-red-800" title="Delete API Key">
                                     <i data-lucide="trash-2" class="h-4 w-4"></i>

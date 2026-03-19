@@ -138,7 +138,11 @@
         </div>
 
         <div class="px-8 pb-6 text-center md:text-left">
-            <p class="text-xs text-slate-400 disable-select">&copy; Reef &middot; Data Integration Platform</p>
+            <p class="text-xs text-slate-400 disable-select">
+            &copy; <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Reef</a> 
+            &middot; 
+            <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">AGPL-3.0</a>
+            </p>
         </div>
     </div>
 
@@ -154,7 +158,7 @@
             </div>
             <div class="space-y-3">
                 <h2 class="text-2xl font-bold text-white tracking-tight">Two-factor authentication</h2>
-                <p class="text-sm text-slate-400 leading-relaxed">An extra layer of security keeps your workspace and data protected from unauthorized access.</p>
+                <p class="text-sm text-slate-400 leading-relaxed">An extra layer of security keeps your workflows and configuration protected from unauthorized access.</p>
             </div>
             <div class="w-full space-y-3 text-left">
                 <div class="flex items-start gap-3">
@@ -190,6 +194,26 @@
     const errorContainer = document.getElementById('error-container');
     const verifyButton = document.getElementById('verify-button');
     const verifyText   = document.getElementById('verify-text');
+
+    function getMfaSessionId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlSessionId = urlParams.get('session');
+        if (urlSessionId) return urlSessionId;
+        
+        const stored = sessionStorage.getItem('reef_mfa_session_id');
+        if (stored) return stored;
+        
+        return null;
+    }
+
+    const mfaSessionId = getMfaSessionId();
+
+    if (!mfaSessionId) {
+        window.addEventListener('DOMContentLoaded', () => {
+            showError('No active MFA session. Please sign in again.');
+            verifyButton.disabled = true;
+        });
+    }
 
     // OTP input wiring
     otpInputs.forEach((input, i) => {
@@ -237,7 +261,7 @@
 
     function updateSubmitState() {
         const complete = getCode().length === 6;
-        verifyButton.disabled = !complete;
+        verifyButton.disabled = !complete || !mfaSessionId;
         if (complete) verifyButton.classList.remove('disabled:opacity-40');
     }
 
@@ -246,20 +270,41 @@
         errorContainer.innerHTML = '';
     }
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     function showError(message) {
         otpInputs.forEach(el => el.classList.add('error'));
-        errorContainer.innerHTML = `
-            <div class="bg-red-50 border border-red-200 text-red-700 rounded-md px-3.5 py-3 error-slide-in" role="alert">
-                <div class="flex items-center gap-2.5">
-                    <i data-lucide="alert-circle" class="h-4 w-4 flex-shrink-0"></i>
-                    <p class="text-sm font-medium">${message}</p>
-                </div>
-            </div>`;
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-50 border border-red-200 text-red-700 rounded-md px-3.5 py-3 error-slide-in';
+        errorDiv.setAttribute('role', 'alert');
+        
+        const flexDiv = document.createElement('div');
+        flexDiv.className = 'flex items-center gap-2.5';
+        
+        const icon = document.createElement('i');
+        icon.setAttribute('data-lucide', 'alert-circle');
+        icon.className = 'h-4 w-4 flex-shrink-0';
+        
+        const text = document.createElement('p');
+        text.className = 'text-sm font-medium';
+        text.textContent = message;
+        
+        flexDiv.appendChild(icon);
+        flexDiv.appendChild(text);
+        errorDiv.appendChild(flexDiv);
+        errorContainer.innerHTML = '';
+        errorContainer.appendChild(errorDiv);
+        
         queueLucideRender();
-        // Shake animation
+        
         const group = document.getElementById('otp-inputs');
         group.style.animation = 'none';
-        group.offsetHeight; // reflow
+        group.offsetHeight;
         group.style.animation = '';
     }
 
@@ -272,6 +317,11 @@
 
     otpForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!mfaSessionId) {
+            showError('No active MFA session. Please sign in again.');
+            return;
+        }
+
         const code = getCode();
         if (code.length !== 6) return;
 
@@ -282,15 +332,16 @@
         verifyText.textContent = 'Verifying…';
 
         try {
-            const response = await fetch('/api/auth/verify-otp', {
+            const response = await fetch('/api/auth/mfa', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code })
+                body: JSON.stringify({ mfaSessionId: mfaSessionId, code })
             });
 
             if (response.ok) {
                 const data = await response.json();
                 if (data.token) {
+                    sessionStorage.removeItem('reef_mfa_session_id');
                     localStorage.setItem('reef_token', data.token);
                     window.location.href = '/dashboard';
                     return;
@@ -306,7 +357,6 @@
                 }
             } catch {}
             showError(errorMsg);
-            // Clear inputs on failure
             otpInputs.forEach(el => { el.value = ''; el.classList.remove('filled'); });
             otpInputs[0].focus();
             resetVerifyButton();
@@ -319,12 +369,27 @@
 
     // Resend handler
     document.getElementById('resend-btn').addEventListener('click', async () => {
+        if (!mfaSessionId) {
+            showError('No active MFA session. Please sign in again.');
+            return;
+        }
+
         const btn = document.getElementById('resend-btn');
         btn.textContent = 'Sending…';
         btn.disabled = true;
         try {
-            await fetch('/api/auth/resend-otp', { method: 'POST' });
-        } catch {}
+            const res = await fetch('/api/auth/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mfaSessionId: mfaSessionId })
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ message: 'Failed to resend code' }));
+                showError(err.message || 'Failed to resend code');
+            }
+        } catch {
+            showError('Connection error. Please try again.');
+        }
         btn.textContent = 'Sent!';
         setTimeout(() => { btn.textContent = 'Resend'; btn.disabled = false; }, 4000);
         clearErrors();
@@ -334,7 +399,11 @@
     });
 
     // Focus first input on load
-    window.addEventListener('DOMContentLoaded', () => otpInputs[0].focus());
+    window.addEventListener('DOMContentLoaded', () => {
+        if (mfaSessionId) {
+            otpInputs[0].focus();
+        }
+    });
 
     if (typeof redirectIfAuthenticated === 'function') {
         redirectIfAuthenticated();

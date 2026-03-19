@@ -2,7 +2,7 @@
 <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Bar -->
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
-                <div class="flex items-center justify-between px-6 py-3">
+                <div class="flex items-center justify-between px-6 h-16">
                     <h1 class="text-xl font-semibold text-slate-900 disable-select">Jobs</h1>
                     <button id="newJobButton" onclick="openAddJobModal()" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors active:scale-95">
                         <i data-lucide="plus" class="h-4 w-4"></i>
@@ -1197,7 +1197,7 @@
             const currentValue = destSelect.value;
 
             if (profileValue) {
-                // Import profiles never restrict destination — always re-enable
+                // Import profiles never restrict destination, always re-enable
                 if (profileTypePart === 'import') {
                     destSelect.disabled = false;
                     destContainer.style.opacity = '1';
@@ -1495,7 +1495,7 @@
                         <td colspan="6" class="px-6 py-12 text-center">
                             <i data-lucide="briefcase" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
                             <p class="text-lg font-semibold text-gray-700 mb-2">No jobs found</p>
-                            <p class="text-gray-500 mb-4">Jobs run your export profiles on a schedule — cron, interval, or webhook trigger. Create one to start automating your data delivery.</p>
+                            <p class="text-gray-500 mb-4">Jobs run your export profiles on a schedule: cron, interval, or webhook trigger. Create one to start automating your data delivery.</p>
                             <button onclick="openAddJobModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 active:scale-95 transition-all">+ New Job</button>
                         </td>
                     </tr>
@@ -1963,6 +1963,7 @@
 
                 if (response.ok) {
                     showToast('Job deleted successfully', 'success');
+                    clearApiCache('/api/jobs');
                     await loadJobs();
                 } else {
                     const error = await response.json();
@@ -2087,6 +2088,7 @@
 
                 if (response.ok) {
                     showToast(`Job ${isEdit ? 'updated' : 'created'} successfully`, 'success');
+                    clearApiCache('/api/jobs');
                     closeAddJobModal();
                     await loadJobs();
                 } else {
@@ -2418,7 +2420,6 @@
             if (modal) modal.remove();
         }
 
-        let userMenuExpanded = false;
 
         function toggleUserMenu() {
             const menu = document.getElementById('user-menu');
@@ -2436,11 +2437,6 @@
             }
             
             setTimeout(() => queueLucideRender(), 50);
-        }
-
-        function logout() {
-            clearAuth();
-            redirectToLogin();
         }
 
         // Close menus when clicking outside

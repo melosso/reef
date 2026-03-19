@@ -1,4 +1,4 @@
-// router.js — Lightweight SPA router for Reef
+// router.js
 // Intercepts same-origin navigation, swaps only the content div, and keeps the
 // sidebar persistent so it never flashes or re-renders between page loads.
 // Falls back to a full navigation on any error.
@@ -19,7 +19,7 @@
     //
     // NOTE: This patch runs after main.js / auth.js (head scripts) but before
     // the page's inline <body> scripts, so shared-script timers (toast fades,
-    // tooltip hides, resize debounce) are NOT captured — only page-specific
+    // tooltip hides, resize debounce) are NOT captured, only page-specific
     // polling intervals are.
     const _pageTimerIds = [];
     const _origSetInterval  = window.setInterval.bind(window);
@@ -122,7 +122,7 @@
         };
 
         // Snapshot window.onload before execution so we can detect if a script
-        // assigned a new handler.  Avoid Object.defineProperty — onload may live
+        // assigned a new handler.  Avoid Object.defineProperty, onload may live
         // on the prototype and that path throws TypeError on restore.
         const onloadBefore = window.onload;
 
@@ -130,7 +130,7 @@
         //
         // Problem: top-level `const`/`let` declarations are bound to the
         // global *lexical* environment.  Once declared they cannot be
-        // re-declared — not even as `var` — which causes a SyntaxError the
+        // re-declared, not even as `var`, which causes a SyntaxError the
         // second time the same (or a sibling) page script runs.
         //
         // Solution: wrap every script in an IIFE so its let/const are
@@ -138,7 +138,7 @@
         // To keep `onclick="fn()"` handlers working, hoist top-level
         // `function` declarations to `window.fn = function` *before* wrapping
         // so they land on the global object.  Inner (nested) functions that
-        // happen to start a line are also exposed on window — harmless in
+        // happen to start a line are also exposed on window, harmless in
         // practice for this code-base.
         [...container.querySelectorAll('script:not([src])')].forEach(old => {
             const s = document.createElement('script');
@@ -228,7 +228,7 @@
         const newContent = newDoc.querySelector('.' + CONTENT_CLASS.replace(/ /g, '.'));
         if (!newContent) { window.location.href = url; return; }
 
-        // Swap content — use View Transitions API when available for a smooth
+        // Swap content, use View Transitions API when available for a smooth
         // cross-fade; fall back to an instant swap on older browsers.
         const current = getContentEl();
         if (!current) { window.location.href = url; return; }

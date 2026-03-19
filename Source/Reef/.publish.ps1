@@ -99,7 +99,7 @@ REEF SERVICE DEPLOYMENT
 
 PREREQUISITES
 -------------
-** REQUIRED: .NET 9.0 Runtime **
+** REQUIRED: .NET 10.0 Runtime **
 Download: https://dotnet.microsoft.com/download/dotnet/9.0
 Install "ASP.NET Core Runtime 9.0.x" for Windows x64
 
@@ -143,10 +143,10 @@ if ($exeFile) {
     Write-Host ""
     Write-Host "SUCCESS: Reef published to $deploymentDir" -ForegroundColor Green
     Write-Host "   - Executable Size: $sizeInMB MB" -ForegroundColor Green
-    Write-Host "   - Deployment Type: Framework-dependent (requires .NET 9.0 Runtime)" -ForegroundColor Green
+    Write-Host "   - Deployment Type: Framework-dependent (requires .NET 10.0 Runtime)" -ForegroundColor Green
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Cyan
-    Write-Host "   1. Ensure .NET 9.0 Runtime is installed on target machine" -ForegroundColor Yellow
+    Write-Host "   1. Ensure .NET 10.0 Runtime is installed on target machine" -ForegroundColor Yellow
     Write-Host "   2. Set REEF_ENCRYPTION_KEY environment variable" -ForegroundColor Yellow
     Write-Host "   3. Run 'Reef.bat test' to test" -ForegroundColor Yellow
     Write-Host "   4. Run 'Reef.bat install' to install as service" -ForegroundColor Yellow

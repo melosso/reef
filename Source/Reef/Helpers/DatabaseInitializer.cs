@@ -1439,7 +1439,7 @@ public class DatabaseInitializer
         await AddColumnIfNotExistsAsync(connection, "WebhookTriggers", "ImportProfileId",
             "INTEGER NULL REFERENCES ImportProfiles(Id) ON DELETE CASCADE");
 
-        // Add ProfileType to Jobs (legacy discriminator — retained for backward compat, ignored in new code)
+        // Add ProfileType to Jobs (legacy discriminator, retained for backward compat, ignored in new code)
         await AddColumnIfNotExistsAsync(connection, "Jobs", "ProfileType", "TEXT NULL");
 
         // Add proper ImportProfileId FK column to Jobs (replaces ProfileType discriminator)
@@ -1469,7 +1469,7 @@ public class DatabaseInitializer
         await connection.ExecuteAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS UX_ImportProfiles_Code ON ImportProfiles(Code) WHERE Code != ''");
 
-        // DestinationEndpoints table — named sub-endpoints on a base Destination connection
+        // DestinationEndpoints table, named sub-endpoints on a base Destination connection
         await connection.ExecuteAsync(@"
             CREATE TABLE IF NOT EXISTS DestinationEndpoints (
                 Id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3047,15 +3047,15 @@ public class DatabaseInitializer
 
         if (oldTableExists && newTableExists)
         {
-            // RENAME + CREATE + INSERT all completed but DROP TABLE failed — clean up
-            Log.Warning("Stale ImportProfiles_old table found — dropping it to complete previous migration");
+            // RENAME + CREATE + INSERT all completed but DROP TABLE failed, clean up
+            Log.Warning("Stale ImportProfiles_old table found, dropping it to complete previous migration");
             await connection.ExecuteAsync("DROP TABLE IF EXISTS ImportProfiles_old");
             return;
         }
 
         if (oldTableExists && !newTableExists)
         {
-            // RENAME succeeded but CREATE/INSERT failed — complete migration from the old table
+            // RENAME succeeded but CREATE/INSERT failed, complete migration from the old table
             Log.Warning("Recovering from partial ImportProfiles migration (old table exists, new table missing)");
             await CompleteImportProfilesMigrationFromOldTableAsync(connection);
             return;
@@ -3064,9 +3064,9 @@ public class DatabaseInitializer
         // Normal path: check if migration is needed ──
         var cols = await connection.QueryAsync("PRAGMA table_info(ImportProfiles)");
         var col = cols.FirstOrDefault(c => (string)c.name == "TargetConnectionId");
-        if (col == null) return; // Column not found — nothing to do
+        if (col == null) return; // Column not found, nothing to do
         if ((long)(col.notnull ?? 0L) == 0)
-            return; // Already nullable — nothing to do
+            return; // Already nullable, nothing to do
 
         Log.Information("Migrating ImportProfiles.TargetConnectionId to nullable (LocalFile support)...");
 
@@ -3079,7 +3079,7 @@ public class DatabaseInitializer
         await connection.ExecuteAsync("PRAGMA foreign_keys = OFF");
         try
         {
-            // Execute each DDL statement individually — multi-statement strings are unreliable
+            // Execute each DDL statement individually, multi-statement strings are unreliable
             // across different SQLite driver versions
             await connection.ExecuteAsync("ALTER TABLE ImportProfiles RENAME TO ImportProfiles_old");
             await connection.ExecuteAsync(BuildImportProfilesCreateTableSql());
@@ -3642,7 +3642,7 @@ public class DatabaseInitializer
 
     /// <summary>
     /// Back-fill unique short codes for any Profiles or ImportProfiles rows that have Code=''.
-    /// Runs per-row with collision retry — safe for live data.
+    /// Runs per-row with collision retry, safe for live data.
     /// </summary>
     private static async Task BackfillProfileCodesAsync(SqliteConnection connection)
     {
