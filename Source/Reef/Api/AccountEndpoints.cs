@@ -24,7 +24,7 @@ public static class AccountEndpoints
 
         group.MapGet("/profile", GetProfile);
         group.MapPut("/profile", UpdateProfile);
-        group.MapGet("/mfa/totp/setup", SetupTotp);
+        group.MapPost("/mfa/totp/setup", SetupTotp);
         group.MapPost("/mfa/totp/confirm", ConfirmTotp);
         group.MapPost("/mfa/email/enable", EnableEmailMfa);
         group.MapDelete("/mfa", DisableMfa);
@@ -100,11 +100,15 @@ public static class AccountEndpoints
         return Results.Ok(new { success = true });
     }
 
-    // GET /api/account/mfa/totp/setup
-    // Generates a new TOTP secret and returns a QR code PNG (base64) + manual key. This is NOT saved yet but only saved after the user confirms with a valid code.
+    // POST /api/account/mfa/totp/setup
+    // Generates a new TOTP secret and returns a QR code PNG (base64) + manual key.
+    // If TOTP is already active, the caller must supply the current valid code first.
+    // The secret is NOT saved until the user confirms with a new valid code via /confirm.
     private static async Task<IResult> SetupTotp(
+        [FromBody] SetupTotpRequest request,
         HttpContext httpContext,
-        [FromServices] DatabaseConfig dbConfig)
+        [FromServices] DatabaseConfig dbConfig,
+        [FromServices] EncryptionService encryptionService)
     {
         var username = httpContext.User.Identity?.Name;
         if (string.IsNullOrEmpty(username)) return Results.Unauthorized();
@@ -115,6 +119,25 @@ public static class AccountEndpoints
             new { Username = username.ToLowerInvariant() });
 
         if (user == null) return Results.NotFound();
+
+        // If TOTP is currently active, require the existing code before proceeding
+        if (user.MfaEnabled && user.MfaMethod == "totp")
+        {
+            if (string.IsNullOrWhiteSpace(request.CurrentCode))
+                return Results.Json(new { success = false, message = "Your current authenticator code is required to reconfigure TOTP." }, statusCode: 400);
+
+            if (string.IsNullOrEmpty(user.TotpSecret))
+                return Results.Json(new { success = false, message = "TOTP secret is missing. Please contact an administrator." }, statusCode: 400);
+
+            var existingPlain = encryptionService.DecryptField(user.TotpSecret);
+            if (string.IsNullOrEmpty(existingPlain))
+                return Results.Json(new { success = false, message = "TOTP secret could not be read. Please contact an administrator." }, statusCode: 400);
+
+            var existingSecretBytes = Base32Encoding.ToBytes(existingPlain);
+            var totp = new Totp(existingSecretBytes);
+            if (!totp.VerifyTotp(request.CurrentCode.Trim(), out _, new VerificationWindow(1, 1)))
+                return Results.Json(new { success = false, message = "Invalid current code. Please try again." }, statusCode: 400);
+        }
 
         // Generate 20-byte TOTP secret (RFC 6238 / SHA-1)
         var secretBytes = KeyGeneration.GenerateRandomKey(20);
@@ -132,11 +155,11 @@ public static class AccountEndpoints
         var qrPng = qrCode.GetGraphic(6);
         var qrBase64 = Convert.ToBase64String(qrPng);
 
-        // Store in PendingTotpSecret so the active TotpSecret is never overwritten
-        // until the user confirms with a valid code.
+        // Store encrypted PendingTotpSecret so the active TotpSecret is never
+        // overwritten until the user confirms with a valid code.
         await conn.ExecuteAsync(
             "UPDATE Users SET PendingTotpSecret = @Secret WHERE Id = @Id",
-            new { Secret = secretBase32, user.Id });
+            new { Secret = encryptionService.Encrypt(secretBase32), user.Id });
 
         return Results.Ok(new
         {
@@ -152,7 +175,8 @@ public static class AccountEndpoints
         [FromBody] ConfirmTotpRequest request,
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] EncryptionService encryptionService)
     {
         var username = httpContext.User.Identity?.Name;
         if (string.IsNullOrEmpty(username)) return Results.Unauthorized();
@@ -166,7 +190,11 @@ public static class AccountEndpoints
         if (string.IsNullOrEmpty(user.PendingTotpSecret))
             return Results.Json(new { success = false, message = "No pending TOTP setup. Request a new setup first." }, statusCode: 400);
 
-        var secretBytes = Base32Encoding.ToBytes(user.PendingTotpSecret);
+        var pendingPlain = encryptionService.DecryptField(user.PendingTotpSecret);
+        if (string.IsNullOrEmpty(pendingPlain))
+            return Results.Json(new { success = false, message = "Pending TOTP secret could not be read. Please start setup again." }, statusCode: 400);
+
+        var secretBytes = Base32Encoding.ToBytes(pendingPlain);
         var totp = new Totp(secretBytes);
         var isValid = totp.VerifyTotp(request.Code.Trim(), out _, new VerificationWindow(1, 1));
 
@@ -186,7 +214,7 @@ public static class AccountEndpoints
 
         await conn.ExecuteAsync(
             "UPDATE Users SET MfaEnabled = 1, MfaMethod = 'totp', TotpSecret = @Secret, PendingTotpSecret = NULL, BackupCodes = @BackupCodes, ModifiedAt = datetime('now') WHERE Id = @Id",
-            new { Secret = user.PendingTotpSecret, BackupCodes = JsonSerializer.Serialize(hashedCodes), user.Id });
+            new { Secret = encryptionService.Encrypt(pendingPlain), BackupCodes = encryptionService.Encrypt(JsonSerializer.Serialize(hashedCodes)), user.Id });
 
         await auditService.LogAsync("User", user.Id, "MfaEnabled", username,
             new { method = "totp" }, httpContext);
@@ -222,7 +250,7 @@ public static class AccountEndpoints
             return Results.Json(new { success = false, message = "An email address is required to enable email MFA. Please update your profile first." }, statusCode: 400);
 
         await conn.ExecuteAsync(
-            "UPDATE Users SET MfaEnabled = 1, MfaMethod = 'email', TotpSecret = NULL, ModifiedAt = datetime('now') WHERE Id = @Id",
+            "UPDATE Users SET MfaEnabled = 1, MfaMethod = 'email', TotpSecret = NULL, PendingTotpSecret = NULL, ModifiedAt = datetime('now') WHERE Id = @Id",
             new { user.Id });
 
         await auditService.LogAsync("User", user.Id, "MfaEnabled", username,
@@ -250,7 +278,7 @@ public static class AccountEndpoints
         if (user == null) return Results.NotFound();
 
         await conn.ExecuteAsync(
-            "UPDATE Users SET MfaEnabled = 0, MfaMethod = NULL, TotpSecret = NULL, ModifiedAt = datetime('now') WHERE Id = @Id",
+            "UPDATE Users SET MfaEnabled = 0, MfaMethod = NULL, TotpSecret = NULL, PendingTotpSecret = NULL, ModifiedAt = datetime('now') WHERE Id = @Id",
             new { user.Id });
 
         await auditService.LogAsync("User", user.Id, "MfaDisabled", username, null, httpContext);
@@ -269,4 +297,10 @@ public class UpdateProfileRequest
 public class ConfirmTotpRequest
 {
     public required string Code { get; set; }
+}
+
+public class SetupTotpRequest
+{
+    /// <summary>Required when TOTP is already active — proves the user still controls the current secret.</summary>
+    public string? CurrentCode { get; set; }
 }

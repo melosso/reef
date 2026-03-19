@@ -294,6 +294,7 @@ public static class AuthEndpoints
         [FromServices] DatabaseConfig dbConfig,
         [FromServices] JwtTokenService jwtService,
         [FromServices] AuditService auditService,
+        [FromServices] EncryptionService encryptionService,
         HttpContext httpContext)
     {
         var clientFingerprint = GetClientFingerprint(httpContext);
@@ -349,9 +350,9 @@ public static class AuthEndpoints
         bool valid;
         if (session.Method == "totp")
         {
-            valid = ValidateTotp(user.TotpSecret, code);
+            valid = ValidateTotp(encryptionService.DecryptField(user.TotpSecret), code);
             if (!valid && code.Length == BackupCodeLength)
-                valid = await ValidateAndConsumeBackupCodeAsync(user, code, connection);
+                valid = await ValidateAndConsumeBackupCodeAsync(user, code, connection, encryptionService);
         }
         else
         {
@@ -381,12 +382,14 @@ public static class AuthEndpoints
         catch { return false; }
     }
 
-    private static async Task<bool> ValidateAndConsumeBackupCodeAsync(User user, string normalizedCode, SqliteConnection connection)
+    private static async Task<bool> ValidateAndConsumeBackupCodeAsync(User user, string normalizedCode, SqliteConnection connection, EncryptionService encryptionService)
     {
         if (string.IsNullOrEmpty(user.BackupCodes)) return false;
         try
         {
-            var hashes = JsonSerializer.Deserialize<List<string>>(user.BackupCodes);
+            var backupCodesJson = encryptionService.DecryptField(user.BackupCodes);
+            if (string.IsNullOrEmpty(backupCodesJson)) return false;
+            var hashes = JsonSerializer.Deserialize<List<string>>(backupCodesJson);
             if (hashes == null || hashes.Count == 0) return false;
 
             var formatted = normalizedCode.Length == BackupCodeLength 
@@ -409,7 +412,7 @@ public static class AuthEndpoints
             hashes.Remove(matchedHash);
             await connection.ExecuteAsync(
                 "UPDATE Users SET BackupCodes = @Codes WHERE Id = @Id",
-                new { Codes = JsonSerializer.Serialize(hashes), user.Id });
+                new { Codes = encryptionService.Encrypt(JsonSerializer.Serialize(hashes)), user.Id });
 
             Log.Warning("User {Username} signed in with a backup code. {Remaining} code(s) remaining.", user.Username, hashes.Count);
             return true;

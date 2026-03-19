@@ -168,6 +168,26 @@
                             <div id="totp-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</div>
                         </div>
 
+                        <!-- Reconfirm step: verify existing TOTP before allowing reconfigure -->
+                        <div id="totp-reconfirm-step" class="hidden px-6 py-5 border-b border-slate-100">
+                            <p class="text-sm font-medium text-slate-700 mb-3">Enter your current authenticator code to continue</p>
+                            <div class="flex items-center gap-3">
+                                <input type="text" id="totp-reconfirm-code" maxlength="6" inputmode="numeric"
+                                    class="w-36 h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm font-mono rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] tracking-widest"
+                                    placeholder="000000"
+                                    onkeydown="if(event.key==='Enter') submitTotpReconfirm()">
+                                <button onclick="submitTotpReconfirm()"
+                                    class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">
+                                    Continue
+                                </button>
+                                <button onclick="cancelTotpReconfirm()"
+                                    class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                            <div id="totp-reconfirm-feedback" class="mt-2 empty:hidden"></div>
+                        </div>
+
                         <!-- Setup flow -->
                         <div id="totp-setup-flow" class="hidden px-6 py-5 space-y-5 border-b border-slate-100">
                             <div class="flex gap-6 items-start">

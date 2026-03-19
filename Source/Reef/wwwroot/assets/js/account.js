@@ -66,15 +66,19 @@ async function loadProfile() {
         const res = await apiFetch('/api/account/profile');
         if (!res.ok) throw new Error();
         profileData = await res.json();
-
-        document.getElementById('profile-username').value = profileData.username || '';
-        document.getElementById('profile-display-name').value = profileData.displayName || '';
-        document.getElementById('profile-email').value = profileData.email || '';
-
-        updateMfaUI(profileData);
     } catch {
         console.error('Failed to load profile');
+        return;
     }
+
+    const usernameEl    = document.getElementById('profile-username');
+    const displayNameEl = document.getElementById('profile-display-name');
+    const emailEl       = document.getElementById('profile-email');
+    if (usernameEl)    usernameEl.value    = profileData.username    || '';
+    if (displayNameEl) displayNameEl.value = profileData.displayName || '';
+    if (emailEl)       emailEl.value       = profileData.email       || '';
+
+    updateMfaUI(profileData);
 }
 
 function updateMfaUI(data) {
@@ -93,7 +97,9 @@ function updateMfaUI(data) {
     document.getElementById('totp-badge').classList.toggle('hidden', !totpActive);
     document.getElementById('totp-status-text').textContent =
         totpActive ? 'Active' : 'Not configured';
-    document.getElementById('totp-setup-btn').textContent = totpActive ? 'Reconfigure' : 'Set up';
+    const totpSetupBtn = document.getElementById('totp-setup-btn');
+    totpSetupBtn.textContent = totpActive ? 'Reconfigure' : 'Set up';
+    totpSetupBtn.onclick = totpActive ? startTotpReconfigure : startTotpSetup;
 
     document.getElementById('email-mfa-badge').classList.toggle('hidden', !emailActive);
 
@@ -200,8 +206,16 @@ async function startTotpSetup() {
     queueLucideRender();
 
     try {
-        const res = await apiFetch('/api/account/mfa/totp/setup');
-        if (!res.ok) throw new Error();
+        const res = await apiFetch('/api/account/mfa/totp/setup', {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            document.getElementById('totp-qr-container').innerHTML =
+                `<p class="text-xs text-red-500 p-2">${err.message || 'Failed to start setup'}</p>`;
+            return;
+        }
         const data = await res.json();
         document.getElementById('totp-qr-container').innerHTML =
             `<img src="data:image/png;base64,${data.qrCodePng}" alt="TOTP QR code" class="w-40 h-40 rounded">`;
@@ -217,6 +231,67 @@ function cancelTotpSetup() {
     document.getElementById('totp-setup-flow').classList.add('hidden');
     document.getElementById('totp-setup-btn').classList.remove('hidden');
     clearFeedback('totp-verify-feedback');
+    // Also hide the reconfigure confirm step if visible
+    const reconfirmEl = document.getElementById('totp-reconfirm-step');
+    if (reconfirmEl) reconfirmEl.classList.add('hidden');
+}
+
+// Shows the current-code verification step before allowing TOTP reconfiguration
+function startTotpReconfigure() {
+    const reconfirmEl = document.getElementById('totp-reconfirm-step');
+    if (!reconfirmEl) {
+        // Fallback: no reconfirm UI, just call setup directly (shouldn't happen)
+        startTotpSetup(null);
+        return;
+    }
+    clearFeedback('totp-reconfirm-feedback');
+    document.getElementById('totp-reconfirm-code').value = '';
+    reconfirmEl.classList.remove('hidden');
+    document.getElementById('totp-setup-btn').classList.add('hidden');
+    document.getElementById('totp-reconfirm-code').focus();
+}
+
+async function submitTotpReconfirm() {
+    clearFeedback('totp-reconfirm-feedback');
+    const code = document.getElementById('totp-reconfirm-code').value.replace(/\s/g, '');
+    if (code.length !== 6) {
+        showFeedback('totp-reconfirm-feedback', 'Enter the 6-digit code from your current app.');
+        return;
+    }
+
+    // Try the setup endpoint; if the current code is wrong it returns 400
+    try {
+        const res = await apiFetch('/api/account/mfa/totp/setup', {
+            method: 'POST',
+            body: JSON.stringify({ currentCode: code })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showFeedback('totp-reconfirm-feedback', err.message || 'Invalid code. Please try again.');
+            return;
+        }
+        const data = await res.json();
+        // Current code validated — switch from reconfirm step to the setup flow
+        document.getElementById('totp-reconfirm-step').classList.add('hidden');
+        const flow = document.getElementById('totp-setup-flow');
+        flow.classList.remove('hidden');
+        document.getElementById('totp-setup-btn').classList.add('hidden');
+        clearFeedback('totp-verify-feedback');
+        document.getElementById('totp-verify-code').value = '';
+        document.getElementById('totp-qr-container').innerHTML =
+            `<img src="data:image/png;base64,${data.qrCodePng}" alt="TOTP QR code" class="w-40 h-40 rounded">`;
+        const formatted = data.secretBase32.match(/.{1,4}/g)?.join(' ') ?? data.secretBase32;
+        document.getElementById('totp-manual-key').textContent = formatted;
+        queueLucideRender();
+    } catch {
+        showFeedback('totp-reconfirm-feedback', 'Connection error. Please try again.');
+    }
+}
+
+function cancelTotpReconfirm() {
+    const reconfirmEl = document.getElementById('totp-reconfirm-step');
+    if (reconfirmEl) reconfirmEl.classList.add('hidden');
+    document.getElementById('totp-setup-btn').classList.remove('hidden');
 }
 
 async function confirmTotp() {
