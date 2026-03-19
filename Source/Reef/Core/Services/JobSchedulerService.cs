@@ -265,28 +265,31 @@ public class JobScheduler : BackgroundService
             var jobService = scope.ServiceProvider.GetRequiredService<JobService>();
             var jobExecutor = scope.ServiceProvider.GetRequiredService<Reef.Api.JobExecutorService>();
             
-            // Double-check if job is already running (database state might have changed)
-            if (!job.AllowConcurrent && _runningJobs.ContainsKey(job.Id))
-            {
-                Log.Debug("Job {JobId} is already running and does not allow concurrent execution", job.Id);
-                return;
-            }
-
             // NOTE: Circuit breaker logic is handled in JobService.UpdateJobAfterFailure()
             // which checks ConsecutiveFailures against CircuitBreakerThreshold (10)
             // MaxRetries is for per-cycle retry attempts, not for disabling jobs
 
             // Create cancellation token for this job execution
             var jobCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            
+
             // Add timeout
             if (job.TimeoutMinutes > 0)
             {
                 jobCts.CancelAfter(TimeSpan.FromMinutes(job.TimeoutMinutes));
             }
-            
-            // Track running job
-            _runningJobs.TryAdd(job.Id, jobCts);
+
+            // Atomically register as running. TryAdd is the authoritative concurrency gate —
+            // using ContainsKey + TryAdd separately would be a TOCTOU race.
+            if (!_runningJobs.TryAdd(job.Id, jobCts))
+            {
+                jobCts.Dispose();
+                if (!job.AllowConcurrent)
+                {
+                    Log.Debug("Job {JobId} is already running and does not allow concurrent execution", job.Id);
+                    return;
+                }
+                // AllowConcurrent jobs proceed even when not tracked (CTS won't be registered for this run)
+            }
             
             Log.Information("Executing job {JobId} ({JobName}) - Type: {JobType}, Priority: {Priority}", 
                 job.Id, job.Name, job.Type, job.Priority);

@@ -93,7 +93,11 @@ public class JobExecutorService
         execution.Id = executionId;
 
         // Execute the job asynchronously (fire and forget)
-        _ = Task.Run(async () => await ExecuteJobInternalAsync(job, execution, parameters));
+        _ = Task.Run(async () =>
+        {
+            try { await ExecuteJobInternalAsync(job, execution, parameters); }
+            catch (Exception ex) { Log.Error(ex, "Unhandled error in background execution of job {JobId}", job.Id); }
+        });
 
         return executionId;
     }

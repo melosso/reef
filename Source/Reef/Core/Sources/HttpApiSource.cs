@@ -100,7 +100,7 @@ public class HttpApiSource : IImportSource
         }
     }
 
-    // ── Private ──────────────────────────────────────────────
+    // Private
 
     private async Task<byte[]> FetchSingleAsync(HttpConfig config, string? dataRootPath, CancellationToken ct)
     {
@@ -192,7 +192,7 @@ public class HttpApiSource : IImportSource
             }
             else if (dataElement.ValueKind == JsonValueKind.Object && string.IsNullOrWhiteSpace(effectiveRootPath))
             {
-                // No root path configured — scan for a single array property to use automatically
+                // No root path configured, scan for a single array property to use automatically
                 var arrayProps = dataElement.EnumerateObject()
                     .Where(p => p.Value.ValueKind == JsonValueKind.Array)
                     .ToList();
@@ -226,7 +226,7 @@ public class HttpApiSource : IImportSource
             }
             else if (dataElement.ValueKind == JsonValueKind.Object)
             {
-                // Root path was set but resolved to an object rather than an array — likely a wrong path
+                // Root path was set but resolved to an object rather than an array, likely a wrong path
                 Log.Warning("HttpApiSource: HttpDataRootPath '{Path}' resolved to a JSON object, not an array. " +
                     "Check your HttpDataRootPath configuration.", effectiveRootPath);
                 allRows.Add(Parsers.JsonImportParser.JsonToDict(dataElement));

@@ -194,7 +194,7 @@ public class AdminService
             var countSql = $"SELECT COUNT(*) FROM AuditLog al {whereClause}";
             var totalCount = await conn.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // Get paginated results — join Profiles/ImportProfiles to resolve EntityCode + EntityName
+            // Get paginated results
             var offset = (page - 1) * pageSize;
             var sql = $@"
                 SELECT

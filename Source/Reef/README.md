@@ -5,7 +5,7 @@ An enterprise-ready data export service for Microsoft SQL Server.
 ## Quick Start
 
 ### Prerequisites
-- .NET 9.0 Runtime
+- .NET 10.0 Runtime
 - SQL Server / MySQL / PostgreSQL (for data sources)
 
 ### Setup

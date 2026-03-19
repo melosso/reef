@@ -8,7 +8,6 @@ using Reef.Core.Models;
 using Reef.Core.Parsers;
 using Reef.Core.Sources;
 using Reef.Core.Targets;
-using Serilog;
 using Serilog.Context;
 
 namespace Reef.Core.Services;
@@ -28,40 +27,26 @@ namespace Reef.Core.Services;
 ///  11. Post-process (optional SQL/script)
 ///  12. Finalise execution record + notify
 /// </summary>
-public class ImportExecutionService
+public class ImportExecutionService(
+    ImportProfileService profileService,
+    ConnectionService connectionService,
+    DatabaseConfig reefDbConfig,
+    DatabaseImportTarget databaseImportTarget,
+    LocalFileImportTarget localFileImportTarget,
+    NotificationService notificationService,
+    DestinationSourceAdapter sourceAdapter,
+    ImportFileOutputService fileOutputService)
 {
-    private readonly ImportProfileService _profileService;
-    private readonly ConnectionService _connectionService;
-    private readonly DatabaseConfig _reefDbConfig;
-    private readonly DatabaseImportTarget _databaseImportTarget;
-    private readonly LocalFileImportTarget _localFileImportTarget;
-    private readonly NotificationService _notificationService;
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
 
-    public ImportExecutionService(
-        ImportProfileService profileService,
-        ConnectionService connectionService,
-        DatabaseConfig reefDbConfig,
-        DatabaseImportTarget databaseImportTarget,
-        LocalFileImportTarget localFileImportTarget,
-        NotificationService notificationService)
-    {
-        _profileService = profileService;
-        _connectionService = connectionService;
-        _reefDbConfig = reefDbConfig;
-        _databaseImportTarget = databaseImportTarget;
-        _localFileImportTarget = localFileImportTarget;
-        _notificationService = notificationService;
-    }
-
-    // ── Public Entry Points ────────────────────────────────────────────
+    // Public Entry Points
 
     public async Task<ImportProfileExecution> ExecuteAsync(
         int importProfileId,
         string triggeredBy = "Manual",
         CancellationToken ct = default)
     {
-        var profile = await _profileService.GetByIdAsync(importProfileId)
+        var profile = await profileService.GetByIdAsync(importProfileId)
             ?? throw new InvalidOperationException($"ImportProfile {importProfileId} not found");
 
         var exec = new ImportProfileExecution
@@ -73,13 +58,13 @@ public class ImportExecutionService
             CurrentPhase = "Initialising"
         };
 
-        exec.Id = await _profileService.CreateExecutionAsync(exec);
+        exec.Id = await profileService.CreateExecutionAsync(exec);
         var phaseTimings = new Dictionary<string, long>();
 
         // Push profile code into log context so all downstream messages carry it
         using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
 
-        Log.Information("ImportExecution {Id} started for profile {ProfileCode} ({ProfileName})",
+        Log.Information("ImportExecution {Id} started for profile {Code} ({ProfileName})",
             exec.Id, profile.Code, profile.Name);
 
         try
@@ -108,7 +93,7 @@ public class ImportExecutionService
             exec.PhaseTimingsJson = JsonSerializer.Serialize(phaseTimings);
             try
             {
-                await _profileService.UpdateExecutionAsync(exec);
+                await profileService.UpdateExecutionAsync(exec);
             }
             catch (Exception ex)
             {
@@ -116,7 +101,7 @@ public class ImportExecutionService
             }
             try
             {
-                await _profileService.UpdateLastExecutedAsync(importProfileId);
+                await profileService.UpdateLastExecutedAsync(importProfileId);
             }
             catch (Exception ex)
             {
@@ -133,9 +118,9 @@ public class ImportExecutionService
             try
             {
                 if (exec.Status == "Failed")
-                    _ = _notificationService.SendImportExecutionFailureAsync(exec, profile);
+                    await notificationService.SendImportExecutionFailureAsync(exec, profile);
                 else
-                    _ = _notificationService.SendImportExecutionSuccessAsync(exec, profile);
+                    await notificationService.SendImportExecutionSuccessAsync(exec, profile);
             }
             catch (Exception ex)
             {
@@ -146,7 +131,7 @@ public class ImportExecutionService
         return exec;
     }
 
-    // ── Pipeline ───────────────────────────────────────────────────────
+    // Pipeline
 
     private async Task RunPipelineAsync(
         ImportProfileWithNames profile,
@@ -154,38 +139,53 @@ public class ImportExecutionService
         Dictionary<string, long> phaseTimings,
         CancellationToken ct)
     {
-        // ── Phase 1: Load target connection (Database target only) ───
+        // Phase 1: Load target connection (Database target only) 
         bool isLocalFile = profile.TargetType?.Equals("LocalFile", StringComparison.OrdinalIgnoreCase) == true;
         Connection? connection = null;
         string? decryptedConnStr = null;
 
         if (!isLocalFile)
         {
-            connection = await _connectionService.GetByIdAsync(profile.TargetConnectionId ?? 0)
+            connection = await connectionService.GetByIdAsync(profile.TargetConnectionId ?? 0)
                 ?? throw new InvalidOperationException(
                     $"Target connection {profile.TargetConnectionId} not found");
             decryptedConnStr = connection.ConnectionString;
         }
 
-        // ── Phase 2: Pre-process (Database target only) ─────────────
+        // Phase 2: Pre-process (Database target only) 
         if (!isLocalFile && !string.IsNullOrWhiteSpace(profile.PreProcessType))
         {
-            await TimedPhaseAsync("PreProcess", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("PreProcess", exec, phaseTimings, async () =>
             {
                 await RunSqlProcessAsync(
                     connection!.Type, decryptedConnStr!,
                     profile.PreProcessConfig, exec.Id, ct);
-            });
+            }, ct);
         }
 
-        // ── Phase 3: Fetch source files ─────────────────────────────
-        List<ImportSourceFile> sourceFiles = null!;
-        await TimedPhaseAsync("FetchSource", exec, phaseTimings, ct, async () =>
+        // Phase 3: Fetch source files 
+        // Resolve SourceDestinationId → source config if needed
+        ImportProfile resolvedProfile = profile;
+        if (profile.SourceDestinationId.HasValue)
         {
-            sourceFiles = await FetchWithRetryAsync(profile, exec, ct);
-        });
+            resolvedProfile = await sourceAdapter.ResolveSourceConfigAsync(profile, ct);
+        }
 
-        // ── Phase 4 + 5 + 6 + 7: Parse → Map → Delta → Write ────────
+        List<ImportSourceFile> sourceFiles = null!;
+        await TimedPhaseAsync("FetchSource", exec, phaseTimings, async () =>
+        {
+            sourceFiles = await FetchWithRetryAsync(resolvedProfile, exec, ct);
+        }, ct);
+
+        // Binary passthrough: skip all parse/map/write phases 
+        if (profile.SourceFormat.Equals("Binary", StringComparison.OrdinalIgnoreCase))
+        {
+            await ExecuteBinaryPassthroughAsync(profile, exec, resolvedProfile,
+                sourceFiles, phaseTimings, ct);
+            return;
+        }
+
+        // Phase 4 + 5 + 6 + 7: Parse → Map → Delta → Write 
         // Parse is streaming; batches are collected then written
         var formatConfig = ParseFormatConfig(profile.FormatConfig);
         var columnMappings = ParseColumnMappings(profile.ColumnMappingsJson);
@@ -217,26 +217,26 @@ public class ImportExecutionService
             TargetWriteMode = profile.LocalTargetWriteMode ?? "Overwrite"
         };
 
-        IImportTarget target = isLocalFile ? _localFileImportTarget : _databaseImportTarget;
-        List<TargetColumnInfo> tableSchema = new();
+        IImportTarget target = isLocalFile ? localFileImportTarget : databaseImportTarget;
+        List<TargetColumnInfo> tableSchema = [];
 
         if (!isLocalFile)
         {
-            await TimedPhaseAsync("GetSchema", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("GetSchema", exec, phaseTimings, async () =>
             {
-                try { tableSchema = await _databaseImportTarget.GetTableSchemaAsync(connection!, profile.TargetTable!, ct); }
+                try { tableSchema = await databaseImportTarget.GetTableSchemaAsync(connection!, profile.TargetTable!, ct); }
                 catch (Exception ex) { Log.Warning("Could not retrieve schema for {Table}: {Error}", profile.TargetTable, ex.Message); }
-            });
+            }, ct);
         }
 
         // Load delta sync state if enabled
-        Dictionary<string, string> previousHashes = new();
+        Dictionary<string, string> previousHashes = [];
         if (profile.DeltaSyncEnabled && !string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
         {
-            await TimedPhaseAsync("LoadDeltaState", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("LoadDeltaState", exec, phaseTimings, async () =>
             {
-                previousHashes = await LoadDeltaHashesAsync(profile.Id);
-            });
+                previousHashes = await LoadDeltaHashesAsync(profile.Id, ct);
+            }, ct);
         }
 
         // Collect all rows for FullReplace; stream batches for others
@@ -246,7 +246,13 @@ public class ImportExecutionService
         bool isFullReplace = profile.LoadStrategy.Equals("FullReplace", StringComparison.OrdinalIgnoreCase);
         var allRowsForFullReplace = isFullReplace ? new List<Dictionary<string, object?>>() : null;
 
-        await TimedPhaseAsync("ParseAndWrite", exec, phaseTimings, ct, async () =>
+        // Pre-load output targets so we know whether to collect rows (avoids memory cost when not needed)
+        var outputTargets = await profileService.GetOutputTargetsAsync(profile.Id);
+        var enabledTargets = outputTargets.Where(t => t.IsEnabled).ToList();
+        bool hasFileOutputTargets = enabledTargets.Count > 0;
+        var collectedRows = hasFileOutputTargets ? new List<Dictionary<string, object?>>() : null;
+
+        await TimedPhaseAsync("ParseAndWrite", exec, phaseTimings, async () =>
         {
             foreach (var file in sourceFiles)
             {
@@ -262,7 +268,7 @@ public class ImportExecutionService
 
                     if (!string.IsNullOrWhiteSpace(row.ParseError))
                     {
-                        await HandleParseFailure(profile, exec, row, ct);
+                        await HandleParseFailure(profile, exec, row);
                         if (exec.Status == "Aborted") return;
                         continue;
                     }
@@ -313,6 +319,10 @@ public class ImportExecutionService
                         }
                     }
 
+                    // Collect rows for fan-out output targets (opt-in; only when targets are configured)
+                    if (hasFileOutputTargets)
+                        collectedRows!.Add(mapped);
+
                     // Check abort thresholds
                     if (ShouldAbort(profile, exec))
                     {
@@ -330,15 +340,15 @@ public class ImportExecutionService
             // FullReplace: truncate then insert all
             if (isFullReplace && allRowsForFullReplace!.Count > 0)
             {
-                await TimedPhaseAsync("FullReplace", exec, phaseTimings, ct, async () =>
+                await TimedPhaseAsync("FullReplace", exec, phaseTimings, async () =>
                 {
                     var result = await target.FullReplaceAsync(allRowsForFullReplace, writeContext, ct);
                     exec.RowsInserted += result.RowsInserted;
                     exec.RowsFailed += result.RowsFailed;
                     await PersistRowErrors(result.Errors, exec.Id, "FullReplace");
-                });
+                }, ct);
             }
-        });
+        }, ct);
 
         if (exec.Status == "Aborted")
         {
@@ -346,13 +356,13 @@ public class ImportExecutionService
             return;
         }
 
-        // ── Phase 8: Commit delta sync state ─────────────────────────
-        if (profile.DeltaSyncEnabled && currentHashState.Any())
+        // Phase 8: Commit delta sync state 
+        if (profile.DeltaSyncEnabled && currentHashState.Count > 0)
         {
-            await TimedPhaseAsync("CommitDeltaState", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("CommitDeltaState", exec, phaseTimings, async () =>
             {
-                await CommitDeltaHashesAsync(profile.Id, exec.Id, currentHashState, previousHashes);
-            });
+                await CommitDeltaHashesAsync(profile.Id, exec.Id, currentHashState, previousHashes, ct);
+            }, ct);
         }
 
         // Warn when Smart Sync was enabled but no rows were tracked (ReefId column missing in data)
@@ -361,37 +371,74 @@ public class ImportExecutionService
             && exec.TotalRowsRead > 0
             && currentHashState.Count == 0)
         {
-            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+            await profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
                 ExecutionId  = exec.Id,
                 ErrorType    = "Configuration",
                 Phase        = "DeltaSync",
                 ErrorMessage =
-                    $"Smart Sync is enabled but column '{profile.DeltaSyncReefIdColumn}' " +
-                    $"was not found in any of the {exec.TotalRowsRead} row(s) processed. " +
-                    "Check the ReefId Column setting in Smart Sync.",
+                    $"Smart Sync is enabled but the unique ID field '{profile.DeltaSyncReefIdColumn}' " +
+                    $"was not found in any of the {exec.TotalRowsRead} record(s) processed. " +
+                    "Check the 'Unique ID Field' setting on the Smart Sync tab. For CSV this must match a column header; for JSON a top-level key; for XML an element name.",
                 OccurredAt   = DateTime.UtcNow
             });
         }
 
-        // ── Phase 9: Archive source files ─────────────────────────────
+        // Phase 8b: Fan-out to output targets 
+        if (hasFileOutputTargets && collectedRows is { Count: > 0 })
+        {
+            await TimedPhaseAsync("FanOut", exec, phaseTimings, async () =>
+            {
+                var fanOutRows = (IReadOnlyList<Dictionary<string, object?>>)collectedRows;
+
+                // Also include FullReplace rows if applicable
+                if (isFullReplace && allRowsForFullReplace is { Count: > 0 })
+                    fanOutRows = allRowsForFullReplace;
+
+                var targetResults = await fileOutputService.FanOutAsync(
+                    fanOutRows, enabledTargets, profile, ct);
+
+                exec.OutputTargetsJson = JsonSerializer.Serialize(targetResults);
+
+                var hardFails = targetResults
+                    .Where(r => r.Status == "Failed")
+                    .Join(enabledTargets,
+                          r => r.DestinationId,
+                          t => t.DestinationId,
+                          (r, t) => (Result: r, Target: t))
+                    .Where(x => x.Target.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (hardFails.Count > 0)
+                {
+                    var names = string.Join(", ", hardFails.Select(x => x.Result.DestinationName));
+                    throw new InvalidOperationException($"Output target(s) failed (OnFailure=Fail): {names}");
+                }
+            }, ct);
+        }
+        else if (hasFileOutputTargets)
+        {
+            Log.Debug("ImportExecution {Id}: output targets configured but no rows collected to fan-out", exec.Id);
+        }
+
+        // Phase 9: Archive source files 
         if (profile.ArchiveAfterImport)
         {
-            await TimedPhaseAsync("Archive", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("Archive", exec, phaseTimings, async () =>
             {
-                var source = ImportSourceFactory.Create(profile.SourceType);
+                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
                 foreach (var file in sourceFiles)
                 {
                     try
                     {
-                        await source.ArchiveAsync(profile, file.Identifier, ct);
+                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
                     }
                     catch (Exception ex)
                     {
                         Log.Warning("ImportExecution {Id}: archive failed for {File}: {Error}", exec.Id, file.Identifier, ex.Message);
                         try
                         {
-                            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+                            await profileService.AddExecutionErrorAsync(new ImportExecutionError
                             {
                                 ExecutionId  = exec.Id,
                                 ErrorType    = "Archive",
@@ -403,33 +450,33 @@ public class ImportExecutionService
                         catch { /* never let error-recording abort execution */ }
                     }
                 }
-            });
+            }, ct);
         }
 
-        // ── Phase 10: Apply deletes (delta sync) ──────────────────────
-        if (profile.DeltaSyncEnabled && profile.DeltaSyncTrackDeletes && previousHashes.Any())
+        // Phase 10: Apply deletes (delta sync) 
+        if (profile.DeltaSyncEnabled && profile.DeltaSyncTrackDeletes && previousHashes.Count > 0)
         {
             var deletedIds = previousHashes.Keys
                 .Except(currentHashState.Keys)
                 .ToList();
 
-            if (deletedIds.Any())
+            if (deletedIds.Count > 0)
             {
-                await TimedPhaseAsync("ApplyDeletes", exec, phaseTimings, ct, async () =>
+                await TimedPhaseAsync("ApplyDeletes", exec, phaseTimings, async () =>
                 {
                     var deleted = await target.ApplyDeletesAsync(
                         deletedIds, profile.DeltaSyncReefIdColumn!, profile, ct);
                     exec.RowsDeleted += deleted;
                     exec.DeltaSyncDeletedRows += deleted;
-                    await MarkDeltaDeletedAsync(profile.Id, exec.Id, deletedIds);
-                });
+                    await MarkDeltaDeletedAsync(profile.Id, exec.Id, deletedIds, ct);
+                }, ct);
             }
         }
 
-        // ── Phase 11: Post-process (Database target only) ─────────────
+        // Phase 11: Post-process (Database target only) 
         if (!isLocalFile && !string.IsNullOrWhiteSpace(profile.PostProcessType))
         {
-            await TimedPhaseAsync("PostProcess", exec, phaseTimings, ct, async () =>
+            await TimedPhaseAsync("PostProcess", exec, phaseTimings, async () =>
             {
                 try
                 {
@@ -443,11 +490,83 @@ public class ImportExecutionService
                     if (!profile.PostProcessSkipOnFailure)
                         throw;
                 }
-            });
+            }, ct);
         }
     }
 
-    // ── Source Fetch with Retry ────────────────────────────────────────
+    // Binary Passthrough
+
+    private async Task ExecuteBinaryPassthroughAsync(
+        ImportProfileWithNames profile,
+        ImportProfileExecution exec,
+        ImportProfile resolvedProfile,
+        List<ImportSourceFile> sourceFiles,
+        Dictionary<string, long> phaseTimings,
+        CancellationToken ct)
+    {
+        var outputTargets = await profileService.GetOutputTargetsAsync(profile.Id);
+        var enabledTargets = outputTargets.Where(t => t.IsEnabled).ToList();
+
+        if (enabledTargets.Count == 0)
+        {
+            Log.Warning("ImportExecution {Id}: Binary passthrough, no enabled output targets configured", exec.Id);
+        }
+
+        if (enabledTargets.Count > 0)
+        {
+            await TimedPhaseAsync("FanOut", exec, phaseTimings, async () =>
+            {
+                var targetResults = await fileOutputService.FanOutRawAsync(sourceFiles, enabledTargets, profile, ct);
+                exec.OutputTargetsJson = JsonSerializer.Serialize(targetResults);
+
+                exec.FilesProcessed = sourceFiles.Count;
+                exec.BytesProcessed = sourceFiles.Sum(f => f.SizeBytes ?? 0);
+                exec.RowsInserted = 0;
+
+                var hardFails = targetResults
+                    .Where(r => r.Status == "Failed")
+                    .Join(enabledTargets,
+                          r => r.DestinationId,
+                          t => t.DestinationId,
+                          (r, t) => (Result: r, Target: t))
+                    .Where(x => x.Target.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (hardFails.Count > 0)
+                {
+                    var names = string.Join(", ", hardFails.Select(x => x.Result.DestinationName));
+                    throw new InvalidOperationException($"Output target(s) failed (OnFailure=Fail): {names}");
+                }
+            }, ct);
+        }
+        else
+        {
+            exec.FilesProcessed = sourceFiles.Count;
+            exec.BytesProcessed = sourceFiles.Sum(f => f.SizeBytes ?? 0);
+        }
+
+        // Archive phase
+        if (profile.ArchiveAfterImport)
+        {
+            await TimedPhaseAsync("Archive", exec, phaseTimings, async () =>
+            {
+                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
+                foreach (var file in sourceFiles)
+                {
+                    try
+                    {
+                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("ImportExecution {Id}: archive failed for {File}: {Error}", exec.Id, file.Identifier, ex.Message);
+                    }
+                }
+            }, ct);
+        }
+    }
+
+    // Source Fetch with Retry─
 
     private async Task<List<ImportSourceFile>> FetchWithRetryAsync(
         ImportProfile profile,
@@ -477,9 +596,9 @@ public class ImportExecutionService
             }
         }
 
-        // All attempts failed — apply OnSourceFailure strategy
+        // All attempts failed
         var errMsg = $"Source fetch failed after {maxAttempts} attempt(s): {lastEx?.Message}";
-        await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+        await profileService.AddExecutionErrorAsync(new ImportExecutionError
         {
             ExecutionId = exec.Id,
             ErrorMessage = errMsg,
@@ -491,13 +610,13 @@ public class ImportExecutionService
         if (profile.OnSourceFailure.Equals("Skip", StringComparison.OrdinalIgnoreCase))
         {
             Log.Warning("ImportExecution {Id}: source failure skipped per OnSourceFailure=Skip", exec.Id);
-            return new List<ImportSourceFile>();
+            return [];
         }
 
         throw new InvalidOperationException(errMsg, lastEx);
     }
 
-    // ── Batch Write ────────────────────────────────────────────────────
+    // Batch Write
 
     private async Task WriteBatchAsync(
         IImportTarget target,
@@ -519,7 +638,7 @@ public class ImportExecutionService
         catch (Exception ex)
         {
             Log.Error("ImportExecution {Id}: batch write failed: {Error}", exec.Id, ex.Message);
-            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+            await profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
                 ExecutionId = exec.Id,
                 ErrorMessage = ex.Message,
@@ -535,23 +654,22 @@ public class ImportExecutionService
         }
     }
 
-    // ── Parse Failure Handling ─────────────────────────────────────────
+    // Parse Failure Handling──
 
     private async Task HandleParseFailure(
         ImportProfile profile,
         ImportProfileExecution exec,
-        ParsedRow row,
-        CancellationToken ct)
+        ParsedRow row)
     {
         exec.RowsFailed++;
-        await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+        await profileService.AddExecutionErrorAsync(new ImportExecutionError
         {
             ExecutionId = exec.Id,
             RowNumber = row.LineNumber,
             ErrorMessage = row.ParseError ?? "Parse error",
             Phase = "Parse",
             ErrorType = "Parse",
-            RowDataJson = row.Columns.Any()
+            RowDataJson = row.Columns.Count > 0
                 ? JsonSerializer.Serialize(row.Columns)
                 : null,
             OccurredAt = DateTime.UtcNow
@@ -563,7 +681,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Column Mapping ─────────────────────────────────────────────────
+    // Column Mapping
 
     private static Dictionary<string, object?>? ApplyColumnMapping(
         Dictionary<string, object?> sourceColumns,
@@ -573,7 +691,7 @@ public class ImportExecutionService
     {
         var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
-        if (mappings.Any())
+        if (mappings.Count > 0)
         {
             foreach (var m in mappings)
             {
@@ -603,21 +721,21 @@ public class ImportExecutionService
                     result[col] = val;
             }
 
-            if (!result.Any() && sourceColumns.Any())
+            if (result.Count == 0 && sourceColumns.Count > 0)
             {
-                // No schema available — pass through all columns
+                // No schema available but pass through all columns
                 foreach (var (col, val) in sourceColumns)
                     result[col] = val;
             }
         }
         else
         {
-            // No mappings, no auto-map — pass through everything
+            // No mappings, no auto-map but pass through everything
             foreach (var (col, val) in sourceColumns)
                 result[col] = val;
         }
 
-        return result.Any() ? result : null;
+        return result.Count > 0 ? result : null;
     }
 
     private static object? CastValue(object? value, string? dataType)
@@ -628,26 +746,26 @@ public class ImportExecutionService
         return dataType?.ToLowerInvariant() switch
         {
             "int" or "integer" or "long" =>
-                long.TryParse(str, out var l) ? l : (object?)null,
+                long.TryParse(str, out var l) ? l : null,
             "decimal" or "float" or "double" or "number" =>
                 decimal.TryParse(str, System.Globalization.NumberStyles.Any,
-                    System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (object?)null,
+                    System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null,
             "bool" or "boolean" =>
                 str is "1" or "true" or "yes" or "True" or "TRUE" or "YES" ? true :
-                str is "0" or "false" or "no" or "False" or "FALSE" or "NO" ? false : (object?)null,
+                str is "0" or "false" or "no" or "False" or "FALSE" or "NO" ? false : null,
             "datetime" or "date" =>
                 DateTime.TryParse(str, null, System.Globalization.DateTimeStyles.RoundtripKind,
-                    out var dt) ? dt : (object?)null,
+                    out var dt) ? dt : null,
             _ => value
         };
     }
 
-    // ── Delta Sync Helpers ─────────────────────────────────────────────
+    // Delta Sync Helpers
 
-    private async Task<Dictionary<string, string>> LoadDeltaHashesAsync(int importProfileId)
+    private async Task<Dictionary<string, string>> LoadDeltaHashesAsync(int importProfileId, CancellationToken ct = default)
     {
-        await using var conn = new SqliteConnection(_reefDbConfig.ConnectionString);
-        await conn.OpenAsync();
+        await using var conn = new SqliteConnection(reefDbConfig.ConnectionString);
+        await conn.OpenAsync(ct);
 
         var rows = await conn.QueryAsync<(string ReefId, string RowHash)>(
             @"SELECT ReefId, RowHash FROM ImportDeltaSyncState
@@ -660,11 +778,12 @@ public class ImportExecutionService
     private async Task CommitDeltaHashesAsync(
         int importProfileId, int executionId,
         Dictionary<string, string> currentState,
-        Dictionary<string, string> previousState)
+        Dictionary<string, string> previousState,
+        CancellationToken ct = default)
     {
-        await using var conn = new SqliteConnection(_reefDbConfig.ConnectionString);
-        await conn.OpenAsync();
-        await using var tx = await conn.BeginTransactionAsync();
+        await using var conn = new SqliteConnection(reefDbConfig.ConnectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
 
         foreach (var (reefId, hash) in currentState)
         {
@@ -693,10 +812,10 @@ public class ImportExecutionService
     }
 
     private async Task MarkDeltaDeletedAsync(
-        int importProfileId, int executionId, List<string> deletedIds)
+        int importProfileId, int executionId, List<string> deletedIds, CancellationToken ct = default)
     {
-        await using var conn = new SqliteConnection(_reefDbConfig.ConnectionString);
-        await conn.OpenAsync();
+        await using var conn = new SqliteConnection(reefDbConfig.ConnectionString);
+        await conn.OpenAsync(ct);
 
         foreach (var reefId in deletedIds)
         {
@@ -709,7 +828,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Pre/Post SQL Processing ────────────────────────────────────────
+    // Pre/Post SQL Processing─
 
     private static async Task RunSqlProcessAsync(
         string dbType, string connectionString,
@@ -740,14 +859,14 @@ public class ImportExecutionService
         await dbConn.ExecuteAsync(new CommandDefinition(sql, cancellationToken: ct));
     }
 
-    // ── Utility ────────────────────────────────────────────────────────
+    // Utility
 
     private static async Task TimedPhaseAsync(
         string phase,
         ImportProfileExecution exec,
         Dictionary<string, long> timings,
-        CancellationToken ct,
-        Func<Task> work)
+        Func<Task> work,
+        CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
         exec.CurrentPhase = phase;
@@ -771,7 +890,7 @@ public class ImportExecutionService
             sb.Append($"{k}={row[k]};");
 
         var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-        var hash = algorithm.ToUpperInvariant() == "MD5"
+        var hash = string.Equals(algorithm, "MD5", StringComparison.OrdinalIgnoreCase)
             ? MD5.HashData(bytes)
             : SHA256.HashData(bytes);
 
@@ -800,7 +919,7 @@ public class ImportExecutionService
     {
         foreach (var e in errors.Take(100)) // cap at 100 stored errors per batch
         {
-            await _profileService.AddExecutionErrorAsync(new ImportExecutionError
+            await profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
                 ExecutionId = execId,
                 RowNumber = e.RowNumber,
@@ -816,7 +935,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Format / Mapping Deserialization ──────────────────────────────
+    // Format / Mapping Deserialization 
 
     private static ImportFormatConfig ParseFormatConfig(string? json)
     {
@@ -827,9 +946,9 @@ public class ImportExecutionService
 
     private static List<ImportColumnMapping> ParseColumnMappings(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return new List<ImportColumnMapping>();
-        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json) ?? new List<ImportColumnMapping>(); }
-        catch { return new List<ImportColumnMapping>(); }
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json) ?? []; }
+        catch { return []; }
     }
 
     private static System.Data.Common.DbConnection CreateDbConnection(string dbType, string connectionString)

@@ -27,7 +27,7 @@ public class ImportProfileService
         _hashValidator = hashValidator;
     }
 
-    // ── Queries ────────────────────────────────────────────────────────
+    // Queries
 
     public async Task<List<ImportProfileWithNames>> GetAllAsync()
     {
@@ -82,7 +82,7 @@ public class ImportProfileService
         return (await conn.QueryAsync<ImportProfileWithNames>(sql, new { GroupId = groupId })).ToList();
     }
 
-    // ── Create ─────────────────────────────────────────────────────────
+    // Create
 
     public async Task<int> CreateAsync(ImportProfile profile, int? createdByUserId)
     {
@@ -157,7 +157,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Update ─────────────────────────────────────────────────────────
+    // Update
 
     public async Task<bool> UpdateAsync(ImportProfile profile)
     {
@@ -220,7 +220,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Delete ─────────────────────────────────────────────────────────
+    // Delete
 
     public async Task<bool> DeleteAsync(int id)
     {
@@ -244,7 +244,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Enable / Disable ───────────────────────────────────────────────
+    // Enable / Disable
 
     public async Task<bool> SetEnabledAsync(int id, bool enabled)
     {
@@ -256,7 +256,7 @@ public class ImportProfileService
         return rows > 0;
     }
 
-    // ── Execution records ──────────────────────────────────────────────
+    // Execution records
 
     public async Task<int> CreateExecutionAsync(ImportProfileExecution exec)
     {
@@ -299,7 +299,8 @@ public class ImportProfileService
                 DeltaSyncChangedRows = @DeltaSyncChangedRows,
                 DeltaSyncUnchangedRows = @DeltaSyncUnchangedRows,
                 DeltaSyncDeletedRows = @DeltaSyncDeletedRows,
-                PhaseTimingsJson = @PhaseTimingsJson
+                PhaseTimingsJson = @PhaseTimingsJson,
+                OutputTargetsJson = @OutputTargetsJson
             WHERE Id = @Id";
 
         var rows = await conn.ExecuteAsync(sql, exec);
@@ -407,7 +408,7 @@ public class ImportProfileService
         };
     }
 
-    // ── Code Generation ────────────────────────────────────────────────
+    // Code Generation
 
     private static async Task<string> GenerateUniqueCodeAsync(SqliteConnection conn)
     {
@@ -421,7 +422,7 @@ public class ImportProfileService
         return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
     }
 
-    // ── Validation ─────────────────────────────────────────────────────
+    // Validation
 
     private static async Task ValidateAsync(SqliteConnection conn, ImportProfile profile)
     {
@@ -488,6 +489,83 @@ public class ImportProfileService
                     @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 throw new InvalidOperationException(
                     "ReefId Column must be a valid identifier (letters, digits, underscores; cannot start with a digit).");
+        }
+    }
+
+    // Output Target CRUD
+
+    public async Task<List<ImportOutputTarget>> GetOutputTargetsAsync(int importProfileId)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        const string sql = @"
+            SELECT iot.*, d.Name AS DestinationName, CAST(d.Type AS TEXT) AS DestinationType
+            FROM ImportOutputTargets iot
+            LEFT JOIN Destinations d ON iot.DestinationId = d.Id
+            WHERE iot.ImportProfileId = @ImportProfileId
+            ORDER BY iot.SortOrder, iot.Id";
+
+        return (await conn.QueryAsync<ImportOutputTarget>(sql, new { ImportProfileId = importProfileId })).ToList();
+    }
+
+    public async Task<int> AddOutputTargetAsync(ImportOutputTarget target)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        target.CreatedAt = DateTime.UtcNow;
+
+        const string sql = @"
+            INSERT INTO ImportOutputTargets
+                (ImportProfileId, DestinationId, DestinationEndpointId, OutputFormat, FilenameTemplate,
+                 IsEnabled, SortOrder, OnFailure, CreatedAt)
+            VALUES
+                (@ImportProfileId, @DestinationId, @DestinationEndpointId, @OutputFormat, @FilenameTemplate,
+                 @IsEnabled, @SortOrder, @OnFailure, @CreatedAt);
+            SELECT last_insert_rowid();";
+
+        return await conn.ExecuteScalarAsync<int>(sql, target);
+    }
+
+    public async Task<bool> UpdateOutputTargetAsync(ImportOutputTarget target)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        const string sql = @"
+            UPDATE ImportOutputTargets SET
+                DestinationId = @DestinationId,
+                DestinationEndpointId = @DestinationEndpointId,
+                OutputFormat = @OutputFormat,
+                FilenameTemplate = @FilenameTemplate,
+                IsEnabled = @IsEnabled,
+                SortOrder = @SortOrder,
+                OnFailure = @OnFailure
+            WHERE Id = @Id AND ImportProfileId = @ImportProfileId";
+
+        var rows = await conn.ExecuteAsync(sql, target);
+        return rows > 0;
+    }
+
+    public async Task<bool> DeleteOutputTargetAsync(int id)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        var rows = await conn.ExecuteAsync("DELETE FROM ImportOutputTargets WHERE Id = @Id", new { Id = id });
+        return rows > 0;
+    }
+
+    public async Task ReorderOutputTargetsAsync(int importProfileId, List<int> orderedIds)
+    {
+        await using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+
+        for (int i = 0; i < orderedIds.Count; i++)
+        {
+            await conn.ExecuteAsync(
+                "UPDATE ImportOutputTargets SET SortOrder = @Order WHERE Id = @Id AND ImportProfileId = @ProfileId",
+                new { Order = i, Id = orderedIds[i], ProfileId = importProfileId });
         }
     }
 

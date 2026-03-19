@@ -1,19 +1,26 @@
 using Reef.Core.Models;
 using Serilog;
+using System.Text.Json;
 
 namespace Reef.Core.Sources;
 
 /// <summary>
-/// Reads files from the local filesystem.
-/// Supports exact path, glob pattern matching, and file selection strategies.
+/// Reads files from a network share (UNC path / SMB / NFS mount).
+/// On Linux the path is assumed to already be mounted.
+/// On Windows, the source path is accessed directly; Windows impersonation
+/// is not required when the process already runs under a service account with
+/// the necessary share permissions.
 /// </summary>
-public class LocalFileSource : IImportSource
+public class NetworkShareImportSource : IImportSource
 {
     public async Task<List<ImportSourceFile>> FetchAsync(
         ImportProfile profile,
         CancellationToken ct = default)
     {
-        var files = await ResolveFilesAsync(profile, ct);
+        var cfg = ParseConfig(profile);
+        var basePath = GetBasePath(cfg, profile);
+
+        var files = ResolveFiles(basePath, profile.SourceFilePath, profile.SourceFilePattern, profile.SourceFileSelection);
         var result = new List<ImportSourceFile>();
 
         foreach (var path in files)
@@ -22,27 +29,27 @@ public class LocalFileSource : IImportSource
 
             if (!File.Exists(path))
             {
-                Log.Warning("LocalFileSource: file not found: {Path}", path);
+                Log.Warning("NetworkShareImportSource: file not found: {Path}", path);
                 continue;
             }
 
             var info = new FileInfo(path);
-            var stream = new MemoryStream();
+            var ms = new MemoryStream();
             await using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true))
             {
-                await fs.CopyToAsync(stream, ct);
+                await fs.CopyToAsync(ms, ct);
             }
+            ms.Position = 0;
 
-            stream.Position = 0;
             result.Add(new ImportSourceFile
             {
                 Identifier = path,
-                Content = stream,
+                Content = ms,
                 SizeBytes = info.Length,
                 LastModified = info.LastWriteTimeUtc
             });
 
-            Log.Debug("LocalFileSource: loaded {Path} ({Bytes} bytes)", path, info.Length);
+            Log.Debug("NetworkShareImportSource: loaded {Path} ({Bytes} bytes)", path, info.Length);
         }
 
         return result;
@@ -52,11 +59,11 @@ public class LocalFileSource : IImportSource
         ImportProfile profile,
         CancellationToken ct = default)
     {
-        var basePath = GetBasePath(profile);
+        var cfg = ParseConfig(profile);
+        var basePath = GetBasePath(cfg, profile);
+
         if (!Directory.Exists(basePath))
-        {
             return Task.FromResult(new List<SourceFileInfo>());
-        }
 
         var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
         var infos = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly)
@@ -86,10 +93,7 @@ public class LocalFileSource : IImportSource
 
         var archivePath = profile.ArchivePath;
         if (string.IsNullOrWhiteSpace(archivePath))
-        {
-            // Default: create an "archive" subfolder next to the source file
             archivePath = Path.Combine(Path.GetDirectoryName(fileIdentifier)!, "archive");
-        }
 
         Directory.CreateDirectory(archivePath);
 
@@ -100,7 +104,7 @@ public class LocalFileSource : IImportSource
         var dest = Path.Combine(archivePath, newName);
 
         await Task.Run(() => File.Move(fileIdentifier, dest, overwrite: true), ct);
-        Log.Information("LocalFileSource: archived {Source} → {Dest}", fileIdentifier, dest);
+        Log.Information("NetworkShareImportSource: archived {Source} → {Dest}", fileIdentifier, dest);
         return true;
     }
 
@@ -108,10 +112,11 @@ public class LocalFileSource : IImportSource
         ImportProfile profile,
         CancellationToken ct = default)
     {
-        var basePath = GetBasePath(profile);
+        var cfg = ParseConfig(profile);
+        var basePath = GetBasePath(cfg, profile);
 
         if (string.IsNullOrWhiteSpace(basePath))
-            return Task.FromResult<(bool, string?)>((false, "No file path or base directory configured"));
+            return Task.FromResult<(bool, string?)>((false, "No UNC path configured"));
 
         if (!string.IsNullOrWhiteSpace(profile.SourceFilePath) && File.Exists(profile.SourceFilePath))
             return Task.FromResult<(bool, string?)>((true, $"File exists: {profile.SourceFilePath}"));
@@ -120,74 +125,85 @@ public class LocalFileSource : IImportSource
         {
             var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
             var count = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly).Length;
-            return Task.FromResult<(bool, string?)>((true, $"Directory exists. {count} matching file(s) found."));
+            return Task.FromResult<(bool, string?)>((true, $"Share path accessible. {count} matching file(s) found."));
         }
 
-        return Task.FromResult<(bool, string?)>((false, $"Path not found: {basePath}"));
+        return Task.FromResult<(bool, string?)>((false, $"Path not accessible: {basePath}"));
     }
 
     // Helpers
 
-    private async Task<List<string>> ResolveFilesAsync(ImportProfile profile, CancellationToken ct)
+    private static List<string> ResolveFiles(string basePath, string? exactPath, string? pattern, string fileSelection)
     {
-        // Exact file path overrides everything
-        if (!string.IsNullOrWhiteSpace(profile.SourceFilePath) && profile.SourceFileSelection == "Exact")
-        {
-            return new List<string> { profile.SourceFilePath };
-        }
-
-        var basePath = GetBasePath(profile);
-        if (string.IsNullOrWhiteSpace(basePath))
-            throw new InvalidOperationException("No source path configured for local file import");
+        if (!string.IsNullOrWhiteSpace(exactPath) && fileSelection == "Exact")
+            return new List<string> { exactPath };
 
         if (!Directory.Exists(basePath))
         {
-            if (File.Exists(basePath))
-                return new List<string> { basePath }; // basePath is actually a file path
-            throw new InvalidOperationException($"Source directory not found: {basePath}");
+            if (File.Exists(basePath)) return new List<string> { basePath };
+            throw new InvalidOperationException($"Network share path not found: {basePath}");
         }
 
-        var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
-        var matches = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly);
+        var glob = string.IsNullOrWhiteSpace(pattern) ? "*" : pattern;
+        var matches = Directory.GetFiles(basePath, glob, SearchOption.TopDirectoryOnly);
 
-        if (matches.Length == 0)
-        {
-            Log.Warning("LocalFileSource: no files matching '{Pattern}' in {Directory}", pattern, basePath);
-            return new List<string>();
-        }
+        if (matches.Length == 0) return new List<string>();
 
-        return profile.SourceFileSelection switch
+        return fileSelection switch
         {
             "All" => matches.ToList(),
             "Oldest" => new List<string> { matches.MinBy(File.GetLastWriteTimeUtc)! },
-            _ => new List<string> { matches.MaxBy(File.GetLastWriteTimeUtc)! } // Latest (default)
+            _ => new List<string> { matches.MaxBy(File.GetLastWriteTimeUtc)! }
         };
     }
 
-    private static string GetBasePath(ImportProfile profile)
+    private static string GetBasePath(NetworkShareSourceConfig cfg, ImportProfile profile)
     {
-        // SourceFilePath may be an absolute file path or a directory
         if (!string.IsNullOrWhiteSpace(profile.SourceFilePath))
         {
             var fi = new FileInfo(profile.SourceFilePath);
             return fi.DirectoryName ?? profile.SourceFilePath;
         }
 
-        // Try to extract basePath from SourceConfig JSON
-        if (!string.IsNullOrWhiteSpace(profile.SourceConfig))
+        var base_ = cfg.UncPath ?? cfg.BasePath ?? "";
+
+        if (!string.IsNullOrWhiteSpace(cfg.SubFolder))
+            base_ = Path.Combine(base_, cfg.SubFolder);
+
+        return base_;
+    }
+
+    private NetworkShareSourceConfig ParseConfig(ImportProfile profile)
+    {
+        var json = profile.SourceConfig ?? "{}";
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        string? Get(params string[] keys)
         {
-            try
-            {
-                using var doc = System.Text.Json.JsonDocument.Parse(profile.SourceConfig);
-                if (doc.RootElement.TryGetProperty("path", out var pathEl) ||
-                    doc.RootElement.TryGetProperty("basePath", out pathEl))
-                {
-                    return pathEl.GetString() ?? string.Empty;
-                }
-            }
-            catch { /* ignore */ }
+            foreach (var key in keys)
+                if (root.TryGetProperty(key, out var el)) return el.GetString();
+            return null;
         }
 
-        return string.Empty;
+        return new NetworkShareSourceConfig
+        {
+            UncPath = Get("uncPath", "UncPath"),
+            BasePath = Get("basePath", "BasePath"),
+            SubFolder = Get("subFolder", "SubFolder"),
+            Username = Get("username", "Username"),
+            Password = Get("password", "Password"),
+            Domain = Get("domain", "Domain")
+        };
+    }
+
+    private sealed class NetworkShareSourceConfig
+    {
+        public string? UncPath { get; set; }
+        public string? BasePath { get; set; }
+        public string? SubFolder { get; set; }
+        public string? Username { get; set; }
+        public string? Password { get; set; }
+        public string? Domain { get; set; }
     }
 }

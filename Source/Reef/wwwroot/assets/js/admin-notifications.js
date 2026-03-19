@@ -345,13 +345,4 @@ function toggleCTASettings() {
  * Initialize notifications when page loads
  * Hook into the admin tab system
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // Override the showTab function to load notifications when needed
-    const originalShowTab = window.showTab;
-    window.showTab = function(tabName) {
-        originalShowTab(tabName);
-        if (tabName === 'notifications') {
-            loadNotificationSettings();
-        }
-    };
-});
+// loadNotificationSettings() is called directly from showTab() in admin.html

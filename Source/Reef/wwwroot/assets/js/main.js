@@ -1,3 +1,87 @@
+// Theme 
+// Pages that should never use dark mode (light-only auth pages)
+(function () {
+    const noDarkModePaths = ['/index', '/otp', '/logoff'];
+    const currentPath = window.location.pathname;
+    const isNoDarkPage = noDarkModePaths.some(p => 
+        currentPath === p || currentPath === p + '.html'
+    );
+    if (isNoDarkPage) return;
+    
+    const saved = localStorage.getItem('reef_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.classList.add('dark');
+    }
+})();
+
+// Global API base URL — defined here so page scripts can reference it on both
+// initial load and SPA navigation (the REEF:SCRIPTS head injection only runs
+// on initial server render).
+window.API_BASE = window.location.origin;
+
+// Auth fallbacks (in case auth.js hasn't loaded or hasn't executed yet)
+window.clearAuth = window.clearAuth || function() {
+    localStorage.removeItem('reef_token');
+    localStorage.removeItem('reef_username');
+    localStorage.removeItem('reef_role');
+    localStorage.removeItem('reef_display_name');
+};
+window.redirectToLogin = window.redirectToLogin || function() {
+    window.location.href = '/logoff';
+};
+window.logout = window.logout || function() {
+    window.clearAuth();
+    window.redirectToLogin();
+};
+
+window.toggleTheme = function () {
+    const noDarkModePaths = ['/index', '/otp', '/logoff'];
+    const currentPath = window.location.pathname;
+    const isNoDarkPage = noDarkModePaths.some(p => 
+        currentPath === p || currentPath === p + '.html'
+    );
+    if (isNoDarkPage) return;
+    
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('reef_theme', isDark ? 'dark' : 'light');
+    syncThemeToggleButton(isDark);
+};
+
+function syncThemeToggleButton(isDark) {
+    const btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+    const label = btn.querySelector('.theme-toggle-label');
+    const icon = btn.querySelector('i[data-lucide]');
+    if (label) label.textContent = isDark ? 'Light mode' : 'Dark mode';
+    if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        queueLucideRender();
+    }
+}
+
+// -----------------------------
+// User menu toggle (global, available on every layout page)
+// -----------------------------
+let userMenuExpanded = false;
+
+window.toggleUserMenu = function () {
+    const menu = document.getElementById('user-menu');
+    const chevron = document.getElementById('chevron-icon');
+    if (!menu) return;
+    userMenuExpanded = !userMenuExpanded;
+    if (userMenuExpanded) {
+        menu.classList.remove('user-menu-collapsed');
+        menu.classList.add('user-menu-expanded');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    } else {
+        menu.classList.remove('user-menu-expanded');
+        menu.classList.add('user-menu-collapsed');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+    queueLucideRender();
+};
+
 // -----------------------------
 // Safe LocalStorage Access
 // -----------------------------
@@ -34,19 +118,6 @@ window.sha256 = async function(str) {
         function sha256js(ascii){var K=[1116352408,1899447441,-1245643825,-373957723,961987163,1508970993,-1841331548,-1424204075,-670586216,310598401,607225278,1426881987,1925078388,-2132889090,-1680079193,-1046744716,-459576895,-272742522,264347078,604807628,770255983,1249150122,1555081692,1996064986,-1740746414,-1473132947,-1341970488,-1084653625,-958395405,-710438585,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,-2117940946,-1838011259,-1564481375,-1474664885,-1035236496,-949202525,-778901479,-694614492,-200395387,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,-2067236844,-1933114872,-1866530822,-1538233109,-1090935817,-965641998],H=[1779033703,-1150833019,1013904242,-1521486534,1359893119,-1694144372,528734635,1541459225],l=ascii.length,s=[],i=0;for(;i<l;++i)s[i>>2]|=ascii.charCodeAt(i)<<24-8*(i%4);s[i>>2]|=0x80<<24-8*(i%4);s[(i+64>>9<<4)+15]=l*8;for(var w=[],j=0;j<s.length;j+=16){var a=H.slice(0),b=H.slice(0);for(var k=0;k<64;++k){var t=a[7]+(r(a[4],6)^r(a[4],11)^r(a[4],25))+(a[6]^(a[4]&a[5]^a[6]&a[4]))+K[k]+(w[k]=k<16?s[j+k]:((r(w[k-2],17)^r(w[k-2],19)^w[k-2]>>>10)+w[k-7]+(r(w[k-15],7)^r(w[k-15],18)^w[k-15]>>>3)+w[k-16])|0);a=[(t+(r(a[0],2)^r(a[0],13)^r(a[0],22))+(a[0]&a[1]^a[0]&a[2]^a[1]&a[2]))|0].concat(a);a[4]=(a[4]+t)|0;a.pop()}for(var k=0;k<8;++k)H[k]=(H[k]+a[k])|0}return H.map(function(h){return('00000000'+(h>>>0).toString(16)).slice(-8)}).join('')}
         return Promise.resolve(sha256js(str));
     }
-};
-
-// -----------------------------
-// Tailwind CSS Configuration
-// -----------------------------
-tailwind.config = {
-    theme: {
-        extend: {
-            fontFamily: {
-                inter: ['Inter', 'sans-serif'],
-            },
-        },
-    },
 };
 
 // -----------------------------
@@ -250,8 +321,13 @@ function setUserSidebarInfo() {
     const nameToDisplay = displayName || username;
 
     if (usernameDisplay) usernameDisplay.textContent = nameToDisplay.charAt(0).toUpperCase() + nameToDisplay.slice(1);
-    if (userInitial) userInitial.textContent = nameToDisplay[0].toUpperCase();
-    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'System Admin' : 'Local User';
+    if (userInitial) {
+        // Target the inner <span> to preserve the ::before pseudo-element z-index layer
+        const initialSpan = userInitial.querySelector('span');
+        if (initialSpan) initialSpan.textContent = nameToDisplay[0].toUpperCase();
+        else userInitial.textContent = nameToDisplay[0].toUpperCase();
+    }
+    if (userRoleDisplay) userRoleDisplay.textContent = (role === 'Admin' || role === 'Administrator') ? 'Reef Admin' : 'Local User';
 }
 
 // -----------------------------
@@ -292,8 +368,8 @@ window.showToast = function(message, type = 'info', persistent = false) {
         copyToClipboard(text).then(ok => {
             if (!ok) return;
             // Brief ring feedback
-            toast.classList.add('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50');
-            setTimeout(() => toast.classList.remove('ring-2', 'ring-white', 'ring-inset', 'ring-opacity-50'), 500);
+            toast.classList.add('ring-2', 'ring-white/50', 'ring-inset');
+            setTimeout(() => toast.classList.remove('ring-2', 'ring-white/50', 'ring-inset'), 500);
         });
     });
 
@@ -404,7 +480,7 @@ function fadeOut(el) {
 /**
  * Render Lucide icons synchronously so they are present before first paint.
  * Calling this from an inline <script> block during body parsing means the
- * browser hasn't painted yet — icons appear on the very first frame with no
+ * browser hasn't painted yet, icons appear on the very first frame with no
  * pop-in flash. Safe to call multiple times; already-converted icons are skipped.
  */
 window.queueLucideRender = function() {
@@ -416,6 +492,75 @@ window.queueLucideRender = function() {
         }
     }
 }
+
+// -----------------------------
+// Shared Confirmation Modal
+// -----------------------------
+/**
+ * Display an in-app confirmation dialog instead of the browser's native confirm().
+ * Returns a Promise that resolves to true (confirmed) or false (cancelled/dismissed).
+ *
+ * @param {object} options
+ * @param {string} options.title       - Dialog heading (required)
+ * @param {string} [options.message]   - Supporting explanation shown below the heading
+ * @param {string} [options.confirmText='Confirm'] - Label for the confirm button
+ * @param {string} [options.cancelText='Cancel']   - Label for the cancel button
+ * @param {boolean} [options.danger=false]          - Use red confirm button for destructive actions
+ * @returns {Promise<boolean>}
+ */
+window.showConfirmModal = function({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', danger = false } = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[9999] flex items-center justify-center';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.setAttribute('aria-labelledby', 'reef-confirm-title');
+
+        const confirmBtnClass = danger
+            ? 'px-4 py-2 text-sm font-semibold text-white bg-red-600 border border-transparent rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors active:scale-95'
+            : 'px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors active:scale-95';
+
+        overlay.innerHTML = `
+            <div class="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md mx-4 p-6">
+                <h3 id="reef-confirm-title" class="text-base font-semibold text-gray-900 mb-2">${escapeHtml(title || 'Are you sure?')}</h3>
+                ${message ? `<p class="text-sm text-gray-600 mb-6">${escapeHtml(message)}</p>` : '<div class="mb-4"></div>'}
+                <div class="flex justify-end space-x-3">
+                    <button id="reef-confirm-cancel" class="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors active:scale-95">
+                        ${escapeHtml(cancelText)}
+                    </button>
+                    <button id="reef-confirm-ok" class="${confirmBtnClass}">
+                        ${escapeHtml(confirmText)}
+                    </button>
+                </div>
+            </div>`;
+
+        function cleanup(result) {
+            overlay.remove();
+            resolve(result);
+        }
+
+        overlay.querySelector('#reef-confirm-ok').addEventListener('click', () => cleanup(true));
+        overlay.querySelector('#reef-confirm-cancel').addEventListener('click', () => cleanup(false));
+
+        overlay.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { cleanup(false); return; }
+            if (e.key === 'Tab') {
+                const focusable = Array.from(overlay.querySelectorAll('button'));
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault(); last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault(); first.focus();
+                }
+            }
+        });
+
+        document.body.appendChild(overlay);
+        // Default focus: cancel button, safer default for destructive actions
+        overlay.querySelector('#reef-confirm-cancel').focus();
+    });
+};
 
 // -----------------------------
 // Modals
@@ -439,6 +584,22 @@ function closeModalOnClickOutside(event, modalId, closeFunction) {
     const modal = document.getElementById(modalId);
     if (event.target === modal) closeFunction();
 }
+
+// Global ESC key handler, closes the topmost visible page modal
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    // showConfirmModal manages its own ESC; skip if it's open
+    if (document.querySelector('[aria-labelledby="reef-confirm-title"]')) return;
+    const visible = [...document.querySelectorAll('.fixed.inset-0')]
+        .filter(el => !el.classList.contains('hidden') && el.style.display !== 'none');
+    if (!visible.length) return;
+    const modal = visible[visible.length - 1];
+    const btn = modal.querySelector('button[aria-label="Close"], button[aria-label="close"]')
+        || modal.querySelector('button[onclick*="close"], button[onclick*="Close"]')
+        || [...modal.querySelectorAll('button[type="button"]')]
+            .find(b => /cancel/i.test(b.textContent.trim()));
+    if (btn) btn.click();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     const helpModal = document.getElementById('help-modal');
@@ -614,6 +775,85 @@ document.addEventListener('DOMContentLoaded', () => {
     enhanceTooltips();
     responsiveGrids();
     setUserSidebarInfo();
+
+    // aria-current="page" on active nav link 
+    // Marks the current page's nav link for screen readers without requiring
+    // server-side changes to the {{NAV_xxx}} placeholders.
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('nav a[href]').forEach(a => {
+        if (a.getAttribute('href') === currentPath) {
+            a.setAttribute('aria-current', 'page');
+        }
+    });
+
+    // Theme toggle button sync──
+    // Set correct icon/label on load based on active theme.
+    syncThemeToggleButton(document.documentElement.classList.contains('dark'));
+
+    // aria-expanded sync on user menu toggle 
+    // The toggleUserMenu() function is defined inline per-page. Rather than
+    // modifying every page, observe class changes on #user-menu and keep the
+    // toggle button's aria-expanded in sync.
+    const userMenu = document.getElementById('user-menu');
+    const userMenuToggle = document.getElementById('user-menu-toggle');
+    if (userMenu && userMenuToggle) {
+        new MutationObserver(() => {
+            const expanded = userMenu.classList.contains('user-menu-expanded');
+            userMenuToggle.setAttribute('aria-expanded', String(expanded));
+        }).observe(userMenu, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // Global Escape key handler──
+    // Closes the topmost open overlay (help modal, then user menu).
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+
+        // 1. Close help modal if open
+        const helpModal = document.getElementById('help-modal');
+        if (helpModal && !helpModal.classList.contains('hidden')) {
+            closeHelpModal();
+            return;
+        }
+
+        // 2. Close shared confirm modal if open
+        const confirmOverlay = document.querySelector('[aria-labelledby="reef-confirm-title"]');
+        if (confirmOverlay) {
+            confirmOverlay.querySelector('#reef-confirm-cancel')?.click();
+            return;
+        }
+
+        // 3. Close any open *-options-menu dropdowns (connections, destinations, admin)
+        const openOptionsMenu = document.querySelector(
+            '#connection-options-menu:not(.hidden), #destination-options-menu:not(.hidden), #user-options-menu:not(.hidden)'
+        );
+        if (openOptionsMenu) {
+            openOptionsMenu.classList.add('hidden');
+            // Return focus to the trigger button
+            const trigger = openOptionsMenu.closest('.relative')?.querySelector('button[aria-expanded]');
+            trigger?.setAttribute('aria-expanded', 'false');
+            trigger?.focus();
+            return;
+        }
+
+        // 4. Close any open job-action menus (jobs page)
+        const openJobMenu = document.querySelector('[id^="job-menu-"]:not([id*="-btn-"]):not(.hidden)');
+        if (openJobMenu) {
+            const jobId = openJobMenu.id.replace('job-menu-', '');
+            openJobMenu.classList.add('hidden');
+            const btn = document.getElementById(`job-menu-btn-${jobId}`);
+            btn?.setAttribute('aria-expanded', 'false');
+            btn?.focus();
+            return;
+        }
+
+        // 5. Collapse user menu if expanded
+        if (userMenu && userMenu.classList.contains('user-menu-expanded')) {
+            if (typeof toggleUserMenu === 'function') {
+                toggleUserMenu();
+                userMenuToggle?.focus();
+            }
+        }
+    });
 
     // Update approval badge if not on login page
     const menuLink = document.querySelector('a[href="/email-approvals"]');

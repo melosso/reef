@@ -187,6 +187,10 @@ public class Program
             var transformationOptionsStats = await transformationOptionsMigration.GetStatsAsync();
             Log.Debug("TransformationOptions Migration Stats: {@Stats}", transformationOptionsStats);
 
+            // Run MFA migration to add MFA columns to Users table
+            var mfaMigration = new MfaMigration(connectionString);
+            await mfaMigration.ApplyAsync();
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
@@ -309,6 +313,8 @@ public class Program
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
+        services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
+        services.AddScoped<ImportFileOutputService>();
         services.AddScoped<ImportExecutionService>();
         // Notification system - throttler is singleton to maintain state across requests
         services.AddSingleton<NotificationThrottler>();
@@ -469,15 +475,19 @@ public class Program
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
 
-        // Serve HTML views from Views folder
+        // Serve HTML views from Views folder (try both casings for Linux compatibility)
         var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
+        if (!Directory.Exists(viewsFolder))
+            viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
         if (!Directory.Exists(viewsFolder))
         {
             var parentDir = Directory.GetParent(AppContext.BaseDirectory);
             var projectRoot = parentDir?.Parent?.Parent?.FullName;
             if (projectRoot != null)
             {
-                viewsFolder = Path.Combine(projectRoot, "views");
+                viewsFolder = Path.Combine(projectRoot, "Views");
+                if (!Directory.Exists(viewsFolder))
+                    viewsFolder = Path.Combine(projectRoot, "views");
             }
         }
 
@@ -488,7 +498,7 @@ public class Program
             // Pages served as static files (no layout injection)
             var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
-                "index.html", "logoff.html", "404.html"
+                "index.html", "logoff.html", "404.html", "otp.html"
             };
 
             // Authenticated pages that get the shared layout
@@ -504,12 +514,13 @@ public class Program
                 "executions.html",
                 "email-approvals.html",
                 "documentation.html",
-                "admin.html"
+                "admin.html",
+                "account.html"
             };
 
             var navPages = new[] { "dashboard", "connections", "destinations", "templates",
                                    "profiles", "jobs", "groups", "executions",
-                                   "email-approvals", "documentation", "admin" };
+                                   "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
             var layoutTemplate = File.Exists(layoutPath)
@@ -590,8 +601,8 @@ public class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-slate-900 text-slate-100"
-                                : "hover:bg-slate-700 hover:text-slate-100";
+                                ? "bg-slate-800 text-slate-100"
+                                : "hover:bg-slate-800 hover:text-slate-100";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
 
@@ -627,6 +638,7 @@ public class Program
 
         // API endpoints
         AuthEndpoints.Map(app);
+        AccountEndpoints.Map(app);
         ConnectionsEndpoints.Map(app);
         ProfilesEndpoints.Map(app);
         GroupsEndpoints.Map(app);
@@ -635,13 +647,9 @@ public class Program
         WebhooksEndpoints.Map(app);
         SystemInfoEndpoints.Map(app);
         AdminEndpoints.Map(app);
-
-        // New endpoints for Jobs, Destinations, and Query Templates (extension methods)
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
-
-        // Import Profile endpoints
         ImportProfilesEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
@@ -649,12 +657,16 @@ public class Program
         {
             var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
             if (!Directory.Exists(viewsFolder))
+                viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
+            if (!Directory.Exists(viewsFolder))
             {
                 var parentDir = Directory.GetParent(AppContext.BaseDirectory);
                 var projectRoot = parentDir?.Parent?.Parent?.FullName;
                 if (projectRoot != null)
                 {
-                    viewsFolder = Path.Combine(projectRoot, "views");
+                    viewsFolder = Path.Combine(projectRoot, "Views");
+                    if (!Directory.Exists(viewsFolder))
+                        viewsFolder = Path.Combine(projectRoot, "views");
                 }
             }
 

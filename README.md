@@ -68,7 +68,7 @@ Upon starting the first time, you can login with the default credentials `admin@
 
 Download the latest release from Releases.
 
-1. **Install .NET 9 Runtime:**
+1. **Install .NET 10 Runtime:**
 ```powershell
    winget install --id Microsoft.DotNet.Runtime.9 -e
 ```

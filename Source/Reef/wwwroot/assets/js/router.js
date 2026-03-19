@@ -1,4 +1,4 @@
-// router.js — Lightweight SPA router for Reef
+// router.js
 // Intercepts same-origin navigation, swaps only the content div, and keeps the
 // sidebar persistent so it never flashes or re-renders between page loads.
 // Falls back to a full navigation on any error.
@@ -12,14 +12,14 @@
         return document.querySelector('.flex-1.flex.flex-col.overflow-hidden');
     }
 
-    // ─── Page timer tracking ──────────────────────────────────────────────────
+    //  Page timer tracking
     // Intercept setInterval / setTimeout globally so timers created by the
     // initial server-rendered page AND by SPA-navigated page scripts are all
     // tracked and can be cancelled when the user navigates away.
     //
     // NOTE: This patch runs after main.js / auth.js (head scripts) but before
     // the page's inline <body> scripts, so shared-script timers (toast fades,
-    // tooltip hides, resize debounce) are NOT captured — only page-specific
+    // tooltip hides, resize debounce) are NOT captured, only page-specific
     // polling intervals are.
     const _pageTimerIds = [];
     const _origSetInterval  = window.setInterval.bind(window);
@@ -58,14 +58,14 @@
         _pageTimerIds.length = 0;
     }
 
-    // ─── External script loader ───────────────────────────────────────────────
+    //  External script loader
     // Track every <script src> already in the document so we only load each
     // page-specific script once (filter.js, connections.js, etc.)
     const loadedSrcs = new Set(
         [...document.querySelectorAll('script[src]')].map(s => s.src)
     );
 
-    // ─── Tag initial server-rendered extras ───────────────────────────────────
+    //  Tag initial server-rendered extras 
     // On first SPA navigation we need to remove the modals and scripts that the
     // server injected outside the .flex.h-screen wrapper (they belong to the
     // current page and must be replaced with the next page's equivalents).
@@ -98,7 +98,7 @@
         });
     }
 
-    // ─── Inline script executor ───────────────────────────────────────────────
+    //  Inline script executor
     // Runs the inline <script> blocks from the newly loaded content.
     // Pages register their initialization logic via DOMContentLoaded listeners,
     // which never fire again in an SPA.  We temporarily patch addEventListener
@@ -122,7 +122,7 @@
         };
 
         // Snapshot window.onload before execution so we can detect if a script
-        // assigned a new handler.  Avoid Object.defineProperty — onload may live
+        // assigned a new handler.  Avoid Object.defineProperty, onload may live
         // on the prototype and that path throws TypeError on restore.
         const onloadBefore = window.onload;
 
@@ -130,7 +130,7 @@
         //
         // Problem: top-level `const`/`let` declarations are bound to the
         // global *lexical* environment.  Once declared they cannot be
-        // re-declared — not even as `var` — which causes a SyntaxError the
+        // re-declared, not even as `var`, which causes a SyntaxError the
         // second time the same (or a sibling) page script runs.
         //
         // Solution: wrap every script in an IIFE so its let/const are
@@ -138,7 +138,7 @@
         // To keep `onclick="fn()"` handlers working, hoist top-level
         // `function` declarations to `window.fn = function` *before* wrapping
         // so they land on the global object.  Inner (nested) functions that
-        // happen to start a line are also exposed on window — harmless in
+        // happen to start a line are also exposed on window, harmless in
         // practice for this code-base.
         [...container.querySelectorAll('script:not([src])')].forEach(old => {
             const s = document.createElement('script');
@@ -166,21 +166,23 @@
         }
     }
 
-    // ─── Active nav updater ───────────────────────────────────────────────────
+    //  Active nav updater
     function setActiveNav(pageName) {
         document.querySelectorAll('#sidebar nav a[href]').forEach(a => {
             const href = a.getAttribute('href').replace(/^\//, '');
-            a.classList.remove('bg-slate-900', 'text-slate-100',
-                               'hover:bg-slate-700', 'hover:text-slate-100');
+            a.classList.remove('bg-slate-800', 'bg-slate-900', 'text-slate-100',
+                               'hover:bg-slate-700', 'hover:bg-slate-800', 'hover:text-slate-100');
+            a.removeAttribute('aria-current');
             if (href === pageName) {
-                a.classList.add('bg-slate-900', 'text-slate-100');
+                a.classList.add('bg-slate-800', 'text-slate-100');
+                a.setAttribute('aria-current', 'page');
             } else {
-                a.classList.add('hover:bg-slate-700', 'hover:text-slate-100');
+                a.classList.add('hover:bg-slate-800', 'hover:text-slate-100');
             }
         });
     }
 
-    // ─── Core navigate function ───────────────────────────────────────────────
+    //  Core navigate function
     async function navigate(url, pushState) {
         let response;
         try {
@@ -226,7 +228,7 @@
         const newContent = newDoc.querySelector('.' + CONTENT_CLASS.replace(/ /g, '.'));
         if (!newContent) { window.location.href = url; return; }
 
-        // Swap content — use View Transitions API when available for a smooth
+        // Swap content, use View Transitions API when available for a smooth
         // cross-fade; fall back to an instant swap on older browsers.
         const current = getContentEl();
         if (!current) { window.location.href = url; return; }
@@ -250,7 +252,7 @@
             history.pushState({ url }, '', url);
         }
 
-        // ─── Sync page extras (modals, scripts outside the flex wrapper) ──────
+        //  Sync page extras (modals, scripts outside the flex wrapper) 
         // Pages put their modals and the main <script> block AFTER the closing
         // </div> of .flex.h-screen, making them direct children of <body>.
         // The content-div swap above only moves the inner flex-1 element; these
@@ -317,7 +319,7 @@
         newContent.scrollTop = 0;
     }
 
-    // ─── Click interception ───────────────────────────────────────────────────
+    //  Click interception
     document.addEventListener('click', function (e) {
         const a = e.target.closest('a[href]');
         if (!a) return;
@@ -337,10 +339,15 @@
         navigate(href, true);
     });
 
-    // ─── Back / forward ───────────────────────────────────────────────────────
+    //  Back / forward
     window.addEventListener('popstate', function (e) {
         navigate(window.location.href, false);
     });
+
+    // Set active nav state from current URL on initial page load
+    // (server only injects CSS classes; aria-current must be set client-side)
+    const initialPage = window.location.pathname.replace(/^\//, '') || 'dashboard';
+    setActiveNav(initialPage);
 
     // Record initial URL in history state
     history.replaceState({ url: window.location.href }, '', window.location.href);

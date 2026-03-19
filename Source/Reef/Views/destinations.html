@@ -1,15 +1,15 @@
 <!--REEF:TITLE-->Destinations · Reef<!--/REEF:TITLE-->
 <!--REEF:SCRIPTS--><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
-                <div class="flex items-center justify-between px-6 py-3">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Destinations</h1>
-                    <div class="flex space-x-3 items-center">
-                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 flex items-center justify-center transition-colors duration-150" aria-label="Help">
-                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+                <div class="flex items-center justify-between px-6 h-16">
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Destinations</h1>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Help">
+                            <i data-lucide="help-circle" class="h-4 w-4"></i>
                         </button>
-                        <button onclick="openAddDestinationModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
-                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                        <button onclick="openAddDestinationModal()" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors active:scale-95">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
                             Add Destination
                         </button>
                     </div>
@@ -33,7 +33,7 @@
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-6">
                         <div id="destinations-list" class="space-y-4">
-                            <p class="text-sm text-gray-500">Loading destinations...</p>
+                            <p class="text-sm text-slate-500">Loading destinations...</p>
                         </div>
                     </div>
                 </div>
@@ -42,20 +42,21 @@
     </div>
 
     <!-- Add Destination Modal -->
-    <div id="add-destination-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+    <div id="add-destination-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-2xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="destination-modal-title" class="text-lg font-semibold text-gray-900">Add New Destination</h3>
+                <h3 id="destination-modal-title" class="text-lg font-semibold text-slate-900">New Destination</h3>
                 <div class="flex items-center space-x-2">
                     <!-- More Options Menu (only visible when editing) -->
                     <div id="destination-more-options" class="relative hidden">
-                        <button type="button" onclick="toggleDestinationOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1">
+                        <button type="button" onclick="toggleDestinationOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1" aria-haspopup="true" aria-expanded="false" aria-controls="destination-options-menu" aria-label="More options">
                             <i data-lucide="more-vertical" class="h-6 w-6"></i>
                         </button>
-                        <div id="destination-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div id="destination-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200" role="menu">
                             <div class="py-1">
-                                <button type="button" onclick="toggleDestinationActiveStatus()" 
-                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                <button type="button" onclick="toggleDestinationActiveStatus()"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                        role="menuitem">
                                     <i data-lucide="power" class="h-4 w-4 mr-2"></i>
                                     <span id="destination-toggle-text">Disable</span>
                                 </button>
@@ -70,16 +71,16 @@
             
             <form id="add-destination-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Name</label>
                     <input type="text" id="destination-name" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                            placeholder="Production S3 Bucket">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
                     <select id="destination-type" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                             onchange="updateConfigFields()">
                         <option value="">Select type...</option>
                         <option value="Local">File System</option>
@@ -94,9 +95,9 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
                     <textarea id="destination-description" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                               placeholder="Optional description"></textarea>
                 </div>
 
@@ -105,9 +106,9 @@
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tags</label>
                     <input type="text" id="destination-tags"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                            placeholder="production, aws">
                     <p class="text-xs text-gray-500 mt-1">Comma-separated tags</p>
                 </div>
@@ -127,19 +128,19 @@
                         <input type="hidden" id="ep-id">
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">Name *</label>
-                            <input type="text" id="ep-name" class="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            <input type="text" id="ep-name" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="e.g. Items Webhook">
                         </div>
                         <div id="ep-http-fields" class="hidden space-y-2">
                             <div>
                                 <label class="block text-xs font-medium text-gray-700 mb-1">Path Suffix</label>
-                                <input type="text" id="ep-path-suffix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                <input type="text" id="ep-path-suffix" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono"
                                        placeholder="triggers/webhook/600/Items">
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-700 mb-1">Method</label>
-                                    <select id="ep-method" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                    <select id="ep-method" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="">Inherit (POST)</option>
                                         <option value="GET">GET</option>
                                         <option value="POST">POST</option>
@@ -150,7 +151,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-gray-700 mb-1">Upload Format</label>
-                                    <select id="ep-upload-format" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                    <select id="ep-upload-format" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="">Inherit</option>
                                         <option value="raw">Raw/Binary</option>
                                         <option value="multipart">Multipart</option>
@@ -161,26 +162,26 @@
                             <div>
                                 <label class="block text-xs font-medium text-gray-700 mb-1">Extra Headers (JSON)</label>
                                 <textarea id="ep-extra-headers" rows="2"
-                                          class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                                          class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono"
                                           placeholder='{"X-Tenant": "600"}'></textarea>
                             </div>
                         </div>
                         <div id="ep-sftp-fields" class="hidden">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Remote Path</label>
-                            <input type="text" id="ep-remote-path" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                            <input type="text" id="ep-remote-path" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono"
                                    placeholder="/exports/orders/">
                         </div>
                         <div id="ep-s3-fields" class="hidden">
                             <label class="block text-xs font-medium text-gray-700 mb-1">Key Prefix</label>
-                            <input type="text" id="ep-key-prefix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm font-mono"
+                            <input type="text" id="ep-key-prefix" class="w-full h-7 px-2 py-0.5 border border-slate-200 rounded text-sm bg-white outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono"
                                    placeholder="exports/tenant-600/">
                         </div>
                         <div class="flex justify-between gap-2">
                             <button type="button" id="ep-test-btn" onclick="testEndpoint()"
-                                    class="hidden text-xs px-2 py-1 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Test</button>
+                                    class="hidden text-xs px-2 py-1 border border-slate-200 rounded text-slate-700 hover:bg-slate-50 transition-colors">Test</button>
                             <div class="flex gap-2 ml-auto">
                                 <button type="button" onclick="cancelEndpointForm()"
-                                        class="text-xs px-2 py-1 border border-gray-300 rounded text-gray-600 hover:bg-gray-100">Cancel</button>
+                                        class="text-xs px-2 py-1 border border-slate-200 rounded text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
                                 <button type="button" onclick="saveEndpoint()"
                                         class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Save Endpoint</button>
                             </div>
@@ -188,9 +189,9 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-4 border-t">
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200">
                     <button type="button" id="test-destination-btn" onclick="testDestination()" 
-                            class="disabled px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center">
+                            class="disabled h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center">
                         <svg id="test-destination-spinner" class="animate-spin h-4 w-4 mr-2 text-gray-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -198,19 +199,19 @@
                         <span id="test-destination-btn-text">Test Connection</span>
                     </button>
                     <button type="button" onclick="closeAddDestinationModal()" 
-                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
                         Save Destination
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
             <div id="help-modal-content-area">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
@@ -264,15 +265,15 @@
                 case 'Local':
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Base Path</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Base Path</label>
                             <input type="text" id="config-BasePath" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="C:/Apps/reef/exports or ./exports">
                             <p class="text-xs text-gray-500 mt-1">Absolute path (C:/data) or relative path (./exports, exports/data)</p>
                         </div>
                         <div class="flex items-center mt-2">
                             <input type="checkbox" id="config-UseRelativePath"
-                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                             <label for="config-UseRelativePath" class="ml-2 block text-sm text-gray-700">
                                 Use Relative Path (relative to application directory)
                             </label>
@@ -283,37 +284,37 @@
                     html = `
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Host *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Host *</label>
                                 <input type="text" id="config-host" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="ftp.example.com">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Port</label>
                                 <input type="number" id="config-port" value="21"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
                                 <input type="text" id="config-username"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
                                 <input type="password" id="config-password"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Remote Path</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Remote Path</label>
                             <input type="text" id="config-remotePath"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="/uploads">
                         </div>
 
@@ -332,7 +333,7 @@
                                     <div class="flex items-start">
                                         <div class="flex items-center h-5">
                                             <input type="checkbox" id="config-usePassiveMode" checked
-                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                         </div>
                                         <div class="ml-3">
                                             <label for="config-usePassiveMode" class="text-sm font-medium text-gray-700">Use Passive Mode</label>
@@ -345,7 +346,7 @@
                                     <div class="flex items-start">
                                         <div class="flex items-center h-5">
                                             <input type="checkbox" id="config-useSsl"
-                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                         </div>
                                         <div class="ml-3">
                                             <label for="config-useSsl" class="text-sm font-medium text-gray-700">Use SSL/TLS (FTPS)</label>
@@ -355,9 +356,9 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Timeout (seconds)</label>
                                     <input type="number" id="config-timeoutSeconds" value="60" min="10" max="300"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     <p class="text-xs text-gray-500 mt-1">Connection and data transfer timeout</p>
                                 </div>
 
@@ -383,27 +384,27 @@
                     html = `
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Host *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Host *</label>
                                 <input type="text" id="config-host" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="sftp.example.com">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Port</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Port</label>
                                 <input type="number" id="config-port" value="22"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Username *</label>
                             <input type="text" id="config-username" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="sftpuser">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Authentication Type</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Authentication Type</label>
                             <select id="sftp-auth-type" onchange="updateSftpAuthFields()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="password">Password</option>
                                 <option value="privatekey">Private Key (SSH)</option>
                             </select>
@@ -412,9 +413,9 @@
                         <!-- Password Auth Fields -->
                         <div id="sftp-password-auth" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                                 <input type="password" id="config-password"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                             </div>
                         </div>
@@ -422,17 +423,17 @@
                         <!-- Private Key Auth Fields -->
                         <div id="sftp-privatekey-auth" class="hidden space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Private Key (PEM format) *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Private Key (PEM format) *</label>
                                 <textarea id="config-privateKey" rows="8"
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                          class="w-full h-9 px-3 py-1 bg-white border border-slate-200 font-mono text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                           placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;MIIEpAIBAAKCAQEA...&#10;-----END RSA PRIVATE KEY-----"
                                           data-secret-field="true"></textarea>
                                 <p class="text-xs text-gray-500 mt-1">Paste your private key content (supports RSA, DSA, ECDSA, ED25519)</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Passphrase (if encrypted)</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Passphrase (if encrypted)</label>
                                 <input type="password" id="config-privateKeyPassphrase"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="Leave blank if key is not encrypted"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Only required if your private key is password-protected</p>
@@ -440,9 +441,9 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Remote Path</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Remote Path</label>
                             <input type="text" id="config-remotePath"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="/uploads">
                         </div>
 
@@ -458,9 +459,9 @@
                             </button>
                             <div id="sftpAdvanced" class="hidden px-4 pb-4 space-y-4 border-t border-gray-200">
                                 <div class="pt-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Timeout (seconds)</label>
                                     <input type="number" id="config-timeoutSeconds" value="60" min="10" max="300"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     <p class="text-xs text-gray-500 mt-1">Connection timeout</p>
                                 </div>
 
@@ -481,22 +482,22 @@
                 case 'AzureBlob':
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Connection String</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Connection String</label>
                             <textarea id="config-connectionString" rows="3"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                      class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                       placeholder="DefaultEndpointsProtocol=https;AccountName=..."
                                       data-secret-field="true"></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Container Name</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Container Name</label>
                             <input type="text" id="config-containerName" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="exports">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Prefix</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Prefix</label>
                             <input type="text" id="config-prefix"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="data/">
                         </div>
                     `;
@@ -505,26 +506,26 @@
                     html = `
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Access Key *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Access Key *</label>
                                 <input type="text" id="config-accessKey"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="AKIAIOSFODNN7EXAMPLE"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave blank to keep existing value</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Secret Key *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Secret Key *</label>
                                 <input type="password" id="config-secretKey"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave blank to keep existing value</p>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Region *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Region *</label>
                                 <select id="config-region" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     <option value="">Select region...</option>
                                     <option value="us-east-1">US East (N. Virginia) — us-east-1</option>
                                     <option value="us-east-2">US East (Ohio) — us-east-2</option>
@@ -546,16 +547,16 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Bucket Name *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Bucket Name *</label>
                                 <input type="text" id="config-bucketName" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="my-export-bucket">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Path / Prefix</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Path / Prefix</label>
                             <input type="text" id="config-prefix"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="exports/">
                             <p class="text-xs text-gray-500 mt-1">Optional folder prefix within the bucket (e.g., "exports/" or "data/{date}/")</p>
                         </div>
@@ -572,17 +573,17 @@
                             </button>
                             <div id="s3Advanced" class="hidden px-4 pb-4 space-y-4 border-t border-gray-200">
                                 <div class="pt-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Custom Endpoint URL</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Custom Endpoint URL</label>
                                     <input type="url" id="config-serviceUrl"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                            placeholder="https://minio.example.com:9000">
                                     <p class="text-xs text-gray-500 mt-1">Leave blank for AWS S3. Use for MinIO, Wasabi, DigitalOcean Spaces, Backblaze B2, or other S3-compatible storage</p>
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Access Control (ACL)</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Access Control (ACL)</label>
                                     <select id="config-acl"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                            class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="private" selected>Private (bucket owner full control)</option>
                                         <option value="public-read">Public Read (anyone can read)</option>
                                         <option value="public-read-write">Public Read-Write (anyone can read/write)</option>
@@ -592,9 +593,9 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Storage Class</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Storage Class</label>
                                     <select id="config-storageClass"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                            class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="STANDARD" selected>Standard (frequently accessed data)</option>
                                         <option value="STANDARD_IA">Standard-IA (infrequent access)</option>
                                         <option value="ONEZONE_IA">One Zone-IA (cheaper, single AZ)</option>
@@ -610,7 +611,7 @@
                                     <div class="flex items-start">
                                         <div class="flex items-center h-5">
                                             <input type="checkbox" id="config-serverSideEncryption" checked
-                                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                         </div>
                                         <div class="ml-3">
                                             <label for="config-serverSideEncryption" class="text-sm font-medium text-gray-700">Server-Side Encryption (SSE)</label>
@@ -620,9 +621,9 @@
                                 </div>
 
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Timeout (seconds)</label>
                                     <input type="number" id="config-timeoutSeconds" value="300" min="30" max="3600"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     <p class="text-xs text-gray-500 mt-1">Upload timeout (increase for large files)</p>
                                 </div>
 
@@ -647,9 +648,9 @@
                     html = `
                         <!-- Email Provider Selector -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email Provider *</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Email Provider *</label>
                             <select id="config-emailProvider" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                     onchange="updateEmailProviderFields()">
                                 <option value="">Select provider...</option>
                                 <option value="Smtp">SMTP</option>
@@ -663,15 +664,15 @@
                         <div id="emailSmtpFields" class="hidden space-y-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Host *</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">SMTP Host *</label>
                                     <input type="text" id="config-smtpServer"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                            placeholder="smtp.gmail.com">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">SMTP Port</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">SMTP Port</label>
                                     <input type="number" id="config-smtpPort" value="587"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 </div>
                             </div>
 
@@ -686,9 +687,9 @@
                                 </button>
                                 <div id="emailSmtpAdvanced" class="hidden px-4 pb-4 space-y-4 border-t border-gray-200">
                                     <div class="pt-4">
-                                        <label class="block text-sm font-medium text-gray-700 mb-2">Authentication Type</label>
+                                        <label class="block text-sm font-medium text-slate-700 mb-2">Authentication Type</label>
                                         <select id="config-authType"
-                                                class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                                 onchange="toggleEmailAuthFields()">
                                             <option value="Basic">Basic (Username & Password)</option>
                                             <option value="OAuth2">OAuth 2.0 (Access Token)</option>
@@ -700,17 +701,17 @@
                                     <div id="emailBasicAuth" class="space-y-4">
                                         <div class="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
                                                 <input type="text" id="config-smtpUsername"
-                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                                        data-secret-field="true"
                                                        placeholder="your-email@gmail.com">
                                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
                                             </div>
                                             <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Password / App Password</label>
+                                                <label class="block text-sm font-medium text-slate-700 mb-1">Password / App Password</label>
                                                 <input type="password" id="config-smtpPassword"
-                                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                                        data-secret-field="true"
                                                        placeholder="Your password or app-specific password">
                                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
@@ -721,17 +722,17 @@
                                     <!-- OAuth2 Auth Fields -->
                                     <div id="emailOAuth2Auth" class="hidden space-y-4">
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">OAuth2 Access Token</label>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">OAuth2 Access Token</label>
                                             <input type="password" id="config-oauthToken"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                                    data-secret-field="true"
                                                    placeholder="OAuth2 access token">
                                             <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
                                         </div>
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Username (for OAuth2)</label>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Username (for OAuth2)</label>
                                             <input type="text" id="config-oauthUsername"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                                    placeholder="your-email@gmail.com">
                                             <p class="text-xs text-gray-500 mt-1">Usually your email address</p>
                                         </div>
@@ -740,7 +741,7 @@
                                     <!-- Connection Settings -->
                                     <div class="border-t border-gray-200 pt-4 space-y-4">
                                         <div class="mb-4 relative">
-                                            <label for="config-securityMode" class="block text-sm font-medium text-gray-700 mb-2">
+                                            <label for="config-securityMode" class="block text-sm font-medium text-slate-700 mb-2">
                                                 Security
                                                 <span class="ml-1 text-gray-400 cursor-help"
                                                     data-tooltip="STARTTLS: Secure, standard for most SMTP servers\nNone: For mock servers or local testing (port 2525)\nAuto: Automatically negotiate TLS if available"
@@ -753,7 +754,7 @@
                                                 </span>
                                             </label>
 
-                                            <select id="config-securityMode" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                            <select id="config-securityMode" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                                 <option value="StartTls" selected>
                                                     STARTTLS (Encrypted, recommended)
                                                 </option>
@@ -770,7 +771,7 @@
                                             <div class="flex items-start">
                                                 <div class="flex items-center h-5">
                                                     <input type="checkbox" id="config-validateCertificate" checked
-                                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                                           class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                                 </div>
                                                 <div class="ml-3">
                                                     <label for="config-validateCertificate" class="text-sm font-medium text-gray-700">Validate Server Certificate</label>
@@ -780,16 +781,16 @@
                                         </div>
 
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Connection Timeout (seconds)</label>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Connection Timeout (seconds)</label>
                                             <input type="number" id="config-timeoutSeconds" value="30" min="5" max="300"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <p class="text-xs text-gray-500 mt-1">How long to wait for SMTP connection (5-300 seconds)</p>
                                         </div>
 
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-1">Retry Count</label>
+                                            <label class="block text-sm font-medium text-slate-700 mb-1">Retry Count</label>
                                             <input type="number" id="config-retryCount" value="3" min="0" max="10"
-                                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <p class="text-xs text-gray-500 mt-1">Number of retry attempts on failure</p>
                                         </div>
                                     </div>
@@ -800,9 +801,9 @@
                         <!-- Resend Provider Fields -->
                         <div id="emailResendFields" class="hidden space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Resend API Key *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Resend API Key *</label>
                                 <input type="password" id="config-resendApiKey"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="re_xxxxxxxxxxxxx"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Get your API key from <a href="https://resend.com/api-keys" target="_blank" class="text-blue-600 hover:underline">resend.com/api-keys</a></p>
@@ -812,9 +813,9 @@
                         <!-- SendGrid Provider Fields -->
                         <div id="emailSendGridFields" class="hidden space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">SendGrid API Key *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">SendGrid API Key *</label>
                                 <input type="password" id="config-sendGridApiKey"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="SG.xxxxxxxxxxxxx"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Get your API key from <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" class="text-blue-600 hover:underline">SendGrid Dashboard</a></p>
@@ -825,15 +826,15 @@
                         <div id="emailCommonFields" class="hidden space-y-4 border-t border-gray-200 pt-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">From Email Address *</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">From Email Address *</label>
                                     <input type="email" id="config-fromAddress"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                            placeholder="noreply@example.com">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">From Name</label>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">From Name</label>
                                     <input type="text" id="config-fromName"
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                            placeholder="Reef Export Service">
                                     <p class="text-xs text-gray-500 mt-1">Display name for sender (optional)</p>
                                 </div>
@@ -844,16 +845,16 @@
                 case 'Http':
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">URL *</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">URL *</label>
                             <input type="url" id="config-url" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="https://api.example.com/upload">
                             <p class="text-xs text-gray-500 mt-1">Target endpoint for HTTP POST</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Upload Format</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Upload Format</label>
                             <select id="config-uploadFormat"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="raw">Raw/Binary</option>
                                 <option value="multipart">Multipart Form Data</option>
                                 <option value="json">JSON Payload</option>
@@ -861,9 +862,9 @@
                             <p class="text-xs text-gray-500 mt-1">How the file is sent to the API</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Authentication Type</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Authentication Type</label>
                             <select id="config-authType" onchange="updateHttpAuthFields()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="">None</option>
                                 <option value="bearer">Bearer Token</option>
                                 <option value="basic">Basic Auth</option>
@@ -875,24 +876,24 @@
                             <!-- Dynamic auth fields will be inserted here -->
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Custom Headers (JSON)</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Custom Headers (JSON)</label>
                             <textarea id="config-headers" rows="3"
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                                      class="w-full h-9 px-3 py-1 bg-white border border-slate-200 font-mono text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                       placeholder='{"X-Custom-Header": "value", "X-Client-ID": "reef"}'></textarea>
                             <p class="text-xs text-gray-500 mt-1">Optional: JSON object with custom headers</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">File Field Name</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">File Field Name</label>
                                 <input type="text" id="config-fileFieldName"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="file">
                                 <p class="text-xs text-gray-500 mt-1">For multipart uploads</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Timeout (seconds)</label>
                                 <input type="number" id="config-timeoutSeconds" value="300"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             </div>
                         </div>
                     `;
@@ -900,44 +901,44 @@
                 case 'NetworkShare':
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">UNC Path *</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">UNC Path *</label>
                             <input type="text" id="config-BasePath" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="\\\\server\\share or \\\\192.168.1.100\\share">
                             <p class="text-xs text-gray-500 mt-1">Network share UNC path</p>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Sub Folder</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Sub Folder</label>
                             <input type="text" id="config-SubFolder"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="exports/data">
                             <p class="text-xs text-gray-500 mt-1">Optional subfolder within the share (can be relative path)</p>
                         </div>
                         <div class="flex items-center mt-2">
                             <input type="checkbox" id="config-UseRelativePath"
-                                   class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                             <label for="config-UseRelativePath" class="ml-2 block text-sm text-gray-700">
                                 Sub Folder is Relative Path
                             </label>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
                                 <input type="text" id="config-Username"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
                                 <input type="password" id="config-Password"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Domain</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Domain</label>
                             <input type="text" id="config-Domain"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="WORKGROUP or DOMAIN">
                             <p class="text-xs text-gray-500 mt-1">Optional Windows domain (leave blank for local authentication)</p>
                         </div>
@@ -974,9 +975,9 @@
                 case 'token':
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Token</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Token</label>
                             <input type="password" id="config-authToken"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="your-token-here"
                                    data-secret-field="true">
                             <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing value</p>
@@ -987,16 +988,16 @@
                     html = `
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
                                 <input type="text" id="config-username"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
                                 <input type="password" id="config-password"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing</p>
                             </div>
@@ -1007,15 +1008,15 @@
                     html = `
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">API Key Header Name</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">API Key Header Name</label>
                                 <input type="text" id="config-apiKeyHeader" required
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        placeholder="X-API-Key">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">API Key</label>
                                 <input type="password" id="config-authToken"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                        data-secret-field="true">
                                 <p class="text-xs text-gray-500 mt-1">Leave unchanged to keep existing</p>
                             </div>
@@ -1032,7 +1033,7 @@
             originalSecretValues.clear();
 
             document.getElementById('add-destination-modal').classList.remove('hidden');
-            document.getElementById('destination-modal-title').textContent = 'Add New Destination';
+            document.getElementById('destination-modal-title').textContent = 'New Destination';
             document.getElementById('destination-more-options').classList.add('hidden');
             document.getElementById('add-destination-form').reset();
             document.getElementById('add-destination-form').removeAttribute('data-edit-id');
@@ -1057,7 +1058,12 @@
 
         function toggleDestinationOptionsMenu() {
             const menu = document.getElementById('destination-options-menu');
-            menu.classList.toggle('hidden');
+            const btn = document.querySelector('[aria-controls="destination-options-menu"]');
+            const isHidden = menu.classList.toggle('hidden');
+            btn?.setAttribute('aria-expanded', String(!isHidden));
+            if (!isHidden) {
+                menu.querySelector('[role="menuitem"]')?.focus();
+            }
         }
 
         // Close dropdown when clicking outside
@@ -1075,15 +1081,17 @@
             const isActive = form.getAttribute('data-is-active') === 'true';
             const destinationName = document.getElementById('destination-name').value;
             
-            const action = isActive ? 'deactivate' : 'activate';
-            const confirmMessage = isActive 
-                ? `Are you sure you want to deactivate "${destinationName}"?\n\nNote: Any profiles, jobs, and webhooks using this destination will fail to execute until you reactivate it.`
-                : `Are you sure you want to activate "${destinationName}"?`;
-            
-            if (!confirm(confirmMessage)) {
-                document.getElementById('destination-options-menu').classList.add('hidden');
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: isActive ? `Deactivate "${destinationName}"?` : `Activate "${destinationName}"?`,
+                message: isActive
+                    ? 'Any profiles, jobs, and webhooks using this destination will fail to execute until you reactivate it.'
+                    : `This destination will become available for use.`,
+                confirmText: isActive ? 'Deactivate' : 'Activate',
+                cancelText: 'Cancel',
+                danger: isActive,
+            });
+            document.getElementById('destination-options-menu').classList.add('hidden');
+            if (!confirmed) return;
 
             try {
                 // Get current destination data
@@ -1112,6 +1120,7 @@
                 
                 if (updateResponse.ok) {
                     showToast(`Destination ${action}d successfully`, 'success');
+                    clearApiCache('/api/destinations');
                     closeAddDestinationModal();
                     await loadDestinations();
                 } else {
@@ -1333,7 +1342,12 @@
                     <div class="flex flex-col items-center justify-center py-12">
                         <i data-lucide="send" class="h-12 w-12 text-gray-300 mb-4"></i>
                         <p class="text-lg font-semibold text-gray-700 mb-2">No destinations found</p>
-                        <p class="text-gray-500 mb-4">${destinationFilter.allItems.length === 0 ? 'Create your first destination to get started.' : 'Try adjusting your filters.'}</p>
+                        <p class="text-gray-500 mb-4">${destinationFilter.allItems.length === 0
+                            ? 'Destinations are where Reef sends your data — S3, SFTP, email, HTTP, and more. Add one to start delivering exports.'
+                            : 'Try adjusting your filters.'}</p>
+                        ${destinationFilter.allItems.length === 0
+                            ? '<button onclick="openAddDestinationModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 active:scale-95 transition-all">+ Add Destination</button>'
+                            : ''}
                     </div>
                 `;
             } else {
@@ -1369,10 +1383,10 @@
                         </div>
                         <div class="flex items-center space-x-2">
                             <span class="px-2 py-1 text-xs ${dest.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">${dest.isActive ? 'Active' : 'Inactive'}</span>
-                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editDestination(${dest.id})" data-tooltip="Edit">
+                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editDestination(${dest.id})" data-tooltip="Edit" aria-label="Edit destination: ${escapeHtml(dest.name)}">
                                 <i data-lucide="edit" class="h-4 w-4"></i>
                             </button>
-                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteDestination(${dest.id}, '${escapeHtml(dest.name)}')" data-tooltip="Delete">
+                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteDestination(${dest.id}, '${escapeForJS(dest.name)}')" data-tooltip="Delete" aria-label="Delete destination: ${escapeHtml(dest.name)}">
                                 <i data-lucide="trash-2" class="h-4 w-4"></i>
                             </button>
                         </div>
@@ -1524,7 +1538,14 @@
         }
 
         async function deleteDestination(id, name) {
-            if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+            const confirmed = await showConfirmModal({
+                title: `Delete "${name}"?`,
+                message: 'This action cannot be undone. Any profiles or jobs using this destination will stop working.',
+                confirmText: 'Delete destination',
+                cancelText: 'Keep destination',
+                danger: true,
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`${API_BASE}/${id}`, {
@@ -1534,6 +1555,7 @@
 
                 if (response.ok) {
                     showToast('Destination deleted successfully', 'success');
+                    clearApiCache('/api/destinations');
                     loadDestinations();
                 } else {
                     const error = await response.json();
@@ -1614,6 +1636,7 @@
                 });
 
                 if (response.ok) {
+                    clearApiCache('/api/destinations');
                     closeAddDestinationModal();
                     await loadDestinations();
                     showToast(isEdit ? 'Destination updated successfully' : 'Destination created successfully', 'success');
@@ -1632,29 +1655,6 @@
             div.textContent = text;
             return div.innerHTML;
         }
-
-        let userMenuExpanded = false;
-
-        // Toggle user menu
-        function toggleUserMenu() {
-            const menu = document.getElementById('user-menu');
-            const chevron = document.getElementById('chevron-icon');
-            userMenuExpanded = !userMenuExpanded;
-            
-            if (userMenuExpanded) {
-                menu.classList.remove('user-menu-collapsed');
-                menu.classList.add('user-menu-expanded');
-                chevron.style.transform = 'rotate(180deg)';
-            } else {
-                menu.classList.remove('user-menu-expanded');
-                menu.classList.add('user-menu-collapsed');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-            
-            // Re-render icons after DOM update
-            setTimeout(() => queueLucideRender(), 50);
-        }
-
         function toggleFtpAdvanced(event) {
             event.preventDefault();
             const panel = document.getElementById('ftpAdvanced');
@@ -1790,11 +1790,6 @@
             }
         }
 
-        function logout() {
-            clearAuth();
-            redirectToLogin();
-        }
-
         function initializeDestinations() {
             if (typeof ReefFilter !== 'undefined') {
                 loadDestinations();
@@ -1809,7 +1804,7 @@
             initializeDestinations();
         });
 
-        // ─── Endpoint management ──────────────────────────────────────────────
+        //  Endpoint management
 
         let _currentEndpoints = [];
         let _currentDestinationId = null;
@@ -2001,6 +1996,7 @@
                 }
                 if (!resp.ok) { const e = await resp.json(); throw new Error(e.message || 'Failed'); }
                 showToast(epId ? 'Endpoint updated' : 'Endpoint added', 'success');
+                clearApiCache('/api/destinations');
                 cancelEndpointForm();
                 await loadEndpoints(_currentDestinationId);
             } catch (err) {
@@ -2009,13 +2005,21 @@
         }
 
         async function deleteEndpoint(id) {
-            if (!confirm('Delete this endpoint?')) return;
+            const confirmed = await showConfirmModal({
+                title: 'Delete endpoint?',
+                message: 'This action cannot be undone.',
+                confirmText: 'Delete endpoint',
+                cancelText: 'Keep endpoint',
+                danger: true,
+            });
+            if (!confirmed) return;
             try {
                 const resp = await fetch(`/api/destinations/${_currentDestinationId}/endpoints/${id}`, {
                     method: 'DELETE', headers: getAuthHeaders()
                 });
                 if (!resp.ok && resp.status !== 204) throw new Error('Failed to delete');
                 showToast('Endpoint deleted', 'success');
+                clearApiCache('/api/destinations');
                 await loadEndpoints(_currentDestinationId);
             } catch (err) {
                 showToast(`Error: ${err.message}`, 'error');

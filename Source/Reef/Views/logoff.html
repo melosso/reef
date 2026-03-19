@@ -3,201 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Logging Out &middot; Reef</title>
-    <script src="/assets/js/_tailwind.3.4.17.js"></script>
+    <title>Signed Out &middot; Reef</title>
+    <script src="/assets/js/_tailwind.4.0.js"></script>
+    <style type="text/tailwindcss">
+        @variant dark (&:where(.dark, .dark *));
+    </style>
     <script src="/assets/js/_lucide.0.552.0.js"></script>
     <script src="/assets/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
-            background-color: #020617; /* slate-950 */
-        }
+        html, body { margin: 0; padding: 0; height: 100%; }
 
-        /* --- Animated Blob Background --- */
-        .background-container {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            overflow: hidden;
-            background-color: #020617;
-        }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(250px);
-            opacity: 0.25;
-            will-change: transform;
-        }
-
-        .blob.color-1 {
-            background: #1e3a8a; /* blue-900 */
-            width: 450px;
-            height: 450px;
-            top: -100px;
-            left: -150px;
-            animation: move-blob-1 35s infinite alternate ease-in-out;
-        }
-
-        .blob.color-2 {
-            background: #4c1d95; /* violet-900 */
-            width: 350px;
-            height: 350px;
-            bottom: -50px;
-            right: -100px;
-            animation: move-blob-2 40s infinite alternate ease-in-out;
-        }
-
-        .blob.color-3 {
-            background: #312e81; /* indigo-900 */
-            width: 300px;
-            height: 300px;
-            top: 50%;
-            left: 50%;
-            animation: move-blob-3 30s infinite alternate ease-in-out;
-        }
-
-        @keyframes move-blob-1 {
-            from { transform: translate(0, 0) scale(1); }
-            to { transform: translate(150px, 200px) scale(1.2); }
-        }
-
-        @keyframes move-blob-2 {
-            from { transform: translate(0, 0) scale(1); }
-            to { transform: translate(-200px, -100px) scale(0.9); }
-        }
-
-        @keyframes move-blob-3 {
-            from { transform: translate(-50%, -50%) scale(1.1); }
-            to { transform: translate(-20px, -200px) scale(1); }
-        }
-
-        /* --- Fade-in animation --- */
-        @keyframes fadeIn {
+        @keyframes fadeUp {
             from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-
-        .fade-in {
-            animation: fadeIn 0.6s ease-out forwards;
-            animation-delay: 0.1s;
+        .fade-up {
+            animation: fadeUp 0.4s ease-out forwards;
             opacity: 0;
         }
-
-        /* --- Hive Overlay --- */
-        .hive-overlay {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-            transition: transform 1.0s ease-out;
-            will-change: transform;
+        .dot-grid {
+            background-image: radial-gradient(circle, rgba(148,163,184,0.15) 1px, transparent 1px);
+            background-size: 28px 28px;
         }
-
         .disable-select {
             -webkit-user-select: none;
             -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
         }
     </style>
 </head>
-<body class="text-slate-200 antialiased">
-    <div class="background-container">
-        <div class="blob color-1"></div>
-        <div class="blob color-2"></div>
-        <div class="blob color-3"></div>
-    </div>
-    <svg class="hive-overlay" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <pattern id="hexPattern" x="0" y="0" width="100" height="86" patternUnits="userSpaceOnUse">
-            <polygon points="50,0 100,25 100,61 50,86 0,61 0,25"
-                     fill="none" stroke="white" stroke-opacity="0.025" stroke-width="1"/>
-            </pattern>
-        </defs>
-        <g>
-            <rect width="200%" height="200%" fill="url(#hexPattern)"/>
-        </g>
-    </svg>
+<body class="antialiased">
 
-    <div class="relative z-10 flex min-h-screen w-full flex-col items-center justify-center p-8">
-        <div class="fade-in w-full max-w-md p-10 bg-slate-900/30 backdrop-blur-xl border border-slate-700/50 rounded-xl shadow-2xl shadow-blue-900/20 text-center flex flex-col items-center">
-            
-            <div class="p-3 bg-blue-500/10 border border-blue-500/20 rounded-full shadow-inner mb-6">
-                <i data-lucide="loader-2" class="h-10 w-10 animate-spin text-blue-400"></i>
+<div class="grid min-h-screen lg:grid-cols-2">
+
+    <!--  Left: signed-out panel  -->
+    <div class="flex flex-col bg-white">
+        <!-- Logo -->
+        <div class="flex justify-center md:justify-start px-8 pt-8">
+            <a href="/index" class="flex items-center gap-2.5 select-none" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                </svg>
+                <span class="text-sm font-semibold text-slate-900 tracking-tight">Reef</span>
+            </a>
+        </div>
+
+        <!-- Centered content -->
+        <div class="flex flex-1 items-center justify-center px-6 py-10">
+            <div class="fade-up w-full max-w-sm text-center space-y-6">
+
+                <div class="flex justify-center">
+                    <div class="h-14 w-14 rounded-full bg-green-50 border border-green-100 flex items-center justify-center">
+                        <i data-lucide="circle-check" class="h-7 w-7 text-green-600"></i>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 disable-select">
+                    <h1 class="text-xl font-bold text-slate-900 tracking-tight">Signed out</h1>
+                    <p class="text-sm text-slate-500">You have been securely signed out.<br>Redirecting to sign in…</p>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="w-full bg-slate-100 rounded-full h-0.5 overflow-hidden">
+                    <div id="redirect-progress" class="h-0.5 bg-slate-300 rounded-full transition-all duration-100" style="width: 0%"></div>
+                </div>
+
+                <a href="/index" class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+                    Sign in now
+                    <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                </a>
             </div>
+        </div>
 
-            <h1 class="text-3xl font-bold tracking-tight text-slate-50 disable-select">
-                You've been logged out.
-            </h1>
-            <p class="mt-3 text-sm font-medium text-slate-400 disable-select">
-                Thanks for the hard work. We're redirecting you back...
+        <div class="px-8 pb-6 text-center md:text-left">
+            <p class="text-xs text-slate-400 disable-select">
+            &copy; <a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">Reef</a> 
+            &middot; 
+            <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="hover:text-slate-500 transition-colors">AGPL-3.0</a>
             </p>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Primary invocation via main.js, with native fallback
-            if (typeof window.queueLucideRender === 'function') {
-                window.queueLucideRender();
-            } else if (typeof window.lucide !== 'undefined' && window.lucide.createIcons) {
-                window.lucide.createIcons();
-            } else {
-                console.error('Lucide rendering engine failed to initialize.');
+    <!-- Right panel -->
+    <div class="hidden lg:flex flex-col items-center justify-center relative bg-slate-900 overflow-hidden">
+        <div class="absolute inset-0 dot-grid"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[300px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col items-center text-center px-12 max-w-md space-y-8 hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 stroke-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+            </svg>
+            <div class="space-y-3">
+                <h2 class="text-2xl font-bold text-white tracking-tight">See you next time.</h2>
+                <p class="text-sm text-slate-400 leading-relaxed">Your session has ended securely. All local credentials have been cleared.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    queueLucideRender();
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof window.queueLucideRender === 'function') {
+            window.queueLucideRender();
+        } else if (typeof window.lucide !== 'undefined' && window.lucide.createIcons) {
+            window.lucide.createIcons();
+        }
+
+        // Session termination
+        (async function executeLogoff() {
+            try {
+                await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            } catch (err) {
+                console.warn('Backend logout API request failed:', err);
             }
+        })();
 
-            // Interactive parallax overlay execution
-            const hiveOverlay = document.querySelector('.hive-overlay');
-            if (hiveOverlay) {
-                const isTouchDevice = () => 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                if (!isTouchDevice()) {
-                    window.addEventListener('mousemove', (e) => {
-                        const { clientX, clientY } = e;
-                        const { innerWidth, innerHeight } = window;
-                        const x = (clientX / innerWidth - 0.5) * 2; 
-                        const y = (clientY / innerHeight - 0.5) * 2;
-                        hiveOverlay.style.transform = `translate(${x * -15}px, ${y * -15}px)`;
-                    });
-                }
-            }
+        // Client-side state clearance
+        localStorage.removeItem('reef_token');
+        localStorage.removeItem('reef_username');
+        localStorage.removeItem('reef_role');
+        localStorage.removeItem('reef_display_name');
 
-            // Session termination sequence
-            (async function executeLogoff() {
-                try {
-                    await fetch('/api/auth/logout', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                    });
-                } catch (err) {
-                    console.warn('Backend logout API request failed:', err);
-                }
-            })();
-
-            // Client-side state clearance
-            localStorage.removeItem('reef_token');
-            localStorage.removeItem('reef_username');
-            localStorage.removeItem('reef_role');
-            localStorage.removeItem('reef_display_name');
-
-            // Redirect timing parameters
-            const redirectDelay = 2500;
-            const fadeOutTime = 500; 
-
-            setTimeout(() => {
-                document.body.style.transition = `opacity ${fadeOutTime}ms ease-in`;
+        // Animated progress bar + redirect
+        const progressBar = document.getElementById('redirect-progress');
+        const totalMs = 2200;
+        const tickMs = 40;
+        let elapsed = 0;
+        const timer = setInterval(() => {
+            elapsed += tickMs;
+            const pct = Math.min((elapsed / totalMs) * 100, 100);
+            if (progressBar) progressBar.style.width = pct + '%';
+            if (elapsed >= totalMs) {
+                clearInterval(timer);
+                document.body.style.transition = 'opacity 0.25s ease-in';
                 document.body.style.opacity = '0';
-                setTimeout(() => {
-                    window.location.href = '/index';
-                }, fadeOutTime);
-            }, redirectDelay - fadeOutTime);
-        });
-    </script>
+                setTimeout(() => { window.location.href = '/index'; }, 260);
+            }
+        }, tickMs);
+    });
+</script>
 </body>
 </html>

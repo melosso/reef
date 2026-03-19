@@ -7,7 +7,6 @@ namespace Reef.Core.Parsers;
 
 /// <summary>
 /// Streaming CSV/TSV parser.
-/// Does not require an external library — uses StreamReader with RFC-4180 compliant field parsing.
 /// </summary>
 public class CsvImportParser : IImportParser
 {
@@ -23,22 +22,20 @@ public class CsvImportParser : IImportParser
         using var reader = new StreamReader(content, encoding, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
 
         // Skip header rows if configured
-        for (int i = 0; i < config.SkipRows && !reader.EndOfStream; i++)
+        for (int i = 0; i < config.SkipRows; i++)
         {
-            await reader.ReadLineAsync(ct);
+            if (await reader.ReadLineAsync(ct) == null) break;
         }
 
         List<string>? headers = null;
         int lineNumber = config.SkipRows;
+        string? line;
 
-        while (!reader.EndOfStream)
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-
-            var line = await reader.ReadLineAsync(ct);
             lineNumber++;
 
-            if (line == null) break;
             if (config.TrimWhitespace) line = line.Trim();
             if (string.IsNullOrEmpty(line)) continue;
 
@@ -91,7 +88,7 @@ public class CsvImportParser : IImportParser
         }
     }
 
-    // ── RFC-4180 CSV line parser ──
+    // RFC-4180 CSV line parser ──
 
     private static List<string> ParseCsvLine(string line, char delimiter, char quote, bool trim)
     {

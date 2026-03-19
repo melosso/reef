@@ -97,6 +97,28 @@ public class EncryptionService
     }
 
     /// <summary>
+    /// Decrypt a general sensitive field (not a connection string).
+    /// Returns null for null/empty input. Returns plaintext as-is for
+    /// unencrypted legacy values so existing data can be migrated gradually.
+    /// </summary>
+    public string? DecryptField(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return null;
+
+        if (!IsEncrypted(value))
+            return value; // legacy unencrypted — return as-is
+
+        var privateKeyPath = Path.Combine(_certsPath, PrivateKeyFileName);
+        if (!File.Exists(privateKeyPath))
+            throw new InvalidOperationException("Private key not found. Required for decryption.");
+
+        var encrypted = File.ReadAllText(privateKeyPath);
+        var privateKey = DecryptPrivateKey(encrypted);
+        return Decrypt(value, privateKey);
+    }
+
+    /// <summary>
     /// Load encryption key from various sources (priority order)
     /// </summary>
     private string LoadEncryptionKey()

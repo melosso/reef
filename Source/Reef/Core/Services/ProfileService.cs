@@ -29,10 +29,10 @@ public class ProfileService
     /// <summary>
     /// Get all profiles with connection information joined
     /// </summary>
-    public async Task<List<ProfileWithConnection>> GetAllAsync()
+    public async Task<List<ProfileWithConnection>> GetAllAsync(CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = @"
             SELECT 
@@ -46,17 +46,17 @@ public class ProfileService
             LEFT JOIN ProfileGroups pg ON p.GroupId = pg.Id
             ORDER BY p.Name";
 
-        var profiles = await connection.QueryAsync<ProfileWithConnection>(sql);
+        var profiles = await connection.QueryAsync<ProfileWithConnection>(new CommandDefinition(sql, cancellationToken: ct));
         return profiles.ToList();
     }
 
     /// <summary>
     /// Get profile by ID with reference names
     /// </summary>
-    public async Task<ProfileWithConnection?> GetByIdAsync(int id)
+    public async Task<ProfileWithConnection?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = @"
             SELECT
@@ -76,61 +76,60 @@ public class ProfileService
             LEFT JOIN QueryTemplates emt ON p.EmailTemplateId = emt.Id
             WHERE p.Id = @Id";
 
-        return await connection.QueryFirstOrDefaultAsync<ProfileWithConnection>(sql, new { Id = id });
+        return await connection.QueryFirstOrDefaultAsync<ProfileWithConnection>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
     /// <summary>
     /// Get profile by name
     /// </summary>
-    public async Task<Profile?> GetByNameAsync(string name)
+    public async Task<Profile?> GetByNameAsync(string name, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Profiles WHERE Name = @Name";
-        return await connection.QueryFirstOrDefaultAsync<Profile>(sql, new { Name = name });
+        return await connection.QueryFirstOrDefaultAsync<Profile>(new CommandDefinition(sql, new { Name = name }, cancellationToken: ct));
     }
 
     /// <summary>
     /// Get all profiles for a specific connection
     /// </summary>
-    public async Task<List<Profile>> GetByConnectionIdAsync(int connectionId)
+    public async Task<List<Profile>> GetByConnectionIdAsync(int connectionId, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Profiles WHERE ConnectionId = @ConnectionId ORDER BY Name";
-        var profiles = await connection.QueryAsync<Profile>(sql, new { ConnectionId = connectionId });
+        var profiles = await connection.QueryAsync<Profile>(new CommandDefinition(sql, new { ConnectionId = connectionId }, cancellationToken: ct));
         return profiles.ToList();
     }
 
     /// <summary>
     /// Get all profiles in a specific group
     /// </summary>
-    public async Task<List<Profile>> GetByGroupIdAsync(int groupId)
+    public async Task<List<Profile>> GetByGroupIdAsync(int groupId, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Profiles WHERE GroupId = @GroupId ORDER BY Name";
-        var profiles = await connection.QueryAsync<Profile>(sql, new { GroupId = groupId });
+        var profiles = await connection.QueryAsync<Profile>(new CommandDefinition(sql, new { GroupId = groupId }, cancellationToken: ct));
         return profiles.ToList();
     }
 
     /// <summary>
     /// Create a new profile with encryption and hash computation
     /// </summary>
-    public async Task<int> CreateAsync(Profile profile, int? createdByUserId)
+    public async Task<int> CreateAsync(Profile profile, int? createdByUserId, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         try
         {
             // Validate connection exists
             var connectionExists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM Connections WHERE Id = @Id", 
-                new { Id = profile.ConnectionId });
+                new CommandDefinition("SELECT COUNT(*) FROM Connections WHERE Id = @Id", new { Id = profile.ConnectionId }, cancellationToken: ct));
 
             if (connectionExists == 0)
             {
@@ -206,7 +205,7 @@ public class ProfileService
             // Generate unique short code (P-XXXX) with collision retry
             if (string.IsNullOrEmpty(profile.Code))
             {
-                profile.Code = await GenerateUniqueCodeAsync(connection);
+                profile.Code = await GenerateUniqueCodeAsync(connection, ct);
             }
 
             const string sql = @"
@@ -245,12 +244,12 @@ public class ProfileService
                 );
                 SELECT last_insert_rowid();";
 
-            var id = await connection.ExecuteScalarAsync<int>(sql, profile);
-            
+            var id = await connection.ExecuteScalarAsync<int>(new CommandDefinition(sql, profile, cancellationToken: ct));
+
             // Create scheduled task if profile has a schedule
             if (!string.IsNullOrEmpty(profile.ScheduleType) && profile.ScheduleType != "Webhook")
             {
-                await CreateScheduledTask(connection, id, profile);
+                await CreateScheduledTask(connection, id, profile, ct);
             }
 
             Log.Information("Profile created: {Name} (ID: {Id}) by {CreatedBy}", profile.Name, id, createdByUserId);
@@ -266,17 +265,16 @@ public class ProfileService
     /// <summary>
     /// Update an existing profile
     /// </summary>
-    public async Task<bool> UpdateAsync(Profile profile)
+    public async Task<bool> UpdateAsync(Profile profile, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         try
         {
             // Validate connection exists
             var connectionExists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM Connections WHERE Id = @Id", 
-                new { Id = profile.ConnectionId });
+                new CommandDefinition("SELECT COUNT(*) FROM Connections WHERE Id = @Id", new { Id = profile.ConnectionId }, cancellationToken: ct));
 
             if (connectionExists == 0)
             {
@@ -407,18 +405,18 @@ public class ProfileService
                     UpdatedAt = @UpdatedAt
                 WHERE Id = @Id";
 
-            var rowsAffected = await connection.ExecuteAsync(sql, profile);
+            var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, profile, cancellationToken: ct));
 
             // Update or create scheduled task
             if (!string.IsNullOrEmpty(profile.ScheduleType) && profile.ScheduleType != "Webhook")
             {
-                await UpdateScheduledTask(connection, profile.Id, profile);
+                await UpdateScheduledTask(connection, profile.Id, profile, ct);
             }
             else
             {
                 // Remove scheduled task if schedule was removed
-                await connection.ExecuteAsync("DELETE FROM ScheduledTasks WHERE ProfileId = @ProfileId", 
-                    new { ProfileId = profile.Id });
+                await connection.ExecuteAsync(new CommandDefinition("DELETE FROM ScheduledTasks WHERE ProfileId = @ProfileId",
+                    new { ProfileId = profile.Id }, cancellationToken: ct));
             }
 
             if (rowsAffected > 0)
@@ -438,31 +436,31 @@ public class ProfileService
     /// <summary>
     /// Delete a profile by ID
     /// </summary>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         try
         {
             // Get profile name for logging
-            var profile = await GetByIdAsync(id);
+            var profile = await GetByIdAsync(id, ct);
             if (profile == null)
             {
                 return false;
             }
 
             // Delete scheduled task first (if exists)
-            await connection.ExecuteAsync("DELETE FROM ScheduledTasks WHERE ProfileId = @ProfileId", 
-                new { ProfileId = id });
+            await connection.ExecuteAsync(new CommandDefinition("DELETE FROM ScheduledTasks WHERE ProfileId = @ProfileId",
+                new { ProfileId = id }, cancellationToken: ct));
 
             // Delete profile dependencies
-            await connection.ExecuteAsync("DELETE FROM ProfileDependencies WHERE ProfileId = @ProfileId OR DependsOnProfileId = @ProfileId", 
-                new { ProfileId = id });
+            await connection.ExecuteAsync(new CommandDefinition("DELETE FROM ProfileDependencies WHERE ProfileId = @ProfileId OR DependsOnProfileId = @ProfileId",
+                new { ProfileId = id }, cancellationToken: ct));
 
             // Delete the profile
             const string sql = "DELETE FROM Profiles WHERE Id = @Id";
-            var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
+            var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
 
             if (rowsAffected > 0)
             {
@@ -481,15 +479,15 @@ public class ProfileService
     /// <summary>
     /// Enable a profile
     /// </summary>
-    public async Task<bool> EnableAsync(int id)
+    public async Task<bool> EnableAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         try
         {
             const string sql = "UPDATE Profiles SET IsEnabled = 1, UpdatedAt = @UpdatedAt WHERE Id = @Id";
-            var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id, UpdatedAt = DateTime.UtcNow });
+            var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id, UpdatedAt = DateTime.UtcNow }, cancellationToken: ct));
 
             if (rowsAffected > 0)
             {
@@ -508,15 +506,15 @@ public class ProfileService
     /// <summary>
     /// Disable a profile
     /// </summary>
-    public async Task<bool> DisableAsync(int id)
+    public async Task<bool> DisableAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         try
         {
             const string sql = "UPDATE Profiles SET IsEnabled = 0, UpdatedAt = @UpdatedAt WHERE Id = @Id";
-            var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id, UpdatedAt = DateTime.UtcNow });
+            var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id, UpdatedAt = DateTime.UtcNow }, cancellationToken: ct));
 
             if (rowsAffected > 0)
             {
@@ -535,13 +533,13 @@ public class ProfileService
     /// <summary>
     /// Generate a unique P-XXXX code for a new profile, retrying on collision.
     /// </summary>
-    private static async Task<string> GenerateUniqueCodeAsync(Microsoft.Data.Sqlite.SqliteConnection connection)
+    private static async Task<string> GenerateUniqueCodeAsync(Microsoft.Data.Sqlite.SqliteConnection connection, CancellationToken ct = default)
     {
         for (var attempt = 0; attempt < 20; attempt++)
         {
             var code = Reef.Helpers.ProfileCodeGenerator.Generate();
             var exists = await connection.ExecuteScalarAsync<int>(
-                "SELECT COUNT(*) FROM Profiles WHERE Code = @Code", new { Code = code });
+                new CommandDefinition("SELECT COUNT(*) FROM Profiles WHERE Code = @Code", new { Code = code }, cancellationToken: ct));
             if (exists == 0) return code;
         }
         // Extremely unlikely to reach here; fall back to a GUID-based suffix
@@ -632,7 +630,7 @@ public class ProfileService
     /// <summary>
     /// Create scheduled task for a profile
     /// </summary>
-    private async Task CreateScheduledTask(SqliteConnection connection, int profileId, Profile profile)
+    private async Task CreateScheduledTask(SqliteConnection connection, int profileId, Profile profile, CancellationToken ct = default)
     {
         var nextRunAt = CalculateNextRunTime(profile);
 
@@ -640,43 +638,43 @@ public class ProfileService
             INSERT INTO ScheduledTasks (ProfileId, NextRunAt, CreatedAt, UpdatedAt)
             VALUES (@ProfileId, @NextRunAt, @CreatedAt, @UpdatedAt)";
 
-        await connection.ExecuteAsync(sql, new 
-        { 
-            ProfileId = profileId, 
+        await connection.ExecuteAsync(new CommandDefinition(sql, new
+        {
+            ProfileId = profileId,
             NextRunAt = nextRunAt,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
-        });
+        }, cancellationToken: ct));
     }
 
     /// <summary>
     /// Update scheduled task for a profile
     /// </summary>
-    private async Task UpdateScheduledTask(SqliteConnection connection, int profileId, Profile profile)
+    private async Task UpdateScheduledTask(SqliteConnection connection, int profileId, Profile profile, CancellationToken ct = default)
     {
         // Check if scheduled task exists
         var exists = await connection.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM ScheduledTasks WHERE ProfileId = @ProfileId", 
-            new { ProfileId = profileId });
+            new CommandDefinition("SELECT COUNT(*) FROM ScheduledTasks WHERE ProfileId = @ProfileId",
+                new { ProfileId = profileId }, cancellationToken: ct));
 
         if (exists > 0)
         {
             var nextRunAt = CalculateNextRunTime(profile);
             const string sql = @"
-                UPDATE ScheduledTasks 
+                UPDATE ScheduledTasks
                 SET NextRunAt = @NextRunAt, UpdatedAt = @UpdatedAt
                 WHERE ProfileId = @ProfileId";
 
-            await connection.ExecuteAsync(sql, new 
-            { 
-                ProfileId = profileId, 
+            await connection.ExecuteAsync(new CommandDefinition(sql, new
+            {
+                ProfileId = profileId,
                 NextRunAt = nextRunAt,
                 UpdatedAt = DateTime.UtcNow
-            });
+            }, cancellationToken: ct));
         }
         else
         {
-            await CreateScheduledTask(connection, profileId, profile);
+            await CreateScheduledTask(connection, profileId, profile, ct);
         }
     }
 

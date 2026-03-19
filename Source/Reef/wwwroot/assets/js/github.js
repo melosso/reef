@@ -41,13 +41,12 @@ function compareVersions(v1, v2) {
 }
 
 /**
- * Fetches the latest release and compares it to CURRENT_VERSION,
- * but only if 3 days have passed since the last check.
+ * Fetches the latest release and compares it to CURRENT_VERSION, but only if 3 days have passed since the last check.
  * Shows the version banner unless the user has dismissed this specific version.
  */
 async function checkLatestVersion() {
     if (getCookie('reef_last_version_check')) {
-        console.log('Version check skipped — last check was within 3 days.');
+        console.log('Version check skipped, last check was within 3 days.');
         return;
     }
 
