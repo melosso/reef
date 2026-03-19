@@ -1,83 +1,75 @@
 <!--REEF:TITLE-->Dashboard · Reef<!--/REEF:TITLE-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Dashboard</h1>
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+                <div class="flex items-center justify-between px-6 py-3">
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Dashboard</h1>
                 </div>
             </header>
             <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
-                <!-- Metrics Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-                    <!-- Users Card -->
-                    <button onclick="window.location.href='/admin?tab=users'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 bg-blue-50 rounded-lg">
-                                    <i data-lucide="users" class="h-4 w-4 text-blue-600"></i>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600">Users</span>
+                <!-- Metrics Grid — two-tier: operational (featured) + admin (compact) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-6">
+                    <!-- Connections — featured operational card -->
+                    <button onclick="window.location.href='/connections'" class="text-left lg:col-span-2 bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="p-2 bg-green-50 rounded-lg">
+                                <i data-lucide="plug" class="h-5 w-5 text-green-600"></i>
                             </div>
+                            <span class="text-sm font-semibold text-gray-700">Connections</span>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900" id="dashboard-users">-</div>
+                        <div class="text-3xl font-bold text-gray-900 mb-1" id="dashboard-connections">-</div>
+                        <p class="text-xs text-gray-400">Database sources available to profiles and jobs</p>
                     </button>
 
-                    <!-- Connections Card -->
-                    <button onclick="window.location.href='/connections'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 bg-green-50 rounded-lg">
-                                    <i data-lucide="plug" class="h-4 w-4 text-green-600"></i>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600">Connections</span>
+                    <!-- Profiles — featured operational card -->
+                    <button onclick="window.location.href='/profiles'" class="text-left lg:col-span-2 bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="p-2 bg-purple-50 rounded-lg">
+                                <i data-lucide="file-code" class="h-5 w-5 text-purple-600"></i>
                             </div>
+                            <span class="text-sm font-semibold text-gray-700">Profiles</span>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900" id="dashboard-connections">-</div>
+                        <div class="text-3xl font-bold text-gray-900 mb-1" id="dashboard-profiles">-</div>
+                        <p class="text-xs text-gray-400">Export configurations: query, transform, format, deliver</p>
                     </button>
 
-                    <!-- Profiles Card -->
-                    <button onclick="window.location.href='/profiles'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 bg-purple-50 rounded-lg">
-                                    <i data-lucide="file-code" class="h-4 w-4 text-purple-600"></i>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600">Profiles</span>
+                    <!-- Users — secondary compact card -->
+                    <button onclick="window.location.href='/admin?tab=users'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-1.5 mb-2.5">
+                            <div class="p-1.5 bg-blue-50 rounded-md">
+                                <i data-lucide="users" class="h-3.5 w-3.5 text-blue-600"></i>
                             </div>
+                            <span class="text-xs font-medium text-gray-500">Users</span>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900" id="dashboard-profiles">-</div>
+                        <div class="text-xl font-bold text-gray-900" id="dashboard-users">-</div>
                     </button>
 
-                    <!-- API Keys Card -->
-                    <button onclick="window.location.href='/admin?tab=apikeys'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 bg-yellow-50 rounded-lg">
-                                    <i data-lucide="key" class="h-4 w-4 text-yellow-600"></i>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600">API Keys</span>
+                    <!-- API Keys — secondary compact card -->
+                    <button onclick="window.location.href='/admin?tab=apikeys'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-1.5 mb-2.5">
+                            <div class="p-1.5 bg-yellow-50 rounded-md">
+                                <i data-lucide="key" class="h-3.5 w-3.5 text-yellow-600"></i>
                             </div>
+                            <span class="text-xs font-medium text-gray-500">API Keys</span>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900" id="dashboard-apikeys">-</div>
+                        <div class="text-xl font-bold text-gray-900" id="dashboard-apikeys">-</div>
                     </button>
 
-                    <!-- Storage Card -->
-                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="p-2 bg-indigo-50 rounded-lg">
-                                    <i data-lucide="database" class="h-4 w-4 text-indigo-600"></i>
-                                </div>
-                                <span class="text-xs font-medium text-gray-600">Storage</span>
+                    <!-- Storage — secondary compact card -->
+                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-center gap-1.5 mb-2.5">
+                            <div class="p-1.5 bg-indigo-50 rounded-md">
+                                <i data-lucide="database" class="h-3.5 w-3.5 text-indigo-600"></i>
                             </div>
+                            <span class="text-xs font-medium text-gray-500">Storage</span>
                         </div>
-                        <div class="text-2xl font-bold text-gray-900" id="dashboard-storage">-</div>
+                        <div class="text-xl font-bold text-gray-900" id="dashboard-storage">-</div>
                     </button>
                 </div>
 
                 <!-- Status & Activity Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <!-- Database Health -->
-                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center gap-2">
                                 <div class="p-2 bg-gray-50 rounded-lg">
@@ -94,7 +86,7 @@
                     </button>
 
                     <!-- Notifications Status -->
-                    <button onclick="window.location.href='/admin?tab=notifications'" class="text-left bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-colors cursor-pointer">
+                    <button onclick="window.location.href='/admin?tab=notifications'" class="text-left bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center gap-2">
                                 <div class="p-2 bg-indigo-50 rounded-lg">
@@ -201,20 +193,6 @@
             
             // Queue icon render (batched to prevent layout thrashing)
             queueLucideRender();
-        }
-
-        // Toast notification system
-        function showToast(message, type = 'info', persistent = true) {
-            const toastContainer = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `flex items-center px-4 py-3 mb-2 rounded shadow text-white ${type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800'}`;
-            toast.innerHTML = `<span class="flex-1">${message}</span><button class="ml-4 text-white opacity-70 hover:opacity-100" onclick="this.parentElement.remove(); if (toastContainer.children.length === 0) toastContainer.style.display = 'none';">&times;</button>`;
-            toastContainer.appendChild(toast);
-            toastContainer.style.display = 'flex';
-            if (!persistent) setTimeout(() => {
-                toast.remove();
-                if (toastContainer.children.length === 0) toastContainer.style.display = 'none';
-            }, 6000);
         }
 
         // Helper to format relative time (copied from connections.js)
@@ -551,12 +529,12 @@
 
     <!-- Password Change Required Modal -->
     <div id="passwordChangeModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" role="dialog" aria-modal="true" aria-labelledby="passwordChangeModal-title">
             <div class="flex items-center mb-4">
                 <div class="bg-yellow-400 rounded-full p-2 mr-3">
                     <i data-lucide="alert-triangle" class="h-6 w-6 text-yellow-600"></i>
                 </div>
-                <h3 class="text-lg font-semibold text-gray-900">Attention</h3>
+                <h3 id="passwordChangeModal-title" class="text-lg font-semibold text-slate-900">Attention</h3>
             </div>
 
             <p class="text-gray-600 mb-6">
@@ -565,31 +543,29 @@
 
             <div class="space-y-4">
                 <div>
-                    <label for="currentPassword" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                    <input type="password" id="currentPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
+                    <label for="currentPassword" class="block text-sm font-medium text-slate-700 mb-1">Current Password</label>
+                    <input type="password" id="currentPassword" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" onkeypress="handlePasswordModalKeypress(event)">
                 </div>
 
                 <div>
-                    <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                    <input type="password" id="newPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
+                    <label for="newPassword" class="block text-sm font-medium text-slate-700 mb-1">New Password</label>
+                    <input type="password" id="newPassword" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" onkeypress="handlePasswordModalKeypress(event)">
                     <p class="text-xs text-gray-500 mt-1">Must be at least 6 characters long</p>
                 </div>
 
                 <div>
-                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                    <input type="password" id="confirmPassword" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" onkeypress="handlePasswordModalKeypress(event)">
+                    <label for="confirmPassword" class="block text-sm font-medium text-slate-700 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" onkeypress="handlePasswordModalKeypress(event)">
                 </div>
             </div>
 
             <div class="flex justify-end mt-6 space-x-3">
-                <button onclick="changePassword()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                <button onclick="changePassword()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
                     Change Password
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Toast container -->
-    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col items-end space-y-2" style="display: none;"></div>
 </body>
 </html>

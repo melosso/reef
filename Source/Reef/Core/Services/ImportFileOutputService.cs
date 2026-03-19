@@ -92,7 +92,7 @@ public class ImportFileOutputService(DestinationService destinationService)
         return results;
     }
 
-    // ── Binary Raw Fan-Out ────────────────────────────────────────────────
+    // Binary Raw Fan-Out
 
     public async Task<List<ImportOutputTargetResult>> FanOutRawAsync(
         IReadOnlyList<ImportSourceFile> files,
@@ -183,7 +183,7 @@ public class ImportFileOutputService(DestinationService destinationService)
         return results;
     }
 
-    // ── Serialisation ─────────────────────────────────────────────────────
+    // Serialisation
 
     private async Task<string> SerializeToTempFileAsync(
         IReadOnlyList<Dictionary<string, object?>> rows,

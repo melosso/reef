@@ -2925,7 +2925,7 @@ public class DatabaseInitializer
 </html>";
     }
 
-    // ── Import Profile Tables ───────────────────────────────────────────────────
+    // Import Profile Tables
 
     private async Task CreateImportProfilesTableAsync(SqliteConnection connection)
     {
@@ -3039,7 +3039,7 @@ public class DatabaseInitializer
     /// </summary>
     private async Task MigrateImportProfilesTargetConnectionNullableAsync(SqliteConnection connection)
     {
-        // ── Recovery: handle partial failures from a previous migration attempt ──
+        // Recovery: handle partial failures from a previous migration attempt ──
         var oldTableExists = (await connection.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ImportProfiles_old'")) > 0;
         var newTableExists = (await connection.ExecuteScalarAsync<long>(
@@ -3061,7 +3061,7 @@ public class DatabaseInitializer
             return;
         }
 
-        // ── Normal path: check if migration is needed ──
+        // Normal path: check if migration is needed ──
         var cols = await connection.QueryAsync("PRAGMA table_info(ImportProfiles)");
         var col = cols.FirstOrDefault(c => (string)c.name == "TargetConnectionId");
         if (col == null) return; // Column not found — nothing to do

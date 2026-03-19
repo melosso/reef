@@ -126,7 +126,7 @@ public class LocalFileSource : IImportSource
         return Task.FromResult<(bool, string?)>((false, $"Path not found: {basePath}"));
     }
 
-    // ── Helpers ──────────────────────────────────────────────
+    // Helpers
 
     private async Task<List<string>> ResolveFilesAsync(ImportProfile profile, CancellationToken ct)
     {

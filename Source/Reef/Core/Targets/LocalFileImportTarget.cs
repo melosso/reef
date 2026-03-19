@@ -107,7 +107,7 @@ public class LocalFileImportTarget : IImportTarget
         }
     }
 
-    // ── Private helpers ────────────────────────────────────────────────
+    // Private helpers
 
     private static async Task<int> AppendCsvAsync(
         string path,

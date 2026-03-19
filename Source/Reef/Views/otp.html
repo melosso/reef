@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify &middot; Reef</title>
+    <script src="/assets/js/_tailwind.4.0.js"></script>
+    <style type="text/tailwindcss">
+        @variant dark (&:where(.dark, .dark *));
+    </style>
+    <script src="/assets/js/_lucide.0.552.0.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/main.js"></script>
+    <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .fade-up {
+            animation: fadeUp 0.4s ease-out forwards;
+            opacity: 0;
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .error-slide-in { animation: slideDown 0.2s ease-out forwards; }
+
+        .dot-grid {
+            background-image: radial-gradient(circle, rgba(148,163,184,0.15) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .disable-select {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        /* OTP digit inputs */
+        .otp-input {
+            width: 2.75rem;
+            height: 3rem;
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            background: white;
+            color: #0f172a;
+            outline: none;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+            caret-color: transparent;
+        }
+        .otp-input:focus {
+            border-color: #94a3b8;
+            box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
+        }
+        .otp-input.filled {
+            border-color: #cbd5e1;
+            background-color: #f8fafc;
+        }
+        .otp-input.error {
+            border-color: #fca5a5;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+<div class="grid min-h-screen lg:grid-cols-2">
+
+    <!--  Left: OTP form panel -->
+    <div class="flex flex-col bg-white">
+        <!-- Logo -->
+        <div class="flex justify-center md:justify-start px-8 pt-8">
+            <a href="/index" class="flex items-center gap-2.5 select-none" tabindex="-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 stroke-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                    <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/>
+                </svg>
+                <span class="text-sm font-semibold text-slate-900 tracking-tight">Reef</span>
+            </a>
+        </div>
+
+        <!-- Centered form -->
+        <div class="flex flex-1 items-center justify-center px-6 py-10">
+            <div class="fade-up w-full max-w-sm">
+
+                <div class="mb-7 text-center">
+                    <div class="flex justify-center mb-4">
+                        <div class="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
+                            <i data-lucide="shield-check" class="h-6 w-6 text-slate-700"></i>
+                        </div>
+                    </div>
+                    <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Check your authenticator</h1>
+                    <p class="mt-1.5 text-sm text-slate-500">Enter the 6-digit code from your authenticator app</p>
+                </div>
+
+                <form id="otp-form" class="space-y-5" novalidate>
+
+                    <!-- OTP digit inputs -->
+                    <div class="flex items-center justify-center gap-2.5" id="otp-inputs" role="group" aria-label="One-time password">
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" autocomplete="one-time-code" aria-label="Digit 1">
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" aria-label="Digit 2">
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" aria-label="Digit 3">
+                        <div class="w-2 h-px bg-slate-300 shrink-0"></div>
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" aria-label="Digit 4">
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" aria-label="Digit 5">
+                        <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="otp-input" aria-label="Digit 6">
+                    </div>
+
+                    <div id="error-container" class="empty:hidden"></div>
+
+                    <button id="verify-button" type="submit" disabled
+                            class="w-full h-9 flex items-center justify-center gap-2 px-4 text-sm font-medium text-white bg-slate-900 rounded-md transition-all hover:bg-slate-800 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-slate-900/30 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100">
+                        <i id="verify-spinner" data-lucide="loader-2" class="h-4 w-4 animate-spin hidden"></i>
+                        <span id="verify-text">Verify code</span>
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center space-y-2">
+                    <p class="text-sm text-slate-500 disable-select">
+                        Didn't receive a code?
+                        <button id="resend-btn" type="button" class="font-medium text-slate-700 hover:text-slate-900 transition-colors underline underline-offset-4 ml-1">Resend</button>
+                    </p>
+                    <a href="/index" class="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 transition-colors">
+                        <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+                        Back to sign in
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-8 pb-6 text-center md:text-left">
+            <p class="text-xs text-slate-400 disable-select">&copy; Reef &middot; Data Integration Platform</p>
+        </div>
+    </div>
+
+    <!--  Right: decorative panel  -->
+    <div class="hidden lg:flex flex-col items-center justify-center relative bg-slate-900 overflow-hidden">
+        <div class="absolute inset-0 dot-grid"></div>
+        <div class="absolute top-0 right-0 w-[500px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+        <div class="absolute bottom-0 left-0 w-[400px] h-[300px] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+
+        <div class="relative z-10 flex flex-col items-center text-center px-12 max-w-md space-y-8">
+            <div class="h-16 w-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
+                <i data-lucide="shield-check" class="h-8 w-8 text-blue-400"></i>
+            </div>
+            <div class="space-y-3">
+                <h2 class="text-2xl font-bold text-white tracking-tight">Two-factor authentication</h2>
+                <p class="text-sm text-slate-400 leading-relaxed">An extra layer of security keeps your workspace and data protected from unauthorized access.</p>
+            </div>
+            <div class="w-full space-y-3 text-left">
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 h-5 w-5 rounded-md bg-blue-500/15 flex items-center justify-center shrink-0">
+                        <i data-lucide="smartphone" class="h-3 w-3 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-200">Authenticator app</p>
+                        <p class="text-xs text-slate-500">Use any TOTP-compatible app such as Authy or Google Authenticator</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <div class="mt-0.5 h-5 w-5 rounded-md bg-blue-500/15 flex items-center justify-center shrink-0">
+                        <i data-lucide="refresh-cw" class="h-3 w-3 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-200">Codes rotate every 30s</p>
+                        <p class="text-xs text-slate-500">Each code is time-based and expires automatically</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    queueLucideRender();
+</script>
+<script>
+    const otpInputs = [...document.querySelectorAll('.otp-input')];
+    const otpForm  = document.getElementById('otp-form');
+    const errorContainer = document.getElementById('error-container');
+    const verifyButton = document.getElementById('verify-button');
+    const verifyText   = document.getElementById('verify-text');
+
+    // OTP input wiring
+    otpInputs.forEach((input, i) => {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/\D/g, '');
+            e.target.value = val ? val[0] : '';
+            e.target.classList.toggle('filled', !!e.target.value);
+            clearErrors();
+            if (val && i < otpInputs.length - 1) {
+                otpInputs[i + 1].focus();
+            }
+            updateSubmitState();
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && i > 0) {
+                otpInputs[i - 1].focus();
+                otpInputs[i - 1].value = '';
+                otpInputs[i - 1].classList.remove('filled');
+                updateSubmitState();
+            }
+            if (e.key === 'ArrowLeft' && i > 0) otpInputs[i - 1].focus();
+            if (e.key === 'ArrowRight' && i < otpInputs.length - 1) otpInputs[i + 1].focus();
+        });
+
+        // Handle paste on any digit
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+            pasted.split('').forEach((ch, j) => {
+                if (otpInputs[j]) {
+                    otpInputs[j].value = ch;
+                    otpInputs[j].classList.add('filled');
+                }
+            });
+            const nextEmpty = otpInputs.find(el => !el.value);
+            (nextEmpty || otpInputs[otpInputs.length - 1]).focus();
+            updateSubmitState();
+        });
+    });
+
+    function getCode() {
+        return otpInputs.map(el => el.value).join('');
+    }
+
+    function updateSubmitState() {
+        const complete = getCode().length === 6;
+        verifyButton.disabled = !complete;
+        if (complete) verifyButton.classList.remove('disabled:opacity-40');
+    }
+
+    function clearErrors() {
+        otpInputs.forEach(el => el.classList.remove('error'));
+        errorContainer.innerHTML = '';
+    }
+
+    function showError(message) {
+        otpInputs.forEach(el => el.classList.add('error'));
+        errorContainer.innerHTML = `
+            <div class="bg-red-50 border border-red-200 text-red-700 rounded-md px-3.5 py-3 error-slide-in" role="alert">
+                <div class="flex items-center gap-2.5">
+                    <i data-lucide="alert-circle" class="h-4 w-4 flex-shrink-0"></i>
+                    <p class="text-sm font-medium">${message}</p>
+                </div>
+            </div>`;
+        queueLucideRender();
+        // Shake animation
+        const group = document.getElementById('otp-inputs');
+        group.style.animation = 'none';
+        group.offsetHeight; // reflow
+        group.style.animation = '';
+    }
+
+    function resetVerifyButton() {
+        const spinner = document.getElementById('verify-spinner');
+        if (spinner) spinner.classList.add('hidden');
+        verifyButton.disabled = false;
+        verifyText.textContent = 'Verify code';
+    }
+
+    otpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = getCode();
+        if (code.length !== 6) return;
+
+        clearErrors();
+        const spinner = document.getElementById('verify-spinner');
+        if (spinner) spinner.classList.remove('hidden');
+        verifyButton.disabled = true;
+        verifyText.textContent = 'Verifying…';
+
+        try {
+            const response = await fetch('/api/auth/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.token) {
+                    localStorage.setItem('reef_token', data.token);
+                    window.location.href = '/dashboard';
+                    return;
+                }
+            }
+
+            let errorMsg = 'Invalid or expired code. Please try again.';
+            try {
+                const ct = response.headers.get('content-type');
+                if (ct && ct.includes('application/json')) {
+                    const err = await response.json();
+                    errorMsg = err.message || errorMsg;
+                }
+            } catch {}
+            showError(errorMsg);
+            // Clear inputs on failure
+            otpInputs.forEach(el => { el.value = ''; el.classList.remove('filled'); });
+            otpInputs[0].focus();
+            resetVerifyButton();
+            verifyButton.disabled = true;
+        } catch {
+            showError('Connection error. Please check your network and try again.');
+            resetVerifyButton();
+        }
+    });
+
+    // Resend handler
+    document.getElementById('resend-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('resend-btn');
+        btn.textContent = 'Sending…';
+        btn.disabled = true;
+        try {
+            await fetch('/api/auth/resend-otp', { method: 'POST' });
+        } catch {}
+        btn.textContent = 'Sent!';
+        setTimeout(() => { btn.textContent = 'Resend'; btn.disabled = false; }, 4000);
+        clearErrors();
+        otpInputs.forEach(el => { el.value = ''; el.classList.remove('filled', 'error'); });
+        otpInputs[0].focus();
+        updateSubmitState();
+    });
+
+    // Focus first input on load
+    window.addEventListener('DOMContentLoaded', () => otpInputs[0].focus());
+
+    if (typeof redirectIfAuthenticated === 'function') {
+        redirectIfAuthenticated();
+    }
+</script>
+</body>
+</html>

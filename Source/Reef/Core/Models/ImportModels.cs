@@ -12,7 +12,7 @@ public class ImportProfile
     public required string Name { get; set; }
     public int? GroupId { get; set; }
 
-    // ── SOURCE ──────────────────────────────────────────────
+    // SOURCE
     /// <summary>Source type: Local, Sftp, Ftp, Http</summary>
     public string SourceType { get; set; } = "Local";
 
@@ -46,14 +46,14 @@ public class ImportProfile
     /// <summary>JSONPath or XPath to the data array in the response e.g. "$.data"</summary>
     public string? HttpDataRootPath { get; set; }
 
-    // ── FORMAT ──────────────────────────────────────────────
+    // FORMAT
     /// <summary>Source data format: CSV, JSON, JSONL, XML, YAML, TSV</summary>
     public string SourceFormat { get; set; } = "CSV";
 
     /// <summary>JSON-serialised ImportFormatConfig</summary>
     public string? FormatConfig { get; set; }
 
-    // ── COLUMN MAPPING ─────────────────────────────────────
+    // COLUMN MAPPING 
     /// <summary>JSON-serialised List&lt;ImportColumnMapping&gt;</summary>
     public string? ColumnMappingsJson { get; set; }
 
@@ -63,7 +63,7 @@ public class ImportProfile
     /// <summary>Silently ignore source columns that have no mapping or target column</summary>
     public bool SkipUnmappedColumns { get; set; } = true;
 
-    // ── TARGET ──────────────────────────────────────────────
+    // TARGET
     /// <summary>Target type: Database (default) or LocalFile</summary>
     public string TargetType { get; set; } = "Database";
 
@@ -73,7 +73,7 @@ public class ImportProfile
     /// <summary>Target table name — required when TargetType=Database</summary>
     public required string TargetTable { get; set; }
 
-    // ── LOCAL FILE TARGET ────────────────────────────────────
+    // LOCAL FILE TARGET 
     /// <summary>Absolute path to write output file — required when TargetType=LocalFile</summary>
     public string? LocalTargetPath { get; set; }
 
@@ -95,7 +95,7 @@ public class ImportProfile
     /// <summary>DB command timeout in seconds</summary>
     public int CommandTimeoutSeconds { get; set; } = 120;
 
-    // ── DELTA SYNC ──────────────────────────────────────────
+    // DELTA SYNC
     /// <summary>Enable delta sync - only import new/changed rows</summary>
     public bool DeltaSyncEnabled { get; set; } = false;
 
@@ -118,7 +118,7 @@ public class ImportProfile
 
     public int? DeltaSyncRetentionDays { get; set; }
 
-    // ── FAILURE HANDLING ────────────────────────────────────
+    // FAILURE HANDLING 
     /// <summary>What to do when source fetch fails: Fail, Skip, Retry</summary>
     public string OnSourceFailure { get; set; } = "Fail";
 
@@ -143,7 +143,7 @@ public class ImportProfile
     /// <summary>Max source connection retries with exponential back-off</summary>
     public int RetryCount { get; set; } = 3;
 
-    // ── PRE/POST PROCESSING ──────────────────────────────────
+    // PRE/POST PROCESSING 
     public string? PreProcessType { get; set; }
     public string? PreProcessConfig { get; set; }
     public bool PreProcessRollbackOnFailure { get; set; } = true;
@@ -153,10 +153,10 @@ public class ImportProfile
     public bool PostProcessSkipOnFailure { get; set; } = true;
     public bool PostProcessRollbackOnFailure { get; set; } = false;
 
-    // ── NOTIFICATIONS ───────────────────────────────────────
+    // NOTIFICATIONS
     public string? NotificationConfig { get; set; }
 
-    // ── METADATA ────────────────────────────────────────────
+    // METADATA
     public bool IsEnabled { get; set; } = true;
     public required string Hash { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -251,7 +251,7 @@ public class ImportOutputTarget
 
     public DateTime CreatedAt { get; set; }
 
-    // ── Joined (not stored in DB) ──────────────────────────────────────
+    // Joined (not stored in DB) 
     public string? DestinationName { get; set; }
     public string? DestinationType { get; set; }
 }
@@ -334,7 +334,7 @@ public class ImportColumnMapping
 /// </summary>
 public class ImportFormatConfig
 {
-    // ── CSV / TSV ──
+    // CSV / TSV ──
     public string Delimiter { get; set; } = ",";
     public bool HasHeader { get; set; } = true;
     public string Encoding { get; set; } = "UTF-8";
@@ -343,17 +343,17 @@ public class ImportFormatConfig
     public int SkipRows { get; set; } = 0;
     public string? NullValue { get; set; }
 
-    // ── JSON / JSONL ──
+    // JSON / JSONL ──
     /// <summary>JSONPath expression pointing to the array of records e.g. "$.data"</summary>
     public string? DataRootPath { get; set; }
     public bool IsJsonLines { get; set; } = false;
 
-    // ── XML ──
+    // XML ──
     /// <summary>XPath to the repeating record element e.g. "//Order"</summary>
     public string? RecordElement { get; set; }
     public string? XmlNamespace { get; set; }
 
-    // ── Common ──
+    // Common ──
     public string? DateTimeFormat { get; set; }
     public string DecimalSeparator { get; set; } = ".";
     public string ThousandsSeparator { get; set; } = "";
@@ -396,7 +396,7 @@ public class ImportWriteContext
     /// <summary>Target type: Database or LocalFile</summary>
     public string TargetType { get; set; } = "Database";
 
-    // ── Database target ──────────────────────────────────────
+    // Database target 
     public Connection? TargetConnection { get; set; }
     public string TargetTable { get; set; } = "";
     public string LoadStrategy { get; set; } = "Upsert";
@@ -407,7 +407,7 @@ public class ImportWriteContext
     public string OnConstraintViolation { get; set; } = "SkipRow";
     public int BatchSize { get; set; } = 500;
 
-    // ── LocalFile target ─────────────────────────────────────
+    // LocalFile target 
     public string? TargetFilePath { get; set; }
     public string? TargetFormat { get; set; } = "CSV";
     public string? TargetWriteMode { get; set; } = "Overwrite";

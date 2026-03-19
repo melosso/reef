@@ -89,7 +89,7 @@ public class CsvImportParser : IImportParser
         }
     }
 
-    // ── RFC-4180 CSV line parser ──
+    // RFC-4180 CSV line parser ──
 
     private static List<string> ParseCsvLine(string line, char delimiter, char quote, bool trim)
     {

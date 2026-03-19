@@ -131,7 +131,7 @@ public class NetworkShareImportSource : IImportSource
         return Task.FromResult<(bool, string?)>((false, $"Path not accessible: {basePath}"));
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    // Helpers
 
     private static List<string> ResolveFiles(string basePath, string? exactPath, string? pattern, string fileSelection)
     {

@@ -60,7 +60,7 @@ public class ImportExecutionService
         _fileOutputService = fileOutputService;
     }
 
-    // ── Public Entry Points ────────────────────────────────────────────
+    // Public Entry Points
 
     public async Task<ImportProfileExecution> ExecuteAsync(
         int importProfileId,
@@ -152,7 +152,7 @@ public class ImportExecutionService
         return exec;
     }
 
-    // ── Pipeline ───────────────────────────────────────────────────────
+    // Pipeline
 
     private async Task RunPipelineAsync(
         ImportProfileWithNames profile,
@@ -160,7 +160,7 @@ public class ImportExecutionService
         Dictionary<string, long> phaseTimings,
         CancellationToken ct)
     {
-        // ── Phase 1: Load target connection (Database target only) ───
+        // Phase 1: Load target connection (Database target only) 
         bool isLocalFile = profile.TargetType?.Equals("LocalFile", StringComparison.OrdinalIgnoreCase) == true;
         Connection? connection = null;
         string? decryptedConnStr = null;
@@ -173,7 +173,7 @@ public class ImportExecutionService
             decryptedConnStr = connection.ConnectionString;
         }
 
-        // ── Phase 2: Pre-process (Database target only) ─────────────
+        // Phase 2: Pre-process (Database target only) 
         if (!isLocalFile && !string.IsNullOrWhiteSpace(profile.PreProcessType))
         {
             await TimedPhaseAsync("PreProcess", exec, phaseTimings, ct, async () =>
@@ -184,7 +184,7 @@ public class ImportExecutionService
             });
         }
 
-        // ── Phase 3: Fetch source files ─────────────────────────────
+        // Phase 3: Fetch source files 
         // Resolve SourceDestinationId → source config if needed
         ImportProfile resolvedProfile = profile;
         if (profile.SourceDestinationId.HasValue)
@@ -198,7 +198,7 @@ public class ImportExecutionService
             sourceFiles = await FetchWithRetryAsync(resolvedProfile, exec, ct);
         });
 
-        // ── Binary passthrough: skip all parse/map/write phases ──────
+        // Binary passthrough: skip all parse/map/write phases 
         if (profile.SourceFormat.Equals("Binary", StringComparison.OrdinalIgnoreCase))
         {
             await ExecuteBinaryPassthroughAsync(profile, exec, resolvedProfile,
@@ -206,7 +206,7 @@ public class ImportExecutionService
             return;
         }
 
-        // ── Phase 4 + 5 + 6 + 7: Parse → Map → Delta → Write ────────
+        // Phase 4 + 5 + 6 + 7: Parse → Map → Delta → Write 
         // Parse is streaming; batches are collected then written
         var formatConfig = ParseFormatConfig(profile.FormatConfig);
         var columnMappings = ParseColumnMappings(profile.ColumnMappingsJson);
@@ -377,7 +377,7 @@ public class ImportExecutionService
             return;
         }
 
-        // ── Phase 8: Commit delta sync state ─────────────────────────
+        // Phase 8: Commit delta sync state 
         if (profile.DeltaSyncEnabled && currentHashState.Any())
         {
             await TimedPhaseAsync("CommitDeltaState", exec, phaseTimings, ct, async () =>
@@ -405,7 +405,7 @@ public class ImportExecutionService
             });
         }
 
-        // ── Phase 8b: Fan-out to output targets ───────────────────────
+        // Phase 8b: Fan-out to output targets 
         if (hasFileOutputTargets && collectedRows is { Count: > 0 })
         {
             await TimedPhaseAsync("FanOut", exec, phaseTimings, ct, async () =>
@@ -442,7 +442,7 @@ public class ImportExecutionService
             Log.Debug("ImportExecution {Id}: output targets configured but no rows collected to fan-out", exec.Id);
         }
 
-        // ── Phase 9: Archive source files ─────────────────────────────
+        // Phase 9: Archive source files 
         if (profile.ArchiveAfterImport)
         {
             await TimedPhaseAsync("Archive", exec, phaseTimings, ct, async () =>
@@ -474,7 +474,7 @@ public class ImportExecutionService
             });
         }
 
-        // ── Phase 10: Apply deletes (delta sync) ──────────────────────
+        // Phase 10: Apply deletes (delta sync) 
         if (profile.DeltaSyncEnabled && profile.DeltaSyncTrackDeletes && previousHashes.Any())
         {
             var deletedIds = previousHashes.Keys
@@ -494,7 +494,7 @@ public class ImportExecutionService
             }
         }
 
-        // ── Phase 11: Post-process (Database target only) ─────────────
+        // Phase 11: Post-process (Database target only) 
         if (!isLocalFile && !string.IsNullOrWhiteSpace(profile.PostProcessType))
         {
             await TimedPhaseAsync("PostProcess", exec, phaseTimings, ct, async () =>
@@ -515,7 +515,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Binary Passthrough ─────────────────────────────────────────────
+    // Binary Passthrough
 
     private async Task ExecuteBinaryPassthroughAsync(
         ImportProfileWithNames profile,
@@ -587,7 +587,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Source Fetch with Retry ────────────────────────────────────────
+    // Source Fetch with Retry─
 
     private async Task<List<ImportSourceFile>> FetchWithRetryAsync(
         ImportProfile profile,
@@ -637,7 +637,7 @@ public class ImportExecutionService
         throw new InvalidOperationException(errMsg, lastEx);
     }
 
-    // ── Batch Write ────────────────────────────────────────────────────
+    // Batch Write
 
     private async Task WriteBatchAsync(
         IImportTarget target,
@@ -675,7 +675,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Parse Failure Handling ─────────────────────────────────────────
+    // Parse Failure Handling──
 
     private async Task HandleParseFailure(
         ImportProfile profile,
@@ -703,7 +703,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Column Mapping ─────────────────────────────────────────────────
+    // Column Mapping
 
     private static Dictionary<string, object?>? ApplyColumnMapping(
         Dictionary<string, object?> sourceColumns,
@@ -782,7 +782,7 @@ public class ImportExecutionService
         };
     }
 
-    // ── Delta Sync Helpers ─────────────────────────────────────────────
+    // Delta Sync Helpers
 
     private async Task<Dictionary<string, string>> LoadDeltaHashesAsync(int importProfileId)
     {
@@ -849,7 +849,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Pre/Post SQL Processing ────────────────────────────────────────
+    // Pre/Post SQL Processing─
 
     private static async Task RunSqlProcessAsync(
         string dbType, string connectionString,
@@ -880,7 +880,7 @@ public class ImportExecutionService
         await dbConn.ExecuteAsync(new CommandDefinition(sql, cancellationToken: ct));
     }
 
-    // ── Utility ────────────────────────────────────────────────────────
+    // Utility
 
     private static async Task TimedPhaseAsync(
         string phase,
@@ -956,7 +956,7 @@ public class ImportExecutionService
         }
     }
 
-    // ── Format / Mapping Deserialization ──────────────────────────────
+    // Format / Mapping Deserialization 
 
     private static ImportFormatConfig ParseFormatConfig(string? json)
     {

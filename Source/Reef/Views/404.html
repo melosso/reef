@@ -8,12 +8,21 @@
     <script src="/assets/js/_lucide.0.552.0.js"></script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <style>
+        :root {
+            --splash-bg:     #020617; /* slate-950 */
+            --splash-blob-1: #7f1d1d; /* red-900   */
+            --splash-blob-2: #4c0519; /* rose-950  */
+            --splash-blob-3: #1e293b; /* slate-800  */
+        }
+        html {
+            background-color: #020617; /* slate-950 — prevents white flash during page transitions */
+        }
         body {
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            background-color: #020617; /* slate-950 */
+            background-color: var(--splash-bg);
         }
 
         /* --- Animated Blob Background --- */
@@ -22,7 +31,7 @@
             inset: 0;
             z-index: 0;
             overflow: hidden;
-            background-color: #020617;
+            background-color: var(--splash-bg);
         }
 
         .blob {
@@ -35,7 +44,7 @@
 
         /* Error state chromatic scale */
         .blob.color-1 {
-            background: #7f1d1d; /* red-900 */
+            background: var(--splash-blob-1);
             width: 450px;
             height: 450px;
             top: -100px;
@@ -44,7 +53,7 @@
         }
 
         .blob.color-2 {
-            background: #4c0519; /* rose-950 */
+            background: var(--splash-blob-2);
             width: 350px;
             height: 350px;
             bottom: -50px;
@@ -53,7 +62,7 @@
         }
 
         .blob.color-3 {
-            background: #1e293b; /* slate-800 */
+            background: var(--splash-blob-3);
             width: 300px;
             height: 300px;
             top: 50%;

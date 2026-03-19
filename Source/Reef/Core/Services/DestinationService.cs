@@ -1403,7 +1403,7 @@ public class DestinationService
         return destinations;
     }
 
-    // ─── Endpoint CRUD ────────────────────────────────────────────────────────
+    //  Endpoint CRUD
 
     public async Task<List<DestinationEndpoint>> GetEndpointsByDestinationIdAsync(int destinationId)
     {

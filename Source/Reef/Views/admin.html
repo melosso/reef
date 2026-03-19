@@ -24,13 +24,78 @@
         }
     </style><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Application Settings</h1>
-                </div>
-            </header>
+    <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+        <div class="px-6 py-4">
+            <h1 class="text-xl font-semibold text-slate-900 disable-select">Settings</h1>
+        </div>
+    </header>
 
-            <main class="flex-1 overflow-y-auto bg-gray-100">
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Settings Sidebar -->
+        <aside class="w-52 bg-white border-r border-slate-200 shrink-0 overflow-y-auto">
+            <div class="p-3 pt-4 space-y-4">
+                <!-- Monitor -->
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Monitor</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-system" onclick="showTab('system')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm bg-slate-100 text-slate-900 font-medium text-left">
+                            <i data-lucide="server" class="h-4 w-4 shrink-0"></i>
+                            System Info
+                        </button>
+                        <button id="tab-metrics" onclick="showTab('metrics')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="bar-chart-2" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Statistics
+                        </button>
+                        <button id="tab-logs" onclick="showTab('logs')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="terminal" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Logging
+                        </button>
+                        <button id="tab-audit" onclick="showTab('audit')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="shield-check" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Audit
+                        </button>
+                    </div>
+                </div>
+                <!-- Access -->
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Access</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-users" onclick="showTab('users')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="users" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Users
+                        </button>
+                        <button id="tab-apikeys" onclick="showTab('apikeys')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="key" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Integrations
+                        </button>
+                    </div>
+                </div>
+                <!-- Configure -->
+                <div>
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Configure</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-notifications" onclick="showTab('notifications')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="bell" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Notifications
+                        </button>
+                        <button id="tab-email-templates" onclick="showTab('email-templates')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="mail" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Templates
+                        </button>
+                    </div>
+                </div>
+                <!-- Danger -->
+                <div class="border-t border-slate-200 pt-1">
+                    <button id="tab-danger" onclick="showTab('danger')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors text-left">
+                        <i data-lucide="triangle-alert" class="h-4 w-4 shrink-0"></i>
+                        Danger Zone
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="flex-1 overflow-y-auto bg-slate-50">
                 <div id="version-notification" class="hidden bg-white border-b border-slate-200 shadow-sm transition-all duration-300">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
                         <div class="flex items-center justify-between">
@@ -63,39 +128,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="px-6 py-6">
-                    <!-- Tabs -->
-                    <div class="mb-6">
-                        <nav class="flex space-x-4 border-b border-gray-200">
-                            <button onclick="showTab('system')" id="tab-system" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                System Info
-                            </button>
-                            <button onclick="showTab('metrics')" id="tab-metrics" class="px-4 py-2 font-medium text-blue-600 border-b-2 border-blue-600">
-                                Statistics
-                            </button>
-                            <button onclick="showTab('logs')" id="tab-logs" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Logging
-                            </button>
-                            <button onclick="showTab('audit')" id="tab-audit" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Audit
-                            </button>
-                            <button onclick="showTab('users')" id="tab-users" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Users
-                            </button>
-                            <button onclick="showTab('apikeys')" id="tab-apikeys" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Integrations
-                            </button>
-                            <button onclick="showTab('notifications')" id="tab-notifications" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Notifications
-                            </button>
-                            <button onclick="showTab('email-templates')" id="tab-email-templates" class="px-4 py-2 font-medium text-gray-600 hover:text-gray-900">
-                                Templates
-                            </button>
-                            <button onclick="showTab('danger')" id="tab-danger" class="px-4 py-2 font-medium text-gray-600 hover:text-red-600">
-                                Danger Zone
-                            </button>
-                        </nav>
-                    </div>
+                <div class="p-6">
 
                     <!-- System Info Tab -->
                     <div id="content-system" class="tab-content hidden relative">
@@ -217,7 +250,7 @@
                                     <p class="text-sm text-gray-600">Check our documentation or get support</p>
                                 </div>
                                 <div class="flex space-x-2">
-                                    <a href="https://github.com/melosso/reef/wiki" target="_blank" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center">
+                                    <a href="https://github.com/melosso/reef/wiki" target="_blank" class="h-9 px-3 text-sm border border-slate-200 rounded-md hover:bg-white flex items-center text-slate-700 transition-colors">
                                         <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
                                         Documentation
                                     </a>
@@ -349,14 +382,14 @@
                                 <div class="flex items-center justify-between disable-select">
                                     <h3 class="text-lg font-semibold text-gray-900">Audit</h3>
                                     <div class="flex space-x-2">
-                                        <select id="filter-entity-type" onchange="applyAuditFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <select id="filter-entity-type" onchange="applyAuditFilters()" class="h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">All Entity Types</option>
                                             <option value="Connection">Connection</option>
                                             <option value="Profile">Profile</option>
                                             <option value="User">User</option>
                                             <option value="ApiKey">API Key</option>
                                         </select>
-                                        <select id="filter-action" onchange="applyAuditFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <select id="filter-action" onchange="applyAuditFilters()" class="h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">All Actions</option>
                                             <option value="Created">Created</option>
                                             <option value="Updated">Updated</option>
@@ -387,10 +420,10 @@
                             <!-- Pagination -->
                             <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
                                 <div class="flex-1 flex justify-between sm:hidden">
-                                    <button onclick="previousAuditPage()" id="audit-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    <button onclick="previousAuditPage()" id="audit-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Previous
                                     </button>
-                                    <button onclick="nextAuditPage()" id="audit-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    <button onclick="nextAuditPage()" id="audit-mobile-next" class="ml-3 relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Next
                                     </button>
                                 </div>
@@ -401,7 +434,7 @@
                                         </p>
                                         <div class="flex items-center space-x-2">
                                             <label for="audit-page-size-select" class="text-sm text-gray-700">Per page:</label>
-                                            <select id="audit-page-size-select" onchange="changeAuditPageSize()" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                            <select id="audit-page-size-select" onchange="changeAuditPageSize()" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white outline-none">
                                                 <option value="25">25</option>
                                                 <option value="50" selected>50</option>
                                                 <option value="100">100</option>
@@ -437,9 +470,9 @@
                         <div class="bg-white rounded-lg shadow mb-6">
                             <div class="p-6 border-b border-gray-200">
                                 <div class="flex items-center justify-between mb-4">
-                                    <h3 class="text-lg font-semibold text-gray-900 disable-select">Console Log</h3>
+                                    <h3 class="text-lg font-semibold text-gray-900 disable-select">Logging</h3>
                                     <div class="flex space-x-2">
-                                        <select id="filter-log-level" onchange="applyLogFilters()" class="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                                        <select id="filter-log-level" onchange="applyLogFilters()" class="h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">All Levels</option>
                                             <option value="Debug">Debug</option>
                                             <option value="Information">Information</option>
@@ -448,7 +481,7 @@
                                             <option value="Fatal">Fatal</option>
                                         </select>
                                         <label class="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
-                                            <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                            <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                             <span class="text-sm text-gray-700">Auto-refresh</span>
                                         </label>
                                         <button onclick="loadLogs()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center">
@@ -471,10 +504,10 @@
                             <!-- Pagination -->
                             <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
                                 <div class="flex-1 flex justify-between sm:hidden">
-                                    <button onclick="previousLogPage()" id="log-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    <button onclick="previousLogPage()" id="log-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Previous
                                     </button>
-                                    <button onclick="nextLogPage()" id="log-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    <button onclick="nextLogPage()" id="log-mobile-next" class="ml-3 relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                         Next
                                     </button>
                                 </div>
@@ -485,7 +518,7 @@
                                         </p>
                                         <div class="flex items-center space-x-2">
                                             <label for="log-page-size-select" class="text-sm text-gray-700">Per page:</label>
-                                            <select id="log-page-size-select" onchange="changeLogPageSize()" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                            <select id="log-page-size-select" onchange="changeLogPageSize()" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white outline-none">
                                                 <option value="50">50</option>
                                                 <option value="100" selected>100</option>
                                                 <option value="200">200</option>
@@ -523,10 +556,10 @@
                                 <div class="flex items-center justify-between disable-select">
                                     <h3 class="text-lg font-semibold text-gray-900">User Management</h3>
                                     <div class="flex gap-2">
-                                        <button onclick="openUserHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out active:scale-95" aria-label="Help">
+                                        <button onclick="openUserHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                                         </button>
-                                        <button onclick="openAddUserModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                        <button onclick="openAddUserModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
                                             <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                                             Add User
                                         </button>
@@ -576,10 +609,10 @@
                                 <div class="flex items-center justify-between disable-select">
                                     <h3 class="text-lg font-semibold text-gray-900">API Key Management</h3>
                                     <div class="flex gap-2">
-                                        <button onclick="openApiKeyHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition duration-150 ease-in-out active:scale-95" aria-label="Help">
+                                        <button onclick="openApiKeyHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                                         </button>
-                                        <button onclick="openAddApiKeyModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                        <button onclick="openAddApiKeyModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
                                             <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                                             Add API Key
                                         </button>
@@ -641,12 +674,12 @@
                                     </label>
                                 </div>
 
-                                <hr class="my-6">
+                                <hr class="my-6 border-slate-200">
 
                                 <!-- Destination Selection -->
                                 <div>
                                     <label for="notification-destination" class="block text-sm font-semibold text-gray-900 mb-2">Email Destination</label>
-                                    <select id="notification-destination" onchange="handleDestinationChange()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <select id="notification-destination" onchange="handleDestinationChange()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                         <option value="">Select a destination...</option>
                                     </select>
                                     <p class="text-sm text-gray-600 mt-1">Choose an Email destination to send notifications through</p>
@@ -655,47 +688,41 @@
                                 <!-- Recipient Emails -->
                                 <div>
                                     <label for="notification-recipients" class="block text-sm font-semibold text-gray-900 mb-2">Recipients</label>
-                                    <input type="text" id="notification-recipients" placeholder="admin@example.com; ops@example.com" onchange="handleNotificationChange()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <input type="text" id="notification-recipients" placeholder="admin@example.com; ops@example.com" onchange="handleNotificationChange()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     <p class="text-sm text-gray-600 mt-1">Specify email recipients for system notifications (semicolon-separated).</p>
                                 </div>
 
-                                <hr class="my-6">
+                                <hr class="my-6 border-slate-200">
 
                                 <!-- Notification Triggers - Categorized -->
-                                <div class="space-y-6">
+                                <div class="space-y-4">
                                     <!-- Profile Execution Notifications -->
                                     <div>
-                                        <div class="flex items-center gap-2 mb-4">
-                                            <div class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                                <i data-lucide="play-circle" class="h-5 w-5 text-blue-600"></i>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                                                <i data-lucide="play-circle" class="h-3.5 w-3.5 text-slate-500"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="text-base font-semibold text-gray-900">Profile Execution</h4>
-                                                <p class="text-xs text-gray-600">Notifications for profile export execution</p>
-                                            </div>
+                                            <h4 class="text-sm font-medium text-slate-700">Profile Execution</h4>
                                         </div>
-                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                                            <!-- Profile Execution Failures -->
-                                            <div class="flex items-center justify-between">
+                                        <div class="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Failures</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a profile execution fails</p>
+                                                    <p class="text-sm font-medium text-slate-700">Failures</p>
+                                                    <p class="text-xs text-slate-500">Notify when a profile execution fails</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
-
-                                            <!-- Profile Execution Success -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Success</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a profile execution completes successfully</p>
+                                                    <p class="text-sm font-medium text-slate-700">Success</p>
+                                                    <p class="text-xs text-slate-500">Notify when a profile execution completes successfully</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -703,37 +730,31 @@
 
                                     <!-- Import Profile Execution Notifications -->
                                     <div>
-                                        <div class="flex items-center gap-2 mb-4">
-                                            <div class="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                                <i data-lucide="download" class="h-5 w-5 text-emerald-600"></i>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                                                <i data-lucide="download" class="h-3.5 w-3.5 text-slate-500"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="text-base font-semibold text-gray-900">Import Profile Execution</h4>
-                                                <p class="text-xs text-gray-600">Notifications for import profile execution</p>
-                                            </div>
+                                            <h4 class="text-sm font-medium text-slate-700">Import Profile Execution</h4>
                                         </div>
-                                        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4 space-y-3">
-                                            <!-- Import Profile Failures -->
-                                            <div class="flex items-center justify-between">
+                                        <div class="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Failures</h5>
-                                                    <p class="text-sm text-gray-600">Notify when an import profile execution fails</p>
+                                                    <p class="text-sm font-medium text-slate-700">Failures</p>
+                                                    <p class="text-xs text-slate-500">Notify when an import profile execution fails</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
-
-                                            <!-- Import Profile Success -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Success</h5>
-                                                    <p class="text-sm text-gray-600">Notify when an import profile execution completes successfully</p>
+                                                    <p class="text-sm font-medium text-slate-700">Success</p>
+                                                    <p class="text-xs text-slate-500">Notify when an import profile execution completes successfully</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -741,37 +762,31 @@
 
                                     <!-- Job Execution Notifications -->
                                     <div>
-                                        <div class="flex items-center gap-2 mb-4">
-                                            <div class="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                                                <i data-lucide="cog" class="h-5 w-5 text-purple-600"></i>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                                                <i data-lucide="cog" class="h-3.5 w-3.5 text-slate-500"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="text-base font-semibold text-gray-900">Job Execution</h4>
-                                                <p class="text-xs text-gray-600">Notifications for scheduled job execution</p>
-                                            </div>
+                                            <h4 class="text-sm font-medium text-slate-700">Job Execution</h4>
                                         </div>
-                                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-                                            <!-- Job Failures -->
-                                            <div class="flex items-center justify-between">
+                                        <div class="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Failures</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a job execution fails</p>
+                                                    <p class="text-sm font-medium text-slate-700">Failures</p>
+                                                    <p class="text-xs text-slate-500">Notify when a job execution fails</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
-
-                                            <!-- Job Success -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">Success</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a job execution completes successfully</p>
+                                                    <p class="text-sm font-medium text-slate-700">Success</p>
+                                                    <p class="text-xs text-slate-500">Notify when a job execution completes successfully</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -779,39 +794,34 @@
 
                                     <!-- Approval Notifications -->
                                     <div>
-                                        <div class="flex items-center gap-2 mb-4">
-                                            <div class="h-8 w-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                                <i data-lucide="mail-check" class="h-5 w-5 text-orange-600"></i>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                                                <i data-lucide="mail-check" class="h-3.5 w-3.5 text-slate-500"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="text-base font-semibold text-gray-900">Approval</h4>
-                                                <p class="text-xs text-gray-600">Notifications for items awaiting approval</p>
-                                            </div>
+                                            <h4 class="text-sm font-medium text-slate-700">Approval</h4>
                                         </div>
-                                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
-                                            <!-- New Email Approval -->
-                                            <div>
-                                                <div class="flex items-center justify-between mb-3">
+                                        <div class="border border-slate-200 rounded-lg">
+                                            <div class="px-4 py-3">
+                                                <div class="flex items-center justify-between mb-1">
                                                     <div class="flex items-center gap-2">
-                                                        <h5 class="font-semibold text-gray-900">New item for approval</h5>
-                                                        <button onclick="toggleEmailApprovalSettings()" class="text-orange-600 hover:text-orange-700 transition-colors" title="Configure cooldown period">
-                                                            <i data-lucide="settings" class="h-4 w-4"></i>
+                                                        <p class="text-sm font-medium text-slate-700">New item for approval</p>
+                                                        <button onclick="toggleEmailApprovalSettings()" class="text-slate-400 hover:text-slate-600 transition-colors" title="Configure cooldown period">
+                                                            <i data-lucide="settings" class="h-3.5 w-3.5"></i>
                                                         </button>
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-email-approval" onchange="handleNotificationChange()" class="sr-only peer">
-                                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
-                                                <p class="text-sm text-gray-600 mb-2">Notify when new emails are pending approval</p>
-                                                <!-- Cooldown Configuration (Hidden by default) -->
-                                                <div id="email-approval-settings" class="hidden ml-4 mt-3 p-3 bg-white border border-orange-300 rounded-lg">
-                                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Cooldown Period</label>
+                                                <p class="text-xs text-slate-500 mb-2">Notify when new emails are pending approval</p>
+                                                <div id="email-approval-settings" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
+                                                    <label class="block text-xs font-medium text-slate-700 mb-2">Cooldown Period</label>
                                                     <div class="flex items-center gap-2">
-                                                        <input type="number" id="email-approval-cooldown-hours" min="1" max="168" value="24" class="w-20 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent" onchange="handleNotificationChange()">
-                                                        <span class="text-sm text-gray-600">hours (notify at most once every N hours)</span>
+                                                        <input type="number" id="email-approval-cooldown-hours" min="1" max="168" value="24" class="w-20 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-300 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <span class="text-xs text-slate-500">hours (notify at most once every N hours)</span>
                                                     </div>
-                                                    <p class="text-xs text-gray-500 mt-2">Default: 24 hours. Prevents notification spam when multiple emails are pending approval.</p>
+                                                    <p class="text-xs text-slate-400 mt-2">Default: 24 hours. Prevents notification spam when multiple emails are pending approval.</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -819,82 +829,71 @@
 
                                     <!-- System Events Notifications -->
                                     <div>
-                                        <div class="flex items-center gap-2 mb-4">
-                                            <div class="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                                                <i data-lucide="bell" class="h-5 w-5 text-amber-600"></i>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <div class="h-6 w-6 rounded-md bg-slate-100 flex items-center justify-center">
+                                                <i data-lucide="bell" class="h-3.5 w-3.5 text-slate-500"></i>
                                             </div>
-                                            <div>
-                                                <h4 class="text-base font-semibold text-gray-900">System Events</h4>
-                                                <p class="text-xs text-gray-600">Notifications for system changes and events</p>
-                                            </div>
+                                            <h4 class="text-sm font-medium text-slate-700">System Events</h4>
                                         </div>
-                                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-                                            <!-- Database Size Threshold -->
-                                            <div>
-                                                <div class="flex items-center justify-between mb-3">
+                                        <div class="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                                            <div class="px-4 py-3">
+                                                <div class="flex items-center justify-between mb-1">
                                                     <div class="flex items-center gap-2">
-                                                        <h5 class="font-semibold text-gray-900">Database Size Threshold</h5>
-                                                        <button onclick="toggleDatabaseSizeSettings()" class="text-amber-600 hover:text-amber-700 transition-colors" title="Configure threshold size">
-                                                            <i data-lucide="settings" class="h-4 w-4"></i>
+                                                        <p class="text-sm font-medium text-slate-700">Database Size Threshold</p>
+                                                        <button onclick="toggleDatabaseSizeSettings()" class="text-slate-400 hover:text-slate-600 transition-colors" title="Configure threshold size">
+                                                            <i data-lucide="settings" class="h-3.5 w-3.5"></i>
                                                         </button>
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-db-size" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                        <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                     </label>
                                                 </div>
-                                                <p class="text-sm text-gray-600 mb-2">Notify when database exceeds limit</p>
-                                                <!-- Threshold Size Input (Hidden by default) -->
-                                                <div id="database-size-settings" class="hidden ml-4 mt-3 p-3 bg-white border border-amber-300 rounded-lg">
-                                                    <label class="block text-sm font-semibold text-gray-900 mb-2">Threshold Size</label>
+                                                <p class="text-xs text-slate-500 mb-2">Notify when database exceeds limit</p>
+                                                <div id="database-size-settings" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
+                                                    <label class="block text-xs font-medium text-slate-700 mb-2">Threshold Size</label>
                                                     <div class="flex items-center gap-2">
-                                                        <input type="number" id="db-threshold-mb" min="100" max="10240" value="1024" class="w-24 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent" onchange="handleNotificationChange()">
-                                                        <span class="text-sm text-gray-600">MB</span>
+                                                        <input type="number" id="db-threshold-mb" min="100" max="10240" value="1024" class="w-24 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-300 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <span class="text-xs text-slate-500">MB</span>
                                                     </div>
-                                                    <p class="text-xs text-gray-500 mt-2">Default: 1024 MB (1 GB). Notify when database size exceeds this threshold.</p>
+                                                    <p class="text-xs text-slate-400 mt-2">Default: 1024 MB (1 GB). Notify when database size exceeds this threshold.</p>
                                                 </div>
                                             </div>
-
-                                            <!-- New API Key -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">New API Key Created</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a new API key is created</p>
+                                                    <p class="text-sm font-medium text-slate-700">New API Key Created</p>
+                                                    <p class="text-xs text-slate-500">Notify when a new API key is created</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-api-key" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
-
-                                            <!-- New User -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">New User Created</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a new user is created</p>
+                                                    <p class="text-sm font-medium text-slate-700">New User Created</p>
+                                                    <p class="text-xs text-slate-500">Notify when a new user is created</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-user" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
-
-                                            <!-- New Webhook -->
-                                            <div class="flex items-center justify-between">
+                                            <div class="flex items-center justify-between px-4 py-3">
                                                 <div>
-                                                    <h5 class="font-semibold text-gray-900">New Webhook Created</h5>
-                                                    <p class="text-sm text-gray-600">Notify when a new webhook trigger is created</p>
+                                                    <p class="text-sm font-medium text-slate-700">New Webhook Created</p>
+                                                    <p class="text-xs text-slate-500">Notify when a new webhook trigger is created</p>
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-webhook" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                                 </label>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <hr class="my-6">
+                                <hr class="my-6 border-slate-200">
 
                                 <!-- Instance Exposure Configuration -->
                                 <div>
@@ -925,7 +924,7 @@
                                             <!-- Instance URL -->
                                             <div>
                                                 <label for="cta-url" class="block text-sm font-semibold text-gray-900 mb-2">Instance URL</label>
-                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono" onchange="handleNotificationChange()">
+                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono" onchange="handleNotificationChange()">
                                                 <p class="text-xs text-gray-500 mt-1">
                                                     External URL where Reef is accessible. Available as <code class="bg-gray-100 px-1 rounded text-xs">{CTAUrl}</code> in all templates.
                                                 </p>
@@ -941,11 +940,11 @@
                                     </div>
                                 </div>
 
-                                <hr class="my-6">
+                                <hr class="my-6 border-slate-200">
 
                                 <!-- Action Buttons -->
                                 <div class="flex justify-end gap-3">
-                                    <button id="test-notification-btn" onclick="sendTestNotification()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-white flex items-center transition duration-200 ease-in-out active:scale-95">
+                                    <button id="test-notification-btn" onclick="sendTestNotification()" class="h-9 px-3 text-sm border border-slate-200 rounded-md hover:bg-white flex items-center text-slate-700 transition-colors transition duration-200 ease-in-out active:scale-95">
                                         <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
                                         Test Notification
                                     </button>
@@ -985,7 +984,7 @@
                                     <!-- Template List -->
                                     <div class="lg:col-span-1">
                                         <label class="block text-sm font-semibold text-gray-900 mb-3">Select Template</label>
-                                        <select id="template-type" onchange="loadTemplate()" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                        <select id="template-type" onchange="loadTemplate()" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                             <option value="">Choose a template...</option>
                                             <option value="ProfileSuccess">Profile Success</option>
                                             <option value="ProfileFailure">Profile Failure</option>
@@ -1005,7 +1004,7 @@
                                             <!-- Subject Editor -->
                                             <div class="mb-6">
                                                 <label class="block text-sm font-semibold text-gray-900 mb-2">Email Subject</label>
-                                                <input type="text" id="template-subject" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm" placeholder="Email subject with optional placeholders">
+                                                <input type="text" id="template-subject" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm" placeholder="Email subject with optional placeholders">
                                             </div>
 
                                             <!-- CTA Configuration -->
@@ -1015,13 +1014,13 @@
                                                     <!-- Button Text -->
                                                     <div>
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">Button Text</label>
-                                                        <input type="text" id="template-cta-button-text" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm" placeholder="e.g., View Execution, Open Dashboard">
+                                                        <input type="text" id="template-cta-button-text" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="e.g., View Execution, Open Dashboard">
                                                         <p class="text-xs text-gray-500 mt-1">Text displayed on the action button (uses global Instance URL)</p>
                                                     </div>
                                                     <!-- URL Override (Optional) -->
                                                     <div>
                                                         <label class="block text-xs font-medium text-gray-700 mb-1">URL Override (Optional)</label>
-                                                        <input type="text" id="template-cta-url-override" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm font-mono" placeholder="Leave empty to use global Instance URL">
+                                                        <input type="text" id="template-cta-url-override" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave empty to use global Instance URL">
                                                         <p class="text-xs text-gray-500 mt-1">Override the global Instance URL for this template only. Supports placeholders.</p>
                                                     </div>
                                                 </div>
@@ -1031,16 +1030,16 @@
                                             <div class="mb-6">
                                                 <div class="flex items-center justify-between mb-2">
                                                     <label class="block text-sm font-semibold text-gray-900">HTML Body</label>
-                                                    <button onclick="showTemplatePreview()" class="px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-1">
+                                                    <button onclick="showTemplatePreview()" class="text-xs px-2 py-1 border border-slate-200 rounded text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1">
                                                         <i data-lucide="external-link" class="h-3 w-3"></i>Preview
                                                     </button>
                                                 </div>
-                                                <textarea id="template-body" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm h-80" placeholder="HTML body of the email template"></textarea>
+                                                <textarea id="template-body" class="w-full px-3 py-2 bg-white border border-slate-200 text-sm font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] h-80" placeholder="HTML body of the email template"></textarea>
                                             </div>
 
                                             <!-- Action Buttons -->
                                             <div class="flex gap-3 justify-end">
-                                                <button onclick="resetTemplateToDefault()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-gray-700">
+                                                <button onclick="resetTemplateToDefault()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                                                     Reset to Default
                                                 </button>
                                                 <button onclick="saveTemplate()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center">
@@ -1163,7 +1162,7 @@
                                     </div>
                                     <div class="flex items-end space-x-4">
                                         <div class="flex-1">
-                                            <label for="audit-retention-days" class="block text-sm font-medium text-gray-700 mb-2">
+                                            <label for="audit-retention-days" class="block text-sm font-medium text-slate-700 mb-2">
                                                 Retention Period (days)
                                             </label>
                                             <input 
@@ -1171,10 +1170,10 @@
                                                 id="audit-retention-days" 
                                                 min="90" 
                                                 value="90" 
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                             />
                                         </div>
-                                        <button onclick="clearOldAudits()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center" data-tooltip="You'll permanently remove old audit logs">
+                                        <button onclick="clearOldAudits()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center" data-tooltip="You'll permanently remove old audit logs">
                                             <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
                                             Purge
                                         </button>
@@ -1203,7 +1202,7 @@
                                     </div>
                                     <div class="flex items-end space-x-4 mb-4">
                                         <div class="flex-1">
-                                            <label for="execution-retention-days" class="block text-sm font-medium text-gray-700 mb-2">
+                                            <label for="execution-retention-days" class="block text-sm font-medium text-slate-700 mb-2">
                                                 Retention Period (days)
                                             </label>
                                             <input 
@@ -1211,10 +1210,10 @@
                                                 id="execution-retention-days" 
                                                 min="1" 
                                                 value="30" 
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                             />
                                         </div>
-                                        <button onclick="clearOldExecutions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center" data-tooltip="You'll permanently remove execution logs">
+                                        <button onclick="clearOldExecutions()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center" data-tooltip="You'll permanently remove execution logs">
                                             <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
                                             Purge
                                         </button>
@@ -1286,17 +1285,18 @@
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+        </main>
+    </div>
+</div>
     </div>
 
     <!-- Database Reset Confirmation Modal -->
     <div id="resetConfirmModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-red-900 flex items-center">
+                <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
                     <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
-                    Confirm
+                    Confirm Reset
                 </h3>
             </div>
             <div class="p-6">
@@ -1310,11 +1310,11 @@
                     type="text" 
                     id="reset-confirmation-input" 
                     placeholder="Type the text here"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                 />
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeResetModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="closeResetModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmReset()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disable">Reset Database</button>
             </div>
         </div>
@@ -1322,11 +1322,11 @@
 
     <!-- Clear All Executions Confirmation Modal -->
     <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-red-900 flex items-center">
+                <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
                     <i data-lucide="alert-triangle" class="h-5 w-5 mr-2"></i>
-                    Confim
+                    Clear All Execution Logs
                 </h3>
             </div>
             <div class="p-6">
@@ -1340,11 +1340,11 @@
                     type="text" 
                     id="clear-all-confirmation-input" 
                     placeholder="Type the text here"
-                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                 />
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeClearAllModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="closeClearAllModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                 <button onclick="confirmClearAll()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Clear All Logs</button>
             </div>
         </div>
@@ -1352,11 +1352,11 @@
 
     <!-- Clear Old Audits Confirmation Modal -->
     <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-gray-900 flex items-center">
                     <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-blue-600"></i>
-                    Confirm
+                    Clear Old Audit Logs
                 </h3>
             </div>
             <div class="p-6">
@@ -1371,19 +1371,19 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeClearOldAuditsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="confirmClearOldAudits()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Clear Old Audits</button>
+                <button onclick="closeClearOldAuditsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="confirmClearOldAudits()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Audits</button>
             </div>
         </div>
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
     <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-gray-900 flex items-center">
                     <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-green-600"></i>
-                    Confirm
+                    Clear Old Execution Logs
                 </h3>
             </div>
             <div class="p-6">
@@ -1398,31 +1398,31 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeClearOldExecutionsModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="confirmClearOldExecutions()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Clear Old Executions</button>
+                <button onclick="closeClearOldExecutionsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="confirmClearOldExecutions()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Executions</button>
             </div>
         </div>
     </div>
 
     <!-- Add User Modal -->
     <div id="addUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Add New User</h3>
+                <h3 id="addUserModal-title" class="text-lg font-semibold text-gray-900">Add New User</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                        <input type="text" id="new-username" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Username</label>
+                        <input type="text" id="new-username" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <input type="password" id="new-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+                        <input type="password" id="new-password" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                        <select id="new-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
+                        <select id="new-role" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                             <option value="User">User</option>
                             <option value="Admin">Admin</option>
                         </select>
@@ -1430,18 +1430,18 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeAddUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="createUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Create User</button>
+                <button onclick="closeAddUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="createUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Create User</button>
             </div>
         </div>
     </div>
 
     <!-- Edit User Modal -->
     <div id="editUserModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
             <div class="p-6 border-b border-gray-200">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-semibold text-gray-900">Edit User</h3>
+                    <h3 id="editUserModal-title" class="text-lg font-semibold text-gray-900">Edit User</h3>
                     <div class="flex items-center space-x-2">
                         <!-- More Options Menu (only visible when editing) -->
                         <div id="user-more-options" class="relative">
@@ -1468,29 +1468,29 @@
                 <input type="hidden" id="edit-is-active">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Username</label>
                         <div class="flex space-x-2">
-                            <input type="text" id="edit-username" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
-                            <button type="button" onclick="openChangeUsernameModal()" id="change-username-button" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center" title="Change username">
+                            <input type="text" id="edit-username" class="flex-1 h-9 px-3 py-1 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-500" disabled>
+                            <button type="button" onclick="openChangeUsernameModal()" id="change-username-button" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center" title="Change username">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="edit" class="h-4 w-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
-                        <input type="text" id="edit-display-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Optional">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Display Name</label>
+                        <input type="text" id="edit-display-name" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Optional">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                        <input type="password" id="edit-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Leave blank to keep current password">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">New Password</label>
+                        <input type="password" id="edit-password" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Leave blank to keep current password">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                        <input type="password" id="edit-password-confirm" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Leave blank to keep current password">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
+                        <input type="password" id="edit-password-confirm" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Leave blank to keep current password">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                        <select id="edit-role" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
+                        <select id="edit-role" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                             <option value="User">User</option>
                             <option value="Admin">Admin</option>
                         </select>
@@ -1498,98 +1498,98 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeEditUserModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="updateUser()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update User</button>
+                <button onclick="closeEditUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="updateUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Update User</button>
             </div>
         </div>
     </div>
 
     <!-- Change Username Modal -->
     <div id="changeUsernameModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Change Username</h3>
+                <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-gray-900">Change Username</h3>
             </div>
             <div class="p-6">
                 <input type="hidden" id="change-username-user-id">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Username</label>
-                        <input type="text" id="current-username-display" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" disabled>
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Current Username</label>
+                        <input type="text" id="current-username-display" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md bg-slate-50 text-sm text-slate-500" disabled>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">New Username</label>
-                        <input type="text" id="new-username-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Enter new username">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">New Username</label>
+                        <input type="text" id="new-username-input" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Enter new username">
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeChangeUsernameModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="changeUsername()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Change Username</button>
+                <button onclick="closeChangeUsernameModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="changeUsername()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Change Username</button>
             </div>
         </div>
     </div>
 
     <!-- Add API Key Modal -->
     <div id="addApiKeyModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">Add API Key</h3>
+                <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-gray-900">Add API Key</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Name</label>
-                        <input type="text" id="new-apikey-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="Your API Key Name">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Name</label>
+                        <input type="text" id="new-apikey-name" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Your API Key Name">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Permissions</label>
-                        <select id="new-apikey-permissions" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Permissions</label>
+                        <select id="new-apikey-permissions" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                             <option value='{"read":true,"write":false}'>Read Only</option>
                             <option value='{"read":true,"write":true}'>Read & Write</option>
                             <option value='{"read":true,"write":true,"admin":true}'>Full Access</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Expires At (Optional)</label>
-                        <input type="date" id="new-apikey-expires" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium text-slate-700 mb-2">Expires At (Optional)</label>
+                        <input type="date" id="new-apikey-expires" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end space-x-3">
-                <button onclick="closeAddApiKeyModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-                <button onclick="createApiKey()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Add</button>
+                <button onclick="closeAddApiKeyModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                <button onclick="createApiKey()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Add</button>
             </div>
         </div>
     </div>
 
     <!-- API Key Display Modal -->
     <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">API Key Generated</h3>
+                <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-gray-900">API Key Generated</h3>
             </div>
             <div class="p-6">
                 <p class="text-sm text-gray-600 mb-4">Save this API key securely. You won't be able to see it again!</p>
                 <div class="bg-gray-50 p-4 rounded-lg mb-4">
                     <code class="text-sm font-mono break-all" id="generated-api-key"></code>
                 </div>
-                <button onclick="copyApiKey()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                <button onclick="copyApiKey()" class="w-full h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center">
                     <i data-lucide="copy" class="h-4 w-4 mr-2"></i>
                     Copy to Clipboard
                 </button>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end">
-                <button onclick="closeApiKeyDisplayModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+                <button onclick="closeApiKeyDisplayModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- User Roles Help Modal -->
     <div id="userHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">About Users</h3>
+                <h3 id="userHelpModal-title" class="text-lg font-semibold text-gray-900">About Users</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-6">
@@ -1665,16 +1665,16 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end">
-                <button onclick="closeUserHelpModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+                <button onclick="closeUserHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- API Key Help Modal -->
     <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
             <div class="p-6 border-b border-gray-200">
-                <h3 class="text-lg font-semibold text-gray-900">About API Keys</h3>
+                <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-gray-900">About API Keys</h3>
             </div>
             <div class="p-6">
                 <div class="space-y-6">
@@ -1755,7 +1755,7 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end">
-                <button onclick="closeApiKeyHelpModal()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Close</button>
+                <button onclick="closeApiKeyHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
             </div>
         </div>
     </div>
@@ -1843,8 +1843,8 @@
 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('[id^="tab-"]').forEach(el => {
-                el.classList.remove('text-blue-600', 'border-blue-600', 'border-b-2');
-                el.classList.add('text-gray-600');
+                el.classList.remove('bg-slate-100', 'text-slate-900', 'font-medium', 'bg-red-50', 'text-red-600');
+                el.classList.add(el.id === 'tab-danger' ? 'text-red-500' : 'text-slate-600');
             });
 
             const tabBtn = document.getElementById(`tab-${tab}`);
@@ -1852,8 +1852,12 @@
 
             // Check if the element was found to prevent the TypeError
             if (tabBtn) {
-                tabBtn.classList.remove('text-gray-600');
-                tabBtn.classList.add('text-blue-600', 'border-blue-600', 'border-b-2');
+                tabBtn.classList.remove('text-slate-600', 'text-red-500');
+                if (tab === 'danger') {
+                    tabBtn.classList.add('bg-red-50', 'text-red-600', 'font-medium');
+                } else {
+                    tabBtn.classList.add('bg-slate-100', 'text-slate-900', 'font-medium');
+                }
             } else {
                  console.error(`Tab button with ID 'tab-${tab}' not found.`);
             }
@@ -2015,7 +2019,7 @@
             // Previous button
             html += `
                 <button onclick="previousAuditPage()" ${auditCurrentPage === 1 ? 'disabled' : ''} 
-                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${auditCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${auditCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-left" class="h-5 w-5"></i>
                 </button>
             `;
@@ -2036,7 +2040,7 @@
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active 
                                 ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
                     </button>
@@ -2046,7 +2050,7 @@
             // Next button
             html += `
                 <button onclick="nextAuditPage()" ${auditCurrentPage === auditTotalPages ? 'disabled' : ''} 
-                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${auditCurrentPage === auditTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${auditCurrentPage === auditTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-right" class="h-5 w-5"></i>
                 </button>
             `;
@@ -2175,7 +2179,7 @@
             // Previous button
             html += `
                 <button onclick="previousLogPage()" ${logCurrentPage === 1 ? 'disabled' : ''} 
-                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${logCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${logCurrentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-left" class="h-5 w-5"></i>
                 </button>
             `;
@@ -2196,7 +2200,7 @@
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active 
                                 ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
                     </button>
@@ -2206,7 +2210,7 @@
             // Next button
             html += `
                 <button onclick="nextLogPage()" ${logCurrentPage === logTotalPages ? 'disabled' : ''} 
-                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${logCurrentPage === logTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${logCurrentPage === logTotalPages ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-right" class="h-5 w-5"></i>
                 </button>
             `;
@@ -2368,8 +2372,14 @@
                 return;
             }
 
-            // NOTE: Using a custom modal/toast instead of confirm in a final application is recommended
-            if (!confirm(`Are you sure you want to delete user "${username}"?`)) return;
+            const confirmed = await showConfirmModal({
+                title: `Delete user "${username}"?`,
+                message: 'This action cannot be undone. The user will immediately lose access.',
+                confirmText: 'Delete user',
+                cancelText: 'Keep user',
+                danger: true,
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`${API_BASE}/api/admin/users/${userId}`, {
@@ -2491,7 +2501,14 @@
         }
 
         async function deleteApiKey(keyId, name) {
-            if (!confirm(`Are you sure you want to delete API key "${name}"?`)) return;
+            const confirmed = await showConfirmModal({
+                title: `Delete API key "${name}"?`,
+                message: 'This action cannot be undone. Any clients using this key will lose access immediately.',
+                confirmText: 'Delete key',
+                cancelText: 'Keep key',
+                danger: true,
+            });
+            if (!confirmed) return;
             
             try {
                 const response = await fetch(`${API_BASE}/api/admin/api-keys/${keyId}`, {

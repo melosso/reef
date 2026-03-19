@@ -148,7 +148,7 @@ public class SftpImportSource : IImportSource
         }, ct);
     }
 
-    // ── Private helpers ──────────────────────────────────────
+    // Private helpers 
 
     private async Task<MemoryStream> DownloadFileAsync(SftpConfig config, string remotePath, CancellationToken ct)
     {

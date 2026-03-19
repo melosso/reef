@@ -114,7 +114,7 @@ public class S3ImportSource : IImportSource
         }
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    // Helpers
 
     private async Task<List<string>> ResolveKeysAsync(
         AmazonS3Client client,

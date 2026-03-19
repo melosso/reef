@@ -11,11 +11,20 @@ body {
     to { visibility: visible; }
 }
 
-/* ── SPA view transitions ─────────────────────────────────────────────────── */
+/* ── SPA view transitions */
 /* Keep the sidebar visually stable — it is a persistent shell element that
    should not participate in the content cross-fade. */
 #sidebar {
     view-transition-name: sidebar;
+}
+/* ── Sidebar active nav indicator */
+/* Use box-shadow (inset) for the left-rail accent — zero layout impact. */
+#sidebar nav a[href] {
+    box-shadow: inset 2px 0 0 transparent;
+    transition: box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+#sidebar nav a[aria-current="page"] {
+    box-shadow: inset 2px 0 0 #3b82f6;
 }
 /* Snap the sidebar instantly; only the content area fades. */
 ::view-transition-group(sidebar) {
@@ -27,13 +36,24 @@ body {
     animation-duration: 120ms;
     animation-timing-function: ease-out;
 }
+/* User menu collapse/expand using grid-template-rows — GPU-composited, no layout thrashing.
+   The inner wrapper uses overflow:hidden + min-height:0 to collapse correctly. */
+#user-menu {
+    overflow: hidden;
+}
+#user-menu > div {
+    overflow: hidden;
+    min-height: 0;
+}
 .user-menu-expanded {
-    max-height: 200px;
-    transition: max-height 0.3s ease-in-out;
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.25s ease-out;
 }
 .user-menu-collapsed {
-    max-height: 0;
-    transition: max-height 0.3s ease-in-out;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease-out;
 }
 .disable-select {
     -webkit-user-select: none;
@@ -41,12 +61,38 @@ body {
     -ms-user-select: none;
     user-select: none;
 }
+/* ── Touch targets─ */
+/* WCAG 2.5.8: icon-only action buttons must be at least 44×44px.
+   Buttons with data-tooltip are exclusively icon buttons in table rows/cards. */
+button[data-tooltip] {
+    min-width: 2.75rem;   /* 44px */
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── User avatar */
+/* Uses a ::before pseudo-element for the animated gradient so that the
+   transform animation stays GPU-composited and doesn't affect the text layer.
+   (Replaced: background-position animation which caused layout repaints.) */
 #user-initial {
+    position: relative;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 40px;
     height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: box-shadow 0.3s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+#user-initial::before {
+    content: '';
+    position: absolute;
+    inset: -25%;
     border-radius: 50%;
     background:
         radial-gradient(2px 2px at 20% 30%, white, transparent),
@@ -56,18 +102,18 @@ body {
         radial-gradient(2px 2px at 90% 60%, white, transparent),
         radial-gradient(1px 1px at 10% 90%, white, transparent),
         radial-gradient(1.5px 1.5px at 40% 80%, white, transparent),
-        linear-gradient(45deg, #0a0e27 0%, #16213e 50%, #0f3460 100%);
-    background-size: 300% 300%;
-    background-position: 0% 0%;
+        linear-gradient(135deg, #0a0e27 0%, #16213e 50%, #0f3460 100%);
     animation: spaceFlow 13s ease-in-out infinite;
-    cursor: pointer;
-    transition: all 0.3s ease-out;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
-
+#user-initial > span {
+    position: relative;
+    z-index: 1;
+}
 #user-initial:hover {
-    animation: spaceFlow 13s ease-in-out infinite, gentlePulse 3s ease-in-out infinite;
     box-shadow: inset 0 0 10px rgba(100, 150, 255, 0.25), 0 0 15px rgba(15, 52, 96, 0.4);
+}
+#user-initial:hover::before {
+    animation: spaceFlow 13s ease-in-out infinite, gentlePulse 3s ease-in-out infinite;
 }
 @keyframes wiggle {
     0%, 100% { transform: rotate(0deg); }
@@ -75,41 +121,219 @@ body {
     50% { transform: rotate(5deg); }
     75% { transform: rotate(-5deg); }
 }
-
 .animate-wiggle {
     animation: wiggle 0.3s ease-in-out;
 }
+/* GPU-composited: uses transform only, no layout-triggering properties. */
 @keyframes spaceFlow {
-    0% {
-        background-position: 0% 0%;
-    }
-    15% {
-        background-position: 70% 30%;
-    }
-    30% {
-        background-position: 40% 80%;
-    }
-    45% {
-        background-position: 90% 20%;
-    }
-    60% {
-        background-position: 20% 70%;
-    }
-    75% {
-        background-position: 60% 40%;
-    }
-    90% {
-        background-position: 10% 90%;
-    }
-    100% {
-        background-position: 0% 0%;
-    }
+    0%   { transform: rotate(0deg); }
+    25%  { transform: rotate(90deg); }
+    50%  { transform: rotate(180deg); }
+    75%  { transform: rotate(270deg); }
+    100% { transform: rotate(360deg); }
 }
 @keyframes gentlePulse {
-    0%, 100% {
-        transform: scale(1);
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.8; }
+}
+
+/* ── Interaction system */
+/* Tier 1 — primary action buttons (bg-slate-900): lift + shadow on hover.
+   Gives a consistent "press-able" feel across all header CTAs. */
+button.bg-slate-900:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s ease-out;
+}
+button.bg-slate-900:not(:disabled):active {
+    transform: scale(0.97) translateY(0);
+    box-shadow: none;
+    transition: transform 0.08s ease-out;
+}
+/* Tier 2 — submit/confirm buttons (modal save, confirm dialogs): active press feedback. */
+button[type="submit"]:not(:disabled):active {
+    transform: scale(0.97);
+    transition: transform 0.08s ease-out;
+}
+
+/* ── Dark mode */
+/* Class-based dark mode. 'dark' is added to <html> by main.js on load.
+   The sidebar (bg-slate-900) is already dark — no overrides needed there.
+   Specificity (.dark .utility) beats single-class Tailwind utilities. */
+
+/* Base */
+.dark body                   { background-color: #020617; color: #e2e8f0; }
+.dark .bg-slate-50           { background-color: #020617; }
+
+/* Surfaces */
+.dark .bg-white              { background-color: #0f172a; }
+.dark .bg-gray-50            { background-color: #0f172a; }
+.dark .bg-gray-100           { background-color: #1e293b; }
+.dark .bg-gray-200           { background-color: #334155; }
+
+/* Text */
+.dark .text-gray-900         { color: #f1f5f9; }
+.dark .text-gray-800         { color: #e2e8f0; }
+.dark .text-gray-700         { color: #cbd5e1; }
+.dark .text-gray-600         { color: #94a3b8; }
+.dark .text-gray-500         { color: #94a3b8; }
+.dark .text-gray-400         { color: #64748b; }
+.dark .text-gray-300         { color: #94a3b8; }
+
+/* Borders */
+.dark .border-gray-100       { border-color: #1e293b; }
+.dark .border-gray-200       { border-color: #334155; }
+.dark .border-gray-300       { border-color: #475569; }
+.dark .border-slate-200      { border-color: #334155; }
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #334155; }
+
+/* Shadows */
+.dark .shadow-sm             { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.5); }
+.dark .shadow                { box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5); }
+.dark .shadow-lg             { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5); }
+
+/* Form elements — dark bg with lightened borders */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+.dark textarea,
+.dark select {
+    background-color: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #64748b; }
+.dark input:not([type="checkbox"]):not([type="radio"]):focus,
+.dark textarea:focus,
+.dark select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgb(96 165 250 / 0.15);
+    outline: none;
+}
+
+/* Modal overlay — darken the scrim */
+.dark .bg-gray-600           { background-color: #020617; }
+
+/* Code blocks */
+.dark .bg-gray-800           { background-color: #020617; }
+.dark .bg-gray-900           { background-color: #020617; }
+
+/* Alert/notification banners */
+.dark .bg-green-50           { background-color: #052e16; }
+.dark .bg-red-50             { background-color: #450a0a; }
+.dark .bg-yellow-50          { background-color: #422006; }
+.dark .bg-blue-50            { background-color: #0c1a3a; }
+.dark .bg-purple-50          { background-color: #2e1065; }
+.dark .bg-indigo-50          { background-color: #1e1b4b; }
+.dark .bg-orange-50          { background-color: #431407; }
+.dark .border-green-400      { border-color: #4ade80; }
+.dark .border-red-400        { border-color: #f87171; }
+.dark .text-green-800        { color: #86efac; }
+.dark .text-red-800          { color: #fca5a5; }
+.dark .text-blue-800         { color: #93c5fd; }
+
+/* Status badges */
+.dark .bg-green-100          { background-color: #14532d; }
+.dark .bg-red-100            { background-color: #7f1d1d; }
+.dark .bg-yellow-100         { background-color: #713f12; }
+.dark .bg-blue-100           { background-color: #1e3a5f; }
+.dark .bg-indigo-100         { background-color: #1e1b4b; }
+.dark .bg-orange-100         { background-color: #7c2d12; }
+.dark .bg-purple-100         { background-color: #3b0764; }
+.dark .bg-slate-100          { background-color: #1e293b; }
+.dark .text-green-700        { color: #86efac; }
+.dark .text-green-600        { color: #4ade80; }
+.dark .text-red-700          { color: #fca5a5; }
+.dark .text-red-600          { color: #f87171; }
+.dark .text-yellow-700       { color: #fde68a; }
+.dark .text-yellow-600       { color: #fbbf24; }
+.dark .text-blue-700         { color: #93c5fd; }
+.dark .text-blue-600         { color: #60a5fa; }
+.dark .text-indigo-800       { color: #a5b4fc; }
+.dark .text-indigo-700       { color: #a5b4fc; }
+.dark .text-indigo-600       { color: #818cf8; }
+.dark .text-orange-700       { color: #fb923c; }
+.dark .text-orange-600       { color: #f97316; }
+.dark .text-purple-700       { color: #d8b4fe; }
+.dark .text-purple-600       { color: #c084fc; }
+.dark .text-slate-500        { color: #94a3b8; }
+
+/* Additional surfaces */
+.dark .bg-gray-300           { background-color: #475569; }
+.dark .bg-gray-500           { background-color: #475569; }
+.dark .bg-amber-50           { background-color: #292100; }
+.dark .bg-amber-100          { background-color: #422006; }
+.dark .bg-emerald-50         { background-color: #022c22; }
+.dark .bg-emerald-100        { background-color: #052e16; }
+
+/* Text — dark-shade variants become invisible on dark tinted surfaces */
+.dark .text-blue-900         { color: #bfdbfe; }
+.dark .text-red-900          { color: #fecaca; }
+.dark .text-green-900        { color: #bbf7d0; }
+.dark .text-yellow-800       { color: #fef08a; }
+.dark .text-yellow-900       { color: #fef9c3; }
+.dark .text-indigo-900       { color: #c7d2fe; }
+.dark .text-purple-800       { color: #e9d5ff; }
+.dark .text-purple-900       { color: #f3e8ff; }
+.dark .text-orange-800       { color: #fdba74; }
+.dark .text-orange-900       { color: #fed7aa; }
+.dark .text-amber-600        { color: #fbbf24; }
+.dark .text-amber-700        { color: #fde68a; }
+.dark .text-amber-800        { color: #fef08a; }
+.dark .text-emerald-600      { color: #34d399; }
+.dark .text-emerald-700      { color: #6ee7b7; }
+.dark .text-emerald-800      { color: #a7f3d0; }
+
+/* Borders — light tint borders invisible on dark backgrounds */
+.dark .border-blue-200       { border-color: #1e3a5f; }
+.dark .border-blue-300       { border-color: #1d4ed8; }
+.dark .border-blue-400       { border-color: #2563eb; }
+.dark .border-blue-600       { border-color: #3b82f6; }
+.dark .border-gray-400       { border-color: #475569; }
+.dark .border-red-200        { border-color: #7f1d1d; }
+.dark .border-red-300        { border-color: #991b1b; }
+.dark .border-red-500        { border-color: #f87171; }
+.dark .border-green-200      { border-color: #14532d; }
+.dark .border-green-500      { border-color: #4ade80; }
+.dark .border-yellow-200     { border-color: #713f12; }
+.dark .border-yellow-400     { border-color: #fbbf24; }
+.dark .border-yellow-500     { border-color: #f59e0b; }
+.dark .border-amber-200      { border-color: #3b2900; }
+.dark .border-amber-300      { border-color: #78350f; }
+.dark .border-amber-500      { border-color: #f59e0b; }
+.dark .border-indigo-200     { border-color: #1e1b4b; }
+.dark .border-indigo-300     { border-color: #3730a3; }
+.dark .border-indigo-400     { border-color: #4338ca; }
+.dark .border-indigo-500     { border-color: #6366f1; }
+.dark .border-orange-200     { border-color: #7c2d12; }
+.dark .border-orange-300     { border-color: #9a3412; }
+.dark .border-emerald-200    { border-color: #022c22; }
+.dark .border-purple-200     { border-color: #4c1d95; }
+
+/* Hover states on interactive surfaces */
+.dark .hover\:bg-gray-50:hover   { background-color: #1e293b; }
+.dark .hover\:bg-gray-100:hover  { background-color: #1e293b; }
+.dark .hover\:bg-gray-200:hover  { background-color: #334155; }
+.dark .hover\:bg-slate-50:hover  { background-color: #1e293b; }
+.dark .hover\:bg-slate-100:hover { background-color: #334155; }
+.dark .hover\:bg-blue-50:hover   { background-color: #0c1a3a; }
+.dark .hover\:bg-blue-100:hover  { background-color: #1e3a5f; }
+
+/* ── Reduced motion */
+/* Respect the user's operating system preference for reduced motion.
+   This disables all CSS transitions and animations globally except the
+   reef-reveal visibility flip, which must still fire so the body becomes
+   visible. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
     }
-    50% {
-        transform: scale(1.015);
+    /* reef-reveal sets visibility:visible — keep body visible even if
+       the animation is collapsed to near-zero duration. */
+    body {
+        visibility: visible;
     }
 }

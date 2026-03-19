@@ -1,14 +1,14 @@
 <!--REEF:TITLE-->Jobs · Reef<!--/REEF:TITLE-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Bar -->
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6">
-                <div>
-                    <h1 class="text-2xl font-semibold text-gray-800">Jobs</h1>
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+                <div class="flex items-center justify-between px-6 py-3">
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Jobs</h1>
+                    <button id="newJobButton" onclick="openAddJobModal()" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors active:scale-95">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        New Job
+                    </button>
                 </div>
-                <button id="newJobButton" onclick="openAddJobModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
-                    <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
-                    New Job
-                </button>
             </header>
 
             <!-- Content Area -->
@@ -24,7 +24,7 @@
                                    id="search-input"
                                    placeholder="Search by job name or profile..."
                                    onkeyup="applyFilters()"
-                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                   class="w-full h-9 pl-10 pr-4 py-1 bg-white border border-slate-200 text-sm rounded-lg outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         </div>
                     </div>
 
@@ -44,11 +44,11 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                         <div>
-                            <label for="filter-health" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label for="filter-health" class="block text-sm font-medium text-slate-700 mb-2">
                                 Job Health
                             </label>
                             <select id="filter-health" onchange="applyFilters()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="" selected>All Jobs</option>
                                 <option value="auto-paused">Auto-Paused</option>
                                 <option value="failing">Failing</option>
@@ -59,11 +59,11 @@
                         </div>
 
                         <div>
-                            <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label for="filter-status" class="block text-sm font-medium text-slate-700 mb-2">
                                 Status
                             </label>
                             <select id="filter-status" onchange="applyFilters()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="" selected>Show All</option> <!-- Placeholder -->
                                 <option value="0">Idle</option>
                                 <option value="1">Queued</option>
@@ -75,31 +75,31 @@
                         </div>
 
                         <div>
-                            <label for="filter-profile" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label for="filter-profile" class="block text-sm font-medium text-slate-700 mb-2">
                                 Profile
                             </label>
                             <select id="filter-profile" onchange="applyFilters()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="" selected>Show All</option> <!-- Placeholder -->
                             </select>
                         </div>
 
                         <div>
-                            <label for="filter-connection" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label for="filter-connection" class="block text-sm font-medium text-slate-700 mb-2">
                                 Connection
                             </label>
                             <select id="filter-connection" onchange="applyFilters()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="" selected>Show All</option> <!-- Placeholder -->
                             </select>
                         </div>
 
                         <div>
-                            <label for="filter-group" class="block text-sm font-medium text-gray-700 mb-2">
+                            <label for="filter-group" class="block text-sm font-medium text-slate-700 mb-2">
                                 Group
                             </label>
                             <select id="filter-group" onchange="applyFilters()"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="" selected>Show All</option> <!-- Placeholder -->
                             </select>
                         </div>
@@ -110,7 +110,7 @@
                 <!-- Queue Metrics (Hidden by default) -->
                 <div id="queue-metrics-panel" class="bg-white rounded-lg shadow p-4 mb-6 hidden">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-lg font-semibold text-gray-900 flex items-center">
+                        <h2 class="text-lg font-semibold text-slate-900 flex items-center">
                             <i data-lucide="layers" class="h-5 w-5 mr-2 text-blue-600"></i>
                             Queue Metrics
                         </h2>
@@ -193,7 +193,7 @@
                     <div class="bg-gray-50 rounded-lg shadow p-4">
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm text-gray-600">Total Jobs</p>
+                                <p class="text-sm text-slate-600">Total Jobs</p>
                                 <p id="stat-total" class="text-2xl font-bold text-gray-700">0</p>
                             </div>
                             <i data-lucide="briefcase" class="h-8 w-8 text-gray-400"></i>
@@ -312,10 +312,10 @@
     </div>
 
     <!-- Add Job Modal -->
-    <div id="add-job-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
+    <div id="add-job-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="job-modal-title" class="text-lg font-semibold text-gray-900">Add New Job</h3>
+                <h3 id="job-modal-title" class="text-lg font-semibold text-slate-900">New Job</h3>
                 <button onclick="closeAddJobModal()" class="text-gray-400 hover:text-gray-600">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
@@ -329,7 +329,7 @@
                         General
                     </button>
                     <button id="jobWebhooksTabButton" onclick="showJobTab('jobWebhooks')" 
-                            class="job-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
+                            class="job-tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-slate-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm"
                             disabled>
                         Webhooks
                     </button>
@@ -341,22 +341,22 @@
                 <div id="jobGeneral" class="job-tab-content space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
                                 Name
                                 <span class="text-red-500 ml-1">*</span>
                             </label>
                             <input type="text" id="job-name" required
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                    placeholder="Daily Customer Export">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
                                 Type
                                 <span class="text-red-500 ml-1">*</span>
                             </label>
                             <select id="job-type" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="">Select type...</option>
                                 <option value="ProfileExecution">Profile Export</option>
                                 <option value="DataTransfer" hidden>Group Export</option>
@@ -366,17 +366,17 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Description</label>
                         <textarea id="job-description" rows="2"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                   placeholder="Optional description"></textarea>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Profile</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Profile</label>
                             <select id="job-profileId"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="">Select profile...</option>
                                 <optgroup label="Export Profiles" id="job-profileId-export-group"></optgroup>
                                 <optgroup label="Import Profiles" id="job-profileId-import-group"></optgroup>
@@ -384,9 +384,9 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Destination</label>
                             <select id="job-destinationId"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="">Select destination...</option>
                             </select>
                         </div>
@@ -394,9 +394,9 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Schedule Type</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Schedule Type</label>
                             <select id="job-scheduleType" required
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                     onchange="updateScheduleFields()">
                                 <option value="0">Manual</option>
                                 <option value="1">Cron Expression</option>
@@ -408,9 +408,9 @@
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Priority</label>
                             <select id="job-priority"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <option value="0">Low</option>
                                 <option value="1" selected>Normal</option>
                                 <option value="2">High</option>
@@ -425,45 +425,45 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label for="job-maxRetries" class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                            <label for="job-maxRetries" class="block text-sm font-medium text-slate-700 mb-1 flex items-center">
                                 Max Retries
                                 <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Retries per job run cycle. Each run retries this many times before counting as 1 failure. Does not affect consecutive failure count for auto-pause." data-tooltip-position="top">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
                                 </span>
                             </label>
                             <input type="number" id="job-maxRetries" value="3" min="0" max="10"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Timeout (minutes)</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Timeout (minutes)</label>
                             <input type="number" id="job-timeoutMinutes" value="60" min="1" max="1440"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         </div>
 
                         <div class="flex items-center mt-6">
                             <input type="checkbox" id="job-allowConcurrent"
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                             <label for="job-allowConcurrent" class="ml-2 block text-sm text-gray-900">Allow Concurrent</label>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tags</label>
                         <input type="text" id="job-tags"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                placeholder="tag1, tag2, tag3">
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" id="job-enabled" checked
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                               class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                         <label for="job-enabled" class="ml-2 block text-sm text-gray-900">Enable job</label>
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" id="job-autoPauseEnabled" checked
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                               class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                         <label for="job-autoPauseEnabled" class="ml-2 block text-sm text-gray-900">
                             Auto-pause after 10 consecutive failures
                             <span class="text-gray-500 text-xs ml-1">(Recommended)</span>
@@ -500,13 +500,13 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end space-x-3 pt-4 border-t">
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <button type="button" onclick="closeAddJobModal()" 
-                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
                         Save Job
                     </button>
                 </div>
@@ -640,9 +640,9 @@
                 case 1: // Cron
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Cron Expression</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Cron Expression</label>
                             <input type="text" id="job-cronExpression" placeholder="0 2 * * *"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             <p class="text-xs text-gray-500 mt-1">Example: 0 2 * * * (daily at 02:00)</p>
                         </div>
                     `;
@@ -650,21 +650,21 @@
                 case 2: // Interval
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Interval (minutes)</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Interval (minutes)</label>
                             <input type="number" id="job-intervalMinutes" value="60" min="1"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         </div>
                     `;
                     break;
                 case 3: // Daily
                     html = `
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
                                 Start Time
                                 <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
                             </label>
                             <input type="time" id="job-startTime" value="02:00"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                   class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         </div>
                     `;
                     break;
@@ -672,7 +672,7 @@
                     html = `
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Days of Week</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Days of Week</label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="flex items-center">
                                         <input type="checkbox" id="job-weekday-0" value="0" class="h-4 w-4 text-blue-600 rounded">
@@ -705,12 +705,12 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Start Time
                                     <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
                                 </label>
                                 <input type="time" id="job-startTime" value="02:00"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             </div>
                         </div>
                     `;
@@ -719,18 +719,18 @@
                     html = `
                         <div class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Day of Month</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Day of Month</label>
                                 <input type="number" id="job-monthday" value="1" min="1" max="31"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                 <p class="text-xs text-gray-500 mt-1">Enter day 1-31</p>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Start Time
                                     <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
                                 </label>
                                 <input type="time" id="job-startTime" value="02:00"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             </div>
                         </div>
                     `;
@@ -1103,7 +1103,7 @@
         let serverTimeInterval = null;
 
         function openAddJobModal() {
-            document.getElementById('job-modal-title').textContent = 'Add New Job';
+            document.getElementById('job-modal-title').textContent = 'New Job';
             document.getElementById('add-job-modal').classList.remove('hidden');
             document.getElementById('add-job-form').reset();
             document.getElementById('add-job-form').removeAttribute('data-edit-id');
@@ -1423,9 +1423,13 @@
 
         // Resume an auto-paused job
         async function resumeJob(jobId) {
-            if (!confirm('Resume this job? Make sure you\'ve fixed the underlying issue that caused failures.')) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: 'Resume job?',
+                message: 'Make sure you\'ve fixed the underlying issue that caused the failures before resuming.',
+                confirmText: 'Resume job',
+                cancelText: 'Cancel',
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/jobs/${jobId}/resume`, {
@@ -1452,9 +1456,13 @@
 
         // Reset failure counter
         async function acknowledgeFailures(jobId) {
-            if (!confirm('Reset failure counter? This will give the job a fresh start.')) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: 'Reset failure counter?',
+                message: 'This will give the job a fresh start. The failure count will be cleared.',
+                confirmText: 'Reset counter',
+                cancelText: 'Cancel',
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/jobs/${jobId}/acknowledge-failures`, {
@@ -1487,7 +1495,8 @@
                         <td colspan="6" class="px-6 py-12 text-center">
                             <i data-lucide="briefcase" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
                             <p class="text-lg font-semibold text-gray-700 mb-2">No jobs found</p>
-                            <p class="text-gray-500">Create your first job to get started.</p>
+                            <p class="text-gray-500 mb-4">Jobs run your export profiles on a schedule — cron, interval, or webhook trigger. Create one to start automating your data delivery.</p>
+                            <button onclick="openAddJobModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 active:scale-95 transition-all">+ New Job</button>
                         </td>
                     </tr>
                 `;
@@ -1599,36 +1608,36 @@
                         </td>
                         <td class="px-6 py-4 text-right text-sm font-medium">
                             <div class="relative inline-block text-left">
-                                <button onclick="toggleJobMenu(${job.id}, event)" id="job-menu-btn-${job.id}" class="text-gray-400 hover:text-gray-600 focus:outline-none">
+                                <button onclick="toggleJobMenu(${job.id}, event)" id="job-menu-btn-${job.id}" class="text-gray-400 hover:text-gray-600 focus:outline-none" aria-haspopup="true" aria-expanded="false" aria-controls="job-menu-${job.id}" aria-label="Actions for ${escapeHtml(job.name)}">
                                     <i data-lucide="more-vertical" class="h-5 w-5"></i>
                                 </button>
-                                <div id="job-menu-${job.id}" class="hidden fixed mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50">
+                                <div id="job-menu-${job.id}" class="hidden fixed mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50" role="menu" aria-labelledby="job-menu-btn-${job.id}">
                                     <div class="py-1">
-                                        <button onclick="event.stopPropagation(); triggerJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <button onclick="event.stopPropagation(); triggerJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                             <i data-lucide="play" class="h-4 w-4 inline mr-2"></i>
                                             Run Now
                                         </button>
-                                        <button onclick="event.stopPropagation(); editJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <button onclick="event.stopPropagation(); editJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                             <i data-lucide="edit" class="h-4 w-4 inline mr-2"></i>
                                             Edit
                                         </button>
-                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); viewJobHistory(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); viewJobHistory(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" role="menuitem">
                                             <i data-lucide="history" class="h-4 w-4 inline mr-2"></i>
                                             History
                                         </button>
                                         ${(job.tags && job.tags.includes('circuit-breaker')) ? `
-                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); resumeJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 border-t border-gray-200">
+                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); resumeJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-green-700 hover:bg-green-50 border-t border-gray-200" role="menuitem">
                                                 <i data-lucide="play" class="h-4 w-4 inline mr-2"></i>
                                                 Resume Job Now
                                             </button>
                                         ` : ''}
                                         ${(job.consecutiveFailures >= 3 && job.consecutiveFailures < 10) ? `
-                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); acknowledgeFailures(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 border-t border-gray-200">
+                                            <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); acknowledgeFailures(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-yellow-700 hover:bg-yellow-50 border-t border-gray-200" role="menuitem">
                                                 <i data-lucide="check-circle" class="h-4 w-4 inline mr-2"></i>
                                                 Reset Failures
                                             </button>
                                         ` : ''}
-                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); deleteJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-200">
+                                        <button onclick="event.stopPropagation(); closeJobMenu(${job.id}); deleteJob(${job.id})" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t border-gray-200" role="menuitem">
                                             <i data-lucide="trash-2" class="h-4 w-4 inline mr-2"></i>
                                             Delete
                                         </button>
@@ -1705,23 +1714,46 @@
             const menu = document.getElementById(`job-menu-${jobId}`);
             const button = document.getElementById(`job-menu-btn-${jobId}`);
             const isCurrentlyHidden = menu.classList.contains('hidden');
-            
-            // Close all other menus
+
+            // Close all other menus and reset their aria-expanded
             document.querySelectorAll('[id^="job-menu-"]:not([id*="-btn-"])').forEach(m => {
                 m.classList.add('hidden');
+                const btnId = m.id.replace('job-menu-', 'job-menu-btn-');
+                document.getElementById(btnId)?.setAttribute('aria-expanded', 'false');
             });
-            
+
             // Toggle current menu
             if (isCurrentlyHidden) {
                 // Position the menu relative to the button (using viewport coordinates)
                 const buttonRect = button.getBoundingClientRect();
-                
+
                 // Position below the button, aligned to the right
                 menu.style.top = `${buttonRect.bottom + 5}px`;
                 menu.style.right = `${window.innerWidth - buttonRect.right}px`;
                 menu.style.left = 'auto';
-                
+
                 menu.classList.remove('hidden');
+                button.setAttribute('aria-expanded', 'true');
+                // Focus the first menu item
+                menu.querySelector('[role="menuitem"]')?.focus();
+                // Arrow key navigation
+                menu.addEventListener('keydown', handleJobMenuKeydown);
+            }
+        }
+
+        function handleJobMenuKeydown(e) {
+            const items = Array.from(e.currentTarget.querySelectorAll('[role="menuitem"]'));
+            const idx = items.indexOf(document.activeElement);
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                items[(idx + 1) % items.length]?.focus();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                items[(idx - 1 + items.length) % items.length]?.focus();
+            } else if (e.key === 'Tab') {
+                // Close menu on Tab to restore normal focus flow
+                const jobId = e.currentTarget.id.replace('job-menu-', '');
+                closeJobMenu(jobId);
             }
         }
 
@@ -1729,7 +1761,9 @@
             const menu = document.getElementById(`job-menu-${jobId}`);
             if (menu) {
                 menu.classList.add('hidden');
+                menu.removeEventListener('keydown', handleJobMenuKeydown);
             }
+            document.getElementById(`job-menu-btn-${jobId}`)?.setAttribute('aria-expanded', 'false');
         }
 
         function toggleJobDetails(jobId) {
@@ -1912,9 +1946,14 @@
         }
 
         async function deleteJob(id) {
-            if (!confirm('Are you sure you want to delete this job?')) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: 'Delete job?',
+                message: 'This action cannot be undone.',
+                confirmText: 'Delete job',
+                cancelText: 'Keep job',
+                danger: true,
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`${API_BASE}/${id}`, {
@@ -2101,13 +2140,13 @@
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge}">
                                             ${statusText}
                                         </span>
-                                        <span class="text-sm text-gray-500">Triggered ${webhook.triggerCount || 0} times</span>
+                                        <span class="text-sm text-slate-500">Triggered ${webhook.triggerCount || 0} times</span>
                                     </div>
                                     <div class="flex items-center space-x-2 mb-2">
                                         <code class="flex-1 px-3 py-2 bg-gray-100 rounded text-xs font-mono text-gray-700 overflow-x-auto">
                                             ${window.location.origin}/webhooks/${webhook.token}
                                         </code>
-                                        <button onclick="copyJobWebhookUrl('${webhook.token}')" class="p-2 text-gray-400 hover:text-gray-600" title="Copy URL">
+                                        <button onclick="copyJobWebhookUrl('${webhook.token}')" class="p-2 text-gray-400 hover:text-gray-600" title="Copy URL" aria-label="Copy webhook URL">
                                             <i data-lucide="copy" class="w-4 h-4"></i>
                                         </button>
                                     </div>
@@ -2116,22 +2155,26 @@
                                 <div class="ml-4 flex flex-col space-y-1">
                                     <button onclick="toggleJobWebhook(${webhook.id}, ${webhook.isActive}, ${jobId})"
                                             class="p-2 text-gray-400 hover:text-gray-600"
-                                            title="${webhook.isActive ? 'Disable' : 'Enable'}">
+                                            title="${webhook.isActive ? 'Disable' : 'Enable'}"
+                                            aria-label="${webhook.isActive ? 'Disable webhook' : 'Enable webhook'}">
                                         <i data-lucide="${webhook.isActive ? 'pause-circle' : 'play-circle'}" class="w-4 h-4"></i>
                                     </button>
                                     <button onclick="regenerateJobWebhookToken(${webhook.id}, ${jobId})"
                                             class="p-2 text-yellow-400 hover:text-yellow-600"
-                                            title="Regenerate Token">
+                                            title="Regenerate Token"
+                                            aria-label="Regenerate webhook token">
                                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                     </button>
                                     <button onclick="testJobWebhook('${webhook.token}')"
                                             class="p-2 text-blue-400 hover:text-blue-600"
-                                            title="Test Webhook">
+                                            title="Test Webhook"
+                                            aria-label="Test webhook">
                                         <i data-lucide="send" class="w-4 h-4"></i>
                                     </button>
                                     <button onclick="deleteJobWebhook(${webhook.id}, ${jobId})"
                                             class="p-2 text-red-400 hover:text-red-600"
-                                            title="Delete">
+                                            title="Delete"
+                                            aria-label="Delete webhook">
                                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                                     </button>
                                 </div>
@@ -2180,9 +2223,14 @@
         }
 
         async function deleteJobWebhook(webhookId, jobId) {
-            if (!confirm('Are you sure you want to delete this webhook?')) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: 'Delete webhook?',
+                message: 'This action cannot be undone. Any integrations using this webhook will stop working.',
+                confirmText: 'Delete webhook',
+                cancelText: 'Keep webhook',
+                danger: true,
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/webhooks/${webhookId}`, {
@@ -2233,9 +2281,14 @@
         }
 
         async function regenerateJobWebhookToken(webhookId, jobId) {
-            if (!confirm('Are you sure you want to regenerate the token? The old token will stop working immediately.')) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: 'Regenerate webhook token?',
+                message: 'The old token will stop working immediately. Update any integrations using it.',
+                confirmText: 'Regenerate token',
+                cancelText: 'Cancel',
+                danger: true,
+            });
+            if (!confirmed) return;
 
             try {
                 const response = await fetch(`/api/webhooks/${webhookId}/regenerate`, {
@@ -2331,7 +2384,7 @@
                                             <code class="text-xs break-all">${webhookUrl}</code>
                                         </div>
                                         <button onclick="copyToClipboard('${webhookUrl}').then(ok => showToast(ok ? 'URL copied to clipboard' : 'Failed to copy', ok ? 'success' : 'error'));"
-                                                class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm mb-3">
+                                                class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors mb-3">
                                             <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
                                             Copy URL
                                         </button>

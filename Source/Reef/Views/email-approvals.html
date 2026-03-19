@@ -1,8 +1,8 @@
 <!--REEF:TITLE-->Email Approvals · Reef<!--/REEF:TITLE-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
-                <div class="flex items-center justify-between px-6 py-4">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Approvals</h1>
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+                <div class="flex items-center justify-between px-6 py-3">
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Approvals</h1>
                 </div>
             </header>
 
@@ -76,7 +76,7 @@
                                 <thead class="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th class="px-6 py-3 text-left">
-                                            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAll()" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAll()" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
                                         </th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
@@ -102,10 +102,10 @@
                         <!-- Pagination for Pending Tab -->
                         <div id="pending-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
                             <div class="flex-1 flex justify-between sm:hidden">
-                                <button onclick="previousPage('pending')" id="pending-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="previousPage('pending')" id="pending-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Previous
                                 </button>
-                                <button onclick="nextPage('pending')" id="pending-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="nextPage('pending')" id="pending-mobile-next" class="ml-3 relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Next
                                 </button>
                             </div>
@@ -116,7 +116,7 @@
                                     </p>
                                     <div class="flex items-center space-x-2">
                                         <label for="pending-page-size-select" class="text-sm text-gray-700">Per page:</label>
-                                        <select id="pending-page-size-select" onchange="changePageSize('pending')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                        <select id="pending-page-size-select" onchange="changePageSize('pending')" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white">
                                             <option value="25" selected>25</option>
                                             <option value="50">50</option>
                                             <option value="100">100</option>
@@ -159,10 +159,10 @@
                         <!-- Pagination for Approved Tab -->
                         <div id="approved-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
                             <div class="flex-1 flex justify-between sm:hidden">
-                                <button onclick="previousPage('approved')" id="approved-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="previousPage('approved')" id="approved-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Previous
                                 </button>
-                                <button onclick="nextPage('approved')" id="approved-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="nextPage('approved')" id="approved-mobile-next" class="ml-3 relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Next
                                 </button>
                             </div>
@@ -173,7 +173,7 @@
                                     </p>
                                     <div class="flex items-center space-x-2">
                                         <label for="approved-page-size-select" class="text-sm text-gray-700">Per page:</label>
-                                        <select id="approved-page-size-select" onchange="changePageSize('approved')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                        <select id="approved-page-size-select" onchange="changePageSize('approved')" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white">
                                             <option value="25" selected>25</option>
                                             <option value="50">50</option>
                                             <option value="100">100</option>
@@ -216,10 +216,10 @@
                         <!-- Pagination for History Tab -->
                         <div id="history-pagination" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200">
                             <div class="flex-1 flex justify-between sm:hidden">
-                                <button onclick="previousPage('history')" id="history-mobile-prev" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="previousPage('history')" id="history-mobile-prev" class="relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Previous
                                 </button>
-                                <button onclick="nextPage('history')" id="history-mobile-next" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                <button onclick="nextPage('history')" id="history-mobile-next" class="ml-3 relative inline-flex items-center h-9 px-4 border border-slate-200 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 transition-colors">
                                     Next
                                 </button>
                             </div>
@@ -230,7 +230,7 @@
                                     </p>
                                     <div class="flex items-center space-x-2">
                                         <label for="history-page-size-select" class="text-sm text-gray-700">Per page:</label>
-                                        <select id="history-page-size-select" onchange="changePageSize('history')" class="px-3 py-1 border border-gray-300 rounded-md text-sm">
+                                        <select id="history-page-size-select" onchange="changePageSize('history')" class="h-7 px-3 py-0.5 border border-slate-200 rounded-md text-sm bg-white">
                                             <option value="25" selected>25</option>
                                             <option value="50">50</option>
                                             <option value="100">100</option>
@@ -290,7 +290,7 @@
                         <ul id="attachments-items" class="space-y-2 text-sm">
                             <!-- Attachment items will be populated here -->
                         </ul>
-                        <p class="text-xs text-gray-500 mt-3 italic border-t border-gray-300 pt-2">
+                        <p class="text-xs text-gray-500 mt-3 italic border-t border-slate-200 pt-2">
                             <i data-lucide="info" class="inline h-3 w-3 mr-1"></i>
                             Attachments cannot be opened or downloaded from this preview for security reasons.
                         </p>
@@ -317,7 +317,7 @@
                         <i data-lucide="x" class="h-4 w-4"></i>
                         Reject
                     </button>
-                    <button onclick="closePreviewModal()" class="flex-1 border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2 px-4 rounded-md transition-colors">
+                    <button onclick="closePreviewModal()" class="flex-1 h-9 border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 px-4 rounded-md transition-colors">
                         Close
                     </button>
                 </div>
@@ -326,12 +326,12 @@
     </div>
 
     <!-- Approval Notes Modal -->
-    <div id="approvalNotesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div id="approvalNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">Approve Email</h2>
+                    <h2 class="text-lg font-semibold text-slate-900">Approve Email</h2>
                     <button onclick="closeApprovalNotesModal()" class="text-gray-400 hover:text-gray-500">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
@@ -340,12 +340,12 @@
                 <!-- Content -->
                 <div class="px-6 py-4">
                     <div class="mb-4">
-                        <label for="approval-notes-input" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="approval-notes-input" class="block text-sm font-medium text-slate-700 mb-2">
                             Add approval notes (optional):
                         </label>
                         <textarea id="approval-notes-input"
                                   rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                   placeholder="Add any notes about this approval..."
                                   autocomplete="off"></textarea>
                     </div>
@@ -354,7 +354,7 @@
                 <!-- Footer -->
                 <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
                     <button type="button" onclick="closeApprovalNotesModal()"
-                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="button" id="confirm-approve-btn" onclick="confirmApproval()"
@@ -368,12 +368,12 @@
     </div>
 
     <!-- Rejection Reason Modal -->
-    <div id="rejectionReasonModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div id="rejectionReasonModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">Reject Email</h2>
+                    <h2 class="text-lg font-semibold text-slate-900">Reject Email</h2>
                     <button onclick="closeRejectionReasonModal()" class="text-gray-400 hover:text-gray-500">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
@@ -382,12 +382,12 @@
                 <!-- Content -->
                 <div class="px-6 py-4">
                     <div class="mb-4">
-                        <label for="rejection-reason-input" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="rejection-reason-input" class="block text-sm font-medium text-slate-700 mb-2">
                             Rejection reason (optional):
                         </label>
                         <textarea id="rejection-reason-input"
                                   rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                   placeholder="Explain why this email is being rejected..."
                                   autocomplete="off"></textarea>
                     </div>
@@ -396,7 +396,7 @@
                 <!-- Footer -->
                 <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
                     <button type="button" onclick="closeRejectionReasonModal()"
-                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="button" id="confirm-reject-btn" onclick="confirmRejection()"
@@ -410,12 +410,12 @@
     </div>
 
     <!-- Skip Notes Modal -->
-    <div id="skipNotesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+    <div id="skipNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">Skip Email</h2>
+                    <h2 class="text-lg font-semibold text-slate-900">Skip Email</h2>
                     <button onclick="closeSkipNotesModal()" class="text-gray-400 hover:text-gray-500">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
@@ -424,16 +424,16 @@
                 <!-- Content -->
                 <div class="px-6 py-4">
                     <div class="mb-4">
-                        <label for="skip-notes-input" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label for="skip-notes-input" class="block text-sm font-medium text-slate-700 mb-2">
                             Skip notes (optional):
                         </label>
                         <textarea id="skip-notes-input"
                                   rows="3"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                  class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                   placeholder="Explain why this email is being skipped..."
                                   autocomplete="off"></textarea>
                     </div>
-                    <p class="text-sm text-gray-600">
+                    <p class="text-sm text-slate-600">
                         <i data-lucide="info" class="inline h-4 w-4 mr-1"></i>
                         The email will not be sent, but the delta sync hash will be committed to prevent future duplicates.
                     </p>
@@ -442,7 +442,7 @@
                 <!-- Footer -->
                 <div class="flex justify-end space-x-3 px-6 py-4 border-t border-gray-200">
                     <button type="button" onclick="closeSkipNotesModal()"
-                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="button" id="confirm-skip-btn" onclick="confirmSkip()"
@@ -610,7 +610,7 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4">
                         <input type="checkbox"
-                               class="approval-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                               class="approval-checkbox h-4 w-4 text-blue-600 border-slate-300 rounded"
                                data-approval-id="${approval.guid}"
                                onchange="toggleApprovalSelection('${approval.guid}')"
                                ${selectedApprovals.has(approval.guid) ? 'checked' : ''}>
@@ -750,9 +750,13 @@
                 return;
             }
 
-            if (!confirm(`Are you sure you want to approve ${selectedApprovals.size} email(s)?`)) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: `Approve ${selectedApprovals.size} email${selectedApprovals.size === 1 ? '' : 's'}?`,
+                message: 'The selected emails will be sent to their recipients.',
+                confirmText: 'Approve and send',
+                cancelText: 'Cancel',
+            });
+            if (!confirmed) return;
 
             const guids = Array.from(selectedApprovals);
             let successCount = 0;
@@ -952,7 +956,7 @@
             // Previous button
             html += `
                 <button onclick="previousPage('${tab}')" ${page === 1 ? 'disabled' : ''}
-                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${page === 1 ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-left" class="h-5 w-5"></i>
                 </button>
             `;
@@ -973,7 +977,7 @@
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active
                                 ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
                     </button>
@@ -983,7 +987,7 @@
             // Next button
             html += `
                 <button onclick="nextPage('${tab}')" ${page === totalPages || totalPages === 0 ? 'disabled' : ''}
-                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${page === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 ${page === totalPages || totalPages === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
                     <i data-lucide="chevron-right" class="h-5 w-5"></i>
                 </button>
             `;

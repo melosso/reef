@@ -100,7 +100,7 @@ public class HttpApiSource : IImportSource
         }
     }
 
-    // ── Private ──────────────────────────────────────────────
+    // Private
 
     private async Task<byte[]> FetchSingleAsync(HttpConfig config, string? dataRootPath, CancellationToken ct)
     {

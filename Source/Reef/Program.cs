@@ -596,8 +596,8 @@ public class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-slate-900 text-slate-100"
-                                : "hover:bg-slate-700 hover:text-slate-100";
+                                ? "bg-slate-800 text-slate-100"
+                                : "hover:bg-slate-800 hover:text-slate-100";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
 

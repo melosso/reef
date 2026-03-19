@@ -24,7 +24,7 @@ public class DatabaseImportTarget : IImportTarget
         _encryptionService = encryptionService;
     }
 
-    // ── WriteBatchAsync (Insert / Upsert / Append) ──────────
+    // WriteBatchAsync (Insert / Upsert / Append) 
 
     public async Task<ImportBatchResult> WriteBatchAsync(
         IReadOnlyList<Dictionary<string, object?>> rows,
@@ -44,7 +44,7 @@ public class DatabaseImportTarget : IImportTarget
         };
     }
 
-    // ── FullReplaceAsync ─────────────────────────────────────
+    // FullReplaceAsync 
 
     public async Task<ImportBatchResult> FullReplaceAsync(
         List<Dictionary<string, object?>> rows,
@@ -88,7 +88,7 @@ public class DatabaseImportTarget : IImportTarget
         }
     }
 
-    // ── ApplyDeletesAsync ────────────────────────────────────
+    // ApplyDeletesAsync 
 
     public async Task<int> ApplyDeletesAsync(
         IReadOnlyList<string> deletedReefIds,
@@ -135,7 +135,7 @@ public class DatabaseImportTarget : IImportTarget
         return affected;
     }
 
-    // ── GetTableSchemaAsync ──────────────────────────────────
+    // GetTableSchemaAsync 
 
     public async Task<List<TargetColumnInfo>> GetTableSchemaAsync(
         Connection connection,
@@ -176,7 +176,7 @@ public class DatabaseImportTarget : IImportTarget
         }
     }
 
-    // ── TestAsync ────────────────────────────────────────────
+    // TestAsync
 
     public async Task<(bool Success, string? Message)> TestAsync(
         Connection connection,
@@ -201,7 +201,7 @@ public class DatabaseImportTarget : IImportTarget
         }
     }
 
-    // ── Insert batch ─────────────────────────────────────────
+    // Insert batch──
 
     private async Task<ImportBatchResult> InsertBatchAsync(
         DbConnection db,
@@ -321,7 +321,7 @@ public class DatabaseImportTarget : IImportTarget
         return result;
     }
 
-    // ── Upsert batch ─────────────────────────────────────────
+    // Upsert batch──
 
     private async Task<ImportBatchResult> UpsertBatchAsync(
         DbConnection db,
@@ -501,7 +501,7 @@ RETURNING xmax";
         return xmax == 0 ? (1, 0) : (0, 1);
     }
 
-    // ── Schema Queries ───────────────────────────────────────
+    // Schema Queries
 
     private static string SqlServerSchemaQuery(string? schema, string table) => $@"
         SELECT
@@ -563,7 +563,7 @@ RETURNING xmax";
           AND NOT a.attisdropped
         ORDER BY a.attnum";
 
-    // ── Helpers ──────────────────────────────────────────────
+    // Helpers
 
     private DbConnection OpenConnection(Connection connection)
     {

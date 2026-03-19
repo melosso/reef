@@ -27,7 +27,7 @@ public class ImportProfileService
         _hashValidator = hashValidator;
     }
 
-    // ── Queries ────────────────────────────────────────────────────────
+    // Queries
 
     public async Task<List<ImportProfileWithNames>> GetAllAsync()
     {
@@ -82,7 +82,7 @@ public class ImportProfileService
         return (await conn.QueryAsync<ImportProfileWithNames>(sql, new { GroupId = groupId })).ToList();
     }
 
-    // ── Create ─────────────────────────────────────────────────────────
+    // Create
 
     public async Task<int> CreateAsync(ImportProfile profile, int? createdByUserId)
     {
@@ -157,7 +157,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Update ─────────────────────────────────────────────────────────
+    // Update
 
     public async Task<bool> UpdateAsync(ImportProfile profile)
     {
@@ -220,7 +220,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Delete ─────────────────────────────────────────────────────────
+    // Delete
 
     public async Task<bool> DeleteAsync(int id)
     {
@@ -244,7 +244,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Enable / Disable ───────────────────────────────────────────────
+    // Enable / Disable
 
     public async Task<bool> SetEnabledAsync(int id, bool enabled)
     {
@@ -256,7 +256,7 @@ public class ImportProfileService
         return rows > 0;
     }
 
-    // ── Execution records ──────────────────────────────────────────────
+    // Execution records
 
     public async Task<int> CreateExecutionAsync(ImportProfileExecution exec)
     {
@@ -408,7 +408,7 @@ public class ImportProfileService
         };
     }
 
-    // ── Code Generation ────────────────────────────────────────────────
+    // Code Generation
 
     private static async Task<string> GenerateUniqueCodeAsync(SqliteConnection conn)
     {
@@ -422,7 +422,7 @@ public class ImportProfileService
         return Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
     }
 
-    // ── Validation ─────────────────────────────────────────────────────
+    // Validation
 
     private static async Task ValidateAsync(SqliteConnection conn, ImportProfile profile)
     {
@@ -492,7 +492,7 @@ public class ImportProfileService
         }
     }
 
-    // ── Output Target CRUD ──────────────────────────────────────────────
+    // Output Target CRUD
 
     public async Task<List<ImportOutputTarget>> GetOutputTargetsAsync(int importProfileId)
     {

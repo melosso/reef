@@ -2,15 +2,15 @@
 <!--REEF:SCRIPTS--><script src="/assets/js/connections.js"></script>
     <script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
                 <div class="flex items-center justify-between px-6 py-3">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Connections</h1>
-                    <div class="flex space-x-3 items-center">
-                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 flex items-center justify-center transition-colors duration-150" aria-label="Help">
-                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Connections</h1>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Help">
+                            <i data-lucide="help-circle" class="h-4 w-4"></i>
                         </button>
-                        <button onclick="openAddConnectionModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
-                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                        <button onclick="openAddConnectionModal()" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors active:scale-95">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
                             Add Connection
                         </button>
                     </div>
@@ -34,7 +34,7 @@
                 <div class="bg-white rounded-lg shadow">
                     <div class="p-6">
                         <div id="connections-list" class="space-y-4">
-                            <p class="text-sm text-gray-500">Loading connections...</p>
+                            <p class="text-sm text-slate-500">Loading connections...</p>
                         </div>
                     </div>
                 </div>
@@ -43,20 +43,21 @@
     </div>
 
     <!-- Add Connection Modal -->
-    <div id="add-connection-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+    <div id="add-connection-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-2xl shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="connection-modal-title" class="text-lg font-semibold text-gray-900">Add New Connection</h3>
+                <h3 id="connection-modal-title" class="text-lg font-semibold text-slate-900">New Connection</h3>
                 <div class="flex items-center space-x-2">
                     <!-- More Options Menu (only visible when editing) -->
                     <div id="connection-more-options" class="relative hidden">
-                        <button type="button" onclick="toggleConnectionOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1">
+                        <button type="button" onclick="toggleConnectionOptionsMenu()" class="text-gray-400 hover:text-gray-600 p-1" aria-haspopup="true" aria-expanded="false" aria-controls="connection-options-menu" aria-label="More options">
                             <i data-lucide="more-vertical" class="h-6 w-6"></i>
                         </button>
-                        <div id="connection-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                        <div id="connection-options-menu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200" role="menu">
                             <div class="py-1">
-                                <button type="button" onclick="toggleConnectionActiveStatus()" 
-                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                                <button type="button" onclick="toggleConnectionActiveStatus()"
+                                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                        role="menuitem">
                                     <i data-lucide="power" class="h-4 w-4 mr-2"></i>
                                     <span id="connection-toggle-text">Deactivate Connection</span>
                                 </button>
@@ -71,16 +72,16 @@
             
             <form id="add-connection-form" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Name</label>
                     <input type="text" id="connection-name" required
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                            placeholder="Production SQL Server">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Type</label>
                     <select id="connection-type" required
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                         <option value="SqlServer">SQL Server</option>
                         <option value="MySQL">MySQL</option>
                         <option value="PostgreSQL">PostgreSQL</option>
@@ -88,7 +89,7 @@
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center">
+                    <label class="block text-sm font-medium text-slate-700 mb-1 flex items-center">
                         Connection String
                         <a href="https://www.connectionstrings.com/" target="_blank" class="ml-1 text-gray-400 cursor-help transition duration-200 ease-in-out active:scale-95" data-tooltip="If you don't know how to build the connection string, click here!" data-tooltip-position="bottom">
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="info" class="lucide lucide-info w-4 h-4"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
@@ -98,21 +99,21 @@
                         </button>
                     </label>
                     <textarea id="connection-string" required rows="3"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                               placeholder="Server=myserver;Database=mydb;User Id=sa;Password=***;"></textarea>
                     <p class="text-xs text-gray-500 mt-1">Connection string will be encrypted automatically</p>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Tags (optional)</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Tags (optional)</label>
                     <input type="text" id="connection-tags"
-                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                            placeholder="production, crm, financial">
                 </div>
                 
                 <div class="flex justify-end space-x-3 mt-6">
                                         <button type="button" id="test-connection-btn" onclick="testConnection()" 
-                                                        class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center">
+                                                        class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center">
                                                 <svg id="test-connection-spinner" class="animate-spin h-4 w-4 mr-2 text-gray-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -120,19 +121,19 @@
                                                 <span id="test-connection-btn-text">Test Connection</span>
                                         </button>
                     <button type="button" onclick="closeAddConnectionModal()" 
-                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
                         Save Connection
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
             <div id="help-modal-content-area">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
@@ -199,7 +200,7 @@
 
         function openAddConnectionModal() {
             document.getElementById('add-connection-modal').classList.remove('hidden');
-            document.getElementById('connection-modal-title').textContent = 'Add New Connection';
+            document.getElementById('connection-modal-title').textContent = 'New Connection';
             document.getElementById('connection-more-options').classList.add('hidden');
             document.getElementById('generate-connection-string-btn').classList.remove('hidden');
             queueLucideRender();
@@ -239,7 +240,12 @@
 
         function toggleConnectionOptionsMenu() {
             const menu = document.getElementById('connection-options-menu');
-            menu.classList.toggle('hidden');
+            const btn = document.querySelector('[aria-controls="connection-options-menu"]');
+            const isHidden = menu.classList.toggle('hidden');
+            btn?.setAttribute('aria-expanded', String(!isHidden));
+            if (!isHidden) {
+                menu.querySelector('[role="menuitem"]')?.focus();
+            }
         }
 
         // Close dropdown when clicking outside
@@ -257,15 +263,17 @@
             const isActive = form.getAttribute('data-is-active') === 'true';
             const connectionName = document.getElementById('connection-name').value;
             
-            const action = isActive ? 'deactivate' : 'activate';
-            const confirmMessage = isActive 
-                ? `Are you sure you want to deactivate "${connectionName}"?\n\nNote: Any profiles, jobs, and webhooks using this connection will fail to execute until you reactivate it.`
-                : `Are you sure you want to activate "${connectionName}"?`;
-            
-            if (!confirm(confirmMessage)) {
-                document.getElementById('connection-options-menu').classList.add('hidden');
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: isActive ? `Deactivate "${connectionName}"?` : `Activate "${connectionName}"?`,
+                message: isActive
+                    ? 'Any profiles, jobs, and webhooks using this connection will fail to execute until you reactivate it.'
+                    : 'This connection will become available for use.',
+                confirmText: isActive ? 'Deactivate' : 'Activate',
+                cancelText: 'Cancel',
+                danger: isActive,
+            });
+            document.getElementById('connection-options-menu').classList.add('hidden');
+            if (!confirmed) return;
 
             try {
                 await checkAuth();
@@ -451,7 +459,12 @@
                     <div class="flex flex-col items-center justify-center py-12">
                         <i data-lucide="plug" class="h-12 w-12 text-gray-300 mb-4"></i>
                         <p class="text-lg font-semibold text-gray-700 mb-2">No connections found</p>
-                        <p class="text-gray-500 mb-4">${connectionFilter.allItems.length === 0 ? 'Create your first connection to get started.' : 'Try adjusting your filters.'}</p>
+                        <p class="text-gray-500 mb-4">${connectionFilter.allItems.length === 0
+                            ? 'Connections are how Reef talks to your databases. Add one to start building export profiles.'
+                            : 'Try adjusting your filters.'}</p>
+                        ${connectionFilter.allItems.length === 0
+                            ? '<button onclick="openAddConnectionModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 active:scale-95 transition-all">+ Add Connection</button>'
+                            : ''}
                     </div>
                 `;
             } else {
@@ -473,10 +486,10 @@
                         </div>
                         <div class="flex items-center space-x-2">
                             <span class="px-2 py-1 text-xs ${conn.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">${conn.isActive ? 'Active' : 'Inactive'}</span>
-                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editConnection(${conn.id})" data-tooltip="Edit" data-tooltip-position="bottom">
+                            <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editConnection(${conn.id})" data-tooltip="Edit" data-tooltip-position="bottom" aria-label="Edit connection: ${escapeHtml(conn.name)}">
                                 <i data-lucide="edit" class="h-4 w-4"></i>
                             </button>
-                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteConnection(${conn.id}, '${escapeHtml(conn.name)}')" data-tooltip="Delete" data-tooltip-position="bottom">
+                            <button class="p-2 text-gray-400 hover:text-red-600" onclick="deleteConnection(${conn.id}, '${escapeForJS(conn.name)}')" data-tooltip="Delete" data-tooltip-position="bottom" aria-label="Delete connection: ${escapeHtml(conn.name)}">
                                 <i data-lucide="trash-2" class="h-4 w-4"></i>
                             </button>
                         </div>

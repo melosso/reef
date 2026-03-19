@@ -332,7 +332,7 @@ public static class AuthEndpoints
                 Path = "/"
             });
 
-            Log.Information("User logged out successfully");
+            Log.Debug("User logged out successfully");
 
             return Results.Ok(new { success = true, message = "Logged out successfully" });
         }

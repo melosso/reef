@@ -101,7 +101,7 @@ public class AzureBlobImportSource : IImportSource
         }
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────
+    // Helpers
 
     private async Task<List<string>> ResolveKeysAsync(
         BlobContainerClient container,

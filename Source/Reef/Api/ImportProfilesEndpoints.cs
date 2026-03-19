@@ -18,7 +18,7 @@ public static class ImportProfilesEndpoints
     {
         var g = app.MapGroup("/api/import-profiles").RequireAuthorization();
 
-        // ── CRUD ──────────────────────────────────────────────────────
+        // CRUD
         g.MapGet("/",                        GetAll);
         g.MapGet("/{id:int}",               GetById);
         g.MapPost("/",                       Create);
@@ -28,26 +28,26 @@ public static class ImportProfilesEndpoints
         g.MapPost("/{id:int}/disable",      Disable);
         g.MapGet("/by-group/{groupId:int}", GetByGroup);
 
-        // ── Execution ──────────────────────────────────────────────────
+        // Execution
         g.MapPost("/{id:int}/execute",      Execute);
         g.MapGet("/{id:int}/executions",    GetExecutions);
         g.MapGet("/executions/{execId:int}",          GetExecution);
         g.MapGet("/executions/{execId:int}/errors",   GetExecutionErrors);
 
-        // ── Source Operations ──────────────────────────────────────────
+        // Source Operations
         g.MapPost("/test-source",           TestSource);
         g.MapPost("/list-source-files",     ListSourceFiles);
         g.MapPost("/preview",               Preview);
 
-        // ── Target Operations ──────────────────────────────────────────
+        // Target Operations
         g.MapPost("/target-schema",         GetTargetSchema);
         g.MapPost("/test-target",           TestTarget);
 
-        // ── Delta Sync ─────────────────────────────────────────────────
+        // Delta Sync
         g.MapGet("/{id:int}/delta-sync/stats",    GetDeltaSyncStats);
         g.MapDelete("/{id:int}/delta-sync/reset", ResetDeltaSync);
 
-        // ── Output Targets ─────────────────────────────────────────────
+        // Output Targets
         g.MapGet("/{id:int}/output-targets",              GetOutputTargets);
         g.MapPost("/{id:int}/output-targets",             AddOutputTarget);
         g.MapPut("/{id:int}/output-targets/{tid:int}",    UpdateOutputTarget);
@@ -55,7 +55,7 @@ public static class ImportProfilesEndpoints
         g.MapPost("/{id:int}/output-targets/reorder",     ReorderOutputTargets);
     }
 
-    // ── CRUD Handlers ──────────────────────────────────────────────────
+    // CRUD Handlers
 
     private static async Task<IResult> GetAll(
         [FromServices] ImportProfileService svc)
@@ -162,7 +162,7 @@ public static class ImportProfilesEndpoints
         catch (Exception ex) { return ServerError($"getting import profiles for group {groupId}", ex); }
     }
 
-    // ── Execution Handlers ─────────────────────────────────────────────
+    // Execution Handlers
 
     private static async Task<IResult> Execute(
         int id,
@@ -219,7 +219,7 @@ public static class ImportProfilesEndpoints
         catch (Exception ex) { return ServerError($"getting errors for execution {execId}", ex); }
     }
 
-    // ── Source Operation Handlers ──────────────────────────────────────
+    // Source Operation Handlers 
 
     private static async Task<IResult> TestSource(
         [FromBody] TestImportSourceRequest req,
@@ -376,7 +376,7 @@ public static class ImportProfilesEndpoints
         }
     }
 
-    // ── Target Operation Handlers ──────────────────────────────────────
+    // Target Operation Handlers 
 
     private static async Task<IResult> GetTargetSchema(
         [FromBody] GetTargetSchemaRequest req,
@@ -431,7 +431,7 @@ public static class ImportProfilesEndpoints
         }
     }
 
-    // ── Delta Sync ─────────────────────────────────────────────────────
+    // Delta Sync
 
     private static async Task<IResult> GetDeltaSyncStats(
         int id,
@@ -477,7 +477,7 @@ public static class ImportProfilesEndpoints
         catch (Exception ex) { return ServerError($"resetting delta sync for {id}", ex); }
     }
 
-    // ── Output Target Handlers ─────────────────────────────────────────
+    // Output Target Handlers──
 
     private static async Task<IResult> GetOutputTargets(
         int id,
@@ -545,7 +545,7 @@ public static class ImportProfilesEndpoints
         catch (Exception ex) { return ServerError($"reordering output targets for profile {id}", ex); }
     }
 
-    // ── Helpers ────────────────────────────────────────────────────────
+    // Helpers
 
     private static int? GetUserId(HttpContext ctx)
     {

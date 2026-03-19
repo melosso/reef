@@ -109,7 +109,7 @@ public class DestinationSourceAdapter(DestinationService destinationService)
         };
     }
 
-    // ── Translation logic ─────────────────────────────────────────────────
+    // Translation logic
 
     private static string MapDestinationTypeToSourceType(DestinationType destType) => destType switch
     {

@@ -1,14 +1,14 @@
 <!--REEF:TITLE-->Groups · Reef<!--/REEF:TITLE-->
 <div class="flex-1 flex flex-col overflow-hidden">
-            <header class="bg-white shadow-sm z-10">
+            <header class="bg-white border-b border-slate-200 shrink-0 z-10">
                 <div class="flex items-center justify-between px-6 py-3">
-                    <h1 class="text-2xl font-semibold text-gray-900 disable-select">Groups</h1>
-                    <div class="flex space-x-3 items-center">
-                        <button onclick="openHelpModal()" class="p-2 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 flex items-center justify-center transition-colors duration-150" aria-label="Help">
-                            <i data-lucide="help-circle" class="h-5 w-5"></i>
+                    <h1 class="text-xl font-semibold text-slate-900 disable-select">Groups</h1>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors" aria-label="Help">
+                            <i data-lucide="help-circle" class="h-4 w-4"></i>
                         </button>
-                        <button onclick="openAddGroupModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 flex items-center shadow-sm transition-colors duration-150 active:scale-95">
-                            <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+                        <button onclick="openAddGroupModal()" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors active:scale-95">
+                            <i data-lucide="plus" class="h-4 w-4"></i>
                             New Group
                         </button>
                     </div>
@@ -39,10 +39,10 @@
             </main>
         </div>
     </div>
-    <div id="group-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white mb-20">
+    <div id="group-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-4">
-                <h3 id="modal-title" class="text-lg font-semibold text-gray-900">Add Group</h3>
+                <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Group</h3>
                 <button onclick="closeGroupModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
@@ -50,22 +50,22 @@
             <form id="group-form" class="space-y-4">
                 <input type="hidden" id="group-id">
                 <div>
-                    <label for="group-name" class="block text-sm font-medium text-gray-700">Name *</label>
-                    <input type="text" id="group-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <label for="group-name" class="block text-sm font-medium text-slate-700">Name *</label>
+                    <input type="text" id="group-name" required class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                 </div>
                 <div>
-                    <label for="group-description" class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea id="group-description" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    <label for="group-description" class="block text-sm font-medium text-slate-700">Description</label>
+                    <textarea id="group-description" rows="2" class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"></textarea>
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
-                    <button type="button" onclick="closeGroupModal()" class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-                    <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">Save Group</button>
+                    <button type="button" onclick="closeGroupModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
+                    <button type="submit" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Save Group</button>
                 </div>
             </form>
         </div>
     </div>
-    <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
             <div id="help-modal-content-area">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
@@ -92,43 +92,6 @@
                 </div>
             </div>
         </div>
-        <div id="help-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-10 mx-auto p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
-            <div id="help-modal-content-area">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
-                        <i data-lucide="lightbulb" class="h-6 w-6 mr-2 text-yellow-500"></i>
-                        How to use Groups
-                    </h3>
-                    <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-500 p-1" aria-label="Close help guide">
-                        <i data-lucide="x" class="h-6 w-6"></i>
-                    </button>
-                </div>
-                <div class="space-y-4 text-gray-700">
-                    <p>
-                        <b>Groups</b> are simply categories that help you organize your profiles. Use groups to keep related profiles together for easier management and bulk actions.
-                    </p>
-                    <h4 class="text-l font-semibold text-gray-800"><b>How to use Groups:</b></h4>
-                    <ul class="list-disc list-inside space-y-2 ml-4">
-                        <li>
-                            <b>Create Group:</b> Click <b>"New Group"</b> to add a new category. Enter a name and (optionally) a description.
-                        </li>
-                        <li>
-                            <b>Profiles:</b> The <b>Profiles</b> column shows how many profiles are assigned to each group.
-                        </li>
-                        <li>
-                            <b>Edit/Delete:</b> Use the 
-                            <i data-lucide="edit" class="h-4 w-4 inline text-blue-600"></i> (Edit) and 
-                            <i data-lucide="trash-2" class="h-4 w-4 inline text-red-600"></i> (Delete) icons to update or remove groups.
-                        </li>
-                    </ul>
-                    <blockquote class="border-l-4 border-blue-500 pl-4 py-2 italic text-gray-600 bg-blue-50 rounded-r-md pr-2">
-                        <p>
-                            <strong>Tip:</strong> Groups make it easy to select sets of profiles for jobs or bulk operations. You can edit or reorganize groups anytime as your needs change.
-                        </p>
-                    </blockquote>
-                </div>
-            </div>
     </div>
     <script>
         queueLucideRender();
@@ -179,8 +142,10 @@
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="4" class="px-6 py-8 text-center text-gray-500">
-                            <i data-lucide="folder" class="h-12 w-12 mx-auto mb-2 text-gray-300"></i>
-                            <p>No groups found. Create your first group to categorize your profiles.</p>
+                            <i data-lucide="folder" class="h-12 w-12 mx-auto mb-4 text-gray-300"></i>
+                            <p class="text-lg font-semibold text-gray-700 mb-2">No groups yet</p>
+                            <p class="text-gray-500 mb-4">Groups let you organize profiles into collections and run bulk operations from the Jobs page.</p>
+                            <button onclick="openAddGroupModal()" class="px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-lg hover:bg-slate-700 active:scale-95 transition-all">+ New Group</button>
                         </td>
                     </tr>
                 `;
@@ -200,10 +165,10 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(group.description || '')}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${groupProfiles.length}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editGroup(${group.id})" class="text-blue-600 hover:text-blue-900 mr-3">
+                            <button onclick="editGroup(${group.id})" aria-label="Edit group ${escapeHtml(group.name)}" class="text-blue-600 hover:text-blue-900 mr-3 p-1">
                                 <i data-lucide="edit" class="h-4 w-4 inline"></i>
                             </button>
-                            <button onclick="deleteGroup(${group.id}, '${escapeHtml(group.name)}')" class="text-red-600 hover:text-red-900">
+                            <button onclick="deleteGroup(${group.id}, '${escapeForJS(group.name)}')" aria-label="Delete group ${escapeHtml(group.name)}" class="text-red-600 hover:text-red-900 p-1">
                                 <i data-lucide="trash-2" class="h-4 w-4 inline"></i>
                             </button>
                         </td>
@@ -283,9 +248,14 @@
         });
 
         async function deleteGroup(id, name) {
-            if (!confirm(`Are you sure you want to delete group "${name}"? This action cannot be undone.`)) {
-                return;
-            }
+            const confirmed = await showConfirmModal({
+                title: `Delete group "${name}"?`,
+                message: 'This action cannot be undone. Profiles assigned to this group will remain but become ungrouped.',
+                confirmText: 'Delete group',
+                cancelText: 'Keep group',
+                danger: true,
+            });
+            if (!confirmed) return;
             try {
                 const response = await fetch(`${API_BASE}/api/groups/${id}`, {
                     method: 'DELETE',
