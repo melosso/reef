@@ -53,15 +53,15 @@ public class NotificationService
     /// <summary>
     /// Get current notification settings from database
     /// </summary>
-    private async Task<NotificationSettings?> GetNotificationSettingsAsync()
+    private async Task<NotificationSettings?> GetNotificationSettingsAsync(CancellationToken ct = default)
     {
         try
         {
             using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync(ct);
 
             const string sql = "SELECT * FROM NotificationSettings LIMIT 1";
-            var result = await connection.QueryFirstOrDefaultAsync<NotificationSettings>(sql);
+            var result = await connection.QueryFirstOrDefaultAsync<NotificationSettings>(new CommandDefinition(sql, cancellationToken: ct));
             return result;
         }
         catch (Exception ex)
@@ -74,17 +74,16 @@ public class NotificationService
     /// <summary>
     /// Get destination by ID, with encrypted config
     /// </summary>
-    private async Task<Destination?> GetDestinationAsync(int destinationId)
+    private async Task<Destination?> GetDestinationAsync(int destinationId, CancellationToken ct = default)
     {
         try
         {
             using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync(ct);
 
             const string sql = "SELECT * FROM Destinations WHERE Id = @Id AND IsActive = 1";
             var result = await connection.QueryFirstOrDefaultAsync<Destination>(
-                sql,
-                new { Id = destinationId });
+                new CommandDefinition(sql, new { Id = destinationId }, cancellationToken: ct));
             return result;
         }
         catch (Exception ex)
@@ -98,24 +97,24 @@ public class NotificationService
     /// Update the email approval cooldown timestamp in the database after sending notification
     /// This persists the cooldown across application restarts
     /// </summary>
-    private async Task UpdateEmailApprovalCooldownTimestampAsync(int settingsId)
+    private async Task UpdateEmailApprovalCooldownTimestampAsync(int settingsId, CancellationToken ct = default)
     {
         try
         {
             using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync();
+            await connection.OpenAsync(ct);
 
             const string sql = @"
-                UPDATE NotificationSettings 
+                UPDATE NotificationSettings
                 SET NewEmailApprovalCooldownTimestamp = @Timestamp, UpdatedAt = @UpdatedAt
                 WHERE Id = @Id";
-            
-            await connection.ExecuteAsync(sql, new
+
+            await connection.ExecuteAsync(new CommandDefinition(sql, new
             {
                 Id = settingsId,
                 Timestamp = DateTime.UtcNow.ToString("o"),
                 UpdatedAt = DateTime.UtcNow.ToString("o")
-            });
+            }, cancellationToken: ct));
             
             Log.Debug("Updated email approval cooldown timestamp for settings {SettingsId}", settingsId);
         }
@@ -129,11 +128,11 @@ public class NotificationService
     /// Send notification for successful profile execution
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
     /// </summary>
-    public async Task SendExecutionSuccessAsync(ProfileExecution execution, Profile profile)
+    public async Task SendExecutionSuccessAsync(ProfileExecution execution, Profile profile, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnProfileSuccess)
             {
                 return;
@@ -158,7 +157,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
                 execution.Id, profile.Code, profile.Name);
         }
@@ -172,11 +171,11 @@ public class NotificationService
     /// Send notification for failed profile execution
     /// Uses throttling to prevent excessive emails (max once per 5 minutes per profile)
     /// </summary>
-    public async Task SendExecutionFailureAsync(ProfileExecution execution, Profile profile)
+    public async Task SendExecutionFailureAsync(ProfileExecution execution, Profile profile, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnProfileFailure)
             {
                 return;
@@ -201,7 +200,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
                 execution.Id, profile.Code, profile.Name);
         }
@@ -215,11 +214,11 @@ public class NotificationService
     /// Send notification for successful import profile execution
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
     /// </summary>
-    public async Task SendImportExecutionSuccessAsync(ImportProfileExecution execution, ImportProfile profile)
+    public async Task SendImportExecutionSuccessAsync(ImportProfileExecution execution, ImportProfile profile, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileSuccess)
             {
                 return;
@@ -239,7 +238,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
                 execution.Id, profile.Code, profile.Name);
         }
@@ -253,11 +252,11 @@ public class NotificationService
     /// Send notification for failed import profile execution
     /// Uses throttling to prevent excessive emails (max once per 5 minutes per profile)
     /// </summary>
-    public async Task SendImportExecutionFailureAsync(ImportProfileExecution execution, ImportProfile profile)
+    public async Task SendImportExecutionFailureAsync(ImportProfileExecution execution, ImportProfile profile, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileFailure)
             {
                 return;
@@ -277,7 +276,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
                 execution.Id, profile.Code, profile.Name);
         }
@@ -291,11 +290,11 @@ public class NotificationService
     /// Send notification for job success
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per job)
     /// </summary>
-    public async Task SendJobSuccessAsync(int jobId, string jobName, Dictionary<string, object> jobDetails)
+    public async Task SendJobSuccessAsync(int jobId, string jobName, Dictionary<string, object> jobDetails, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnJobSuccess)
             {
                 return;
@@ -320,7 +319,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent job success notification for job {JobId} ({JobName})", jobId, jobName);
         }
         catch (Exception ex)
@@ -333,11 +332,11 @@ public class NotificationService
     /// Send notification for job failure
     /// Uses throttling to prevent excessive emails (max once per 5 minutes per job)
     /// </summary>
-    public async Task SendJobFailureAsync(int jobId, string jobName, string errorMessage)
+    public async Task SendJobFailureAsync(int jobId, string jobName, string errorMessage, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnJobFailure)
             {
                 return;
@@ -362,7 +361,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent job failure notification for job {JobId} ({JobName})", jobId, jobName);
         }
         catch (Exception ex)
@@ -374,11 +373,11 @@ public class NotificationService
     /// <summary>
     /// Send notification for new user creation
     /// </summary>
-    public async Task SendNewUserNotificationAsync(string username, string email)
+    public async Task SendNewUserNotificationAsync(string username, string email, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewUser)
             {
                 return;
@@ -396,7 +395,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent new user notification for {Username}", username);
         }
         catch (Exception ex)
@@ -408,11 +407,11 @@ public class NotificationService
     /// <summary>
     /// Send notification for new API key
     /// </summary>
-    public async Task SendNewApiKeyNotificationAsync(string keyName)
+    public async Task SendNewApiKeyNotificationAsync(string keyName, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewApiKey)
             {
                 return;
@@ -430,7 +429,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent new API key notification for {KeyName}", keyName);
         }
         catch (Exception ex)
@@ -442,11 +441,11 @@ public class NotificationService
     /// <summary>
     /// Send notification for new webhook
     /// </summary>
-    public async Task SendNewWebhookNotificationAsync(string webhookName)
+    public async Task SendNewWebhookNotificationAsync(string webhookName, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewWebhook)
             {
                 return;
@@ -464,7 +463,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent new webhook notification for {WebhookName}", webhookName);
         }
         catch (Exception ex)
@@ -534,7 +533,7 @@ public class NotificationService
     /// Uses database-persisted throttling to prevent excessive emails (cooldown configurable, default once per 24 hours)
     /// This ensures cooldown persists across application restarts
     /// </summary>
-    public async Task SendNewEmailApprovalNotificationAsync(int pendingCount)
+    public async Task SendNewEmailApprovalNotificationAsync(int pendingCount, CancellationToken ct = default)
     {
         try
         {
@@ -543,8 +542,8 @@ public class NotificationService
                 Log.Debug("Skipping email approval notification because there are no pending items.");
                 return;
             }
-            
-            var settings = await GetNotificationSettingsAsync();
+
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnNewEmailApproval)
             {
                 return;
@@ -584,10 +583,10 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
 
             // Update cooldown timestamp in database after successful send
-            await UpdateEmailApprovalCooldownTimestampAsync(settings.Id);
+            await UpdateEmailApprovalCooldownTimestampAsync(settings.Id, ct);
 
             Log.Information("Email approval notification sent successfully (next notification allowed in {Hours}h)",
                 settings.NewEmailApprovalCooldownHours);
@@ -602,11 +601,11 @@ public class NotificationService
     /// Send notification for database size threshold exceeded
     /// Uses throttling to prevent excessive emails (max once per hour)
     /// </summary>
-    public async Task SendDatabaseSizeNotificationAsync(long currentSizeBytes)
+    public async Task SendDatabaseSizeNotificationAsync(long currentSizeBytes, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || !settings.IsEnabled || !settings.NotifyOnDatabaseSizeThreshold)
             {
                 return;
@@ -640,7 +639,7 @@ public class NotificationService
             var renderedSubject = await RenderEmailTemplateAsync(subject, context);
             var renderedBody = await RenderEmailTemplateAsync(body, context);
 
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings);
+            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
             Log.Information("Sent database size threshold notification ({CurrentMb}MB > {ThresholdMb}MB)",
                 currentMb, thresholdMb);
         }
@@ -654,18 +653,18 @@ public class NotificationService
     /// Send a two-factor authentication OTP code to a specific user email address.
     /// Uses the configured system notification destination but overrides the recipient.
     /// </summary>
-    public async Task<bool> SendMfaOtpEmailAsync(string recipientEmail, string otp)
+    public async Task<bool> SendMfaOtpEmailAsync(string recipientEmail, string otp, CancellationToken ct = default)
     {
         try
         {
-            var settings = await GetNotificationSettingsAsync();
+            var settings = await GetNotificationSettingsAsync(ct);
             if (settings == null || settings.DestinationId <= 0)
             {
                 Log.Warning("Cannot send MFA OTP email: notification settings not configured");
                 return false;
             }
 
-            var destination = await GetDestinationAsync(settings.DestinationId);
+            var destination = await GetDestinationAsync(settings.DestinationId, ct);
             if (destination == null)
             {
                 Log.Warning("Cannot send MFA OTP email: notification destination not found");
@@ -734,11 +733,11 @@ public class NotificationService
     /// <summary>
     /// Core method to send system notification via EmailDestination
     /// </summary>
-    private async Task SendSystemNotificationAsync(string subject, string body, NotificationSettings settings)
+    private async Task SendSystemNotificationAsync(string subject, string body, NotificationSettings settings, CancellationToken ct = default)
     {
         try
         {
-            var destination = await GetDestinationAsync(settings.DestinationId);
+            var destination = await GetDestinationAsync(settings.DestinationId, ct);
             if (destination == null)
             {
                 Log.Warning("Notification destination {DestinationId} not found or inactive", settings.DestinationId);

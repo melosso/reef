@@ -511,14 +511,15 @@ public class DestinationService
         }
     }
 
-    public async Task<IEnumerable<Destination>> GetAllAsync(bool activeOnly = false)
+    public async Task<IEnumerable<Destination>> GetAllAsync(bool activeOnly = false, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         var sql = activeOnly
             ? "SELECT * FROM Destinations WHERE IsActive = 1 ORDER BY Name"
             : "SELECT * FROM Destinations ORDER BY Name";
 
-        var destinations = await conn.QueryAsync<Destination>(sql);
+        var destinations = await conn.QueryAsync<Destination>(new CommandDefinition(sql, cancellationToken: ct));
 
         // Decrypt and mask configs for API responses
         foreach (var dest in destinations)
@@ -556,18 +557,18 @@ public class DestinationService
         return destinations;
     }
 
-    public async Task<Destination?> GetByIdAsync(int id)
+    public async Task<Destination?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        return await GetByIdAsync(id, maskSecrets: true);
+        return await GetByIdAsync(id, maskSecrets: true, ct: ct);
     }
 
     /// <summary>
     /// Get destination by ID for execution (without masking secrets)
     /// Used internally when destinations need to be used for actual operations
     /// </summary>
-    public async Task<Destination?> GetByIdForExecutionAsync(int id)
+    public async Task<Destination?> GetByIdForExecutionAsync(int id, CancellationToken ct = default)
     {
-        return await GetByIdAsync(id, maskSecrets: false);
+        return await GetByIdAsync(id, maskSecrets: false, ct: ct);
     }
 
     /// <summary>
@@ -575,11 +576,12 @@ public class DestinationService
     /// maskSecrets=true: For API responses (decrypt then mask secrets)
     /// maskSecrets=false: For internal execution (fully decrypted, in-memory only)
     /// </summary>
-    private async Task<Destination?> GetByIdAsync(int id, bool maskSecrets)
+    private async Task<Destination?> GetByIdAsync(int id, bool maskSecrets, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         var dest = await conn.QuerySingleOrDefaultAsync<Destination>(
-            "SELECT * FROM Destinations WHERE Id = @Id", new { Id = id });
+            new CommandDefinition("SELECT * FROM Destinations WHERE Id = @Id", new { Id = id }, cancellationToken: ct));
 
         if (dest != null && !string.IsNullOrEmpty(dest.ConfigurationJson))
         {
@@ -622,9 +624,10 @@ public class DestinationService
         return dest;
     }
 
-    public async Task<Destination> CreateAsync(Destination destination)
+    public async Task<Destination> CreateAsync(Destination destination, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
 
         // Encrypt entire ConfigurationJson
         var encryptedConfig = destination.ConfigurationJson;
@@ -659,7 +662,7 @@ public class DestinationService
             Hash = destination.Hash
         };
 
-        destination.Id = await conn.ExecuteScalarAsync<int>(sql, dbDestination);
+        destination.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, dbDestination, cancellationToken: ct));
 
         // Return original plaintext config so frontend can display it
         // (The encrypted version is stored in database)
@@ -668,13 +671,14 @@ public class DestinationService
         return destination;
     }
 
-    public async Task<bool> UpdateAsync(Destination destination)
+    public async Task<bool> UpdateAsync(Destination destination, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
 
         // Get existing destination
         var existing = await conn.QuerySingleOrDefaultAsync<Destination>(
-            "SELECT * FROM Destinations WHERE Id = @Id", new { destination.Id });
+            new CommandDefinition("SELECT * FROM Destinations WHERE Id = @Id", new { destination.Id }, cancellationToken: ct));
 
         if (existing == null)
             return false;
@@ -741,17 +745,18 @@ public class DestinationService
             Hash = destination.Hash
         };
 
-        var rows = await conn.ExecuteAsync(sql, dbDestination);
+        var rows = await conn.ExecuteAsync(new CommandDefinition(sql, dbDestination, cancellationToken: ct));
         return rows > 0;
     }
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+        await conn.OpenAsync(ct);
+
         // Check if destination is in use
         var inUse = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM Profiles WHERE OutputDestinationId = @Id", new { Id = id });
+            new CommandDefinition("SELECT COUNT(*) FROM Profiles WHERE OutputDestinationId = @Id", new { Id = id }, cancellationToken: ct));
         
         if (inUse > 0)
         {
@@ -760,13 +765,13 @@ public class DestinationService
         }
         
         var sql = "DELETE FROM Destinations WHERE Id = @Id";
-        var rows = await conn.ExecuteAsync(sql, new { Id = id });
+        var rows = await conn.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         return rows > 0;
     }
 
-    public async Task<DestinationTestResult> TestConnectionAsync(int destinationId, string? testFileName = null, string? testContent = null)
+    public async Task<DestinationTestResult> TestConnectionAsync(int destinationId, string? testFileName = null, string? testContent = null, CancellationToken ct = default)
     {
-        var destination = await GetByIdForExecutionAsync(destinationId); 
+        var destination = await GetByIdForExecutionAsync(destinationId, ct); 
         if (destination == null)
         {
             return new DestinationTestResult 
@@ -1373,11 +1378,12 @@ public class DestinationService
         }
     }
 
-    public async Task<IEnumerable<Destination>> GetByTagAsync(string tag)
+    public async Task<IEnumerable<Destination>> GetByTagAsync(string tag, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         var sql = "SELECT * FROM Destinations WHERE Tags LIKE @Tag ORDER BY Name";
-        var destinations = await conn.QueryAsync<Destination>(sql, new { Tag = $"%{tag}%" });
+        var destinations = await conn.QueryAsync<Destination>(new CommandDefinition(sql, new { Tag = $"%{tag}%" }, cancellationToken: ct));
 
         // Decrypt and mask configs for API responses
         foreach (var dest in destinations)
@@ -1405,41 +1411,45 @@ public class DestinationService
 
     //  Endpoint CRUD
 
-    public async Task<List<DestinationEndpoint>> GetEndpointsByDestinationIdAsync(int destinationId)
+    public async Task<List<DestinationEndpoint>> GetEndpointsByDestinationIdAsync(int destinationId, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         var rows = await conn.QueryAsync<DestinationEndpoint>(
-            "SELECT * FROM DestinationEndpoints WHERE DestinationId = @Id ORDER BY SortOrder, Id",
-            new { Id = destinationId });
+            new CommandDefinition("SELECT * FROM DestinationEndpoints WHERE DestinationId = @Id ORDER BY SortOrder, Id",
+                new { Id = destinationId }, cancellationToken: ct));
         return rows.ToList();
     }
 
-    public async Task<DestinationEndpoint?> GetEndpointByIdAsync(int id)
+    public async Task<DestinationEndpoint?> GetEndpointByIdAsync(int id, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         return await conn.QuerySingleOrDefaultAsync<DestinationEndpoint>(
-            "SELECT * FROM DestinationEndpoints WHERE Id = @Id", new { Id = id });
+            new CommandDefinition("SELECT * FROM DestinationEndpoints WHERE Id = @Id", new { Id = id }, cancellationToken: ct));
     }
 
-    public async Task<DestinationEndpoint> CreateEndpointAsync(DestinationEndpoint endpoint)
+    public async Task<DestinationEndpoint> CreateEndpointAsync(DestinationEndpoint endpoint, CancellationToken ct = default)
     {
         endpoint.CreatedAt = DateTime.UtcNow;
         using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync(ct);
         const string sql = @"
             INSERT INTO DestinationEndpoints
                 (DestinationId, Name, PathSuffix, Method, UploadFormat, ExtraHeaders, RemotePath, KeyPrefix, SortOrder, CreatedAt)
             VALUES
                 (@DestinationId, @Name, @PathSuffix, @Method, @UploadFormat, @ExtraHeaders, @RemotePath, @KeyPrefix, @SortOrder, @CreatedAt);
             SELECT last_insert_rowid();";
-        endpoint.Id = await conn.ExecuteScalarAsync<int>(sql, endpoint);
+        endpoint.Id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, endpoint, cancellationToken: ct));
         return endpoint;
     }
 
-    public async Task UpdateEndpointAsync(DestinationEndpoint endpoint)
+    public async Task UpdateEndpointAsync(DestinationEndpoint endpoint, CancellationToken ct = default)
     {
         endpoint.ModifiedAt = DateTime.UtcNow;
         using var conn = new SqliteConnection(_connectionString);
-        await conn.ExecuteAsync(@"
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(@"
             UPDATE DestinationEndpoints SET
                 Name        = @Name,
                 PathSuffix  = @PathSuffix,
@@ -1451,13 +1461,14 @@ public class DestinationService
                 SortOrder   = @SortOrder,
                 ModifiedAt  = @ModifiedAt
             WHERE Id = @Id AND DestinationId = @DestinationId",
-            endpoint);
+            endpoint, cancellationToken: ct));
     }
 
-    public async Task DeleteEndpointAsync(int id)
+    public async Task DeleteEndpointAsync(int id, CancellationToken ct = default)
     {
         using var conn = new SqliteConnection(_connectionString);
-        await conn.ExecuteAsync("DELETE FROM DestinationEndpoints WHERE Id = @Id", new { Id = id });
+        await conn.OpenAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition("DELETE FROM DestinationEndpoints WHERE Id = @Id", new { Id = id }, cancellationToken: ct));
     }
 
     /// <summary>

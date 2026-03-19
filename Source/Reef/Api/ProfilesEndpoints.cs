@@ -80,7 +80,7 @@ public static class ProfilesEndpoints
                 var exportProfiles = await service.GetAllAsync();
                 var importProfiles = await importProfileService.GetAllAsync();
 
-                var combined = new List<object>();
+                List<object> combined = [];
                 combined.AddRange(exportProfiles.Select(p => new { profileType = "export", profile = (object)p }));
                 combined.AddRange(importProfiles.Select(p => new { profileType = "import", profile = (object)p }));
                 return Results.Ok(combined);
@@ -836,7 +836,7 @@ public static class ProfilesEndpoints
 
             var username = context.User.Identity?.Name ?? "Unknown";
             
-            if (request.ReefIds != null && request.ReefIds.Any())
+            if (request.ReefIds != null && request.ReefIds.Count > 0)
             {
                 // Reset specific rows by ReefId
                 var count = await deltaSyncService.ResetDeltaSyncRowsAsync(id, request.ReefIds);
@@ -1143,8 +1143,8 @@ public static class ProfilesEndpoints
                 return Results.BadRequest(new { error = "Profile is not configured as email export" });
             }
 
-            var errors = new List<string>();
-            var warnings = new List<string>();
+            List<string> errors = [];
+            List<string> warnings = [];
 
             // Validate EmailTemplateId
             if (!profile.EmailTemplateId.HasValue)
@@ -1470,7 +1470,7 @@ public static class ProfilesEndpoints
             }
 
             // Take only first 25 rows (in case query already had a larger limit)
-            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+            var limitedRows = rows?.Take(25).ToList() ?? [];
 
             Log.Information("Query test successful for profile {ProfileId}. Returned {Count} rows in {Time}ms",
                 id, limitedRows.Count, executionTime);
@@ -1480,7 +1480,7 @@ public static class ProfilesEndpoints
                 success = true,
                 rowCount = limitedRows.Count,
                 totalExecutionTimeMs = executionTime,
-                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>(),
+                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? [],
                 rows = limitedRows
             });
         }
@@ -1542,13 +1542,13 @@ public static class ProfilesEndpoints
             if (!success)
                 return Results.Ok(new { success = false, error, executionTimeMs = executionTime });
 
-            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+            var limitedRows = rows?.Take(25).ToList() ?? [];
 
             // Run delta comparison without committing hashes
             var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, profile);
 
             // Tag each row with its status so the client can render accordingly
-            var taggedRows = new List<Dictionary<string, object>>();
+            List<Dictionary<string, object>> taggedRows = [];
 
             foreach (var row in delta.NewRows)
             {
@@ -1567,7 +1567,7 @@ public static class ProfilesEndpoints
             }
 
             // Column list without the internal tag
-            var dataColumns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>();
+            var dataColumns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? [];
 
             return Results.Ok(new
             {
@@ -1671,7 +1671,7 @@ public static class ProfilesEndpoints
             }
 
             // Take only first 25 rows (in case query already had a larger limit)
-            var limitedRows = rows?.Take(25).ToList() ?? new List<Dictionary<string, object>>();
+            var limitedRows = rows?.Take(25).ToList() ?? [];
 
             Log.Information("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
                 request.ConnectionId, limitedRows.Count, executionTime);
@@ -1681,7 +1681,7 @@ public static class ProfilesEndpoints
                 success = true,
                 rowCount = limitedRows.Count,
                 totalExecutionTimeMs = executionTime,
-                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? new List<string>(),
+                columns = limitedRows.FirstOrDefault()?.Keys.ToList() ?? [],
                 rows = limitedRows
             });
         }

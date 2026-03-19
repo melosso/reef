@@ -29,47 +29,47 @@ public class ConnectionService
     /// <summary>
     /// Get all connections
     /// </summary>
-    public async Task<List<Connection>> GetAllAsync()
+    public async Task<List<Connection>> GetAllAsync(CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Connections ORDER BY Name";
-        var connections = await connection.QueryAsync<Connection>(sql);
+        var connections = await connection.QueryAsync<Connection>(new CommandDefinition(sql, cancellationToken: ct));
         return connections.ToList();
     }
 
     /// <summary>
     /// Get connection by ID
     /// </summary>
-    public async Task<Connection?> GetByIdAsync(int id)
+    public async Task<Connection?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Connections WHERE Id = @Id";
-        return await connection.QueryFirstOrDefaultAsync<Connection>(sql, new { Id = id });
+        return await connection.QueryFirstOrDefaultAsync<Connection>(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
     }
 
     /// <summary>
     /// Get connection by name
     /// </summary>
-    public async Task<Connection?> GetByNameAsync(string name)
+    public async Task<Connection?> GetByNameAsync(string name, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "SELECT * FROM Connections WHERE Name = @Name";
-        return await connection.QueryFirstOrDefaultAsync<Connection>(sql, new { Name = name });
+        return await connection.QueryFirstOrDefaultAsync<Connection>(new CommandDefinition(sql, new { Name = name }, cancellationToken: ct));
     }
 
     /// <summary>
     /// Create a new connection
     /// </summary>
-    public async Task<int> CreateAsync(Connection conn, int? createdByUserId)
+    public async Task<int> CreateAsync(Connection conn, int? createdByUserId, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         // Encrypt connection string if not already encrypted
         if (!_encryptionService.IsEncrypted(conn.ConnectionString))
@@ -96,7 +96,7 @@ public class ConnectionService
             SELECT last_insert_rowid();
         ";
 
-        var id = await connection.ExecuteScalarAsync<int>(sql, conn);
+        var id = await connection.ExecuteScalarAsync<int>(new CommandDefinition(sql, conn, cancellationToken: ct));
         Log.Information("Created connection {Name} (ID: {Id})", conn.Name, id);
         return id;
     }
@@ -104,10 +104,10 @@ public class ConnectionService
     /// <summary>
     /// Update an existing connection
     /// </summary>
-    public async Task<bool> UpdateAsync(Connection conn)
+    public async Task<bool> UpdateAsync(Connection conn, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         // Encrypt connection string if not already encrypted
         if (!_encryptionService.IsEncrypted(conn.ConnectionString))
@@ -133,7 +133,7 @@ public class ConnectionService
             WHERE Id = @Id
         ";
 
-        var rowsAffected = await connection.ExecuteAsync(sql, conn);
+        var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, conn, cancellationToken: ct));
         Log.Information("Updated connection {Name} (ID: {Id})", conn.Name, conn.Id);
         return rowsAffected > 0;
     }
@@ -141,13 +141,13 @@ public class ConnectionService
     /// <summary>
     /// Delete a connection
     /// </summary>
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = "DELETE FROM Connections WHERE Id = @Id";
-        var rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
+        var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         Log.Information("Deleted connection (ID: {Id})", id);
         return rowsAffected > 0;
     }
@@ -156,9 +156,9 @@ public class ConnectionService
     /// Create a database connection for production use by connection ID
     /// Includes enhanced error handling for decryption failures
     /// </summary>
-    public async Task<DbConnection> CreateDatabaseConnectionAsync(int connectionId)
+    public async Task<DbConnection> CreateDatabaseConnectionAsync(int connectionId, CancellationToken ct = default)
     {
-        var conn = await GetByIdAsync(connectionId);
+        var conn = await GetByIdAsync(connectionId, ct);
         if (conn == null)
         {
             throw new InvalidOperationException($"Connection with ID {connectionId} not found");
@@ -191,9 +191,9 @@ public class ConnectionService
     /// Create a database connection for production use by connection name
     /// Includes enhanced error handling for decryption failures
     /// </summary>
-    public async Task<DbConnection> CreateDatabaseConnectionAsync(string connectionName)
+    public async Task<DbConnection> CreateDatabaseConnectionAsync(string connectionName, CancellationToken ct = default)
     {
-        var conn = await GetByNameAsync(connectionName);
+        var conn = await GetByNameAsync(connectionName, ct);
         if (conn == null)
         {
             throw new InvalidOperationException($"Connection '{connectionName}' not found");
@@ -260,7 +260,7 @@ public class ConnectionService
     /// <summary>
     /// Test a connection
     /// </summary>
-    public async Task<(bool Success, string? Message, long ResponseTimeMs)> TestConnectionAsync(string type, string connectionString)
+    public async Task<(bool Success, string? Message, long ResponseTimeMs)> TestConnectionAsync(string type, string connectionString, CancellationToken ct = default)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -270,7 +270,7 @@ public class ConnectionService
 
             await using (testConnection)
             {
-                await testConnection.OpenAsync();
+                await testConnection.OpenAsync(ct);
                 stopwatch.Stop();
                 return (true, "Connection successful", stopwatch.ElapsedMilliseconds);
             }
@@ -286,10 +286,10 @@ public class ConnectionService
     /// <summary>
     /// Update last test result
     /// </summary>
-    public async Task UpdateTestResultAsync(int id, bool success, string? message = null)
+    public async Task UpdateTestResultAsync(int id, bool success, string? message = null, CancellationToken ct = default)
     {
         await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
         const string sql = @"
             UPDATE Connections
@@ -298,6 +298,6 @@ public class ConnectionService
         ";
 
         var result = success ? "Success" : $"Failed: {message}";
-        await connection.ExecuteAsync(sql, new { Id = id, Result = result });
+        await connection.ExecuteAsync(new CommandDefinition(sql, new { Id = id, Result = result }, cancellationToken: ct));
     }
 }
