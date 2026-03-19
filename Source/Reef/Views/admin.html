@@ -1,5 +1,6 @@
 <!--REEF:TITLE-->Admin · Reef<!--/REEF:TITLE-->
-<!--REEF:SCRIPTS--><script src="/assets/js/github.js"></script>
+<!--REEF:SCRIPTS-->
+    <script src="/assets/js/github.js"></script>
     <script src="/assets/js/admin-users.js"></script>
     <script src="/assets/js/admin-notifications.js"></script>
     <script src="/assets/js/admin-email-templates.js"></script>
@@ -85,11 +86,14 @@
                     </div>
                 </div>
                 <!-- Danger -->
-                <div class="border-t border-slate-200 pt-1">
-                    <button id="tab-danger" onclick="showTab('danger')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors text-left">
-                        <i data-lucide="triangle-alert" class="h-4 w-4 shrink-0"></i>
-                        Danger Zone
-                    </button>
+                <div class="border-t border-slate-200 pt-4">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em] px-3 mb-1 disable-select">Maintenance</div>
+                    <div class="space-y-0.5">
+                        <button id="tab-danger" onclick="showTab('danger')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors text-left">
+                            <i data-lucide="triangle-alert" class="h-4 w-4 shrink-0"></i>
+                            Danger Zone
+                        </button>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -254,7 +258,7 @@
                                         <i data-lucide="book-open" class="h-4 w-4 mr-2"></i>
                                         Documentation
                                     </a>
-                                    <a href="https://github.com/melosso/reef/issues" target="_blank" class="px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                    <a href="https://github.com/melosso/reef/issues" target="_blank" class="px-3 py-2 text-sm bg-slate-900 text-white rounded-md hover:bg-slate-800 active:scale-95 flex items-center">
                                         <i data-lucide="life-buoy" class="h-4 w-4 mr-2"></i>
                                         Get Support
                                     </a>
@@ -279,43 +283,43 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-slate-600 text-sm font-medium">Total Profiles</div>
-                                    <i data-lucide="file-code" class="h-5 w-5 text-blue-500"></i>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-slate-600">Total Profiles</div>
+                                    <i data-lucide="file-code" class="h-4 w-4 text-blue-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-slate-900" id="metric-total-profiles">--</div>
-                                <div class="text-sm text-slate-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
+                                <div class="text-xl font-semibold text-slate-900" id="metric-total-profiles">--</div>
+                                <div class="text-xs text-slate-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
                             </div>
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-slate-600 text-sm font-medium">Total Executions</div>
-                                    <i data-lucide="activity" class="h-5 w-5 text-green-500"></i>
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-slate-600">Total Executions</div>
+                                    <i data-lucide="activity" class="h-4 w-4 text-green-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-slate-900" id="metric-total-executions">--</div>
-                                <div class="text-sm text-slate-500 mt-1"><span id="metric-success-rate">--</span>% success rate</div>
+                                <div class="text-xl font-semibold text-slate-900" id="metric-total-executions">--</div>
+                                <div class="text-xs text-slate-500 mt-1"><span id="metric-success-rate">--</span>% success rate</div>
                             </div>
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-slate-600 text-sm font-medium">Failed (24h)</div>
-                                    <i data-lucide="alert-circle" class="h-5 w-5 text-red-500"></i>
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-slate-600">Failed (24h)</div>
+                                    <i data-lucide="alert-circle" class="h-4 w-4 text-red-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-slate-900" id="metric-failed-24h">--</div>
-                                <div class="text-sm text-slate-500 mt-1">Last 24 hours</div>
+                                <div class="text-xl font-semibold text-slate-900" id="metric-failed-24h">--</div>
+                                <div class="text-xs text-slate-500 mt-1">Last 24 hours</div>
                             </div>
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="text-slate-600 text-sm font-medium">System Uptime</div>
-                                    <i data-lucide="server" class="h-5 w-5 text-purple-500"></i>
+                            <div class="bg-white rounded-lg border border-slate-200 p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="text-sm font-medium text-slate-600">System Uptime</div>
+                                    <i data-lucide="server" class="h-4 w-4 text-purple-500"></i>
                                 </div>
-                                <div class="text-3xl font-bold text-slate-900" id="metric-uptime">--</div>
-                                <div class="text-sm text-slate-500 mt-1">days</div>
+                                <div class="text-xl font-semibold text-slate-900" id="metric-uptime">--</div>
+                                <div class="text-xs text-slate-500 mt-1">days</div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div class="bg-white rounded-lg shadow">
+                            <div class="bg-white rounded-lg border border-slate-200">
                                 <div class="p-6 border-b border-slate-200">
                                     <h3 class="text-lg font-semibold text-slate-900">Recent Statistics (7 Days)</h3>
                                 </div>
@@ -341,7 +345,7 @@
                                 </div>
                             </div>
 
-                            <div class="bg-white rounded-lg shadow">
+                            <div class="bg-white rounded-lg border border-slate-200">
                                 <div class="p-6 border-b border-slate-200">
                                     <h3 class="text-lg font-semibold text-slate-900">Storage Usage</h3>
                                 </div>
@@ -559,7 +563,7 @@
                                         <button onclick="openUserHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                                         </button>
-                                        <button onclick="openAddUserModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
+                                        <button onclick="openAddUserModal()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center">
                                             <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                                             Add User
                                         </button>
@@ -612,7 +616,7 @@
                                         <button onclick="openApiKeyHelpModal()" class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 hover:text-slate-700 transition-colors active:scale-95" aria-label="Help">
                                             <i data-lucide="help-circle" class="h-5 w-5"></i>
                                         </button>
-                                        <button onclick="openAddApiKeyModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
+                                        <button onclick="openAddApiKeyModal()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center">
                                             <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
                                             Add API Key
                                         </button>
@@ -1042,7 +1046,7 @@
                                                 <button onclick="resetTemplateToDefault()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                                                     Reset to Default
                                                 </button>
-                                                <button onclick="saveTemplate()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center">
+                                                <button onclick="saveTemplate()" class="px-6 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-800 active:scale-95 font-medium flex items-center">
                                                     <i data-lucide="save" class="h-4 w-4 mr-2"></i>
                                                     Save Template
                                                 </button>
@@ -1173,7 +1177,7 @@
                                                 class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                             />
                                         </div>
-                                        <button onclick="clearOldAudits()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center" data-tooltip="You'll permanently remove old audit logs">
+                                        <button onclick="clearOldAudits()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center" data-tooltip="You'll permanently remove old audit logs">
                                             <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
                                             Purge
                                         </button>
@@ -1213,7 +1217,7 @@
                                                 class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                             />
                                         </div>
-                                        <button onclick="clearOldExecutions()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center" data-tooltip="You'll permanently remove execution logs">
+                                        <button onclick="clearOldExecutions()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center" data-tooltip="You'll permanently remove execution logs">
                                             <i data-lucide="trash" class="h-4 w-4 mr-2"></i>
                                             Purge
                                         </button>
@@ -1287,11 +1291,15 @@
                 </div>
         </main>
     </div>
+    <script>
+        queueLucideRender();
+        window._pendingAdminInit = true;
+    </script>
 </div>
     </div>
 
     <!-- Database Reset Confirmation Modal -->
-    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1321,7 +1329,7 @@
     </div>
 
     <!-- Clear All Executions Confirmation Modal -->
-    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1351,7 +1359,7 @@
     </div>
 
     <!-- Clear Old Audits Confirmation Modal -->
-    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1372,13 +1380,13 @@
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeClearOldAuditsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="confirmClearOldAudits()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Audits</button>
+                <button onclick="confirmClearOldAudits()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Clear Old Audits</button>
             </div>
         </div>
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
-    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center disable-select">
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1399,13 +1407,13 @@
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeClearOldExecutionsModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="confirmClearOldExecutions()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Clear Old Executions</button>
+                <button onclick="confirmClearOldExecutions()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Clear Old Executions</button>
             </div>
         </div>
     </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addUserModal-title" class="text-lg font-semibold text-slate-900">Add New User</h3>
@@ -1414,15 +1422,15 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Username</label>
-                        <input type="text" id="new-username" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <input type="text" id="new-username" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
-                        <input type="password" id="new-password" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <input type="password" id="new-password" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
-                        <select id="new-role" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <select id="new-role" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             <option value="User">User</option>
                             <option value="Admin">Admin</option>
                         </select>
@@ -1431,13 +1439,13 @@
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeAddUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="createUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Create User</button>
+                <button onclick="createUser()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Create User</button>
             </div>
         </div>
     </div>
 
     <!-- Edit User Modal -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <div class="flex items-center justify-between">
@@ -1478,19 +1486,19 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Display Name</label>
-                        <input type="text" id="edit-display-name" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Optional">
+                        <input type="text" id="edit-display-name" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Optional">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">New Password</label>
-                        <input type="password" id="edit-password" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Leave blank to keep current password">
+                        <input type="password" id="edit-password" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave blank to keep current password">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Confirm Password</label>
-                        <input type="password" id="edit-password-confirm" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Leave blank to keep current password">
+                        <input type="password" id="edit-password-confirm" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave blank to keep current password">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
-                        <select id="edit-role" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <select id="edit-role" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             <option value="User">User</option>
                             <option value="Admin">Admin</option>
                         </select>
@@ -1499,13 +1507,13 @@
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeEditUserModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="updateUser()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Update User</button>
+                <button onclick="updateUser()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Update User</button>
             </div>
         </div>
     </div>
 
     <!-- Change Username Modal -->
-    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-slate-900">Change Username</h3>
@@ -1519,19 +1527,19 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">New Username</label>
-                        <input type="text" id="new-username-input" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Enter new username">
+                        <input type="text" id="new-username-input" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Enter new username">
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeChangeUsernameModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="changeUsername()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Change Username</button>
+                <button onclick="changeUsername()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Change Username</button>
             </div>
         </div>
     </div>
 
     <!-- Add API Key Modal -->
-    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-slate-900">Add API Key</h3>
@@ -1540,11 +1548,11 @@
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Name</label>
-                        <input type="text" id="new-apikey-name" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none" placeholder="Your API Key Name">
+                        <input type="text" id="new-apikey-name" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Your API Key Name">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Permissions</label>
-                        <select id="new-apikey-permissions" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <select id="new-apikey-permissions" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                             <option value='{"read":true,"write":false}'>Read Only</option>
                             <option value='{"read":true,"write":true}'>Read & Write</option>
                             <option value='{"read":true,"write":true,"admin":true}'>Full Access</option>
@@ -1552,19 +1560,19 @@
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-2">Expires At (Optional)</label>
-                        <input type="date" id="new-apikey-expires" class="w-full h-9 px-4 border border-slate-200 rounded-md outline-none">
+                        <input type="date" id="new-apikey-expires" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                     </div>
                 </div>
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end space-x-3">
                 <button onclick="closeAddApiKeyModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                <button onclick="createApiKey()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Add</button>
+                <button onclick="createApiKey()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Add</button>
             </div>
         </div>
     </div>
 
     <!-- API Key Display Modal -->
-    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-slate-900">API Key Generated</h3>
@@ -1574,19 +1582,19 @@
                 <div class="bg-slate-50 p-4 rounded-lg mb-4">
                     <code class="text-sm font-mono break-all" id="generated-api-key"></code>
                 </div>
-                <button onclick="copyApiKey()" class="w-full h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center">
+                <button onclick="copyApiKey()" class="w-full h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center justify-center">
                     <i data-lucide="copy" class="h-4 w-4 mr-2"></i>
                     Copy to Clipboard
                 </button>
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end">
-                <button onclick="closeApiKeyDisplayModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
+                <button onclick="closeApiKeyDisplayModal()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- User Roles Help Modal -->
-    <div id="userHelpModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="userHelpModal-title" class="text-lg font-semibold text-slate-900">About Users</h3>
@@ -1665,13 +1673,13 @@
                 </div>
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end">
-                <button onclick="closeUserHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
+                <button onclick="closeUserHelpModal()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Close</button>
             </div>
         </div>
     </div>
 
     <!-- API Key Help Modal -->
-    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-50 z-50 flex items-center justify-center">
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-slate-900">About API Keys</h3>
@@ -1755,7 +1763,7 @@
                 </div>
             </div>
             <div class="p-6 border-t border-slate-200 flex justify-end">
-                <button onclick="closeApiKeyHelpModal()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Close</button>
+                <button onclick="closeApiKeyHelpModal()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors">Close</button>
             </div>
         </div>
     </div>
@@ -1764,10 +1772,8 @@
         queueLucideRender();
     </script>
     <script>
-        const API_BASE = window.location.origin;
         var currentTab = 'metrics';
         var logRefreshInterval = null;
-        var userMenuExpanded = false;
 
         // Audit logs pagination variables
         var auditCurrentPage = 1;
@@ -1803,28 +1809,9 @@
 
         if (document.readyState === 'loading') {
             window.addEventListener('DOMContentLoaded', initAdmin);
-        } else {
+        } else if (window._pendingAdminInit) {
+            window._pendingAdminInit = false;
             initAdmin();
-        }
-
-        // Toggle user menu
-        function toggleUserMenu() {
-            const menu = document.getElementById('user-menu');
-            const chevron = document.getElementById('chevron-icon');
-            userMenuExpanded = !userMenuExpanded;
-            
-            if (userMenuExpanded) {
-                menu.classList.remove('user-menu-collapsed');
-                menu.classList.add('user-menu-expanded');
-                chevron.style.transform = 'rotate(180deg)';
-            } else {
-                menu.classList.remove('user-menu-expanded');
-                menu.classList.add('user-menu-collapsed');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-            
-            // Re-render icons after DOM update
-            setTimeout(() => queueLucideRender(), 50);
         }
 
         function getLogLevelColor(level) {

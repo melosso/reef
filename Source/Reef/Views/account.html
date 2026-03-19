@@ -159,7 +159,7 @@
                     </div>
 
                     <!-- Authenticator app -->
-                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm mb-4">
+                    <div id="totp-card" class="bg-white border border-slate-200 rounded-lg shadow-sm mb-4 transition-opacity">
                         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                             <div>
                                 <h2 class="text-base font-semibold text-slate-900">Authenticator app</h2>
@@ -232,7 +232,7 @@
                     </div>
 
                     <!-- Email OTP -->
-                    <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+                    <div id="email-mfa-card" class="bg-white border border-slate-200 rounded-lg shadow-sm transition-opacity">
                         <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                             <div>
                                 <h2 class="text-base font-semibold text-slate-900">Email one-time code</h2>
@@ -255,9 +255,9 @@
             </div><!-- /max-w -->
         </main>
     </div><!-- /flex -->
-</div>
 
-<script>
-    queueLucideRender();
-    if (typeof init === 'function') init();
-</script>
+    <script>
+        queueLucideRender();
+        if (typeof init === 'function') init();
+    </script>
+</div>

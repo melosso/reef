@@ -15,6 +15,11 @@
     }
 })();
 
+// Global API base URL — defined here so page scripts can reference it on both
+// initial load and SPA navigation (the REEF:SCRIPTS head injection only runs
+// on initial server render).
+window.API_BASE = window.location.origin;
+
 // Auth fallbacks (in case auth.js hasn't loaded or hasn't executed yet)
 window.clearAuth = window.clearAuth || function() {
     localStorage.removeItem('reef_token');

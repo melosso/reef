@@ -96,9 +96,10 @@ function updateMfaUI(data) {
 
     document.getElementById('totp-badge').classList.toggle('hidden', !totpActive);
     document.getElementById('totp-status-text').textContent =
-        totpActive ? 'Active' : 'Not configured';
+        totpActive ? 'Active' : emailActive ? 'Email one-time code is already active' : 'Not configured';
     const totpSetupBtn = document.getElementById('totp-setup-btn');
     totpSetupBtn.textContent = totpActive ? 'Reconfigure' : 'Set up';
+    totpSetupBtn.disabled = emailActive;
     totpSetupBtn.onclick = totpActive ? startTotpReconfigure : startTotpSetup;
 
     document.getElementById('email-mfa-badge').classList.toggle('hidden', !emailActive);
@@ -110,6 +111,10 @@ function updateMfaUI(data) {
         emailStatusText.textContent = `Active! Codes sent to ${data.email || 'your email'}`;
         emailBtn.textContent = 'Reconfigure';
         emailBtn.disabled = false;
+    } else if (totpActive) {
+        emailStatusText.textContent = 'Authenticator app is already active';
+        emailBtn.textContent = 'Enable';
+        emailBtn.disabled = true;
     } else if (!data.emailMfaAvailable) {
         emailStatusText.textContent = 'Requires system notifications to be configured in Settings';
         emailBtn.textContent = 'Enable';
@@ -122,6 +127,18 @@ function updateMfaUI(data) {
         emailStatusText.textContent = `Will send codes to ${data.email}`;
         emailBtn.textContent = 'Enable';
         emailBtn.disabled = false;
+    }
+
+    // Grey out the card for the inactive method when one is already active
+    const totpCard = document.getElementById('totp-card');
+    const emailCard = document.getElementById('email-mfa-card');
+    if (totpCard) {
+        totpCard.classList.toggle('opacity-40', emailActive);
+        totpCard.classList.toggle('pointer-events-none', emailActive);
+    }
+    if (emailCard) {
+        emailCard.classList.toggle('opacity-40', totpActive);
+        emailCard.classList.toggle('pointer-events-none', totpActive);
     }
 }
 
@@ -367,7 +384,13 @@ async function enableEmailMfa() {
 // ── Disable MFA ───────────────────────────────────────────────────────────────
 
 async function disableMfa() {
-    if (!confirm('Disable two-factor authentication? Your account will be less secure.')) return;
+    const confirmed = await window.showConfirmModal({
+        title: 'Disable two-factor authentication?',
+        message: 'Your account will be less secure without 2FA. You can re-enable it at any time.',
+        confirmText: 'Disable',
+        danger: true
+    });
+    if (!confirmed) return;
     try {
         const res  = await apiFetch('/api/account/mfa', { method: 'DELETE' });
         const data = await res.json();
