@@ -4,11 +4,17 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Copy .git directory first (for MinVer to read tags)
+COPY .git ./
+
 # Copy solution and project files first to leverage layer caching
 COPY Source/Reef.slnx ./
 COPY Source/Directory.Packages.props ./
 COPY Source/Reef.Tests/*.csproj ./Reef.Tests/
 COPY Source/Reef/*.csproj ./Reef/
+
+# Fetch all tags so MinVer can determine the version
+RUN git fetch --tags --quiet
 
 # Restore dependencies (use BuildKit cache for NuGet packages)
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
