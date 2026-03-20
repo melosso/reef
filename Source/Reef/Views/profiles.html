@@ -3427,20 +3427,19 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-indigo-900 transition-colors">${_lastRun}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <div class="flex items-center justify-end gap-2">
-                                <button id="play-btn-import-${p.id}" onclick="executeProfile(${p.id}, true, false)" class="text-green-600 hover:text-green-900" title="Run Now">
+                                <button id="play-btn-import-${p.id}" onclick="executeProfile(${p.id}, true, false)" class="text-green-600 hover:text-green-900" data-tooltip="Run Now">
                                     <i data-lucide="play-circle" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="editProfile(${p.id}, true)" class="text-blue-600 hover:text-blue-900" title="Edit">
+                                <button onclick="editProfile(${p.id}, true)" class="text-blue-600 hover:text-blue-900" data-tooltip="Edit">
                                     <i data-lucide="edit" class="h-4 w-4"></i>
                                 </button>
                                 <button onclick="exportProfileAsToml(${p.id}, true)" class="text-purple-600 hover:text-purple-900" data-tooltip="Export as TOML">
                                     <i data-lucide="download" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="toggleProfileEnabled(${p.id}, ${!p.isEnabled}, true)" class="text-gray-600 hover:text-gray-900"
-                                    title="${p.isEnabled ? 'Disable' : 'Enable'}">
+                                <button onclick="toggleProfileEnabled(${p.id}, ${!p.isEnabled}, true)" class="text-gray-600 hover:text-gray-900" data-tooltip="${p.isEnabled ? 'Disable' : 'Enable'} Profile">
                                     <i data-lucide="${p.isEnabled ? 'pause' : 'play'}" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="deleteProfile(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', true)" class="text-red-600 hover:text-red-900" title="Delete">
+                                <button onclick="deleteProfile(${p.id}, '${escapeHtml(p.name).replace(/'/g, "\\'")}', true)" class="text-red-600 hover:text-red-900" data-tooltip="Delete">
                                     <i data-lucide="trash-2" class="h-4 w-4"></i>
                                 </button>
                             </div>

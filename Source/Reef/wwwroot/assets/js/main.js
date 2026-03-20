@@ -617,14 +617,18 @@ document.addEventListener('DOMContentLoaded', () => {
 let tooltipEl;
 let currentTooltipTarget = null;
 let tooltipRAF = null;
-let tooltipHideScheduled = false;
+let tooltipHideTimeout = null;
 
 function showTooltip(el) {
     const text = el.getAttribute('data-tooltip');
     if (!text) return;
 
     // Cancel any pending hide
-    tooltipHideScheduled = false;
+    if (tooltipHideTimeout) {
+        clearTimeout(tooltipHideTimeout);
+        tooltipHideTimeout = null;
+        if (tooltipEl) tooltipEl.style.opacity = '1';
+    }
 
     if (!tooltipEl) {
         tooltipEl = document.createElement('div');
@@ -648,13 +652,12 @@ function showTooltip(el) {
 }
 
 function hideTooltip() {
-    if (tooltipEl && !tooltipHideScheduled) {
-        tooltipHideScheduled = true;
+    if (tooltipEl && !tooltipHideTimeout) {
         tooltipEl.style.opacity = '0';
-        setTimeout(() => {
+        tooltipHideTimeout = setTimeout(() => {
             if (tooltipEl) tooltipEl.style.display = 'none';
             currentTooltipTarget = null;
-            tooltipHideScheduled = false;
+            tooltipHideTimeout = null;
         }, 150);
     }
 }

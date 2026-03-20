@@ -64,11 +64,8 @@ body {
     user-select: none;
 }
 /* ── Touch targets─ */
-/* WCAG 2.5.8: icon-only action buttons must be at least 44×44px.
-   Buttons with data-tooltip are exclusively icon buttons in table rows/cards. */
+/* Buttons with data-tooltip are exclusively icon buttons in table rows/cards. */
 button[data-tooltip] {
-    min-width: 2.75rem;   /* 44px */
-    min-height: 2.75rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
