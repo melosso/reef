@@ -52,7 +52,7 @@ public static class AuthEndpoints
         return $"{clientIp}:{userAgent.GetHashCode()}";
     }
 
-    private static bool ValidateOrigin(HttpContext context)
+    private static (bool IsValid, string EvaluatedOrigin) ValidateOrigin(HttpContext context)
     {
         var origin = context.Request.Headers.Origin.FirstOrDefault();
         
@@ -72,10 +72,13 @@ public static class AuthEndpoints
                 }
                 catch
                 {
-                    return true;
+                    return (true, "invalid-referer-allowed");
                 }
             }
-            return true;
+            else 
+            {
+                return (true, "no-origin-or-referer-allowed");
+            }
         }
 
         var config = context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
@@ -83,10 +86,18 @@ public static class AuthEndpoints
 
         if (allowedOrigins.Contains("*"))
         {
-            return true;
+            return (true, origin);
         }
         
-        return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+        var isValid = allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+        
+        // Also check if allowedOrigins have trailing slashes and the origin matches if we add one (common mistake)
+        if (!isValid)
+        {
+            isValid = allowedOrigins.Contains(origin + "/", StringComparer.OrdinalIgnoreCase);
+        }
+
+        return (isValid, origin);
     }
 
     private sealed class OriginValidationFilter : IEndpointFilter
@@ -95,10 +106,18 @@ public static class AuthEndpoints
             EndpointFilterInvocationContext context,
             EndpointFilterDelegate next)
         {
-            if (!ValidateOrigin(context.HttpContext))
+            var (isValid, evaluatedOrigin) = ValidateOrigin(context.HttpContext);
+            if (!isValid)
             {
-                Log.Warning("Origin validation failed for auth request from IP: {IP}", 
-                    context.HttpContext.Connection.RemoteIpAddress);
+                var clientIp = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
+                    ?? context.HttpContext.Connection.RemoteIpAddress?.ToString() 
+                    ?? "unknown";
+                
+                var config = context.HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
+                var allowedOrigins = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+                
+                Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}", 
+                    clientIp, evaluatedOrigin, string.Join(", ", allowedOrigins));
                 return Results.Json(new { message = "Invalid request origin" }, statusCode: 403);
             }
 
