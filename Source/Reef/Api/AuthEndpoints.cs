@@ -82,7 +82,9 @@ public static class AuthEndpoints
         }
 
         var config = context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-        var allowedOrigins = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var allowedOriginsArray = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var allowedOriginsString = config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
         if (allowedOrigins.Contains("*"))
         {
@@ -114,7 +116,9 @@ public static class AuthEndpoints
                     ?? "unknown";
                 
                 var config = context.HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-                var allowedOrigins = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+                var allowedOriginsArray = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+                var allowedOriginsString = config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+                var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                 
                 Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}", 
                     clientIp, evaluatedOrigin, string.Join(", ", allowedOrigins));

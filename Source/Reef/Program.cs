@@ -129,6 +129,16 @@ public class Program
             // Register services
             RegisterServices(builder.Services, builder.Configuration, encryptionService, connectionString);
 
+            // Configure Forwarded Headers for Reverse Proxy support
+            builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
+                // Clear KnownNetworks and KnownProxies so it accepts forwarded headers from any proxy
+                // In production, you would normally restrict this to specific proxy IPs
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
+
             // Add controllers with JSON string enum converter for enums
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
@@ -403,6 +413,9 @@ public class Program
 
     private static async Task ConfigureMiddleware(WebApplication app)
     {
+        // Use forwarded headers before any other middleware (required for correct reverse proxy IP/scheme resolution)
+        app.UseForwardedHeaders();
+
         // Global exception handler - always return JSON
         app.Use(async (context, next) =>
         {

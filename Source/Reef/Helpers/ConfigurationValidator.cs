@@ -67,7 +67,9 @@ public static class ConfigurationValidator
         }
 
         // Validate CORS configuration
-        var corsOrigins = configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var corsOriginsArray = configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var corsOriginsString = configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var corsOrigins = corsOriginsArray.Concat(corsOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (corsOrigins == null || corsOrigins.Length == 0)
         {
             Log.Warning("Reef:Security:AllowedOrigins is not configured - CORS will be disabled");
@@ -178,7 +180,9 @@ public static class ConfigurationValidator
         }
 
         // Check for insecure CORS configuration
-        var corsOrigins = configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var corsOriginsArray = configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var corsOriginsString = configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var corsOrigins = corsOriginsArray.Concat(corsOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (corsOrigins != null && corsOrigins.Any(o => o == "*"))
         {
             warnings.Add("CORS is configured to allow all origins (*) - this is insecure for production");
@@ -213,7 +217,7 @@ public static class ConfigurationValidator
             { "Reef:Jobs:CheckIntervalSeconds", configuration.GetValue<int>("Reef:Jobs:CheckIntervalSeconds", 10) },
             { "Reef:Jobs:MaxConcurrentJobs", configuration.GetValue<int>("Reef:Jobs:MaxConcurrentJobs", 10) },
             { "Environment", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production" },
-            { "Security:AllowedOrigins", string.Join(", ", configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>()) }
+            { "Security:AllowedOrigins", string.Join(", ", (configuration.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>()).Concat(configuration.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase)) }
         };
     }
 }
