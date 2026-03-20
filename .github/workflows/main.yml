@@ -10,7 +10,7 @@ on:
 
 env:
   DOTNET_VERSION: '10.0.x'
-  SOLUTION_PATH: 'Source/Reef.sln'
+  SOLUTION_PATH: 'Source/Reef.slnx'
   PROJECT_PATH: 'Source/Reef/Reef.csproj'
   SOURCE_DIR: 'Source/Reef'
   PUBLISH_WIN: 'publish_win'

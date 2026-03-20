@@ -18,7 +18,7 @@ jobs:
 
     env:
       IMAGE_NAME: reef
-      SOLUTION_PATH: Source/Reef.sln
+      SOLUTION_PATH: Source/Reef.slnx
       PROJECT_DIR: Source/Reef
       DOTNET_CONFIGURATION: Release
       VERSION: ${{ github.ref_name }}
