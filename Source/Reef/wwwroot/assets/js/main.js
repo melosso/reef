@@ -9,8 +9,7 @@
     if (isNoDarkPage) return;
     
     const saved = localStorage.getItem('reef_theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (saved === 'dark' || (!saved && prefersDark)) {
+    if (saved === 'dark') {
         document.documentElement.classList.add('dark');
     }
 })();
