@@ -1,5 +1,7 @@
 using Serilog;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Reef.Core.Formatters;
 
@@ -9,6 +11,13 @@ namespace Reef.Core.Formatters;
 /// </summary>
 public class JsonFormatter : IFormatter
 {
+    private static readonly JsonSerializerOptions OutputOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = null,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        DefaultIgnoreCondition = JsonIgnoreCondition.Never
+    };
     /// <summary>
     /// Format data as JSON and write to file
     /// </summary>
@@ -27,15 +36,6 @@ public class JsonFormatter : IFormatter
                 Directory.CreateDirectory(directory);
             }
 
-            // Configure JSON serialization options
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = null, // Keep original property names
-                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.Never
-            };
-
             // Convert data for JSON serialization
             var jsonData = data.Select(row =>
             {
@@ -49,7 +49,7 @@ public class JsonFormatter : IFormatter
 
             // Write to file
             await using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write, FileShare.None);
-            await JsonSerializer.SerializeAsync(fileStream, jsonData, options);
+            await JsonSerializer.SerializeAsync(fileStream, jsonData, OutputOptions);
             await fileStream.FlushAsync();
 
             var fileSize = fileStream.Length;

@@ -3,15 +3,14 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- App Dependencies -->
+  <ItemGroup Label="App Dependencies">
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.25" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.19" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.26.0" />
     <PackageVersion Include="BCrypt.Net-Next" Version="4.0.3" />
-    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
     <PackageVersion Include="Dapper" Version="2.1.66" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.2.0" />
-    <PackageVersion Include="FluentAssertions" Version="8.8.0" />
     <PackageVersion Include="FluentFTP" Version="53.0.2" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.11.54" />
     <PackageVersion Include="MailKit" Version="4.15.1" />
@@ -19,17 +18,14 @@
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.2" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="MimeKit" Version="4.15.1" />
-    <PackageVersion Include="MinVer" Version="6.0.0" />
-    <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="MySqlConnector" Version="2.4.0" />
     <PackageVersion Include="NCrontab" Version="3.4.0" />
     <PackageVersion Include="Npgsql" Version="10.0.2" />
     <PackageVersion Include="Otp.NET" Version="1.4.0" />
     <PackageVersion Include="QRCoder" Version="1.6.0" />
     <PackageVersion Include="QuestPDF" Version="2024.12.0" />
-    <PackageVersion Include="Scriban" Version="6.5.0" />
+    <PackageVersion Include="Scriban" Version="6.6.0" />
     <PackageVersion Include="Serilog" Version="4.3.0" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
@@ -37,8 +33,21 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+  </ItemGroup>
+
+  <!-- Build Dependencies -->
+  <ItemGroup Label="Build Dependencies">
+    <PackageVersion Include="MinVer" Version="6.0.0" />
+  </ItemGroup>
+
+  <!-- Test Dependencies -->
+  <ItemGroup Label="Test Dependencies">
+    <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+    <PackageVersion Include="FluentAssertions" Version="8.8.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="xunit" Version="2.9.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
   </ItemGroup>
 </Project>

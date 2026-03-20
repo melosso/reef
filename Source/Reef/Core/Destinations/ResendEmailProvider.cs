@@ -176,7 +176,7 @@ public class ResendEmailProvider : IEmailProvider
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ResendApiKey);
 
                 var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(request, new JsonSerializerOptions { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull }),
+                    JsonSerializer.Serialize(request, ResendJsonContext.Default.ResendEmailRequest),
                     Encoding.UTF8,
                     "application/json");
 
@@ -239,7 +239,7 @@ public class ResendEmailProvider : IEmailProvider
                 }
 
                 var jsonString = await response.Content.ReadAsStringAsync();
-                var responseData = JsonSerializer.Deserialize<ResendEmailResponse>(jsonString);
+                var responseData = JsonSerializer.Deserialize(jsonString, ResendJsonContext.Default.ResendEmailResponse);
                 var recipients = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => r.Address));
                 var maskedRecipientsForLog = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => MaskEmailForLog(r.Address)));
 
@@ -273,46 +273,52 @@ public class ResendEmailProvider : IEmailProvider
         }
     }
 
-    // Resend API models
-    private class ResendEmailRequest
-    {
-        [JsonPropertyName("from")]
-        public string? From { get; set; }
+}
 
-        [JsonPropertyName("to")]
-        public string[]? To { get; set; }
+[JsonSerializable(typeof(ResendEmailRequest))]
+[JsonSerializable(typeof(ResendEmailResponse))]
+[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+internal partial class ResendJsonContext : JsonSerializerContext { }
 
-        [JsonPropertyName("cc")]
-        public string[]? Cc { get; set; }
+// Resend API wire models
+internal sealed class ResendEmailRequest
+{
+    [JsonPropertyName("from")]
+    public string? From { get; set; }
 
-        [JsonPropertyName("subject")]
-        public string? Subject { get; set; }
+    [JsonPropertyName("to")]
+    public string[]? To { get; set; }
 
-        [JsonPropertyName("html")]
-        public string? Html { get; set; }
+    [JsonPropertyName("cc")]
+    public string[]? Cc { get; set; }
 
-        [JsonPropertyName("text")]
-        public string? Text { get; set; }
+    [JsonPropertyName("subject")]
+    public string? Subject { get; set; }
 
-        [JsonPropertyName("reply_to")]
-        public string? ReplyTo { get; set; }
+    [JsonPropertyName("html")]
+    public string? Html { get; set; }
 
-        [JsonPropertyName("attachments")]
-        public ResendAttachment[]? Attachments { get; set; }
-    }
+    [JsonPropertyName("text")]
+    public string? Text { get; set; }
 
-    private class ResendAttachment
-    {
-        [JsonPropertyName("filename")]
-        public string? Filename { get; set; }
+    [JsonPropertyName("reply_to")]
+    public string? ReplyTo { get; set; }
 
-        [JsonPropertyName("content")]
-        public string? Content { get; set; }
-    }
+    [JsonPropertyName("attachments")]
+    public ResendAttachment[]? Attachments { get; set; }
+}
 
-    private class ResendEmailResponse
-    {
-        [JsonPropertyName("id")]
-        public string? Id { get; set; }
-    }
+internal sealed class ResendAttachment
+{
+    [JsonPropertyName("filename")]
+    public string? Filename { get; set; }
+
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+}
+
+internal sealed class ResendEmailResponse
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
 }

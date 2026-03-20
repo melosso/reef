@@ -1,0 +1,20 @@
+<Project>
+  <!-- Metadata -->
+  <PropertyGroup>
+    <Authors>Melosso</Authors>
+    <Company>Melosso</Company>
+    <Copyright>Copyright © 2026-$([System.DateTime]::Now.Year) Melosso</Copyright>
+    <Product>Reef</Product>
+    <RepositoryUrl>https://github.com/melosso/reef</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageProjectUrl>https://reef.melosso.com/</PackageProjectUrl>
+  </PropertyGroup>
+
+  <!-- C# Language Settings -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>

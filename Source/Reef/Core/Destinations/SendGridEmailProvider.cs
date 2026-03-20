@@ -166,11 +166,7 @@ public class SendGridEmailProvider : IEmailProvider
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.SendGridApiKey);
 
                 var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(sendGridRequest, new JsonSerializerOptions
-                    {
-                        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                    }),
+                    JsonSerializer.Serialize(sendGridRequest, SendGridJsonContext.Default.SendGridEmailRequest),
                     Encoding.UTF8,
                     "application/json");
 
@@ -202,61 +198,66 @@ public class SendGridEmailProvider : IEmailProvider
         }
     }
 
-    // SendGrid API models
-    private class SendGridEmailRequest
-    {
-        [JsonPropertyName("from")]
-        public SendGridEmailAddress? From { get; set; }
+}
 
-        [JsonPropertyName("subject")]
-        public string? Subject { get; set; }
+[JsonSerializable(typeof(SendGridEmailRequest))]
+[JsonSourceGenerationOptions(DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
+internal partial class SendGridJsonContext : JsonSerializerContext { }
 
-        [JsonPropertyName("content")]
-        public SendGridContent[]? Content { get; set; }
+// SendGrid API wire models
+internal sealed class SendGridEmailRequest
+{
+    [JsonPropertyName("from")]
+    public SendGridEmailAddress? From { get; set; }
 
-        [JsonPropertyName("personalizations")]
-        public SendGridPersonalization[]? Personalizations { get; set; }
+    [JsonPropertyName("subject")]
+    public string? Subject { get; set; }
 
-        [JsonPropertyName("attachments")]
-        public SendGridAttachment[]? Attachments { get; set; }
-    }
+    [JsonPropertyName("content")]
+    public SendGridContent[]? Content { get; set; }
 
-    private class SendGridEmailAddress
-    {
-        [JsonPropertyName("email")]
-        public string? Email { get; set; }
+    [JsonPropertyName("personalizations")]
+    public SendGridPersonalization[]? Personalizations { get; set; }
 
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
-    }
+    [JsonPropertyName("attachments")]
+    public SendGridAttachment[]? Attachments { get; set; }
+}
 
-    private class SendGridContent
-    {
-        [JsonPropertyName("type")]
-        public string? Type { get; set; }
+internal sealed class SendGridEmailAddress
+{
+    [JsonPropertyName("email")]
+    public string? Email { get; set; }
 
-        [JsonPropertyName("value")]
-        public string? Value { get; set; }
-    }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+}
 
-    private class SendGridPersonalization
-    {
-        [JsonPropertyName("to")]
-        public SendGridEmailAddress[]? To { get; set; }
+internal sealed class SendGridContent
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
 
-        [JsonPropertyName("cc")]
-        public SendGridEmailAddress[]? Cc { get; set; }
-    }
+    [JsonPropertyName("value")]
+    public string? Value { get; set; }
+}
 
-    private class SendGridAttachment
-    {
-        [JsonPropertyName("filename")]
-        public string? Filename { get; set; }
+internal sealed class SendGridPersonalization
+{
+    [JsonPropertyName("to")]
+    public SendGridEmailAddress[]? To { get; set; }
 
-        [JsonPropertyName("content")]
-        public string? Content { get; set; }
+    [JsonPropertyName("cc")]
+    public SendGridEmailAddress[]? Cc { get; set; }
+}
 
-        [JsonPropertyName("type")]
-        public string? Type { get; set; }
-    }
+internal sealed class SendGridAttachment
+{
+    [JsonPropertyName("filename")]
+    public string? Filename { get; set; }
+
+    [JsonPropertyName("content")]
+    public string? Content { get; set; }
+
+    [JsonPropertyName("type")]
+    public string? Type { get; set; }
 }

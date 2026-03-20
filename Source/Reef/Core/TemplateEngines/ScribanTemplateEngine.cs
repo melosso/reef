@@ -14,6 +14,7 @@ namespace Reef.Core.TemplateEngines;
 /// </summary>
 public class ScribanTemplateEngine : ITemplateEngine
 {
+    private static readonly JsonSerializerOptions PrettifyOptions = new() { WriteIndented = true };
     private readonly IConfiguration _configuration;
     
     public string EngineName => "Scriban";
@@ -289,14 +290,7 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
         try
         {
             using var jsonDoc = JsonDocument.Parse(json);
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                // Note: Can't control indent size directly in System.Text.Json
-                // It always uses 2 spaces
-            };
-
-            return JsonSerializer.Serialize(jsonDoc.RootElement, options);
+            return JsonSerializer.Serialize(jsonDoc.RootElement, PrettifyOptions);
         }
         catch (Exception ex)
         {

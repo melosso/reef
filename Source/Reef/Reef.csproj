@@ -3,25 +3,11 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Reef</RootNamespace>
     <MinVerTagPrefix>v</MinVerTagPrefix>
-    
-    <!-- Assembly Information -->
     <AssemblyTitle>Reef</AssemblyTitle>
-    <AssemblyDescription>A Lightweight Data Export Service</AssemblyDescription>
-    <AssemblyProduct>Reef</AssemblyProduct>
-    <AssemblyCompany>Melosso</AssemblyCompany>
-    <AssemblyCopyright>Copyright © Melosso 2026</AssemblyCopyright>
-
-    <!-- Additional Metadata -->
-    <Authors>Melosso</Authors>
+    <AssemblyDescription>A lightweight data orchestration service</AssemblyDescription>
     <ApplicationIcon>logo.ico</ApplicationIcon>
-    <RepositoryUrl>https://github.com/melosso/reef</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
-    <PackageProjectUrl>https://reef.melosso.com/</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
