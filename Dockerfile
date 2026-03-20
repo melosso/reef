@@ -5,13 +5,14 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy solution and project files first to leverage layer caching
-COPY Source/Reef.sln ./
+COPY Source/Reef.slnx ./
+COPY Source/Directory.Packages.props ./
 COPY Source/Reef.Tests/*.csproj ./Reef.Tests/
 COPY Source/Reef/*.csproj ./Reef/
 
 # Restore dependencies (use BuildKit cache for NuGet packages)
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
-    dotnet restore ./Reef.sln
+    dotnet restore ./Reef.slnx
 
 # Copy the remaining source files
 COPY Source/ .
