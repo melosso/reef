@@ -142,7 +142,7 @@
                         <p id="mfa-hint" class="mt-1.5 text-sm text-slate-500"></p>
                     </div>
 
-                    <div class="flex items-center justify-center md:justify-start gap-2.5" id="mfa-inputs" role="group" aria-label="Verification code">
+                    <div class="w-full flex items-center justify-center md:justify-start gap-1.5" id="mfa-inputs" role="group" aria-label="Verification code">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" autocomplete="one-time-code" aria-label="Digit 1">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" aria-label="Digit 2">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" aria-label="Digit 3">
@@ -282,8 +282,16 @@
             });
             input.addEventListener('keydown', e => {
                 const all = mfaInputs();
-                if (e.key === 'Backspace' && !e.target.value && i > 0) {
-                    all[i - 1].focus(); all[i - 1].value = ''; all[i - 1].classList.remove('filled');
+                if (e.key === 'Backspace') {
+                    if (e.target.value) {
+                        e.target.value = '';
+                        e.target.classList.remove('filled');
+                    } else if (i > 0) {
+                        all[i - 1].focus();
+                        all[i - 1].value = '';
+                        all[i - 1].classList.remove('filled');
+                    }
+                    e.preventDefault();
                     updateMfaSubmitState();
                 }
                 if (e.key === 'ArrowLeft' && i > 0) all[i - 1].focus();

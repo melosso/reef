@@ -20,12 +20,6 @@ public static class AuthEndpoints
     private const int OtpLength = 6;
     private const int BackupCodeLength = 8;
 
-    private static readonly string[] AllowedOrigins =
-    [
-        "http://localhost:8085",
-        "https://localhost:8085"
-    ];
-
     private record MfaPendingSession(
         string Username,
         DateTime Expires,
@@ -83,8 +77,16 @@ public static class AuthEndpoints
             }
             return true;
         }
+
+        var config = context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
+        var allowedOrigins = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+
+        if (allowedOrigins.Contains("*"))
+        {
+            return true;
+        }
         
-        return AllowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
+        return allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
     }
 
     private sealed class OriginValidationFilter : IEndpointFilter
@@ -95,10 +97,11 @@ public static class AuthEndpoints
         {
             if (!ValidateOrigin(context.HttpContext))
             {
-                Log.Warning("Origin validation failed for MFA request from IP: {IP}", 
+                Log.Warning("Origin validation failed for auth request from IP: {IP}", 
                     context.HttpContext.Connection.RemoteIpAddress);
                 return Results.Json(new { message = "Invalid request origin" }, statusCode: 403);
             }
+
             return await next(context);
         }
     }
@@ -192,7 +195,7 @@ public static class AuthEndpoints
     {
         var authGroup = app.MapGroup("/api/auth");
 
-        authGroup.MapPost("/login", Login);
+        authGroup.MapPost("/login", Login).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/mfa", VerifyMfa).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/verify-otp", VerifyMfa).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/refresh", RefreshToken).RequireAuthorization();
