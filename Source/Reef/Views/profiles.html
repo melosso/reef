@@ -7267,9 +7267,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 let response;
 
                 if (useDelta) {
+                    // Send the current query from the form, allowing unsaved edits to be tested
                     response = await fetch(`${API_BASE}/api/profiles/${profileId}/test-query-delta`, {
                         method: 'POST',
-                        headers: getAuthHeaders()
+                        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query })
                     });
                 } else {
                     response = await fetch(`${API_BASE}/api/profiles/test-query-preview`, {

@@ -678,6 +678,8 @@ public class EmailApprovalService
         try
         {
             var profile = await _profileService.GetByIdAsync(profileId);
+            Log.Debug("UserCanApproveAsync: ProfileId={ProfileId}, EmailApprovalRequired={Required}, UserId={UserId}",
+                profileId, profile?.EmailApprovalRequired, userId);
             if (profile == null || !profile.EmailApprovalRequired)
                 return false;
 
@@ -689,23 +691,28 @@ public class EmailApprovalService
                 "SELECT Role FROM Users WHERE Id = @Id",
                 new { Id = userId });
 
+            Log.Debug("UserCanApproveAsync: UserId={UserId}, UserRole={Role}", userId, userRole);
             if (string.IsNullOrEmpty(userRole))
                 return false;
 
             // Parse approval roles from profile
-            if (string.IsNullOrEmpty(profile.EmailApprovalRoles))
-                return true; // If no roles specified, allow any user
-
+            var allowedRoles = new List<string>();
             try
             {
-                var allowedRoles = JsonSerializer.Deserialize<List<string>>(profile.EmailApprovalRoles) ?? new();
-                return allowedRoles.Contains(userRole);
+                allowedRoles = JsonSerializer.Deserialize<List<string>>(profile.EmailApprovalRoles ?? "[]") ?? new();
             }
             catch
             {
                 Log.Warning("Failed to parse EmailApprovalRoles for profile {ProfileId}", profileId);
                 return false;
             }
+
+            // If no roles specified or empty array, allow any user
+            if (allowedRoles.Count == 0)
+                return true;
+
+            Log.Debug("UserCanApproveAsync: AllowedRoles={Roles}, UserRole={Role}", string.Join(",", allowedRoles), userRole);
+            return allowedRoles.Contains(userRole);
         }
         catch (Exception ex)
         {

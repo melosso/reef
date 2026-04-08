@@ -1,5 +1,11 @@
 data/
 Deployment/
+.*/
+.[a-zA-Z]*/
+!.github/
 .fake
 Source/Reef.Tests/bin/
 Source/Reef.Tests/obj/
+*.md
+!README.md
+!web.*.md
