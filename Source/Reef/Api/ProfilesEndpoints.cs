@@ -1495,9 +1495,11 @@ public static class ProfilesEndpoints
     /// POST /api/profiles/{id}/test-query-delta - Test a saved profile's query with delta sync awareness.
     /// Runs the query (first 25 rows), passes results through DeltaSyncService without committing,
     /// and returns rows tagged with their sync status (new / changed / unchanged).
+    /// Optional body: { "query": "custom query to test" } - uses custom query instead of saved profile query
     /// </summary>
     private static async Task<IResult> TestQueryDelta(
         int id,
+        [FromBody] TestQueryDeltaRequest? request,
         ProfileService profileService,
         ConnectionService connectionService,
         QueryExecutor queryExecutor,
@@ -1517,7 +1519,8 @@ public static class ProfilesEndpoints
                 return Results.NotFound(new { error = "Connection not found" });
 
             // Build a 25-row limited version of the query
-            var testQuery = profile.Query?.Trim() ?? "";
+            // Use custom query from request body if provided, otherwise use saved profile query
+            var testQuery = request?.Query?.Trim() ?? profile.Query?.Trim() ?? "";
             var hasLimit = testQuery.Contains("LIMIT", StringComparison.OrdinalIgnoreCase) ||
                            testQuery.Contains("TOP", StringComparison.OrdinalIgnoreCase) ||
                            testQuery.Contains("FETCH", StringComparison.OrdinalIgnoreCase);
@@ -1699,6 +1702,14 @@ public static class ProfilesEndpoints
     {
         public int ConnectionId { get; set; }
         public string Query { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request model for testing query delta with optional custom query
+    /// </summary>
+    public class TestQueryDeltaRequest
+    {
+        public string? Query { get; set; }
     }
 
     private static bool IsValidEmail(string? email) =>
