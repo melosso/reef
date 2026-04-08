@@ -219,6 +219,8 @@ public static class EmailApprovalsEndpoints
                 return Results.NotFound(new { message = "Approval not found" });
 
             var canApprove = await service.UserCanApproveAsync(approval.ProfileId, userId);
+            Log.Information("Approval check for GUID={Guid}, ProfileId={ProfileId}, UserId={UserId}, CanApprove={CanApprove}",
+                guid, approval.ProfileId, userId, canApprove);
             if (!canApprove)
                 return Results.Forbid();
 
