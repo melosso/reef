@@ -126,12 +126,7 @@ public class DocxGenerator : IDocumentGenerator
         headerPart.Header.Append(paragraph);
 
         // Link header to document
-        var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().FirstOrDefault();
-        if (sectPr == null)
-        {
-            sectPr = new SectionProperties();
-            mainPart.Document.Body!.Append(sectPr);
-        }
+        SectionProperties sectPr = GetOrCreateSectionProperties(mainPart);
 
         var headerReference = new HeaderReference
         {
@@ -176,12 +171,7 @@ public class DocxGenerator : IDocumentGenerator
         }
 
         // Link footer to document
-        var sectPr = mainPart.Document.Body!.Elements<SectionProperties>().FirstOrDefault();
-        if (sectPr == null)
-        {
-            sectPr = new SectionProperties();
-            mainPart.Document.Body!.Append(sectPr);
-        }
+        SectionProperties sectPr = GetOrCreateSectionProperties(mainPart);
 
         var footerReference = new FooterReference
         {
@@ -380,5 +370,24 @@ public class DocxGenerator : IDocumentGenerator
                         .Replace("&gt;", ">")
                         .Replace("&amp;", "&");
         return content.Trim();
+    }
+
+    private static SectionProperties GetOrCreateSectionProperties(MainDocumentPart mainPart)
+    {
+        var body = mainPart.Document?.Body;
+        
+        if (body == null)
+        {
+            throw new InvalidOperationException("The main document or its body has not been initialized.");
+        }
+
+        foreach (var sectPr in body.Elements<SectionProperties>())
+        {
+            return sectPr;
+        }
+
+        var newSectPr = new SectionProperties();
+        body.Append(newSectPr);
+        return newSectPr;
     }
 }

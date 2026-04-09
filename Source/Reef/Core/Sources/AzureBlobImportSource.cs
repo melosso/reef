@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 using Reef.Core.Models;
 using Serilog;
 using System.Text.Json;
@@ -56,7 +57,7 @@ public class AzureBlobImportSource : IImportSource
         var prefix = cfg.Prefix ?? "";
 
         var infos = new List<SourceFileInfo>();
-        await foreach (var item in container.GetBlobsAsync(prefix: prefix, cancellationToken: ct))
+        await foreach (var item in container.GetBlobsAsync(BlobTraits.Metadata, BlobStates.All, prefix, ct))
         {
             var name = Path.GetFileName(item.Name);
             if (MatchesPattern(name, pattern))
@@ -117,7 +118,7 @@ public class AzureBlobImportSource : IImportSource
         var prefix = cfg.Prefix ?? "";
 
         var items = new List<(string Key, DateTimeOffset? LastModified)>();
-        await foreach (var item in container.GetBlobsAsync(prefix: prefix, cancellationToken: ct))
+        await foreach (var item in container.GetBlobsAsync(BlobTraits.Metadata, BlobStates.All, prefix, ct))
         {
             if (MatchesPattern(Path.GetFileName(item.Name), glob))
                 items.Add((item.Name, item.Properties.LastModified));
