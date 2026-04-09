@@ -62,11 +62,11 @@ namespace Reef.Core.Middleware
                 {
                     Log.Debug("Invalid or expired authentication token. Redirecting to /logoff.");
 
-                    // Clear the invalid cookie
+                    var isHttps = context.Request.IsHttps;
                     context.Response.Cookies.Delete("reef_token", new CookieOptions
                     {
                         HttpOnly = true,
-                        Secure = false,
+                        Secure = isHttps,
                         SameSite = SameSiteMode.Lax,
                         Path = "/"
                     });

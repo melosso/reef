@@ -154,14 +154,24 @@ public class Program
             // Configure JWT Authentication
             ConfigureAuthentication(builder.Services, builder.Configuration);
 
-            // Configure CORS
+            // Configure CORS with configured origins
             builder.Services.AddCors(options =>
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    policy.AllowAnyOrigin()
-                          .AllowAnyMethod()
-                          .AllowAnyHeader();
+                    var allowedOrigins = builder.Configuration.GetSection("Reef:AllowedOrigins").Get<List<string>>();
+                    if (allowedOrigins != null && allowedOrigins.Count > 0)
+                    {
+                        policy.WithOrigins(allowedOrigins.ToArray())
+                              .AllowAnyMethod()
+                              .AllowAnyHeader();
+                    }
+                    else
+                    {
+                        policy.AllowAnyOrigin()
+                              .AllowAnyMethod()
+                              .AllowAnyHeader();
+                    }
                 });
             });
 
@@ -307,6 +317,7 @@ public class Program
 
         // Scoped services (each request gets its own instance)
         // Core services
+        services.AddScoped<ValidationService>();
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
         services.AddScoped<ProfileService>();

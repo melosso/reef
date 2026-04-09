@@ -11,16 +11,18 @@ namespace Reef.Core.Services;
 
 /// <summary>
 /// Service for executing SQL queries against different database types
-/// Supports SQL Server, MySQL, and PostgreSQL with parameter substitution
+/// Supports SQL Server, MySQL, and PostgreSQL with native parameterization
 /// </summary>
 public class QueryExecutor
 {
     private readonly EncryptionService _encryptionService;
-    private const int DefaultCommandTimeout = 30; // seconds
+    private readonly ValidationService _validationService;
+    private const int DefaultCommandTimeout = 30;
 
-    public QueryExecutor(EncryptionService encryptionService)
+    public QueryExecutor(EncryptionService encryptionService, ValidationService validationService)
     {
         _encryptionService = encryptionService;
+        _validationService = validationService;
     }
 
     /// <summary>
@@ -151,10 +153,18 @@ public class QueryExecutor
                 return (false, new List<Dictionary<string, object>>(), "Failed to decrypt connection string", stopwatch.ElapsedMilliseconds);
             }
 
-            // Substitute parameters in query
-            if (parameters != null && parameters.Count > 0)
+            // Validate query before execution
+            var validationResult = await _validationService.ValidateQueryAsync(query, connection.Type);
+            if (!validationResult.IsValid)
             {
-                query = SubstituteParameters(query, parameters);
+                Log.Warning("Query validation failed for connection {ConnectionName}: {ErrorMessage}", connection.Name, validationResult.ErrorMessage);
+                return (false, new List<Dictionary<string, object>>(), validationResult.ErrorMessage, stopwatch.ElapsedMilliseconds);
+            }
+
+            // Log warnings if any
+            foreach (var warning in validationResult.Warnings)
+            {
+                Log.Warning("Query validation warning for {ConnectionName}: {Warning}", connection.Name, warning);
             }
 
             Log.Information("Executing query on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
@@ -165,16 +175,16 @@ public class QueryExecutor
             switch (connection.Type.ToLowerInvariant())
             {
                 case "sqlserver":
-                    rows = await ExecuteSqlServerQueryAsync(connectionString, query, commandTimeout);
+                    rows = await ExecuteSqlServerQueryAsync(connectionString, query, parameters, commandTimeout);
                     break;
 
                 case "mysql":
-                    rows = await ExecuteMySqlQueryAsync(connectionString, query, commandTimeout);
+                    rows = await ExecuteMySqlQueryAsync(connectionString, query, parameters, commandTimeout);
                     break;
 
                 case "postgresql":
                 case "postgres":
-                    rows = await ExecutePostgreSqlQueryAsync(connectionString, query, commandTimeout);
+                    rows = await ExecutePostgreSqlQueryAsync(connectionString, query, parameters, commandTimeout);
                     break;
 
                 default:
@@ -267,10 +277,17 @@ public class QueryExecutor
                 return (false, 0, "Failed to decrypt connection string", stopwatch.ElapsedMilliseconds);
             }
 
-            // Substitute parameters in command
-            if (parameters != null && parameters.Count > 0)
+            // Validate command before execution
+            var validationResult = await _validationService.ValidateQueryAsync(command, connection.Type);
+            if (!validationResult.IsValid)
             {
-                command = SubstituteParameters(command, parameters);
+                Log.Warning("Command validation failed for connection {ConnectionName}: {ErrorMessage}", connection.Name, validationResult.ErrorMessage);
+                return (false, 0, validationResult.ErrorMessage, stopwatch.ElapsedMilliseconds);
+            }
+
+            foreach (var warning in validationResult.Warnings)
+            {
+                Log.Warning("Command validation warning for {ConnectionName}: {Warning}", connection.Name, warning);
             }
 
             Log.Information("Executing command on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
@@ -281,16 +298,16 @@ public class QueryExecutor
             switch (connection.Type.ToLowerInvariant())
             {
                 case "sqlserver":
-                    rowsAffected = await ExecuteSqlServerCommandAsync(connectionString, command, commandTimeout);
+                    rowsAffected = await ExecuteSqlServerCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
                 
                 case "mysql":
-                    rowsAffected = await ExecuteMySqlCommandAsync(connectionString, command, commandTimeout);
+                    rowsAffected = await ExecuteMySqlCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
                 
                 case "postgresql":
                 case "postgres":
-                    rowsAffected = await ExecutePostgreSqlCommandAsync(connectionString, command, commandTimeout);
+                    rowsAffected = await ExecutePostgreSqlCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
                 
                 default:
@@ -312,10 +329,10 @@ public class QueryExecutor
     }
 
     /// <summary>
-    /// Execute command against SQL Server using ExecuteAsync
+    /// Execute command against SQL Server using ExecuteAsync with native parameters
     /// </summary>
     private async Task<int> ExecuteSqlServerCommandAsync(
-        string connectionString, string command, int commandTimeout)
+        string connectionString, string command, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new SqlConnectionStringBuilder(connectionString)
         {
@@ -324,14 +341,15 @@ public class QueryExecutor
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await connection.ExecuteAsync(command, commandTimeout: commandTimeout);
+        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
     /// <summary>
-    /// Execute command against MySQL using ExecuteAsync
+    /// Execute command against MySQL using ExecuteAsync with native parameters
     /// </summary>
     private async Task<int> ExecuteMySqlCommandAsync(
-        string connectionString, string command, int commandTimeout)
+        string connectionString, string command, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString)
         {
@@ -340,14 +358,15 @@ public class QueryExecutor
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await connection.ExecuteAsync(command, commandTimeout: commandTimeout);
+        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
     /// <summary>
-    /// Execute command against PostgreSQL using ExecuteAsync
+    /// Execute command against PostgreSQL using ExecuteAsync with native parameters
     /// </summary>
     private async Task<int> ExecutePostgreSqlCommandAsync(
-        string connectionString, string command, int commandTimeout)
+        string connectionString, string command, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new NpgsqlConnectionStringBuilder(connectionString)
         {
@@ -356,14 +375,15 @@ public class QueryExecutor
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await connection.ExecuteAsync(command, commandTimeout: commandTimeout);
+        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
     /// <summary>
     /// Execute query against SQL Server
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteSqlServerQueryAsync(
-        string connectionString, string query, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new SqlConnectionStringBuilder(connectionString)
         {
@@ -372,14 +392,14 @@ public class QueryExecutor
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await ExecuteQueryWithDapper(connection, query, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
     /// <summary>
     /// Execute query against MySQL
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteMySqlQueryAsync(
-        string connectionString, string query, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString)
         {
@@ -388,14 +408,14 @@ public class QueryExecutor
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await ExecuteQueryWithDapper(connection, query, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
     /// <summary>
     /// Execute query against PostgreSQL
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecutePostgreSqlQueryAsync(
-        string connectionString, string query, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
     {
         var builder = new NpgsqlConnectionStringBuilder(connectionString)
         {
@@ -404,16 +424,22 @@ public class QueryExecutor
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
-        return await ExecuteQueryWithDapper(connection, query, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
     /// <summary>
-    /// Execute query using Dapper and convert results to dictionary list
+    /// Execute query using Dapper with native parameterization and convert results to dictionary list
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteQueryWithDapper(
-        IDbConnection connection, string query, int commandTimeout)
+        IDbConnection connection, string query, Dictionary<string, string>? parameters, int commandTimeout)
     {
-        var result = await connection.QueryAsync(query, commandTimeout: commandTimeout);
+        object? paramObject = null;
+        if (parameters != null && parameters.Count > 0)
+        {
+            paramObject = new DynamicParameters(parameters);
+        }
+
+        var result = await connection.QueryAsync(query, paramObject, commandTimeout: commandTimeout);
         
         var rows = new List<Dictionary<string, object>>();
         
@@ -426,7 +452,6 @@ public class QueryExecutor
             {
                 foreach (var kvp in dapperRow)
                 {
-                    // Convert DBNull to null
                     dict[kvp.Key] = kvp.Value == DBNull.Value ? null! : kvp.Value;
                 }
             }
@@ -435,29 +460,6 @@ public class QueryExecutor
         }
         
         return rows;
-    }
-
-    /// <summary>
-    /// Substitute parameters in query
-    /// Replaces @ParamName with provided parameter values
-    /// </summary>
-    private string SubstituteParameters(string query, Dictionary<string, string> parameters)
-    {
-        foreach (var param in parameters)
-        {
-            // Handle both @ParamName and {ParamName} formats
-            var paramKey = param.Key.StartsWith("@") ? param.Key : "@" + param.Key;
-            var paramValue = param.Value;
-            
-            // Basic SQL injection prevention: escape single quotes
-            paramValue = paramValue.Replace("'", "''");
-            
-            // Replace parameter in query
-            query = query.Replace(paramKey, $"'{paramValue}'", StringComparison.OrdinalIgnoreCase);
-            query = query.Replace("{" + param.Key + "}", $"'{paramValue}'", StringComparison.OrdinalIgnoreCase);
-        }
-        
-        return query;
     }
 
     /// <summary>

@@ -18,6 +18,10 @@ public static class AuthEndpoints
     private const int MaxMfaAttempts = 5;
     private const int MfaLockoutMinutes = 15;
     private const int OtpLength = 6;
+    private const int MaxLoginAttempts = 5;
+    private static readonly ConcurrentDictionary<string, (int Attempts, DateTime? LockedUntil)> _loginAttempts = new();
+    private const int LoginAttemptWindowMinutes = 15;
+    private const int LoginLockoutMinutes = 15;
     private const int BackupCodeLength = 8;
 
     private record MfaPendingSession(
@@ -82,8 +86,8 @@ public static class AuthEndpoints
         }
 
         var config = context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-        var allowedOriginsArray = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        var allowedOriginsString = config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+        var allowedOriginsArray = config?.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+        var allowedOriginsString = config?.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
         var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
         if (allowedOrigins.Contains("*"))
@@ -116,8 +120,8 @@ public static class AuthEndpoints
                     ?? "unknown";
                 
                 var config = context.HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-                var allowedOriginsArray = config?.GetSection("Reef:Security:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-                var allowedOriginsString = config?.GetValue<string>("Reef:Security:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
+                var allowedOriginsArray = config?.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
+                var allowedOriginsString = config?.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
                 var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
                 
                 Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}", 
@@ -135,6 +139,41 @@ public static class AuthEndpoints
         RandomNumberGenerator.Fill(bytes);
         var num = BitConverter.ToUInt32(bytes);
         return (num % 900_000 + 100_000).ToString();
+    }
+
+    private static void RecordFailedLoginAttempt(string clientIp)
+    {
+        var now = DateTime.UtcNow;
+        var existing = _loginAttempts.GetOrAdd(clientIp, (0, null));
+        var attempts = existing.Attempts + 1;
+        DateTime? lockedUntil = null;
+
+        if (attempts >= MaxLoginAttempts)
+        {
+            lockedUntil = now.AddMinutes(LoginLockoutMinutes);
+            Log.Warning("IP {IP} has been locked out due to {Attempts} failed login attempts", clientIp, attempts);
+        }
+
+        _loginAttempts[clientIp] = (attempts, lockedUntil);
+    }
+
+    private static void CleanupExpiredLoginAttempts()
+    {
+        var now = DateTime.UtcNow;
+        var lastTicks = Interlocked.Read(ref _lastCleanupTicks);
+        if (now.Ticks - lastTicks < _cleanupInterval.Ticks) return;
+
+        if (Interlocked.CompareExchange(ref _lastCleanupTicks, now.Ticks, lastTicks) != lastTicks) return;
+
+        var expiredKeys = _loginAttempts
+            .Where(kvp => kvp.Value.LockedUntil.HasValue && kvp.Value.LockedUntil < now)
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        foreach (var key in expiredKeys)
+        {
+            _loginAttempts.TryRemove(key, out _);
+        }
     }
 
     private static void CleanupExpiredSessions()
@@ -245,6 +284,18 @@ public static class AuthEndpoints
         {
             Log.Debug("Auth endpoint called: /api/auth/login for user {Username}", request.Username);
 
+            // Clean up expired attempts and rate limit
+            CleanupExpiredLoginAttempts();
+            var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            if (_loginAttempts.TryGetValue(clientIp, out var loginAttempt))
+            {
+                if (loginAttempt.LockedUntil.HasValue && loginAttempt.LockedUntil > DateTime.UtcNow)
+                {
+                    Log.Warning("Login rate limit exceeded for IP {IP}", clientIp);
+                    return Results.Json(new { message = "Too many login attempts. Please try again later." }, statusCode: 429);
+                }
+            }
+
             await using var connection = new SqliteConnection(dbConfig.ConnectionString);
             await connection.OpenAsync();
 
@@ -254,12 +305,14 @@ public static class AuthEndpoints
 
             if (user == null)
             {
+                RecordFailedLoginAttempt(clientIp);
                 Log.Warning("Login attempt failed for user {Username}. Reason: user not found", request.Username);
                 return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
             }
 
             if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
+                RecordFailedLoginAttempt(clientIp);
                 Log.Warning("Login attempt failed for user {Username}. Reason: invalid password", request.Username);
                 return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
             }
@@ -466,10 +519,11 @@ public static class AuthEndpoints
         var remoteIp = httpContext.Connection.RemoteIpAddress?.ToString();
         Log.Information("User {Username} logged in successfully from IP {IP}", user.Username, remoteIp);
 
+        var isHttps = httpContext.Request.IsHttps;
         httpContext.Response.Cookies.Append("reef_token", token, new CookieOptions
         {
             HttpOnly = true,
-            Secure   = false,
+            Secure   = isHttps,
             SameSite = SameSiteMode.Lax,
             Expires  = expiresAt,
             Path     = "/"
@@ -518,11 +572,11 @@ public static class AuthEndpoints
             var newToken = jwtService.GenerateToken(username, role, userId);
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
-            // Set HTTP-only cookie with the new JWT token
+            var isHttps = httpContext.Request.IsHttps;
             httpContext.Response.Cookies.Append("reef_token", newToken, new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false, // Set to true in production with HTTPS
+                Secure = isHttps,
                 SameSite = SameSiteMode.Lax,
                 Expires = expiresAt,
                 Path = "/"
@@ -696,11 +750,11 @@ public static class AuthEndpoints
     {
         try
         {
-            // Clear the HTTP-only cookie
+            var isHttps = httpContext.Request.IsHttps;
             httpContext.Response.Cookies.Delete("reef_token", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false,
+                Secure = isHttps,
                 SameSite = SameSiteMode.Lax,
                 Path = "/"
             });

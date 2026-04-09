@@ -50,7 +50,7 @@ services:
     environment:
       - REEF_ENCRYPTION_KEY=YourKeyHere
       - Reef__DatabasePath=/app/data/Reef.db
-      - Reef__Security__AllowedOrigins=http://localhost:8085
+      - Reef__AllowedOrigins=http://localhost:8085,http://localhost:3000
 
 volumes:
   reef_core:
