@@ -142,7 +142,7 @@
                         <p id="mfa-hint" class="mt-1.5 text-sm text-slate-500"></p>
                     </div>
 
-                    <div class="w-full flex items-center justify-center md:justify-start gap-1.5" id="mfa-inputs" role="group" aria-label="Verification code">
+                    <div class="w-full flex items-center justify-between gap-1.5" id="mfa-inputs" role="group" aria-label="Verification code">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" autocomplete="one-time-code" aria-label="Digit 1">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" aria-label="Digit 2">
                         <input type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" class="mfa-input" aria-label="Digit 3">
@@ -271,8 +271,8 @@
     // Wire digit boxes
     document.addEventListener('DOMContentLoaded', () => {
         mfaInputs().forEach((input, i) => {
-            const all = mfaInputs();
             input.addEventListener('input', e => {
+                const all = mfaInputs();
                 const val = e.target.value.replace(/\D/g, '');
                 e.target.value = val ? val[0] : '';
                 e.target.classList.toggle('filled', !!e.target.value);
@@ -286,17 +286,32 @@
                     if (e.target.value) {
                         e.target.value = '';
                         e.target.classList.remove('filled');
+                        e.preventDefault();
                     } else if (i > 0) {
                         all[i - 1].focus();
                         all[i - 1].value = '';
                         all[i - 1].classList.remove('filled');
+                        e.preventDefault();
                     }
-                    e.preventDefault();
                     updateMfaSubmitState();
+                } else if (e.key === 'Home' && i > 0) {
+                    all[0].focus();
+                    e.preventDefault();
+                } else if (e.key === 'End' && i < all.length - 1) {
+                    all[all.length - 1].focus();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowLeft' && i > 0) {
+                    all[i - 1].focus();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowRight' && i < all.length - 1) {
+                    all[i + 1].focus();
+                    e.preventDefault();
+                } else if (e.key === 'Enter' && getMfaCode().length === 6) {
+                    submitMfa();
                 }
-                if (e.key === 'ArrowLeft' && i > 0) all[i - 1].focus();
-                if (e.key === 'ArrowRight' && i < all.length - 1) all[i + 1].focus();
-                if (e.key === 'Enter' && getMfaCode().length === 6) submitMfa();
+            });
+            input.addEventListener('focus', e => {
+                e.target.select();
             });
             input.addEventListener('paste', e => {
                 e.preventDefault();
