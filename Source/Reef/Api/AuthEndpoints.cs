@@ -446,7 +446,6 @@ public static class AuthEndpoints
             return Results.Json(new { message = "Invalid code. Please try again." }, statusCode: 401);
         }
 
-        Log.Information("MFA verified for user {Username} (method: {Method})", user.Username, session.Method);
         return await IssueToken(user, connection, jwtService, auditService, httpContext);
     }
 
