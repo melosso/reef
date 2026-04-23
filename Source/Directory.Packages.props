@@ -4,20 +4,20 @@
   </PropertyGroup>
   <!-- App Dependencies -->
   <ItemGroup Label="App Dependencies">
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.32" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.21" />
+    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.34" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.22" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageVersion Include="BCrypt.Net-Next" Version="4.1.0" />
     <PackageVersion Include="Dapper" Version="2.1.72" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
-    <PackageVersion Include="FluentFTP" Version="54.1.0" />
+    <PackageVersion Include="FluentFTP" Version="54.1.1" />
     <PackageVersion Include="HtmlAgilityPack" Version="1.12.4" />
-    <PackageVersion Include="MailKit" Version="4.15.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
+    <PackageVersion Include="MailKit" Version="4.16.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.7" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.5" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.5" />
-    <PackageVersion Include="MimeKit" Version="4.15.1" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.7" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.7" />
+    <PackageVersion Include="MimeKit" Version="4.16.0" />
     <PackageVersion Include="MySqlConnector" Version="2.5.0" />
     <PackageVersion Include="NCrontab" Version="3.4.0" />
     <PackageVersion Include="Npgsql" Version="10.0.2" />
@@ -32,7 +32,7 @@
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="SSH.NET" Version="2025.1.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.17.0" />
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+    <PackageVersion Include="YamlDotNet" Version="17.0.1" />
   </ItemGroup>
   <!-- Build Dependencies -->
   <ItemGroup Label="Build Dependencies">
@@ -40,7 +40,7 @@
   </ItemGroup>
   <!-- Test Dependencies -->
   <ItemGroup Label="Test Dependencies">
-    <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+    <PackageVersion Include="coverlet.collector" Version="10.0.0" />
     <PackageVersion Include="FluentAssertions" Version="8.9.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="Moq" Version="4.20.72" />
