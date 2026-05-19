@@ -11,7 +11,7 @@ This is **Reef**. It's a web-based integration platform that orchestrates your d
 ## What is Reef?
 
 > [!IMPORTANT]  
-> Reef is currently in active development, though stable to use. Expect breaking changes, be cautious during updates.
+> Reef is currently in development, though stable to use. Expect breaking changes, be cautious during updates.
 
 Reef automates data exports for **reporting workflows**, **integration pipelines**, and **data synchronization** with customizable data structures. Keep it low-code, set-up your own custom templates if necessary, and export data effortlessly. 
 
