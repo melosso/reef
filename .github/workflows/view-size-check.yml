@@ -1,0 +1,41 @@
+name: View Size Guardrail
+
+on:
+  pull_request:
+    paths:
+      - 'Source/Reef/Views/**'
+      - 'Source/Reef/wwwroot/assets/js/**'
+
+jobs:
+  check-view-sizes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Enforce view file size limit
+        run: |
+          set -e
+          MAX_LINES=500
+          BASELINE=".github/view-size-baseline.txt"
+
+          fail=0
+          for f in Source/Reef/Views/*.html; do
+            name=$(basename "$f")
+            lines=$(wc -l < "$f")
+            limit=$MAX_LINES
+            baseline_entry=$(grep -E "^${name}:" "$BASELINE" || true)
+            if [ -n "$baseline_entry" ]; then
+              limit=$(echo "$baseline_entry" | cut -d: -f2)
+            fi
+            if [ "$lines" -gt "$limit" ]; then
+              echo "::error file=$f::$name has $lines lines (limit $limit). Split markup/JS into separate files instead of growing this view. Pre-existing oversized files have a fixed ceiling in $BASELINE — they cannot grow further."
+              fail=1
+            fi
+          done
+
+          if [ "$fail" -ne 0 ]; then
+            echo "View size guardrail failed. See CONTRIBUTING.md and $BASELINE."
+            exit 1
+          fi
+          echo "All view files within size limit."

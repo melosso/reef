@@ -1,0 +1,13 @@
+# Baseline line-count ceiling for views that predate the size guardrail.
+# These files may NOT grow past their listed line count.
+# Files not listed here are capped at 500 lines (see view-size-check.yml).
+# Shrink a file below its baseline -> lower the number here, don't leave slack.
+# Remove an entry once the file is decomposed under 500 lines.
+admin.html:2959
+connections.html:628
+dashboard.html:546
+destinations.html:2029
+email-approvals.html:1505
+executions.html:1648
+jobs.html:521
+profiles.html:2650

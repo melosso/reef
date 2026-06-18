@@ -20,7 +20,7 @@ using Dapper;
 namespace Reef;
 
 /// <summary>
-/// Main entry point and service configuration
+/// Main entry point
 /// </summary>
 public class Program
 {
@@ -110,7 +110,7 @@ public class Program
                 });
             }
 
-            // Get connection string - SINGLE SOURCE OF TRUTH
+            // Get connection string (AS SINGLE SOURCE OF TRUTH)
             var dbPath = builder.Configuration["Reef:DatabasePath"] ?? "Reef.db";
             var connectionString = builder.Configuration.GetConnectionString("Reef")
                 ?? $"Data Source={dbPath}";
@@ -118,6 +118,14 @@ public class Program
             // Get configured port for logging
             var port = builder.Configuration.GetValue<int>("Reef:ListenPort", 8085);
             var localhostOnly = builder.Configuration.GetValue<bool>("Reef:LocalhostOnly", false);
+
+            // Fail fast with a clean message if the port is already taken
+            if (IsPortInUse(port))
+            {
+                Log.Fatal("Port {Port} is already in use. Stop whatever is using it and try again.", port);
+                await Log.CloseAndFlushAsync();
+                Environment.Exit(1);
+            }
 
             // Configure server URLs only in production (launchSettings.json handles development)
             if (!builder.Environment.IsDevelopment())
@@ -286,6 +294,21 @@ public class Program
         }
     }
 
+    private static bool IsPortInUse(int port)
+    {
+        try
+        {
+            using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, port);
+            listener.Start();
+            listener.Stop();
+            return false;
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return true;
+        }
+    }
+
     private static void RegisterServices(
         IServiceCollection services, 
         IConfiguration configuration, 
@@ -337,10 +360,9 @@ public class Program
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
         services.AddScoped<ImportFileOutputService>();
         services.AddScoped<ImportExecutionService>();
-        // Notification system - throttler is singleton to maintain state across requests
-        services.AddSingleton<NotificationThrottler>();
 
-        // Notification template service
+        // Notification system
+        services.AddSingleton<NotificationThrottler>();
         services.AddScoped<NotificationTemplateService>(sp =>
             new NotificationTemplateService(connectionString));
 
@@ -519,7 +541,7 @@ public class Program
         {
             Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
 
-            // Pages served as static files (no layout injection)
+            // Pages served as static files (we won't rely on layout injection here)
             var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
                 "index.html", "logoff.html", "404.html", "otp.html"
@@ -750,7 +772,7 @@ public class Program
 }
 
 /// <summary>
-/// Database configuration - used by all services
+/// Database configuration
 /// </summary>
 public class DatabaseConfig
 {
