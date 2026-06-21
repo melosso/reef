@@ -6824,10 +6824,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         let profileModalSnapshot = '';
         let importProfileModalSnapshot = '';
 
-        function snapshotFormState(formId) {
-            const form = document.getElementById(formId);
-            if (!form) return '';
-            return Array.from(form.querySelectorAll('input, select, textarea'))
+        // Scoped to the whole modal, not the <form> tag: profile-form closes
+        // at line ~853, but the Webhooks/Delta Sync/Split Output/Email
+        // Options tabs (lines 855+) are siblings of the form INSIDE
+        // profile-modal, not nested inside it. Scoping to the <form> meant
+        // edits in any of those tabs were invisible to dirty tracking -
+        // closing via backdrop/Escape silently discarded them, no warning.
+        function snapshotFormState(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return '';
+            return Array.from(container.querySelectorAll('input, select, textarea'))
                 .map(el => {
                     const key = el.id || el.name;
                     const value = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
@@ -6837,11 +6843,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         }
 
         function isProfileModalDirty() {
-            return snapshotFormState('profile-form') !== profileModalSnapshot;
+            return snapshotFormState('profile-modal') !== profileModalSnapshot;
         }
 
         function isImportProfileModalDirty() {
-            return snapshotFormState('import-profile-form') !== importProfileModalSnapshot;
+            return snapshotFormState('import-profile-modal') !== importProfileModalSnapshot;
         }
 
         function attemptCloseProfileModal() {
@@ -6868,8 +6874,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 }).observe(modalEl, { attributes: true, attributeFilter: ['class'] });
             };
 
-            snapshotWhenShown(profileModalEl, () => { profileModalSnapshot = snapshotFormState('profile-form'); });
-            snapshotWhenShown(importProfileModalEl, () => { importProfileModalSnapshot = snapshotFormState('import-profile-form'); });
+            snapshotWhenShown(profileModalEl, () => { profileModalSnapshot = snapshotFormState('profile-modal'); });
+            snapshotWhenShown(importProfileModalEl, () => { importProfileModalSnapshot = snapshotFormState('import-profile-modal'); });
         })();
 
         function closeProfileModal() {
