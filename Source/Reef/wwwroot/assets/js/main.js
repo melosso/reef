@@ -1023,3 +1023,31 @@ function formatRelativeTime(dateString) {
     if (diffDays < 7) return `${diffDays}d ago`;
     return null;
 }
+
+// Global Escape-to-close for modals
+// Every modal in this app follows the same shape: a root div with classes
+// `fixed inset-0` that's `hidden` when closed, with an inline
+// `onclick="if (event.target === this) closeXyz()"` for click-outside-closes.
+// Escape should do exactly the same thing as a click on that backdrop, so
+// instead of re-implementing close logic here (and risking it drift from the
+// click-outside behavior, e.g. missing a dirty-state confirm), this just
+// invokes the same onclick handler the backdrop already has, faking the one
+// thing it checks: that event.target === the modal itself.
+//
+// This lives in main.js (loaded on every page, survives SPA navigation via
+// router.js's document-level persistence) rather than per-page, so new
+// modals get Escape support for free as long as they follow the convention
+// above - no per-modal JS wiring needed.
+document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+
+    const openModals = Array.from(document.querySelectorAll('.fixed.inset-0'))
+        .filter(el => !el.classList.contains('hidden') && typeof el.onclick === 'function');
+    if (openModals.length === 0) return;
+
+    // Topmost = last in DOM order among the open ones (modals are appended
+    // as they're opened; nested/stacked modals aren't common here, but this
+    // keeps behavior sane if it ever happens).
+    const topmost = openModals[openModals.length - 1];
+    topmost.onclick.call(topmost, { target: topmost });
+});

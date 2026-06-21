@@ -208,6 +208,14 @@ public class ImportProfileExecution
     public string? ErrorMessage { get; set; }
     public string? StackTrace { get; set; }
     public string? ExecutionLog { get; set; }
+
+    // Pre/post-process Script step observability (Type=Script only)
+    public string? PreProcessStdout { get; set; }
+    public string? PreProcessStderr { get; set; }
+    public int? PreProcessExitCode { get; set; }
+    public string? PostProcessStdout { get; set; }
+    public string? PostProcessStderr { get; set; }
+    public int? PostProcessExitCode { get; set; }
     public int FilesProcessed { get; set; }
     public long BytesProcessed { get; set; }
 

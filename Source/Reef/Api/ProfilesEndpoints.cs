@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
+using Reef.Core.Scripting;
 using Reef.Core.Services;
 using Reef.Core.TemplateEngines;
 using Serilog;
@@ -46,6 +47,9 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
         group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
+        group.MapPost("/test-script", TestScript);
+        group.MapGet("/interpreters", GetInterpreters);
+        group.MapPost("/interpreters/{name}/test", TestInterpreter);
 
         // Unified import profile execution endpoints (use ?type=import)
         group.MapPost("/{id:int}/execute", ExecuteProfile);
@@ -1696,12 +1700,116 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
+    /// Runs a Script-type pre/post-process step in isolation, without executing
+    /// the rest of the profile pipeline. Lets users iterate on a script
+    /// directly from the editor instead of having to run a full export to see
+    /// whether it works.
+    /// </summary>
+    private static async Task<IResult> TestScript(
+        [FromBody] TestScriptRequest request,
+        IScriptRunner scriptRunner)
+    {
+        if (string.IsNullOrWhiteSpace(request.Interpreter))
+        {
+            return Results.BadRequest(new { error = "Interpreter is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ScriptPathOrInline))
+        {
+            return Results.BadRequest(new { error = "Script is required" });
+        }
+
+        // Sample stdin payload mirroring what a real pre/post-processing run sends,
+        // so a script that reads context fields behaves the same way under test.
+        var sampleContext = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            ExecutionId = 0,
+            ProfileId = request.ProfileId ?? 0,
+            RowCount = 10,
+            OutputPath = "/data/exports/sample-output.csv",
+            FileSizeBytes = 1024,
+            ExecutionTimeMs = 100,
+            OutputFormat = "CSV",
+            TriggeredBy = "Test",
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow,
+            Status = "Success",
+            ErrorMessage = (string?)null,
+            parameters = new Dictionary<string, string>()
+        });
+
+        try
+        {
+            var result = await scriptRunner.RunAsync(new ScriptExecutionRequest
+            {
+                Interpreter = request.Interpreter,
+                ScriptPathOrInline = request.ScriptPathOrInline,
+                IsInline = request.ScriptIsInline,
+                StdinJson = sampleContext,
+                TimeoutSeconds = request.Timeout ?? 30,
+                EnvAllowlist = request.EnvAllowlist
+            });
+
+            return Results.Ok(new
+            {
+                success = result.Success,
+                exitCode = result.ExitCode,
+                stdout = result.Stdout,
+                stderr = result.Stderr,
+                errorMessage = result.ErrorMessage,
+                elapsedMs = result.ElapsedMs
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Script test failed: {Message}", ex.Message);
+            return Results.Ok(new { success = false, exitCode = -1, stdout = "", stderr = "", errorMessage = ex.Message, elapsedMs = 0L });
+        }
+    }
+
+    /// <summary>
+    /// Checks which script interpreters (pwsh, python, node, bash, sh, cmd) are
+    /// actually runnable on this host, by running a trivial probe script through
+    /// each one via the real IScriptRunner path. Used by Admin's Interpreters
+    /// section and by the Profile editor to grey out Script interpreters that
+    /// won't work. Not Admin-gated - any authenticated user creating a profile
+    /// needs this to know which interpreters they can pick.
+    /// </summary>
+    private static async Task<IResult> GetInterpreters(InterpreterService interpreterService)
+    {
+        var statuses = await interpreterService.CheckAllAsync();
+        return Results.Ok(statuses);
+    }
+
+    /// <summary>
+    /// Re-checks a single interpreter on demand (Admin's "Test" button per row).
+    /// </summary>
+    private static async Task<IResult> TestInterpreter(string name, InterpreterService interpreterService)
+    {
+        var status = await interpreterService.CheckOneAsync(name);
+        return Results.Ok(status);
+    }
+
+    /// <summary>
     /// Request model for testing query preview without saved profile
     /// </summary>
     public class TestQueryPreviewRequest
     {
         public int ConnectionId { get; set; }
         public string Query { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request model for testing a Script-type pre/post-process step in isolation
+    /// </summary>
+    public class TestScriptRequest
+    {
+        public int? ProfileId { get; set; }
+        public string Interpreter { get; set; } = string.Empty;
+        public string ScriptPathOrInline { get; set; } = string.Empty;
+        public bool ScriptIsInline { get; set; }
+        public int? Timeout { get; set; }
+        public List<string>? EnvAllowlist { get; set; }
     }
 
     /// <summary>

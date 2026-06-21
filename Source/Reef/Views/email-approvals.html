@@ -251,7 +251,7 @@
     </div>
 
     <!-- Email Preview Modal -->
-    <div id="previewModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-50 flex items-center justify-center">
+    <div id="previewModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-50 flex items-center justify-center" onclick="if (event.target === this) closePreviewModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900">Email Preview</h2>
@@ -326,7 +326,7 @@
     </div>
 
     <!-- Approval Notes Modal -->
-    <div id="approvalNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="approvalNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeApprovalNotesModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
@@ -368,7 +368,7 @@
     </div>
 
     <!-- Rejection Reason Modal -->
-    <div id="rejectionReasonModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="rejectionReasonModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeRejectionReasonModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
@@ -410,7 +410,7 @@
     </div>
 
     <!-- Skip Notes Modal -->
-    <div id="skipNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="skipNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeSkipNotesModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->

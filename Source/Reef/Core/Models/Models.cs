@@ -197,13 +197,19 @@ public class ProfileExecution
     public string? PreProcessStatus { get; set; } // null, Success, Failed, Skipped
     public string? PreProcessError { get; set; }
     public long? PreProcessTimeMs { get; set; }
-    
+    public string? PreProcessStdout { get; set; } // Script type only
+    public string? PreProcessStderr { get; set; } // Script type only
+    public int? PreProcessExitCode { get; set; } // Script type only
+
     // Post-Processing Phase Tracking
     public DateTime? PostProcessStartedAt { get; set; }
     public DateTime? PostProcessCompletedAt { get; set; }
     public string? PostProcessStatus { get; set; } // null, Success, Failed, Skipped
     public string? PostProcessError { get; set; }
     public long? PostProcessTimeMs { get; set; }
+    public string? PostProcessStdout { get; set; } // Script type only
+    public string? PostProcessStderr { get; set; } // Script type only
+    public int? PostProcessExitCode { get; set; } // Script type only
 
     // Email Approval Workflow Tracking
     public string? ApprovalStatus { get; set; } // null, Pending, Approved, Rejected, Sent (tracks approval status separately)
@@ -336,31 +342,55 @@ public class ScheduledTask
 public class ProcessingConfig
 {
     /// <summary>
-    /// Type of processing: Query or StoredProcedure
+    /// Type of processing: Query, StoredProcedure, or Script
     /// </summary>
-    public required string Type { get; set; } // Query, StoredProcedure
-    
+    public required string Type { get; set; } // Query, StoredProcedure, Script
+
     /// <summary>
     /// SQL command to execute (can contain {placeholder} variables)
     /// For Query: SELECT, UPDATE, DELETE, INSERT, etc.
     /// For StoredProcedure: Procedure name (without EXEC/CALL)
+    /// Not used when Type is Script.
     /// </summary>
-    public required string Command { get; set; }
-    
+    public string? Command { get; set; }
+
     /// <summary>
     /// Optional parameters for stored procedure or parameterized query
     /// </summary>
     public List<ProcessingParameter>? Parameters { get; set; }
-    
+
     /// <summary>
     /// Timeout in seconds (default 30)
     /// </summary>
     public int Timeout { get; set; } = 30;
-    
+
     /// <summary>
     /// Whether to continue execution if this processing step fails
     /// </summary>
     public bool ContinueOnError { get; set; } = false;
+
+    /// <summary>
+    /// Script interpreter to use when Type is Script: pwsh, python, node, bash, sh, cmd
+    /// </summary>
+    public string? Interpreter { get; set; }
+
+    /// <summary>
+    /// When Type is Script: either the inline script source or a path to a script
+    /// file, depending on <see cref="ScriptIsInline"/>.
+    /// </summary>
+    public string? ScriptPathOrInline { get; set; }
+
+    /// <summary>
+    /// When Type is Script: whether ScriptPathOrInline holds inline source (true)
+    /// or a file path (false).
+    /// </summary>
+    public bool ScriptIsInline { get; set; }
+
+    /// <summary>
+    /// When Type is Script: names of environment variables to pass through to
+    /// the script process. Everything else is withheld to avoid leaking secrets.
+    /// </summary>
+    public List<string>? EnvAllowlist { get; set; }
 }
 
 /// <summary>
@@ -481,6 +511,13 @@ public class ProcessingContext
     /// Available as: {splitkey}
     /// </summary>
     public string? SplitKey { get; set; }
+
+    /// <summary>
+    /// Webhook/job trigger parameters passed into ExecuteProfileAsync.
+    /// Forwarded to Script-type processing steps as part of the stdin JSON
+    /// context, so a post-process webhook script can see what triggered the run.
+    /// </summary>
+    public Dictionary<string, string>? WebhookParameters { get; set; }
 }
 
 // ===== Email Approval Workflow Models =====
