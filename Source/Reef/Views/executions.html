@@ -151,7 +151,7 @@
     </div>
 
     <!-- Import Execution Details Modal -->
-    <div id="import-exec-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="import-exec-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeImportExecModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-slate-900 flex items-center">
@@ -169,7 +169,7 @@
     </div>
 
     <!-- Execution Details Modal -->
-    <div id="details-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="details-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeDetailsModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-slate-900 flex items-center">
@@ -199,7 +199,7 @@
     </div>
 
     <!-- Test Profile Modal -->
-    <div id="execute-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="execute-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeExecuteModal()">
         <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-slate-900">Test Profile</h3>
@@ -229,7 +229,7 @@
     </div>
 
     <!-- Run Job Modal -->
-    <div id="run-job-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="run-job-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeRunJobModal()">
         <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-md shadow-lg rounded-md bg-white">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-slate-900">Run Job</h3>

@@ -147,11 +147,11 @@
         </div>
     </div>
 
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseProfileModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Profile</h3>
-                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-500">
+                <button onclick="attemptCloseProfileModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -840,7 +840,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                             </div>
                         </div>
-                        <button type="button" onclick="closeProfileModal()"
+                        <button type="button" onclick="attemptCloseProfileModal()"
                                 class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
@@ -1264,7 +1264,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                     </div>
                 </div>
-                <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+                <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
                     <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
                         <div id="help-modal-content-area">
                             <div class="flex justify-between items-center mb-4">
@@ -1509,7 +1509,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Email HTML Preview Modal -->
-    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeEmailPreviewModal()">
         <div class="relative w-full max-w-4xl mx-auto my-8">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="email-preview-modal-title">
                 <!-- Header -->
@@ -1551,7 +1551,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Query Results Preview Modal -->
-    <div id="query-results-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="query-results-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeQueryResultsModal()">
         <div class="relative w-full max-w-6xl mx-auto my-8">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="query-results-modal-title">
                 <!-- Header -->
@@ -1610,7 +1610,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Email Execution Confirmation Modal -->
-    <div id="email-execute-confirmation-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="email-execute-confirmation-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeEmailExecutionConfirmationModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="email-execute-confirmation-modal-title">
                 <!-- Header -->
@@ -1668,14 +1668,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Import Profile Modal -->
-    <div id="import-profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="import-profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseImportProfileModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-modal-title" class="text-lg font-semibold text-slate-900 flex items-center">
                     <i data-lucide="upload" class="h-5 w-5 mr-2 text-blue-500"></i>
                     New Profile
                 </h3>
-                <button onclick="closeImportProfileModal()" class="text-gray-400 hover:text-gray-500">
+                <button onclick="attemptCloseImportProfileModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -2965,7 +2965,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             class="hidden px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center">
                         <i data-lucide="play-circle" class="h-4 w-4 mr-1"></i>Run Now
                     </button>
-                    <button type="button" onclick="closeImportProfileModal()"
+                    <button type="button" onclick="attemptCloseImportProfileModal()"
                             class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                     <button type="submit"
                             class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
@@ -2977,7 +2977,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Import Preview Modal -->
-    <div id="import-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="import-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closePreviewModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-5xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-preview-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-preview-modal-title" class="text-lg font-semibold text-slate-900">Data Preview</h3>
@@ -6813,6 +6813,65 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             queueLucideRender();
         }
 
+        // Dirty-state tracking for the Profile and Import Profile editor
+        // modals. A snapshot of every input/select/textarea value inside the
+        // form is taken shortly after the modal becomes visible (covering
+        // both "new" and "edit" - population finishes via different code
+        // paths for each, so a MutationObserver on the modal's own class
+        // list is more robust than hooking every population function).
+        // Closing (backdrop click, Escape, X, or Cancel) compares the
+        // current snapshot against it and confirms before discarding.
+        let profileModalSnapshot = '';
+        let importProfileModalSnapshot = '';
+
+        function snapshotFormState(formId) {
+            const form = document.getElementById(formId);
+            if (!form) return '';
+            return Array.from(form.querySelectorAll('input, select, textarea'))
+                .map(el => {
+                    const key = el.id || el.name;
+                    const value = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
+                    return `${key}=${value}`;
+                })
+                .join('|');
+        }
+
+        function isProfileModalDirty() {
+            return snapshotFormState('profile-form') !== profileModalSnapshot;
+        }
+
+        function isImportProfileModalDirty() {
+            return snapshotFormState('import-profile-form') !== importProfileModalSnapshot;
+        }
+
+        function attemptCloseProfileModal() {
+            if (isProfileModalDirty() && !confirm('You have unsaved changes. Discard them and close?')) return;
+            closeProfileModal();
+        }
+
+        function attemptCloseImportProfileModal() {
+            if (isImportProfileModalDirty() && !confirm('You have unsaved changes. Discard them and close?')) return;
+            closeImportProfileModal();
+        }
+
+        (function setupModalDirtyTracking() {
+            const profileModalEl = document.getElementById('profile-modal');
+            const importProfileModalEl = document.getElementById('import-profile-modal');
+
+            const snapshotWhenShown = (modalEl, takeSnapshot) => {
+                if (!modalEl) return;
+                new MutationObserver(() => {
+                    if (!modalEl.classList.contains('hidden')) {
+                        // Let synchronous population finish before snapshotting.
+                        setTimeout(takeSnapshot, 50);
+                    }
+                }).observe(modalEl, { attributes: true, attributeFilter: ['class'] });
+            };
+
+            snapshotWhenShown(profileModalEl, () => { profileModalSnapshot = snapshotFormState('profile-form'); });
+            snapshotWhenShown(importProfileModalEl, () => { importProfileModalSnapshot = snapshotFormState('import-profile-form'); });
+        })();
+
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.add('hidden');
             closeTestActionsMenu();
@@ -7553,7 +7612,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const profileName = document.getElementById('profile-name').value;
             
             const modal = `
-                <div id="resetRowsModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+                <div id="resetRowsModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeResetRowsModal()">
                     <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white" role="dialog" aria-modal="true" aria-labelledby="resetRowsModal-title">
                         <div class="flex justify-between items-center mb-4">
                             <h3 id="resetRowsModal-title" class="text-lg font-semibold text-slate-900">Reset Specific Rows</h3>

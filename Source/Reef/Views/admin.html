@@ -1332,7 +1332,7 @@
     </div>
 
     <!-- Database Reset Confirmation Modal -->
-    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeResetModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1362,7 +1362,7 @@
     </div>
 
     <!-- Clear All Executions Confirmation Modal -->
-    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeClearAllModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1392,7 +1392,7 @@
     </div>
 
     <!-- Clear Old Audits Confirmation Modal -->
-    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldAuditsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1419,7 +1419,7 @@
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
-    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldExecutionsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1446,7 +1446,7 @@
     </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addUserModal-title" class="text-lg font-semibold text-slate-900">Add New User</h3>
@@ -1478,7 +1478,7 @@
     </div>
 
     <!-- Edit User Modal -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeEditUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <div class="flex items-center justify-between">
@@ -1546,7 +1546,7 @@
     </div>
 
     <!-- Change Username Modal -->
-    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeChangeUsernameModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-slate-900">Change Username</h3>
@@ -1572,7 +1572,7 @@
     </div>
 
     <!-- Add API Key Modal -->
-    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddApiKeyModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-slate-900">Add API Key</h3>
@@ -1605,7 +1605,7 @@
     </div>
 
     <!-- API Key Display Modal -->
-    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyDisplayModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-slate-900">API Key Generated</h3>
@@ -1627,7 +1627,7 @@
     </div>
 
     <!-- User Roles Help Modal -->
-    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeUserHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="userHelpModal-title" class="text-lg font-semibold text-slate-900">About Users</h3>
@@ -1712,7 +1712,7 @@
     </div>
 
     <!-- API Key Help Modal -->
-    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-slate-900">About API Keys</h3>
@@ -1844,7 +1844,15 @@
             window.addEventListener('DOMContentLoaded', initAdmin);
         } else if (window._pendingAdminInit) {
             window._pendingAdminInit = false;
-            initAdmin();
+            // Defer: on SPA navigation router.js rewrites top-level `function`
+            // declarations (e.g. showTab, further down this same script) into
+            // plain `window.x = function` assignments, which - unlike real
+            // function declarations - only exist once that line actually runs.
+            // Calling initAdmin() synchronously here, before the script has
+            // finished executing top to bottom, throws "showTab is not
+            // defined". setTimeout pushes the call to a macrotask, after the
+            // whole script (and all those assignments) has finished.
+            setTimeout(initAdmin, 0);
         }
 
         function getLogLevelColor(level) {
