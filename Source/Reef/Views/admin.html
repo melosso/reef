@@ -83,6 +83,10 @@
                             <i data-lucide="mail" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Templates
                         </button>
+                        <button id="tab-interpreters" onclick="showTab('interpreters')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="terminal-square" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Interpreters
+                        </button>
                     </div>
                 </div>
                 <!-- Danger -->
@@ -1106,6 +1110,35 @@
                         </div>
                     </div>
 
+                    <!-- Interpreters Tab -->
+                    <div id="content-interpreters" class="tab-content hidden relative">
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900">Script Interpreters</h3>
+                                    <p class="text-sm text-slate-600 mt-1">
+                                        Profile pre/post-process Script steps run via one of these interpreters.
+                                        Verify which are actually runnable on this host before relying on them.
+                                    </p>
+                                </div>
+                                <button onclick="loadInterpreters()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center">
+                                    <svg id="interpreters-refresh-spinner" class="animate-spin h-4 w-4 mr-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+                                    Verify All
+                                </button>
+                            </div>
+
+                            <div class="p-6">
+                                <div id="interpretersList" class="space-y-2">
+                                    <p class="text-gray-500 text-center py-4">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Danger Zone Tab -->
                     <div id="content-danger" class="tab-content hidden relative">
                         <!-- Admin Only Permission Blur Overlay -->
@@ -1875,6 +1908,70 @@
             else if (tab === 'apikeys') loadApiKeys();
             else if (tab === 'system') loadSystemInfo();
             else if (tab === 'notifications' && typeof window.loadNotificationSettings === 'function') loadNotificationSettings();
+            else if (tab === 'interpreters') loadInterpreters();
+        }
+
+        async function loadInterpreters() {
+            const list = document.getElementById('interpretersList');
+            const spinner = document.getElementById('interpreters-refresh-spinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters`, { headers: getAuthHeaders() });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const interpreters = await resp.json();
+                renderInterpretersList(interpreters);
+            } catch (e) {
+                list.innerHTML = `<p class="text-red-500 text-center py-4">Failed to load interpreters: ${e.message}</p>`;
+            } finally {
+                spinner.classList.add('hidden');
+                queueLucideRender();
+            }
+        }
+
+        function interpreterRowHtml(i) {
+            return `
+                <div id="interpreter-row-${i.name}" class="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="${i.available ? 'check-circle' : 'x-circle'}" class="h-5 w-5 ${i.available ? 'text-green-500' : 'text-red-500'} shrink-0"></i>
+                        <div>
+                            <p class="text-sm font-medium text-slate-900">${escapeHtml(i.displayName)} <span class="text-xs text-slate-400 font-mono">${escapeHtml(i.name)}</span></p>
+                            <p class="text-xs ${i.available ? 'text-slate-500' : 'text-red-600'}">
+                                ${i.available ? (i.output ? escapeHtml(i.output) : 'Available') : (i.error || 'Not available on this host')}
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="testInterpreter('${i.name}')" class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                        <i data-lucide="play" class="w-3.5 h-3.5 mr-1.5"></i>Test
+                    </button>
+                </div>`;
+        }
+
+        function renderInterpretersList(interpreters) {
+            document.getElementById('interpretersList').innerHTML = interpreters.map(interpreterRowHtml).join('');
+            queueLucideRender();
+        }
+
+        async function testInterpreter(name) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters/${name}/test`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const status = await resp.json();
+
+                const existingRow = document.getElementById(`interpreter-row-${name}`);
+                if (existingRow) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = interpreterRowHtml(status).trim();
+                    existingRow.replaceWith(wrapper.firstElementChild);
+                    queueLucideRender();
+                }
+                showToast(`${status.displayName}: ${status.available ? 'available' : 'not available'}`, status.available ? 'success' : 'error');
+            } catch (e) {
+                showToast(`Test failed: ${e.message}`, 'error');
+            }
         }
 
         /**

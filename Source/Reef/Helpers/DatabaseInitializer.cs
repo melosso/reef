@@ -1509,6 +1509,14 @@ public class DatabaseInitializer
         // Add OutputTargetsJson column to ImportProfileExecutions for fan-out results
         await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "OutputTargetsJson", "TEXT NULL");
 
+        // Add Script pre/post-process observability columns to ImportProfileExecutions
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessExitCode", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessExitCode", "INTEGER NULL");
+
         Log.Debug("Database schema migrations completed");
     }
 

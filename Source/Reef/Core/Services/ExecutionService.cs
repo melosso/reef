@@ -30,6 +30,7 @@ public class ExecutionService
     private readonly EmailExportService _emailExportService;
     private readonly EmailApprovalService _emailApprovalService;
     private readonly NotificationService _notificationService;
+    private readonly Reef.Core.Scripting.IScriptRunner _scriptRunner;
 
     private readonly Microsoft.Extensions.Configuration.IConfiguration _configuration;
 
@@ -46,6 +47,7 @@ public class ExecutionService
         EmailExportService emailExportService,
         EmailApprovalService emailApprovalService,
         NotificationService notificationService,
+        Reef.Core.Scripting.IScriptRunner scriptRunner,
         Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
         _connectionString = config.ConnectionString;
@@ -62,6 +64,7 @@ public class ExecutionService
         _emailExportService = emailExportService;
         _emailApprovalService = emailApprovalService;
         _notificationService = notificationService;
+        _scriptRunner = scriptRunner;
     }
 
     /// <summary>
@@ -162,7 +165,8 @@ public class ExecutionService
                 Status = "Running",
                 ErrorMessage = null,
                 DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn,
-                SplitKeyColumn = profile.SplitKeyColumn
+                SplitKeyColumn = profile.SplitKeyColumn,
+                WebhookParameters = parameters
             };
 
             var (preProcessSuccess, preProcessError) = await ExecutePreProcessingAsync(
@@ -299,7 +303,8 @@ public class ExecutionService
                         Status = "Success",
                         ErrorMessage = null,
                         DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn,
-                        SplitKeyColumn = profile.SplitKeyColumn
+                        SplitKeyColumn = profile.SplitKeyColumn,
+                        WebhookParameters = parameters
                     };
 
                     var zeroRowConnection = await _connectionService.GetByIdAsync(profile.ConnectionId);
@@ -703,7 +708,8 @@ public class ExecutionService
                         Status = splitSuccess ? "Success" : "Failed",
                         ErrorMessage = splitError,
                         DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn,
-                        SplitKeyColumn = profile.SplitKeyColumn
+                        SplitKeyColumn = profile.SplitKeyColumn,
+                        WebhookParameters = parameters
                     };
                     var splitConnection = await _connectionService.GetByIdAsync(profile.ConnectionId);
                     if (splitConnection != null)
@@ -1266,7 +1272,8 @@ public class ExecutionService
                     Status = "Success",
                     ErrorMessage = null,
                     DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn,
-                    SplitKeyColumn = profile.SplitKeyColumn
+                    SplitKeyColumn = profile.SplitKeyColumn,
+                    WebhookParameters = parameters
                 };
 
                 // Execute new post-processing logic (supports both Query and StoredProcedure)
@@ -1830,6 +1837,30 @@ public class ExecutionService
                 return (false, errorMsg);
             }
 
+            if (config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                var (scriptSuccess, scriptError, stdout, stderr, exitCode) = await RunProcessingScriptAsync(config, context);
+                stopwatch.Stop();
+
+                if (scriptSuccess)
+                {
+                    Log.Debug("Pre-processing script completed successfully in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                    await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Success", null, stopwatch.ElapsedMilliseconds, stdout, stderr, exitCode);
+                    return (true, null);
+                }
+
+                Log.Warning("Pre-processing script failed: {Error}", scriptError);
+                await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", scriptError, stopwatch.ElapsedMilliseconds, stdout, stderr, exitCode);
+
+                if (!config.ContinueOnError)
+                {
+                    return (false, scriptError);
+                }
+
+                Log.Information("Continuing execution despite pre-processing script error (ContinueOnError=true)");
+                return (true, null);
+            }
+
             // Build and execute command
             var command = BuildDatabaseCommand(connection.Type, config, context);
             Log.Debug("Executing pre-processing command: {Command}", command);
@@ -1841,7 +1872,7 @@ public class ExecutionService
 
             if (success)
             {
-                Log.Debug("Pre-processing completed successfully in {ElapsedMs}ms. Rows affected: {RowsAffected}", 
+                Log.Debug("Pre-processing completed successfully in {ElapsedMs}ms. Rows affected: {RowsAffected}",
                     stopwatch.ElapsedMilliseconds, rowsAffected);
                 await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Success", null, stopwatch.ElapsedMilliseconds);
                 return (true, null);
@@ -1850,12 +1881,12 @@ public class ExecutionService
             {
                 Log.Warning("Pre-processing failed: {Error}", error);
                 await UpdatePreProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
-                
+
                 if (!config.ContinueOnError)
                 {
                     return (false, error);
                 }
-                
+
                 Log.Information("Continuing execution despite pre-processing error (ContinueOnError=true)");
                 return (true, null); // Continue execution
             }
@@ -1928,6 +1959,30 @@ public class ExecutionService
                 return (false, errorMsg);
             }
 
+            if (config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                var (scriptSuccess, scriptError, stdout, stderr, exitCode) = await RunProcessingScriptAsync(config, context);
+                stopwatch.Stop();
+
+                if (scriptSuccess)
+                {
+                    Log.Debug("Post-processing script completed successfully in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+                    await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Success", null, stopwatch.ElapsedMilliseconds, stdout, stderr, exitCode);
+                    return (true, null);
+                }
+
+                Log.Warning("Post-processing script failed: {Error}", scriptError);
+                await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", scriptError, stopwatch.ElapsedMilliseconds, stdout, stderr, exitCode);
+
+                if (!config.ContinueOnError)
+                {
+                    return (false, scriptError);
+                }
+
+                Log.Information("Ignoring post-processing script error (ContinueOnError=true)");
+                return (true, null);
+            }
+
             // Build and execute command
             var command = BuildDatabaseCommand(connection.Type, config, context);
             Log.Debug("Executing post-processing command: {Command}", command);
@@ -1939,7 +1994,7 @@ public class ExecutionService
 
             if (success)
             {
-                Log.Debug("Post-processing completed successfully in {ElapsedMs}ms. Rows affected: {RowsAffected}", 
+                Log.Debug("Post-processing completed successfully in {ElapsedMs}ms. Rows affected: {RowsAffected}",
                     stopwatch.ElapsedMilliseconds, rowsAffected);
                 await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Success", null, stopwatch.ElapsedMilliseconds);
                 return (true, null);
@@ -1948,12 +2003,12 @@ public class ExecutionService
             {
                 Log.Warning("Post-processing failed: {Error}", error);
                 await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
-                
+
                 if (!config.ContinueOnError)
                 {
                     return (false, error);
                 }
-                
+
                 Log.Information("Ignoring post-processing error (ContinueOnError=true)");
                 return (true, null); // Don't fail overall execution
             }
@@ -1978,6 +2033,9 @@ public class ExecutionService
     /// <returns>SQL command string</returns>
     private string BuildDatabaseCommand(string connectionType, ProcessingConfig config, ProcessingContext context)
     {
+        if (string.IsNullOrWhiteSpace(config.Command))
+            throw new ArgumentException($"ProcessingConfig.Command is required for Type={config.Type}");
+
         // Substitute context variables in the command
         var command = SubstituteContextVariables(config.Command, context);
 
@@ -2084,6 +2142,53 @@ public class ExecutionService
     }
 
     /// <summary>
+    /// Run a pre/post-processing step whose ProcessingConfig.Type is "Script".
+    /// Builds the stdin JSON context (execution context + webhook/job trigger
+    /// parameters) and executes it via IScriptRunner.
+    /// </summary>
+    private async Task<(bool Success, string? ErrorMessage, string Stdout, string Stderr, int ExitCode)> RunProcessingScriptAsync(
+        ProcessingConfig config,
+        ProcessingContext context)
+    {
+        if (string.IsNullOrWhiteSpace(config.Interpreter) || string.IsNullOrWhiteSpace(config.ScriptPathOrInline))
+        {
+            return (false, "Script processing requires Interpreter and ScriptPathOrInline to be set", "", "", -1);
+        }
+
+        var stdinPayload = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            context.ExecutionId,
+            context.ProfileId,
+            context.RowCount,
+            context.OutputPath,
+            context.FileSizeBytes,
+            context.ExecutionTimeMs,
+            context.OutputFormat,
+            context.TriggeredBy,
+            context.StartedAt,
+            context.CompletedAt,
+            context.Status,
+            context.ErrorMessage,
+            context.DeltaSyncReefIdColumn,
+            context.SplitKeyColumn,
+            context.SplitKey,
+            parameters = context.WebhookParameters ?? new Dictionary<string, string>()
+        });
+
+        var result = await _scriptRunner.RunAsync(new Reef.Core.Scripting.ScriptExecutionRequest
+        {
+            Interpreter = config.Interpreter,
+            ScriptPathOrInline = config.ScriptPathOrInline,
+            IsInline = config.ScriptIsInline,
+            StdinJson = stdinPayload,
+            TimeoutSeconds = config.Timeout,
+            EnvAllowlist = config.EnvAllowlist
+        });
+
+        return (result.Success, result.ErrorMessage, result.Stdout, result.Stderr, result.ExitCode);
+    }
+
+    /// <summary>
     /// Update pre-processing status in ProfileExecutions table
     /// </summary>
     private async Task UpdatePreProcessingStatusAsync(
@@ -2092,18 +2197,24 @@ public class ExecutionService
         DateTime? completedAt,
         string status,
         string? error,
-        long? timeMs)
+        long? timeMs,
+        string? stdout = null,
+        string? stderr = null,
+        int? exitCode = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
         const string sql = @"
-            UPDATE ProfileExecutions 
+            UPDATE ProfileExecutions
             SET PreProcessStartedAt = @StartedAt,
                 PreProcessCompletedAt = @CompletedAt,
                 PreProcessStatus = @Status,
                 PreProcessError = @Error,
-                PreProcessTimeMs = @TimeMs
+                PreProcessTimeMs = @TimeMs,
+                PreProcessStdout = @Stdout,
+                PreProcessStderr = @Stderr,
+                PreProcessExitCode = @ExitCode
             WHERE Id = @Id";
 
         await connection.ExecuteAsync(sql, new
@@ -2113,7 +2224,10 @@ public class ExecutionService
             CompletedAt = completedAt,
             Status = status,
             Error = error,
-            TimeMs = timeMs
+            TimeMs = timeMs,
+            Stdout = stdout,
+            Stderr = stderr,
+            ExitCode = exitCode
         });
     }
 
@@ -2126,18 +2240,24 @@ public class ExecutionService
         DateTime? completedAt,
         string status,
         string? error,
-        long? timeMs)
+        long? timeMs,
+        string? stdout = null,
+        string? stderr = null,
+        int? exitCode = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
 
         const string sql = @"
-            UPDATE ProfileExecutions 
+            UPDATE ProfileExecutions
             SET PostProcessStartedAt = @StartedAt,
                 PostProcessCompletedAt = @CompletedAt,
                 PostProcessStatus = @Status,
                 PostProcessError = @Error,
-                PostProcessTimeMs = @TimeMs
+                PostProcessTimeMs = @TimeMs,
+                PostProcessStdout = @Stdout,
+                PostProcessStderr = @Stderr,
+                PostProcessExitCode = @ExitCode
             WHERE Id = @Id";
 
         await connection.ExecuteAsync(sql, new
@@ -2147,7 +2267,10 @@ public class ExecutionService
             CompletedAt = completedAt,
             Status = status,
             Error = error,
-            TimeMs = timeMs
+            TimeMs = timeMs,
+            Stdout = stdout,
+            Stderr = stderr,
+            ExitCode = exitCode
         });
     }
 

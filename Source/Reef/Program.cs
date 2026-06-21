@@ -219,6 +219,14 @@ public class Program
             var mfaMigration = new MfaMigration(connectionString);
             await mfaMigration.ApplyAsync();
 
+            // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
+            Log.Debug("Running Scripting database migration...");
+            var scriptingMigration = new ScriptingMigration(connectionString);
+            await scriptingMigration.ApplyAsync();
+
+            var scriptingStats = await scriptingMigration.GetStatsAsync();
+            Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
@@ -344,10 +352,12 @@ public class Program
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
         services.AddScoped<ProfileService>();
+        services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
         services.AddScoped<ExecutionService>();
         services.AddScoped<WebhookService>();
         services.AddScoped<AuditService>();
         services.AddScoped<AdminService>();
+        services.AddScoped<InterpreterService>();
         services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();

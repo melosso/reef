@@ -4,7 +4,7 @@
   </PropertyGroup>
   <!-- App Dependencies -->
   <ItemGroup Label="App Dependencies">
-    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.34" />
+l    <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.3.34" />
     <PackageVersion Include="AWSSDK.S3" Version="4.0.22" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.27.0" />
     <PackageVersion Include="BCrypt.Net-Next" Version="4.1.0" />
