@@ -2650,9 +2650,13 @@
                     document.getElementById('system-uptime').textContent = data.uptime.days + ' days';
                 }
 
-                // Start real-time clock
+                // Start real-time clock. Clear any previous interval first -
+                // loadSystemInfo() runs every time the System Info tab is
+                // reselected, and without this, switching tabs back and forth
+                // stacked one interval per visit.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
                 updateServerTime();
-                setInterval(updateServerTime, 1000);
+                window.systemTimeInterval = setInterval(updateServerTime, 1000);
 
             } catch (error) {
                 console.error('Error loading system info:', error);
@@ -2660,19 +2664,25 @@
         }
 
         function updateServerTime() {
+            const timeEl = document.getElementById('system-time');
+            const dateEl = document.getElementById('system-date');
+            if (!timeEl || !dateEl) {
+                // Tab content no longer in the DOM (navigated away) - stop polling.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
+                return;
+            }
+
             const now = new Date();
-            
+
             // Format time as HH:MM:SS
-            const timeStr = now.toUTCString().split(' ')[4];
-            document.getElementById('system-time').textContent = timeStr;
-            
+            timeEl.textContent = now.toUTCString().split(' ')[4];
+
             // Format date more compactly
-            const dateStr = now.toLocaleDateString('nl-NL', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            dateEl.textContent = now.toLocaleDateString('nl-NL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
-            document.getElementById('system-date').textContent = dateStr;
         }
         window.onload = async function() {
 
