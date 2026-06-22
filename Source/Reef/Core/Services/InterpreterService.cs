@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using Reef.Core.Scripting;
+using Serilog;
 
 namespace Reef.Core.Services;
 
@@ -12,6 +14,15 @@ namespace Reef.Core.Services;
 /// </summary>
 public class InterpreterService(IScriptRunner scriptRunner)
 {
+    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<InterpreterService>();
+
+    // CheckAllAsync runs on every Profile editor page load (it's how the UI
+    // greys out unavailable interpreters) - logging "pwsh unavailable" on
+    // every single load would spam the log for something that's static
+    // per-host. Logged once per interpreter per process lifetime instead;
+    // an explicit manual re-check (the Admin "Test" button) always logs.
+    private static readonly ConcurrentDictionary<string, bool> _loggedUnavailable = new();
+
     public static readonly IReadOnlyList<InterpreterDefinition> KnownInterpreters = new List<InterpreterDefinition>
     {
         new("pwsh", "PowerShell", "Write-Output 'ok'"),
@@ -27,12 +38,20 @@ public class InterpreterService(IScriptRunner scriptRunner)
         var results = new List<InterpreterStatus>();
         foreach (var def in KnownInterpreters)
         {
-            results.Add(await CheckOneAsync(def.Name, ct));
+            var status = await CheckAsync(def.Name, logIfUnavailable: false, ct);
+            if (!status.Available && _loggedUnavailable.TryAdd(def.Name, true))
+                Log.Warning("Interpreter '{Interpreter}' unavailable: {Error}", def.Name, status.Error);
+
+            results.Add(status);
         }
         return results;
     }
 
-    public async Task<InterpreterStatus> CheckOneAsync(string name, CancellationToken ct = default)
+    /// <summary>Explicit single re-check (Admin's "Test" button) - always logs.</summary>
+    public Task<InterpreterStatus> CheckOneAsync(string name, CancellationToken ct = default) =>
+        CheckAsync(name, logIfUnavailable: true, ct);
+
+    private async Task<InterpreterStatus> CheckAsync(string name, bool logIfUnavailable, CancellationToken ct)
     {
         var def = KnownInterpreters.FirstOrDefault(d =>
             d.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
@@ -48,10 +67,13 @@ public class InterpreterService(IScriptRunner scriptRunner)
             ScriptPathOrInline = def.ProbeScript,
             IsInline = true,
             StdinJson = "{}",
-            TimeoutSeconds = 10
+            TimeoutSeconds = 10,
+            LogIfUnavailable = logIfUnavailable
         }, ct);
 
         var available = result.Success && result.Stdout.Contains("ok", StringComparison.Ordinal);
+        if (available) _loggedUnavailable.TryRemove(def.Name, out _);
+
         return new InterpreterStatus(
             def.Name,
             def.DisplayName,

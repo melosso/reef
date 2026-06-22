@@ -68,6 +68,9 @@ public class DatabaseInitializer
         // Application Startup Tracking
         await CreateApplicationStartupTableAsync(connection);
 
+        // Store guided recipe wizard run state
+        await CreateRecipeRunsTableAsync(connection);
+
         // Apply schema migrations for existing databases
         await ApplyMigrationsAsync(connection);
 
@@ -1029,6 +1032,30 @@ public class DatabaseInitializer
                 await connection.ExecuteAsync("CREATE UNIQUE INDEX idx_startup_token ON ApplicationStartup(StartupToken)");
             }
         }
+    }
+
+    // Store guided recipe wizard run state - tracks progress through a recipe's steps
+    // so a user can close the wizard mid-setup and resume exactly where they left off.
+    private async Task CreateRecipeRunsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS RecipeRuns (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                RecipeKey TEXT NOT NULL,
+                Status TEXT NOT NULL DEFAULT 'InProgress',
+                CurrentStepKey TEXT NULL,
+                StepStateJson TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                CreatedBy INTEGER NULL,
+                CompletedAt TEXT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_recipekey ON RecipeRuns(RecipeKey);
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_status ON RecipeRuns(Status);
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_createdby ON RecipeRuns(CreatedBy);
+        ";
+        await connection.ExecuteAsync(sql);
     }
 
     private async Task CreateDefaultUser(SqliteConnection connection)
@@ -3257,6 +3284,14 @@ public class DatabaseInitializer
 
                 -- Fan-out output target results (JSON array)
                 OutputTargetsJson       TEXT    NULL,
+
+                -- Script pre/post-process observability
+                PreProcessStdout        TEXT    NULL,
+                PreProcessStderr        TEXT    NULL,
+                PreProcessExitCode      INTEGER NULL,
+                PostProcessStdout       TEXT    NULL,
+                PostProcessStderr       TEXT    NULL,
+                PostProcessExitCode     INTEGER NULL,
 
                 FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
             );
