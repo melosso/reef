@@ -12,6 +12,19 @@ let groups = [];
 let currentRun = null;
 let currentStepDirty = false;
 
+// Client-side only - the recipe list is small enough that filtering server-side would just
+// be a round-trip for no benefit. "All" is synthetic, never a real Category value.
+const ALL_CATEGORIES = 'All';
+let recipeSearchQuery = '';
+let activeCategory = ALL_CATEGORIES;
+
+// Pure client-side UI affordance, never persisted server-side. Simple mode (default) hides
+// CanAutoProvision steps (e.g. WooCommerce's "connection"/"group" steps) from the rail
+// entirely - they were already silently provisioned for real by RecipeService.StartRecipeAsync.
+// Flipping this on reveals them again so the user can override with their own entity, which
+// just flows through the normal save path (ExecuteStepAsync) like any manual step.
+let advancedMode = false;
+
 // Per-runId: has the resume summary already been shown this session?
 const resumeSummaryShownForRunId = new Set();
 
@@ -32,9 +45,13 @@ async function loadRecipes() {
 }
 
 function renderGallery() {
-    const gallery = document.getElementById('recipe-gallery');
+    const controls = document.getElementById('recipe-gallery-controls');
+    const grid = document.getElementById('recipe-gallery-grid');
+
     if (!recipes.length) {
-        gallery.innerHTML = `
+        controls.classList.add('hidden');
+        grid.className = 'grid grid-cols-1';
+        grid.innerHTML = `
             <div class="bg-white rounded-lg shadow p-8 text-center text-slate-500">
                 <i data-lucide="package" class="h-10 w-10 mx-auto mb-3 text-slate-300"></i>
                 <p>No recipes available yet.</p>
@@ -43,53 +60,117 @@ function renderGallery() {
         return;
     }
 
-    gallery.innerHTML = recipes.map(recipe => {
-        const isInProgress = !!recipe.existingRunId;
-        const hasCompletedRun = !!recipe.lastCompletedRunId;
-        const badge = isInProgress
-            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">In progress</span>'
-            : hasCompletedRun
-                ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Completed</span>'
-                : '';
+    controls.classList.remove('hidden');
+    grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+    renderCategoryChips();
+    renderRecipeGrid();
+}
 
-        const primaryLabel = isInProgress ? 'Resume Setup' : hasCompletedRun ? 'Run Again' : 'Start Setup';
-        const primaryAction = isInProgress
-            ? `resumeRecipe(${recipe.existingRunId})`
-            : `startRecipe('${escapeForJS(recipe.key)}')`;
+function recipeCategories() {
+    return [...new Set(recipes.map(r => r.category))];
+}
 
-        const reconfigureButton = hasCompletedRun
-            ? `<button onclick="startReconfigure('${escapeForJS(recipe.key)}', ${recipe.lastCompletedRunId})"
-                       class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">
-                   Reconfigure
-               </button>`
+function renderCategoryChips() {
+    const container = document.getElementById('recipe-category-chips');
+    const categories = [ALL_CATEGORIES, ...recipeCategories()];
+
+    container.innerHTML = categories.map(cat => {
+        const isActive = cat === activeCategory;
+        return `
+            <button type="button" onclick="setActiveCategory('${escapeForJS(cat)}')"
+                    class="h-8 px-3 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${isActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+                ${escapeHtml(cat)}
+            </button>`;
+    }).join('');
+}
+
+function setActiveCategory(category) {
+    activeCategory = category;
+    renderCategoryChips();
+    renderRecipeGrid();
+}
+
+function onRecipeFilterChanged() {
+    recipeSearchQuery = (document.getElementById('recipe-search-input').value || '').trim().toLowerCase();
+    renderRecipeGrid();
+}
+
+function filteredRecipes() {
+    return recipes.filter(recipe => {
+        if (activeCategory !== ALL_CATEGORIES && recipe.category !== activeCategory) return false;
+        if (!recipeSearchQuery) return true;
+        return recipe.name.toLowerCase().includes(recipeSearchQuery) ||
+            recipe.description.toLowerCase().includes(recipeSearchQuery);
+    });
+}
+
+function renderRecipeGrid() {
+    const grid = document.getElementById('recipe-gallery-grid');
+    const visible = filteredRecipes();
+
+    if (!visible.length) {
+        grid.innerHTML = `
+            <div class="bg-white rounded-lg shadow p-8 text-center text-slate-500 md:col-span-2 lg:col-span-3">
+                <i data-lucide="search-x" class="h-10 w-10 mx-auto mb-3 text-slate-300"></i>
+                <p>No recipes match your search or filter.</p>
+            </div>`;
+        queueLucideRender();
+        return;
+    }
+
+    grid.innerHTML = visible.map(recipe => recipeCardHtml(recipe)).join('');
+    queueLucideRender();
+}
+
+function recipeCardHtml(recipe) {
+    const isInProgress = !!recipe.existingRunId;
+    const hasCompletedRun = !!recipe.lastCompletedRunId;
+
+    // Installed takes precedence over "Completed" - both would describe a finished setup
+    // and showing both is redundant noise on one card. In-progress always wins over either
+    // since it reflects the most recent run state.
+    const badge = isInProgress
+        ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">In progress</span>'
+        : recipe.isInstalled
+            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i data-lucide="check" class="h-3 w-3"></i>Installed</span>'
             : '';
 
-        return `
-            <div class="bg-white rounded-lg shadow p-6 flex items-center justify-between gap-6">
-                <div class="flex items-start gap-4">
-                    <div class="h-10 w-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                        <i data-lucide="shopping-cart" class="h-5 w-5"></i>
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-base font-semibold text-slate-900">${escapeHtml(recipe.name)}</h3>
-                            ${badge}
-                        </div>
-                        <p class="text-sm text-slate-500 mt-1 max-w-xl">${escapeHtml(recipe.description)}</p>
-                        <p class="text-xs text-slate-400 mt-1">${recipe.stepCount} steps</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    ${reconfigureButton}
-                    <button onclick="${primaryAction}"
-                            class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">
-                        ${primaryLabel}
-                    </button>
-                </div>
-            </div>`;
-    }).join('');
+    const primaryLabel = isInProgress ? 'Resume Setup' : hasCompletedRun ? 'Run Again' : 'Start Setup';
+    const primaryAction = isInProgress
+        ? `resumeRecipe(${recipe.existingRunId})`
+        : `startRecipe('${escapeForJS(recipe.key)}')`;
 
-    queueLucideRender();
+    const reconfigureButton = hasCompletedRun
+        ? `<button onclick="startReconfigure('${escapeForJS(recipe.key)}', ${recipe.lastCompletedRunId})"
+                   class="h-9 px-3 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">
+               Reconfigure
+           </button>`
+        : '';
+
+    return `
+        <div class="bg-white rounded-lg shadow p-5 flex flex-col gap-3">
+            <div class="flex items-start gap-3">
+                <div class="h-10 w-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <i data-lucide="${escapeHtml(recipe.icon)}" class="h-5 w-5"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 class="text-base font-semibold text-slate-900">${escapeHtml(recipe.name)}</h3>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 mt-1">${escapeHtml(recipe.category)}</span>
+                </div>
+            </div>
+            <p class="text-sm text-slate-500 flex-1">${escapeHtml(recipe.description)}</p>
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-xs text-slate-400">${recipe.stepCount} steps</p>
+                ${badge}
+            </div>
+            <div class="flex items-center gap-2 pt-1">
+                ${reconfigureButton}
+                <button onclick="${primaryAction}"
+                        class="h-9 px-3 flex-1 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    ${primaryLabel}
+                </button>
+            </div>
+        </div>`;
 }
 
 async function startRecipe(key) {
@@ -103,6 +184,7 @@ async function startRecipe(key) {
             throw new Error(error.error || 'Failed to start recipe');
         }
         currentRun = await response.json();
+        advancedMode = false;
         await preloadReferenceData();
         showWizard();
     } catch (error) {
@@ -115,6 +197,7 @@ async function resumeRecipe(runId) {
         const response = await fetch(`${API_BASE}/api/recipes/runs/${runId}`, { headers: getAuthHeaders() });
         if (!response.ok) throw new Error('Failed to load recipe run');
         currentRun = await response.json();
+        advancedMode = false;
         await preloadReferenceData();
 
         const hasPriorProgress = currentRun.steps.some(s => s.entityId || s.verified || s.skipped);
@@ -152,6 +235,7 @@ async function startReconfigure(key, completedRunId) {
             throw new Error(error.error || 'Failed to start reconfiguration');
         }
         currentRun = await response.json();
+        advancedMode = false;
         await preloadReferenceData();
         showWizard();
     } catch (error) {
@@ -224,8 +308,12 @@ function showWizard() {
     document.getElementById('wizard-recipe-description').textContent =
         currentRun.status === 'Completed' ? 'This setup is complete.' : 'Follow each step below - save and verify before moving on.';
 
+    const toggleSlot = document.getElementById('wizard-advanced-toggle-slot');
+    if (toggleSlot) toggleSlot.innerHTML = renderAdvancedToggle();
+
     renderStepRail();
     renderActiveStep();
+    queueLucideRender();
 }
 
 function exitWizard() {
@@ -261,9 +349,40 @@ async function abandonWizard() {
     }
 }
 
+// Simple mode (default, advancedMode === false) skips CanAutoProvision steps entirely - not
+// even a "done automatically" placeholder row - since RecipeService already silently
+// provisioned a real Connection/Group for them. Advanced mode shows every step like normal.
+function visibleSteps() {
+    return currentRun.steps.filter(s => advancedMode || !s.canAutoProvision);
+}
+
+function toggleAdvancedMode() {
+    advancedMode = !advancedMode;
+    // If the user is currently sitting on a step that just became hidden, hop to the first
+    // visible step so the panel doesn't show an orphaned step.
+    if (!advancedMode && !visibleSteps().some(s => s.stepKey === currentRun.currentStepKey)) {
+        const firstVisible = visibleSteps()[0];
+        if (firstVisible) currentRun.currentStepKey = firstVisible.stepKey;
+    }
+    renderStepRail();
+    renderActiveStep();
+}
+
+function renderAdvancedToggle() {
+    const hasAutoProvisionedSteps = currentRun.steps.some(s => s.canAutoProvision);
+    if (!hasAutoProvisionedSteps) return '';
+    return `
+        <button type="button" onclick="toggleAdvancedMode()"
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${advancedMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+            <i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>
+            Advanced${advancedMode ? ': on' : ''}
+        </button>`;
+}
+
 function renderStepRail() {
     const rail = document.getElementById('step-rail');
-    const groupedShared = currentRun.steps.filter(s => s.isShared);
+    const steps = visibleSteps();
+    const groupedShared = steps.filter(s => s.isShared);
 
     const renderGroup = (steps, label) => `
         ${label ? `<h4 class="px-2 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">${label}</h4>` : ''}
@@ -272,7 +391,7 @@ function renderStepRail() {
 
     // Each flow (flowGroup) gets its own rail section rather than one flattened list.
     const flowGroups = [];
-    currentRun.steps.filter(s => !s.isShared).forEach(step => {
+    steps.filter(s => !s.isShared).forEach(step => {
         const label = step.flowGroup || 'Setup';
         let group = flowGroups.find(g => g.label === label);
         if (!group) {
@@ -385,6 +504,21 @@ function isShipmentsStep(stepKey) {
     return (stepKey || '').startsWith('shipments-');
 }
 
+// ExactGlobeRecipe's two flows use "debtors-*"/"items-*" prefixes instead of "shipments-*" -
+// a different two-flow shape (no shared import side), so it gets its own helpers rather than
+// overloading isShipmentsStep's semantics.
+function isDebtorsStep(stepKey) {
+    return (stepKey || '').startsWith('debtors-');
+}
+
+function isItemsStep(stepKey) {
+    return (stepKey || '').startsWith('items-');
+}
+
+function isExactGlobeRecipe() {
+    return currentRun && currentRun.recipeKey === 'exact-globe-data-export';
+}
+
 function renderStepForm(step) {
     const area = document.getElementById('step-form-area');
     const params = (step.params) || {};
@@ -430,9 +564,12 @@ function groupOptionsHtml(selectedId) {
 }
 
 function connectionForm(p) {
+    const exactGlobe = isExactGlobeRecipe();
     return `
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">This is the database where staging tables for synced WooCommerce data will live. Pick an existing connection or create a new one.</p>
+            <p class="text-sm text-blue-800">${exactGlobe
+                ? 'This is your real Exact Globe+ business database - Debtors and Items are queried directly from it, so pick the actual connection rather than a staging copy.'
+                : 'This is the database where staging tables for synced WooCommerce data will live. Pick an existing connection or create a new one.'}</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
@@ -445,7 +582,7 @@ function connectionForm(p) {
             </div>
             <div>
                 <label for="wf-connection-name" class="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                <input type="text" id="wf-connection-name" value="${escapeHtml(p.name || 'Store Database')}"
+                <input type="text" id="wf-connection-name" value="${escapeHtml(p.name || (exactGlobe ? 'Exact Globe+ Database' : 'Store Database'))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>
             <div>
@@ -503,7 +640,7 @@ function groupForm(p) {
         <div class="space-y-4 max-w-lg">
             <div>
                 <label for="wf-group-name" class="block text-sm font-medium text-slate-700 mb-1">Group Name</label>
-                <input type="text" id="wf-group-name" value="${escapeHtml(p.name || 'WooCommerce Recipe')}"
+                <input type="text" id="wf-group-name" value="${escapeHtml(p.name || (isExactGlobeRecipe() ? 'Exact Globe+ Data Export (Store)' : 'WooCommerce Recipe'))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>
             <div>
@@ -581,29 +718,28 @@ function stagingTableForm(p, stepKey) {
         </div>`;
 }
 
+// WooCommerce auths with a Consumer Key/Secret pair as Basic Auth; Magento's REST API uses
+// a single integration Bearer token instead - two genuinely different auth shapes, so the
+// form swaps its credential fields based on recipe rather than forcing one shape on both.
+function isMagentoRecipe() {
+    return currentRun && currentRun.recipeKey === 'magento-tracking-link';
+}
+
 function importProfileForm(p, stepKey) {
     const sharedConn = getStep('connection');
     const sharedGroup = getStep('group');
     const shipments = isShipmentsStep(stepKey);
-    const defaultTable = shipments ? 'StoreShipments' : 'StoreOrders';
-    const wooEndpoint = shipments ? '/wp-json/wc/v3/orders' : '/wp-json/wc/v3/orders';
-    return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">${shipments
-                ? `Pulls shipment tracking data for orders from your WooCommerce store's REST API (<code>${wooEndpoint}</code>) using your store's Consumer Key/Secret as Basic Auth.`
-                : `Pulls orders from your WooCommerce store's REST API (<code>${wooEndpoint}</code>) using your store's Consumer Key/Secret as Basic Auth.`}</p>
-        </div>
-        <div class="space-y-4 max-w-lg">
+    const magento = isMagentoRecipe();
+    const defaultTable = magento ? 'MagentoShipments' : (shipments ? 'StoreShipments' : 'StoreOrders');
+    const endpoint = magento ? '/rest/V1/shipments' : '/wp-json/wc/v3/orders';
+
+    const credentialFields = magento ? `
             <div>
-                <label for="wf-import-name" class="block text-sm font-medium text-slate-700 mb-1">Profile Name</label>
-                <input type="text" id="wf-import-name" value="${escapeHtml(p.name || (shipments ? 'WooCommerce Tracking Import' : 'WooCommerce Order Import'))}"
+                <label for="wf-import-integrationToken" class="block text-sm font-medium text-slate-700 mb-1">Integration Token</label>
+                <input type="password" id="wf-import-integrationToken" placeholder="Leave unchanged to keep existing value"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
-            </div>
-            <div>
-                <label for="wf-import-storeUrl" class="block text-sm font-medium text-slate-700 mb-1">Store URL</label>
-                <input type="url" id="wf-import-storeUrl" value="${escapeHtml(p.storeUrl || '')}" placeholder="https://yourstore.com"
-                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
-            </div>
+                <p class="text-xs text-gray-500 mt-1">Sent as <code>Authorization: Bearer {token}</code>. Generate one under Magento Admin &rarr; System &rarr; Integrations.</p>
+            </div>` : `
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label for="wf-import-consumerKey" class="block text-sm font-medium text-slate-700 mb-1">Consumer Key</label>
@@ -615,7 +751,28 @@ function importProfileForm(p, stepKey) {
                     <input type="password" id="wf-import-consumerSecret" placeholder="Leave unchanged to keep existing value"
                            class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
                 </div>
+            </div>`;
+
+    return `
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <p class="text-sm text-blue-800">${magento
+                ? `Pulls shipment tracking data from your Magento store's REST API (<code>${endpoint}</code>) using an integration token as a Bearer token.`
+                : shipments
+                    ? `Pulls shipment tracking data for orders from your WooCommerce store's REST API (<code>${endpoint}</code>) using your store's Consumer Key/Secret as Basic Auth.`
+                    : `Pulls orders from your WooCommerce store's REST API (<code>${endpoint}</code>) using your store's Consumer Key/Secret as Basic Auth.`}</p>
+        </div>
+        <div class="space-y-4 max-w-lg">
+            <div>
+                <label for="wf-import-name" class="block text-sm font-medium text-slate-700 mb-1">Profile Name</label>
+                <input type="text" id="wf-import-name" value="${escapeHtml(p.name || (magento ? 'Magento Tracking Import' : (shipments ? 'WooCommerce Tracking Import' : 'WooCommerce Order Import')))}"
+                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>
+            <div>
+                <label for="wf-import-storeUrl" class="block text-sm font-medium text-slate-700 mb-1">Store URL</label>
+                <input type="url" id="wf-import-storeUrl" value="${escapeHtml(p.storeUrl || '')}" placeholder="https://yourstore.com"
+                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+            </div>
+            ${credentialFields}
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label for="wf-import-connectionId" class="block text-sm font-medium text-slate-700 mb-1">Target Connection</label>
@@ -639,41 +796,70 @@ function importProfileForm(p, stepKey) {
 }
 
 function queryTemplateForm(p, stepKey) {
+    const exactGlobe = isExactGlobeRecipe();
+    if (exactGlobe) {
+        const items = isItemsStep(stepKey);
+        return `
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                <p class="text-sm text-blue-800">A ready-made eExact-compliant XML template for ${items ? 'Items' : 'Debtors'} is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${items ? 'item' : 'debtor'} row.</p>
+            </div>
+            <div class="space-y-4 max-w-2xl">
+                <div>
+                    <label for="wf-template-name" class="block text-sm font-medium text-slate-700 mb-1">Template Name</label>
+                    <input type="text" id="wf-template-name" value="${escapeHtml(p.name || (items ? 'eExact XML Template for Items' : 'eExact XML Template for Debtors'))}"
+                           class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+                </div>
+                <div>
+                    <label for="wf-template-content" class="block text-sm font-medium text-slate-700 mb-1">Scriban Template (XML body)</label>
+                    <textarea id="wf-template-content" rows="14"
+                              class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">Leave blank to use the built-in eExact XML template for ${items ? 'Items' : 'Debtors'}.</p>
+                </div>
+            </div>`;
+    }
+
     const shipments = isShipmentsStep(stepKey);
+    const magento = isMagentoRecipe();
+    const brand = magento ? 'Magento' : 'WooCommerce';
     return `
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">A ready-made ${shipments ? 'tracking link' : 'order confirmation'} email template is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${shipments ? 'shipment' : 'order'} row.</p>
+            <p class="text-sm text-blue-800">A ready-made ${shipments || magento ? 'tracking link' : 'order confirmation'} email template is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${shipments || magento ? 'shipment' : 'order'} row.</p>
         </div>
         <div class="space-y-4 max-w-2xl">
             <div>
                 <label for="wf-template-name" class="block text-sm font-medium text-slate-700 mb-1">Template Name</label>
-                <input type="text" id="wf-template-name" value="${escapeHtml(p.name || (shipments ? 'WooCommerce Tracking Update' : 'WooCommerce Order Confirmation'))}"
+                <input type="text" id="wf-template-name" value="${escapeHtml(p.name || (magento ? 'Magento Tracking Update' : (shipments ? 'WooCommerce Tracking Update' : 'WooCommerce Order Confirmation')))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>
             <div>
                 <label for="wf-template-content" class="block text-sm font-medium text-slate-700 mb-1">Scriban Template (HTML email body)</label>
                 <textarea id="wf-template-content" rows="10"
                           class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
-                <p class="text-xs text-gray-500 mt-1">Leave blank to use the built-in WooCommerce ${shipments ? 'Tracking Update' : 'Order Confirmation'} template.</p>
+                <p class="text-xs text-gray-500 mt-1">Leave blank to use the built-in ${brand} ${shipments || magento ? 'Tracking Update' : 'Order Confirmation'} template.</p>
             </div>
         </div>`;
 }
 
 function exportProfileForm(p, stepKey) {
+    if (isExactGlobeRecipe()) return exactGlobeExportProfileForm(p, stepKey);
+
     const sharedConn = getStep('connection');
     const sharedGroup = getStep('group');
     const sharedDest = getStep('destination');
     const shipments = isShipmentsStep(stepKey);
+    const magento = isMagentoRecipe();
     const templateStep = getStep(shipments ? 'shipments-query-template' : 'query-template');
-    const defaultQuery = shipments ? 'SELECT * FROM StoreShipments WHERE EmailSent = 0' : 'SELECT * FROM StoreOrders WHERE EmailSent = 0';
+    const defaultQuery = magento
+        ? 'SELECT * FROM MagentoShipments WHERE EmailSent = 0'
+        : (shipments ? 'SELECT * FROM StoreShipments WHERE EmailSent = 0' : 'SELECT * FROM StoreOrders WHERE EmailSent = 0');
     return `
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">This Export Profile selects unsent ${shipments ? 'shipments' : 'orders'} and emails each one using the template from the previous step.</p>
+            <p class="text-sm text-blue-800">This Export Profile selects unsent ${shipments || magento ? 'shipments' : 'orders'} and emails each one using the template from the previous step.</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
                 <label for="wf-export-name" class="block text-sm font-medium text-slate-700 mb-1">Profile Name</label>
-                <input type="text" id="wf-export-name" value="${escapeHtml(p.name || (shipments ? 'WooCommerce Tracking Email' : 'WooCommerce Order Confirmation Email'))}"
+                <input type="text" id="wf-export-name" value="${escapeHtml(p.name || (magento ? 'Magento Tracking Email' : (shipments ? 'WooCommerce Tracking Email' : 'WooCommerce Order Confirmation Email')))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>
             <div>
@@ -692,25 +878,78 @@ function exportProfileForm(p, stepKey) {
             <input type="hidden" id="wf-export-groupId" value="${sharedGroup?.entityId || ''}">
             <div>
                 <label for="wf-export-emailSubject" class="block text-sm font-medium text-slate-700 mb-1">Email Subject</label>
-                <input type="text" id="wf-export-emailSubject" value="${escapeHtml(p.emailSubject || (shipments ? 'Your order is on its way' : 'Your order is confirmed'))}"
+                <input type="text" id="wf-export-emailSubject" value="${escapeHtml(p.emailSubject || (shipments || magento ? 'Your order is on its way' : 'Your order is confirmed'))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+            </div>
+        </div>`;
+}
+
+// No email/Destination step for this recipe - file output path lives inline in the Profile
+// itself (OutputDestinationType="Local" + OutputDestinationConfig JSON), so this form has no
+// destination/template-id hidden fields beyond the QueryTemplate this flow's own previous step created.
+function exactGlobeExportProfileForm(p, stepKey) {
+    const sharedConn = getStep('connection');
+    const sharedGroup = getStep('group');
+    const items = isItemsStep(stepKey);
+    const templateStep = getStep(items ? 'items-query-template' : 'debtors-query-template');
+    const defaultQuery = items ? 'SELECT * FROM dbo.Items' : 'SELECT * FROM dbo.cicmpy';
+    const defaultPath = items ? 'exports/exact-globe/items' : 'exports/exact-globe/debtors';
+
+    return `
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+            <p class="text-sm text-blue-800">This Export Profile runs the query below against your Exact Globe+ database and writes the result as an XML file using the template from the previous step - no email, no separate Destination to configure.</p>
+        </div>
+        <div class="space-y-4 max-w-lg">
+            <div>
+                <label for="wf-export-name" class="block text-sm font-medium text-slate-700 mb-1">Profile Name</label>
+                <input type="text" id="wf-export-name" value="${escapeHtml(p.name || (items ? 'Exact Globe+ Items Export' : 'Exact Globe+ Debtors Export'))}"
+                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+            </div>
+            <div>
+                <label for="wf-export-connectionId" class="block text-sm font-medium text-slate-700 mb-1">Connection</label>
+                <select id="wf-export-connectionId" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+                    ${connectionOptionsHtml(p.connectionId || sharedConn?.entityId)}
+                </select>
+            </div>
+            <div>
+                <label for="wf-export-query" class="block text-sm font-medium text-slate-700 mb-1">Query</label>
+                <textarea id="wf-export-query" rows="3"
+                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.query || defaultQuery)}</textarea>
+            </div>
+            <input type="hidden" id="wf-export-templateId" value="${templateStep?.entityId || ''}">
+            <input type="hidden" id="wf-export-groupId" value="${sharedGroup?.entityId || ''}">
+            <div>
+                <label for="wf-export-outputPath" class="block text-sm font-medium text-slate-700 mb-1">Output Folder</label>
+                <input type="text" id="wf-export-outputPath" value="${escapeHtml(p.outputPath || defaultPath)}"
+                       class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
+                <p class="text-xs text-gray-500 mt-1">Folder (relative to Reef's exports directory) where the generated .xml file is written.</p>
             </div>
         </div>`;
 }
 
 function jobsForm(p, stepKey) {
     const shipments = isShipmentsStep(stepKey);
-    // ErrorDigestRecipe has no import side (queries the user's own existing tables), so
-    // hasImport is false and the export Profile schedules on its own interval instead of
-    // chaining OnDependency after an import job (see RecipeService.SaveJobAsync).
-    const importStep = getStep(shipments ? 'shipments-import-profile' : 'import-profile');
-    const exportStep = getStep(shipments ? 'shipments-export-profile' : 'export-profile');
+    const items = isItemsStep(stepKey);
+    const exactGlobe = isExactGlobeRecipe();
+    const magento = isMagentoRecipe();
+    // ErrorDigestRecipe and ExactGlobeRecipe both have no import side (they query the user's
+    // own existing tables directly), so hasImport is false and the export Profile schedules on
+    // its own interval instead of chaining OnDependency after an import job (see
+    // RecipeService.SaveJobAsync) - this generalizes across both no-import recipes unchanged.
+    const importStep = exactGlobe ? null : getStep(shipments ? 'shipments-import-profile' : 'import-profile');
+    const exportStep = exactGlobe
+        ? getStep(items ? 'items-export-profile' : 'debtors-export-profile')
+        : getStep(shipments ? 'shipments-export-profile' : 'export-profile');
     const hasImport = !!importStep;
+    // Magento has no equivalently easy native webhook mechanism wired up, unlike
+    // WooCommerce's Tracking Link flow - polling only.
     const webhookSection = shipments ? renderWebhookSection() : '';
 
     const intervalLabel = hasImport ? 'Poll Interval (minutes)' : 'Run Interval (minutes)';
     const defaultInterval = hasImport ? 15 : 1440;
-    const defaultExportJobName = p.exportJobName || (shipments ? 'Send Tracking Emails' : exportStep ? 'Send Order Confirmations' : 'Run Scheduled Export');
+    const defaultExportJobName = p.exportJobName || (exactGlobe
+        ? (items ? 'Export Items to XML' : 'Export Debtors to XML')
+        : (shipments || magento ? 'Send Tracking Emails' : exportStep ? 'Send Order Confirmations' : 'Run Scheduled Export'));
 
     return `
         <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
@@ -724,7 +963,7 @@ function jobsForm(p, stepKey) {
             ${hasImport ? `
             <div>
                 <label for="wf-jobs-importJobName" class="block text-sm font-medium text-slate-700 mb-1">Import Job Name</label>
-                <input type="text" id="wf-jobs-importJobName" value="${escapeHtml(p.importJobName || (shipments ? 'Sync Tracking Updates' : 'Sync Orders'))}"
+                <input type="text" id="wf-jobs-importJobName" value="${escapeHtml(p.importJobName || (shipments || magento ? 'Sync Tracking Updates' : 'Sync Orders'))}"
                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">
             </div>` : `<input type="hidden" id="wf-jobs-importJobName" value="">`}
             <div>
@@ -784,7 +1023,12 @@ function collectStepParams(step) {
             return { connectionId: parseInt(val('wf-staging-connectionId')), tableName: val('wf-staging-tableName') };
         case 'ImportProfile': {
             const storeUrl = (val('wf-import-storeUrl') || '').replace(/\/$/, '');
-            const sourceConfig = {
+            const magento = isMagentoRecipe();
+            const sourceConfig = magento ? {
+                Url: `${storeUrl}/rest/V1/shipments`,
+                AuthType: 'Bearer',
+                AuthToken: val('wf-import-integrationToken')
+            } : {
                 Url: `${storeUrl}/wp-json/wc/v3/orders`,
                 AuthType: 'Basic',
                 AuthToken: btoa(`${val('wf-import-consumerKey')}:${val('wf-import-consumerSecret')}`)
@@ -792,7 +1036,7 @@ function collectStepParams(step) {
             return {
                 name: val('wf-import-name'),
                 storeUrl,
-                consumerKey: val('wf-import-consumerKey'),
+                consumerKey: magento ? undefined : val('wf-import-consumerKey'),
                 sourceConfig: JSON.stringify(sourceConfig),
                 httpMethod: 'GET',
                 httpPaginationEnabled: true,
@@ -800,12 +1044,23 @@ function collectStepParams(step) {
                 httpDataRootPath: '$',
                 targetConnectionId: parseInt(val('wf-import-connectionId')),
                 targetTable: val('wf-import-targetTable'),
+                upsertKeyColumns: magento ? 'MagentoOrderId' : undefined,
                 groupId: val('wf-import-groupId') ? parseInt(val('wf-import-groupId')) : null
             };
         }
         case 'QueryTemplate':
             return { name: val('wf-template-name'), template: val('wf-template-content') || undefined };
         case 'Profile':
+            if (isExactGlobeRecipe()) {
+                return {
+                    name: val('wf-export-name'),
+                    connectionId: parseInt(val('wf-export-connectionId')),
+                    query: val('wf-export-query'),
+                    templateId: val('wf-export-templateId') ? parseInt(val('wf-export-templateId')) : null,
+                    groupId: val('wf-export-groupId') ? parseInt(val('wf-export-groupId')) : null,
+                    outputPath: val('wf-export-outputPath')
+                };
+            }
             return {
                 name: val('wf-export-name'),
                 connectionId: parseInt(val('wf-export-connectionId')),
@@ -973,8 +1228,9 @@ function setSpinner(btn, spinner, btnText, loading, loadingLabel) {
 
 async function advanceOrComplete() {
     const recipe = currentRun;
-    const idx = recipe.steps.findIndex(s => s.stepKey === recipe.currentStepKey);
-    const next = recipe.steps[idx + 1];
+    const steps = visibleSteps();
+    const idx = steps.findIndex(s => s.stepKey === recipe.currentStepKey);
+    const next = steps[idx + 1];
 
     if (next) {
         currentRun.currentStepKey = next.stepKey;
@@ -1021,7 +1277,8 @@ function showCompletion() {
         buttons.push(`<a href="/groups" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 inline-flex items-center">View Group</a>`);
     }
     if (importStep?.entityId) {
-        buttons.push(`<button onclick="runProfileNow(${importStep.entityId}, true)" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">Run Order Import Now</button>`);
+        const importLabel = isMagentoRecipe() ? 'Run Tracking Import Now' : 'Run Order Import Now';
+        buttons.push(`<button onclick="runProfileNow(${importStep.entityId}, true)" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">${importLabel}</button>`);
     }
     if (exportStep?.entityId) {
         const label = isWooCommerce ? 'Run Order Export Now' : 'Run Export Now';

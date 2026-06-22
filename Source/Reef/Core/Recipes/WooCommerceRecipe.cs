@@ -9,6 +9,7 @@ public static class WooCommerceRecipe
     public const string ShipmentsStagingTableName = "StoreShipments";
 
     // Per-database-type identity/text syntax for Reef's supported query sources.
+    // Sqlite here is the user's chosen staging file (never Reef's own app database).
     public static string GetStagingTableDdl(string connectionType) => connectionType switch
     {
         "SqlServer" => """
@@ -57,6 +58,30 @@ public static class WooCommerceRecipe
                 EmailSent TINYINT(1) NOT NULL DEFAULT 0,
                 CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE KEY UQ_StoreOrders_WooOrderId (WooOrderId)
+            )
+            """,
+        "Sqlite" => """
+            CREATE TABLE StoreOrders (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                WooOrderId INTEGER NOT NULL,
+                OrderNumber TEXT NULL,
+                OrderDate TEXT NULL,
+                OrderStatus TEXT NULL,
+                CustomerName TEXT NULL,
+                CustomerEmail TEXT NULL,
+                Company TEXT NULL,
+                CurrencySymbol TEXT NULL,
+                Total TEXT NULL,
+                Subtotal TEXT NULL,
+                Discount TEXT NULL,
+                Shipping TEXT NULL,
+                Tax TEXT NULL,
+                ShippingAddressJson TEXT NULL,
+                BillingAddressJson TEXT NULL,
+                ItemsJson TEXT NULL,
+                EmailSent INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (WooOrderId)
             )
             """,
         _ => """
@@ -126,6 +151,25 @@ public static class WooCommerceRecipe
                 UNIQUE KEY UQ_StoreShipments_WooOrderId (WooOrderId)
             )
             """,
+        "Sqlite" => """
+            CREATE TABLE StoreShipments (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                WooOrderId INTEGER NOT NULL,
+                OrderNumber TEXT NULL,
+                CustomerName TEXT NULL,
+                CustomerEmail TEXT NULL,
+                Company TEXT NULL,
+                TrackingNumber TEXT NULL,
+                Carrier TEXT NULL,
+                TrackingUrl TEXT NULL,
+                EstimatedDeliveryDate TEXT NULL,
+                ShippingAddressJson TEXT NULL,
+                ItemsJson TEXT NULL,
+                EmailSent INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (WooOrderId)
+            )
+            """,
         _ => """
             CREATE TABLE StoreShipments (
                 Id SERIAL PRIMARY KEY,
@@ -156,6 +200,8 @@ public static class WooCommerceRecipe
         Key = Key,
         Name = "WooCommerce Order Confirmation",
         Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation, plus shipment tracking links.",
+        Category = "E-commerce",
+        Icon = "shopping-cart",
         Steps = new List<RecipeStepDefinition>
         {
             new()
@@ -164,7 +210,8 @@ public static class WooCommerceRecipe
                 Title = "Database Connection",
                 EntityType = RecipeEntityType.Connection,
                 IsShared = true,
-                VerifierKind = RecipeVerifierKind.Connection
+                VerifierKind = RecipeVerifierKind.Connection,
+                CanAutoProvision = true
             },
             new()
             {
@@ -172,7 +219,8 @@ public static class WooCommerceRecipe
                 Title = "Organize",
                 EntityType = RecipeEntityType.Group,
                 IsShared = true,
-                VerifierKind = null
+                VerifierKind = null,
+                CanAutoProvision = true
             },
             new()
             {

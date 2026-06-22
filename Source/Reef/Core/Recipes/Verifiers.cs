@@ -189,6 +189,7 @@ public class ScribanTemplateVerifier : IRecipeVerifier
         var connection = await _connectionService.GetByIdAsync(connectionId, ct);
         if (connection is null) return null;
 
+        // SQL Server uses TOP; MySQL, PostgreSQL, and SQLite all support LIMIT.
         var sql = connection.Type == "SqlServer"
             ? $"SELECT TOP 1 * FROM {context.TableName}"
             : $"SELECT * FROM {context.TableName} LIMIT 1";
@@ -250,6 +251,7 @@ public class ExportQueryVerifier : IRecipeVerifier
             }
             else
             {
+                // MySQL, PostgreSQL, and SQLite all support LIMIT.
                 testQuery += " LIMIT 25";
             }
         }

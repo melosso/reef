@@ -46,6 +46,8 @@ public static class ErrorDigestRecipe
         Key = Key,
         Name = "System Error Daily Digest",
         Description = "Email your team a daily summary of system errors/warnings pulled from your own database - no import required.",
+        Category = "Database Sync",
+        Icon = "alert-triangle",
         Steps = new List<RecipeStepDefinition>
         {
             new()

@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 using MySqlConnector;
 using Npgsql;
@@ -11,7 +12,7 @@ namespace Reef.Core.Services;
 
 /// <summary>
 /// Service for executing SQL queries against different database types
-/// Supports SQL Server, MySQL, and PostgreSQL with native parameterization
+/// Supports SQL Server, MySQL, PostgreSQL, and SQLite with native parameterization
 /// </summary>
 public class QueryExecutor
 {
@@ -187,6 +188,10 @@ public class QueryExecutor
                     rows = await ExecutePostgreSqlQueryAsync(connectionString, query, parameters, commandTimeout);
                     break;
 
+                case "sqlite":
+                    rows = await ExecuteSqliteQueryAsync(connectionString, query, parameters, commandTimeout);
+                    break;
+
                 default:
                     return (false, new List<Dictionary<string, object>>(),
                         $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
@@ -309,7 +314,11 @@ public class QueryExecutor
                 case "postgres":
                     rowsAffected = await ExecutePostgreSqlCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
-                
+
+                case "sqlite":
+                    rowsAffected = await ExecuteSqliteCommandAsync(connectionString, command, parameters, commandTimeout);
+                    break;
+
                 default:
                     return (false, 0, $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
             }
@@ -380,6 +389,19 @@ public class QueryExecutor
     }
 
     /// <summary>
+    /// Execute command against SQLite using ExecuteAsync with native parameters
+    /// </summary>
+    private async Task<int> ExecuteSqliteCommandAsync(
+        string connectionString, string command, Dictionary<string, string>? parameters, int commandTimeout)
+    {
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
+        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
+    }
+
+    /// <summary>
     /// Execute query against SQL Server
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteSqlServerQueryAsync(
@@ -424,6 +446,18 @@ public class QueryExecutor
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
         
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+    }
+
+    /// <summary>
+    /// Execute query against SQLite
+    /// </summary>
+    private async Task<List<Dictionary<string, object>>> ExecuteSqliteQueryAsync(
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+    {
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
         return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
@@ -528,7 +562,17 @@ public class QueryExecutor
                         await conn.ExecuteAsync("SELECT 1");
                     }
                     break;
-                
+
+                case "sqlite":
+                    {
+                        // Opening a SqliteConnection creates the file automatically if it doesn't
+                        // exist yet - this is SQLite's normal behavior, not an error case.
+                        await using var conn = new SqliteConnection(connectionString);
+                        await conn.OpenAsync();
+                        await conn.ExecuteAsync("SELECT 1");
+                    }
+                    break;
+
                 default:
                     return (false, $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
             }

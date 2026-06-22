@@ -12,7 +12,9 @@ public static class RecipeRegistry
     public static IReadOnlyList<RecipeDefinition> All { get; } = new List<RecipeDefinition>
     {
         WooCommerceRecipe.Definition,
-        ErrorDigestRecipe.Definition
+        ErrorDigestRecipe.Definition,
+        MagentoRecipe.Definition,
+        ExactGlobeRecipe.Definition
     };
 
     public static RecipeDefinition? GetByKey(string key) =>

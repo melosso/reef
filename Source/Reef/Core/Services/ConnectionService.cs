@@ -252,7 +252,11 @@ public class ConnectionService
                 {
                     ApplicationName = "Reef"
                 }.ConnectionString),
-            
+
+            // Sqlite connections point at a dedicated staging file chosen by the caller
+            // (e.g. "Data Source=/path/to/file.db"). This is NEVER Reef's own app database.
+            "Sqlite" => new Microsoft.Data.Sqlite.SqliteConnection(connectionString),
+
             _ => throw new NotSupportedException($"Database type {type} is not supported")
         };
     }
