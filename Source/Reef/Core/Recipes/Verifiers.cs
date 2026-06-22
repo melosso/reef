@@ -6,11 +6,7 @@ using Reef.Core.TemplateEngines;
 
 namespace Reef.Core.Recipes;
 
-/// <summary>
-/// Confirms the staging Connection saved by the wizard's Connection step is actually
-/// reachable. Thin wrapper around the same mechanism Api/ConnectionsEndpoints.cs's
-/// /test handler already exposes - ConnectionService.TestConnectionAsync.
-/// </summary>
+// Wraps ConnectionService.TestConnectionAsync (same mechanism as ConnectionsEndpoints' /test).
 public class ConnectionVerifier : IRecipeVerifier
 {
     private readonly ConnectionService _connectionService;
@@ -31,9 +27,7 @@ public class ConnectionVerifier : IRecipeVerifier
         if (connection is null)
             return new RecipeVerifyResult { Success = false, Message = $"Connection {connectionId} not found." };
 
-        // Connection.ConnectionString is encrypted at rest; ConnectionService always returns it
-        // encrypted from GetByIdAsync, so it must be decrypted before testing, same as the
-        // existing /test endpoint does via the request's plaintext value.
+        // GetByIdAsync returns the connection string encrypted; decrypt before testing.
         var connectionString = _encryptionService.IsEncrypted(connection.ConnectionString)
             ? _encryptionService.Decrypt(connection.ConnectionString)
             : connection.ConnectionString;
@@ -49,11 +43,7 @@ public class ConnectionVerifier : IRecipeVerifier
     }
 }
 
-/// <summary>
-/// Verifies an HTTP API source (e.g. WooCommerce REST) is reachable and authenticates
-/// correctly. Thin wrapper around the same mechanism Api/ImportProfilesEndpoints.cs's
-/// TestSource handler already exposes - ImportSourceFactory + IImportSource.TestAsync.
-/// </summary>
+// Wraps ImportSourceFactory + IImportSource.TestAsync (same path as ImportProfilesEndpoints.TestSource).
 public class HttpSourceVerifier : IRecipeVerifier
 {
     private readonly ImportProfileService _importProfileService;
@@ -85,10 +75,7 @@ public class HttpSourceVerifier : IRecipeVerifier
     }
 }
 
-/// <summary>
-/// Confirms the staging table the wizard created via raw DDL actually exists on the
-/// target Connection. Thin wrapper around DatabaseImportTarget.TestAsync's table-exists check.
-/// </summary>
+// Wraps DatabaseImportTarget.TestAsync's table-exists check.
 public class StagingTableVerifier : IRecipeVerifier
 {
     private readonly ConnectionService _connectionService;
@@ -117,11 +104,7 @@ public class StagingTableVerifier : IRecipeVerifier
     }
 }
 
-/// <summary>
-/// Sends a real test email via the existing SMTP destination test path.
-/// Thin wrapper around DestinationService.TestDestinationConfigurationAsync, which is
-/// already a genuine live send (not just a connection probe).
-/// </summary>
+// Wraps DestinationService.TestDestinationConfigurationAsync - a real send, not just a probe.
 public class EmailDestinationVerifier : IRecipeVerifier
 {
     private readonly DestinationService _destinationService;
@@ -136,8 +119,7 @@ public class EmailDestinationVerifier : IRecipeVerifier
         if (context.EntityId is not { } destinationId)
             return new RecipeVerifyResult { Success = false, Message = "No Email destination has been saved for this step yet." };
 
-        // GetByIdForExecutionAsync returns the fully-decrypted configuration (never masked),
-        // which TestDestinationConfigurationAsync needs to actually send a real test email.
+        // Needs the fully-decrypted (never masked) config to actually send the test email.
         var destination = await _destinationService.GetByIdForExecutionAsync(destinationId, ct);
         if (destination is null)
             return new RecipeVerifyResult { Success = false, Message = $"Destination {destinationId} not found." };
@@ -155,11 +137,8 @@ public class EmailDestinationVerifier : IRecipeVerifier
     }
 }
 
-/// <summary>
-/// Renders the QueryTemplate against one real staging row (or mock data if the
-/// staging table is empty) using the same Scriban preview path the Templates page
-/// exposes (Api/QueryTemplateEndpoints.cs's /preview handler).
-/// </summary>
+// Renders against one real staging row, or mock data if the table is empty - same
+// Scriban preview path QueryTemplateEndpoints' /preview handler uses.
 public class ScribanTemplateVerifier : IRecipeVerifier
 {
     private readonly QueryTemplateService _queryTemplateService;
@@ -233,11 +212,7 @@ public class ScribanTemplateVerifier : IRecipeVerifier
     };
 }
 
-/// <summary>
-/// Runs the Export Profile's query against the live staging table, confirming it
-/// actually returns rows. Thin wrapper around the same QueryExecutor path
-/// Api/ProfilesEndpoints.cs's TestQuery/TestQueryPreview handlers already expose.
-/// </summary>
+// Wraps the same QueryExecutor path ProfilesEndpoints' TestQuery/TestQueryPreview use.
 public class ExportQueryVerifier : IRecipeVerifier
 {
     private readonly ConnectionService _connectionService;

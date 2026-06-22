@@ -1,25 +1,19 @@
 'use strict';
 
-// ── Store: guided recipe wizard ────────────────────────────────────────────
-// Page state. This page is a dedicated full view (not a modal), with its own
-// lightweight "unsaved step" guard instead of the modal dirty-watcher system -
-// the wizard's resumable server-side state already covers most of what a
-// dirty watcher protects against; this guard only covers in-flight form edits.
+// Dedicated full page, not a modal - uses its own lightweight dirty guard
+// instead of the shared modal dirty-watcher (resumable server state already
+// covers most of what that protects against).
 
 const API_BASE = window.location.origin;
 
 let recipes = [];
 let connections = [];
 let groups = [];
-let currentRun = null;       // RecipeRunStateDto from the server
+let currentRun = null;
 let currentStepDirty = false;
 
-// Tracks which run ids have already shown the resume summary this session, so navigating
-// away and back to the same in-progress run (e.g. via "Back to Store" then "Resume Setup"
-// again) doesn't nag the user with the summary every single time - only the first reopen.
+// Per-runId: has the resume summary already been shown this session?
 const resumeSummaryShownForRunId = new Set();
-
-// ── Init ────────────────────────────────────────────────────────────────────
 
 async function init() {
     queueLucideRender();
@@ -63,10 +57,6 @@ function renderGallery() {
             ? `resumeRecipe(${recipe.existingRunId})`
             : `startRecipe('${escapeForJS(recipe.key)}')`;
 
-        // "Reconfigure" - point this same recipe at a different store/source by starting a
-        // new run pre-seeded from the most recent Completed run's saved entities/params
-        // (RecipeService.StartRecipeAsync's cloneFromRunId). Shown alongside the primary
-        // action whenever a Completed run exists, even if a newer InProgress run also exists.
         const reconfigureButton = hasCompletedRun
             ? `<button onclick="startReconfigure('${escapeForJS(recipe.key)}', ${recipe.lastCompletedRunId})"
                        class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">
@@ -127,10 +117,6 @@ async function resumeRecipe(runId) {
         currentRun = await response.json();
         await preloadReferenceData();
 
-        // Show the one-time resume summary only if this run actually has prior progress
-        // (at least one step already saved/verified) and we haven't already shown it for
-        // this run id this session - otherwise just drop straight into the step rail like
-        // starting fresh (e.g. a brand new run with nothing saved yet has nothing to summarize).
         const hasPriorProgress = currentRun.steps.some(s => s.entityId || s.verified || s.skipped);
         if (hasPriorProgress && !resumeSummaryShownForRunId.has(runId)) {
             resumeSummaryShownForRunId.add(runId);
@@ -143,11 +129,9 @@ async function resumeRecipe(runId) {
     }
 }
 
-// "Reconfigure": starts a new run for the same recipe pre-seeded from a prior Completed
-// run's saved entities/params (RecipeService.StartRecipeAsync's cloneFromRunId), so
-// re-pointing at a different WooCommerce store reuses the same Connection/Group/Profile
-// records instead of creating duplicates - only the store-specific fields (consumer
-// key/secret/store URL, held in the ImportProfile steps' sourceConfig) need re-entering.
+// Pre-seeds a new run from a prior Completed run's entities/params (RecipeService
+// cloneFromRunId) so re-pointing at a different store reuses the same Connection/Group/
+// Profile records - only the WooCommerce-specific fields need re-entering.
 async function startReconfigure(key, completedRunId) {
     const confirmed = await showConfirmModal({
         title: 'Reconfigure this recipe?',
@@ -174,8 +158,6 @@ async function startReconfigure(key, completedRunId) {
         showMessage(error.message, 'error');
     }
 }
-
-// ── Resume summary ───────────────────────────────────────────────────────────
 
 function showResumeSummary() {
     document.getElementById('recipe-gallery').classList.add('hidden');
@@ -232,8 +214,6 @@ async function preloadReferenceData() {
     }
 }
 
-// ── View switching ──────────────────────────────────────────────────────────
-
 function showWizard() {
     document.getElementById('recipe-gallery').classList.add('hidden');
     document.getElementById('completion-view').classList.add('hidden');
@@ -281,8 +261,6 @@ async function abandonWizard() {
     }
 }
 
-// ── Step rail ───────────────────────────────────────────────────────────────
-
 function renderStepRail() {
     const rail = document.getElementById('step-rail');
     const groupedShared = currentRun.steps.filter(s => s.isShared);
@@ -292,9 +270,7 @@ function renderStepRail() {
         ${steps.map(step => renderRailItem(step)).join('')}
     `;
 
-    // Non-shared steps are grouped by flowGroup ("Order Confirmation", "Tracking Link", ...)
-    // rather than flattened into one list - each flow gets its own step-rail section,
-    // in the order its steps first appear.
+    // Each flow (flowGroup) gets its own rail section rather than one flattened list.
     const flowGroups = [];
     currentRun.steps.filter(s => !s.isShared).forEach(step => {
         const label = step.flowGroup || 'Setup';
@@ -348,8 +324,6 @@ async function goToStep(stepKey) {
     renderStepRail();
     renderActiveStep();
 }
-
-// ── Step panel ──────────────────────────────────────────────────────────────
 
 function getStep(stepKey) {
     return currentRun.steps.find(s => s.stepKey === stepKey);
@@ -405,11 +379,8 @@ function wireDirtyWatcher() {
     });
 }
 
-// ── Step form rendering, keyed by EntityType ─────────────────────────────────
-
 // "shipments-*" step keys are Flow B (Tracking Link) - same shape as Flow A's steps,
-// just a different staging table/template/query defaults. Centralized here so each
-// form function can pick the right copy/defaults without duplicating the switch.
+// just different staging table/template/query defaults.
 function isShipmentsStep(stepKey) {
     return (stepKey || '').startsWith('shipments-');
 }
@@ -494,10 +465,8 @@ function connectionForm(p) {
         </div>`;
 }
 
-// The "destination" step is shared (IsShared=true) - both Order Confirmation and Tracking
-// Link reference the same single step/entity, so there's never a second Destination to
-// create. When the user reaches this step having already verified it earlier in the run
-// (e.g. via Flow A before starting Flow B), surface that as a reuse confirmation instead of
+// The "destination" step is shared (IsShared=true) across flows - only one Destination
+// ever exists per run. If it's already verified, show reuse confirmation instead of
 // implying SMTP creds need re-entering.
 function renderDestinationReuseBanner(stepKey) {
     const banner = document.getElementById('destination-reuse-banner');
@@ -731,10 +700,9 @@ function exportProfileForm(p, stepKey) {
 
 function jobsForm(p, stepKey) {
     const shipments = isShipmentsStep(stepKey);
-    // Not every recipe has an import side - ErrorDigestRecipe queries the user's own existing
-    // tables, so there's no 'import-profile'/'shipments-import-profile' step to look up. When
-    // there's no import step, the export Profile gets scheduled directly on its own interval
-    // instead of chained OnDependency after an import job (see RecipeService.SaveJobAsync).
+    // ErrorDigestRecipe has no import side (queries the user's own existing tables), so
+    // hasImport is false and the export Profile schedules on its own interval instead of
+    // chaining OnDependency after an import job (see RecipeService.SaveJobAsync).
     const importStep = getStep(shipments ? 'shipments-import-profile' : 'import-profile');
     const exportStep = getStep(shipments ? 'shipments-export-profile' : 'export-profile');
     const hasImport = !!importStep;
@@ -774,9 +742,7 @@ function jobsForm(p, stepKey) {
         </div>`;
 }
 
-// Webhook fast-path UI (Tracking Link only) - belt-and-suspenders on top of the polling
-// Import Job above, not a replacement for it. Reuses the existing WebhookTriggers mechanism
-// via RecipeService.RegisterTrackingWebhookAsync -> WebhookService.CreateWebhookForImportProfileAsync.
+// Belt-and-suspenders fast path on top of the polling Import Job, not a replacement.
 function renderWebhookSection() {
     return `
         <div class="border-t border-slate-200 pt-4 mt-2">
@@ -790,8 +756,6 @@ function renderWebhookSection() {
             <div id="webhook-result-area" class="mt-3"></div>
         </div>`;
 }
-
-// ── Collecting params per step ───────────────────────────────────────────────
 
 function collectStepParams(step) {
     switch (step.entityType) {
@@ -864,9 +828,7 @@ function collectStepParams(step) {
     }
 }
 
-// Registers a WebhookTrigger for the Tracking Link ImportProfile (belt-and-suspenders fast
-// path on top of the polling Import Job) and shows the URL to paste into WooCommerce's
-// webhook settings. The Jobs step must be saved first so the ImportProfile id is known.
+// Jobs step must be saved first so the ImportProfile id is known.
 async function registerTrackingWebhook() {
     const resultArea = document.getElementById('webhook-result-area');
     const step = getStep(currentRun.currentStepKey);
@@ -913,8 +875,6 @@ function val(id) {
     const el = document.getElementById(id);
     return el ? el.value : '';
 }
-
-// ── Save / verify / skip / advance ───────────────────────────────────────────
 
 async function saveCurrentStep() {
     const step = getStep(currentRun.currentStepKey);
@@ -984,7 +944,7 @@ async function refreshRunState() {
     if (!response.ok) return;
     const previousStepKey = currentRun.currentStepKey;
     currentRun = await response.json();
-    currentRun.currentStepKey = previousStepKey; // stay on the step the user just acted on; "Next step" button advances explicitly
+    currentRun.currentStepKey = previousStepKey; // "Next step" button advances explicitly
     renderStepRail();
     renderActiveStep();
 }
@@ -1023,7 +983,6 @@ async function advanceOrComplete() {
         return;
     }
 
-    // Last step - try to complete the run
     try {
         const response = await fetch(`${API_BASE}/api/recipes/runs/${currentRun.runId}/complete`, {
             method: 'POST',
@@ -1091,8 +1050,6 @@ async function runProfileNow(id, isImport) {
     }
 }
 
-// ── Messages ──────────────────────────────────────────────────────────────
-
 function showMessage(message, type) {
     if (typeof window.showToast === 'function') {
         window.showToast(message, type === 'error' ? 'error' : type === 'success' ? 'success' : 'info');
@@ -1105,7 +1062,6 @@ function showMessage(message, type) {
     setTimeout(() => { container.innerHTML = ''; }, 5000);
 }
 
-// Warn on navigation away with unsaved step changes (lightweight guard, not the modal dirty-watcher system)
 window.addEventListener('beforeunload', (e) => {
     if (currentStepDirty) {
         e.preventDefault();

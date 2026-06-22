@@ -1,24 +1,14 @@
 namespace Reef.Core.Recipes;
 
-/// <summary>
-/// System Error Daily Digest: a second recipe proving the Store engine (RecipeService,
-/// RecipesEndpoints, IRecipeVerifier adapters, RecipeDefinition/RecipeStepDefinition shape)
-/// is genuinely generic, not built around WooCommerceRecipe's specific shape. Deliberately
-/// simpler than WooCommerceRecipe - it queries data the user's database already has (no
-/// staging table, no HTTP import, no webhook), so it only exercises Connection/Destination/
-/// QueryTemplate/Profile steps and the Connection/EmailDestination/ScribanTemplate/ExportQuery
-/// verifiers, all of which already exist. Zero engine changes were needed to add this recipe.
-/// </summary>
+// Second recipe proving the engine is generic: no staging table, no HTTP import, no
+// webhook - just Connection/Destination/QueryTemplate/Profile steps. Required zero
+// engine changes to add.
 public static class ErrorDigestRecipe
 {
     public const string Key = "system-error-daily-digest";
 
-    /// <summary>
-    /// Default export query. Unlike WooCommerceRecipe, there is no wizard-created staging
-    /// table here - this recipe assumes the user already has an error/log table in their
-    /// database and just needs to point the query at it, so the default is a starting
-    /// point to edit rather than a guaranteed-to-work query against a fixed schema.
-    /// </summary>
+    // No wizard-created staging table here - this assumes the user already has an
+    // error/log table, so the query is a starting point to edit, not a fixed schema.
     public const string DefaultExportQuery = """
         SELECT
             'ops-team@yourcompany.com' AS email,
@@ -35,12 +25,6 @@ public static class ErrorDigestRecipe
             '[]' AS error_list_json
         """;
 
-    /// <summary>
-    /// Mock row shaped for ErrorDigestEmailTemplate's column names, used by
-    /// ScribanTemplateVerifier when no real row is available - this recipe has no
-    /// staging table, so "no real row" is actually the common case (it queries the
-    /// user's own pre-existing tables, which may be empty of fresh errors).
-    /// </summary>
     public static Dictionary<string, object> MockDigestRow() => new(StringComparer.OrdinalIgnoreCase)
     {
         ["email"] = "ops-team@yourcompany.com",
@@ -78,7 +62,7 @@ public static class ErrorDigestRecipe
                 Title = "Organize",
                 EntityType = RecipeEntityType.Group,
                 IsShared = true,
-                VerifierKind = null // Groups are pure UI organization, no live check applies
+                VerifierKind = null
             },
             new()
             {
@@ -108,7 +92,7 @@ public static class ErrorDigestRecipe
                 Title = "Scheduling (optional)",
                 EntityType = RecipeEntityType.Job,
                 IsOptional = true,
-                VerifierKind = null // Optional automation on top of already-verified steps; no separate live check
+                VerifierKind = null
             }
         }
     };

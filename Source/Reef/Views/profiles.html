@@ -3309,12 +3309,20 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
         };
 
-        function applyScriptStarter(prefix, kind) {
+        async function applyScriptStarter(prefix, kind) {
             const starter = SCRIPT_STARTERS[kind];
             if (!starter) return;
 
             const bodyEl = document.getElementById(`${prefix}-script-body`);
-            if (bodyEl.value.trim() && !confirm('Replace the current script with this starting point?')) return;
+            if (bodyEl.value.trim()) {
+                const confirmed = await showConfirmModal({
+                    title: 'Replace current script?',
+                    message: 'Replace the current script with this starting point?',
+                    confirmText: 'Replace',
+                    cancelText: 'Cancel'
+                });
+                if (!confirmed) return;
+            }
 
             document.getElementById(`${prefix}-script-interpreter`).value = starter.interpreter;
             document.getElementById(`${prefix}-script-source`).value = 'inline';
@@ -6927,15 +6935,33 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         // enough to warrant the explicit button-level guard too; thin
         // wrappers over the shared window.reefIsModalDirty() in main.js -
         // no bespoke snapshot logic duplicated here.
-        function attemptCloseProfileModal() {
+        async function attemptCloseProfileModal() {
             const modal = document.getElementById('profile-modal');
-            if (window.reefIsModalDirty(modal) && !confirm('You have unsaved changes. Discard them and close?')) return;
+            if (window.reefIsModalDirty(modal)) {
+                const confirmed = await showConfirmModal({
+                    title: 'Discard unsaved changes?',
+                    message: 'You have unsaved changes. Discard them and close?',
+                    confirmText: 'Discard & close',
+                    cancelText: 'Stay here',
+                    danger: true
+                });
+                if (!confirmed) return;
+            }
             closeProfileModal();
         }
 
-        function attemptCloseImportProfileModal() {
+        async function attemptCloseImportProfileModal() {
             const modal = document.getElementById('import-profile-modal');
-            if (window.reefIsModalDirty(modal) && !confirm('You have unsaved changes. Discard them and close?')) return;
+            if (window.reefIsModalDirty(modal)) {
+                const confirmed = await showConfirmModal({
+                    title: 'Discard unsaved changes?',
+                    message: 'You have unsaved changes. Discard them and close?',
+                    confirmText: 'Discard & close',
+                    cancelText: 'Stay here',
+                    danger: true
+                });
+                if (!confirmed) return;
+            }
             closeImportProfileModal();
         }
 

@@ -4,10 +4,6 @@ using Serilog;
 
 namespace Reef.Api;
 
-/// <summary>
-/// REST API for the Store guided recipe wizard.
-/// Base path: /api/recipes
-/// </summary>
 public static class RecipesEndpoints
 {
     public static void Map(WebApplication app)
@@ -51,12 +47,6 @@ public static class RecipesEndpoints
         catch (Exception ex) { return ServerError($"starting recipe '{key}'", ex); }
     }
 
-    /// <summary>
-    /// POST /api/recipes/{key}/reconfigure - starts a new run pre-seeded from the given
-    /// Completed run's saved entity ids/params (the "point this recipe at a different
-    /// store" action shown next to "Resume Setup"/"Start Setup" once a Completed run exists).
-    /// The body's RunId must reference a Completed run for this same recipe.
-    /// </summary>
     private static async Task<IResult> Reconfigure(
         string key,
         [FromBody] ReconfigureRequest request,
@@ -158,11 +148,6 @@ public static class RecipesEndpoints
         catch (Exception ex) { return ServerError($"abandoning recipe run {runId}", ex); }
     }
 
-    /// <summary>
-    /// GET /api/recipes/runs/{runId}/reusable-destination - returns the Id of an Email
-    /// Destination already created earlier in THIS run (Flow A's shared "destination" step),
-    /// if any, so Flow B's wizard UI can offer "reuse it?" instead of re-collecting SMTP creds.
-    /// </summary>
     private static async Task<IResult> GetReusableDestination(
         int runId,
         [FromServices] RecipeService svc,
@@ -177,12 +162,6 @@ public static class RecipesEndpoints
         catch (Exception ex) { return ServerError($"retrieving reusable destination for run {runId}", ex); }
     }
 
-    /// <summary>
-    /// POST /api/recipes/runs/{runId}/steps/{stepKey}/webhook - creates a WebhookTrigger
-    /// pointed at this step's ImportProfile (Tracking Link's "shipments-jobs" step) and
-    /// returns the URL to paste into WooCommerce's webhook settings. Belt-and-suspenders
-    /// fast path on top of the polling Import Job - does not replace it.
-    /// </summary>
     private static async Task<IResult> RegisterWebhook(
         int runId,
         string stepKey,
@@ -198,8 +177,6 @@ public static class RecipesEndpoints
         catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
         catch (Exception ex) { return ServerError($"registering Tracking Link webhook for run {runId}", ex); }
     }
-
-    // Helpers
 
     private static int? GetUserId(HttpContext ctx)
     {

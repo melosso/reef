@@ -1135,12 +1135,22 @@ document.addEventListener('click', function (e) {
     if (!modal || modal.classList.contains('hidden')) return;
     if (e.target !== modal) return; // only the backdrop itself, not its content
     if (!window.reefIsModalDirty(modal)) return; // not dirty - let the inline onclick proceed normally
+    if (document.querySelector('[aria-labelledby="reef-confirm-title"]')) return; // already confirming
 
-    if (!confirm('You have unsaved changes. Discard them and close?')) {
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        e.preventDefault();
-    }
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    e.preventDefault();
+
+    const closeHandler = modal.onclick;
+    showConfirmModal({
+        title: 'Discard unsaved changes?',
+        message: 'You have unsaved changes. Discard them and close?',
+        confirmText: 'Discard & close',
+        cancelText: 'Stay here',
+        danger: true
+    }).then(confirmed => {
+        if (confirmed && typeof closeHandler === 'function') closeHandler.call(modal, { target: modal });
+    });
 }, true);
 
 // Escape mirrors click-outside-close exactly: same dirty check, then invokes
@@ -1158,6 +1168,18 @@ document.addEventListener('keydown', function (e) {
     // as they're opened; nested/stacked modals aren't common here, but this
     // keeps behavior sane if it ever happens).
     const topmost = openModals[openModals.length - 1];
-    if (window.reefIsModalDirty(topmost) && !confirm('You have unsaved changes. Discard them and close?')) return;
+    if (window.reefIsModalDirty(topmost)) {
+        if (document.querySelector('[aria-labelledby="reef-confirm-title"]')) return; // already confirming
+        showConfirmModal({
+            title: 'Discard unsaved changes?',
+            message: 'You have unsaved changes. Discard them and close?',
+            confirmText: 'Discard & close',
+            cancelText: 'Stay here',
+            danger: true
+        }).then(confirmed => {
+            if (confirmed) topmost.onclick.call(topmost, { target: topmost });
+        });
+        return;
+    }
     topmost.onclick.call(topmost, { target: topmost });
 });

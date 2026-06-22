@@ -1,30 +1,14 @@
 namespace Reef.Core.Recipes;
 
-/// <summary>
-/// WooCommerce recipe: Order Confirmation emails (Flow A) + Tracking Link emails (Flow B).
-/// Both flows share steps 1-3 (Connection/Group/Destination, IsShared=true) and are grouped
-/// in the UI via RecipeStepDefinition.FlowGroup ("Order Confirmation" / "Tracking Link") -
-/// one RecipeDefinition, two flows as sections in its Steps list, per the Phase 1 step shape
-/// that already anticipated this (IsShared flag) rather than splitting into two recipes or
-/// redesigning the engine for cross-recipe-run lookups.
-/// </summary>
+// Order Confirmation (Flow A) + Tracking Link (Flow B) as one RecipeDefinition, both flows
+// sharing steps 1-3 (IsShared=true) and grouped in the UI via FlowGroup.
 public static class WooCommerceRecipe
 {
     public const string Key = "woocommerce-order-confirmation";
-
-    /// <summary>Default staging table the wizard creates via raw DDL (Reef does not auto-create import target tables) - Flow A (Order Confirmation).</summary>
     public const string StagingTableName = "StoreOrders";
-
-    /// <summary>Default staging table for Flow B (Tracking Link).</summary>
     public const string ShipmentsStagingTableName = "StoreShipments";
 
-    /// <summary>
-    /// CREATE TABLE DDL for the StoreOrders staging table. Column set matches the fields
-    /// the Order Confirmation Scriban template (see WooCommerceEmailTemplates) and the
-    /// WooCommerce REST orders endpoint (/wp-json/wc/v3/orders) both expect.
-    /// Per-database-type because Reef's supported query sources are SqlServer/MySQL/PostgreSQL
-    /// and each has different identity/text-type syntax.
-    /// </summary>
+    // Per-database-type identity/text syntax for Reef's supported query sources.
     public static string GetStagingTableDdl(string connectionType) => connectionType switch
     {
         "SqlServer" => """
@@ -100,15 +84,8 @@ public static class WooCommerceRecipe
             """
     };
 
-    /// <summary>Default export query selecting unsent order confirmations from the staging table.</summary>
     public const string DefaultExportQuery = "SELECT * FROM StoreOrders WHERE EmailSent = 0";
 
-    /// <summary>
-    /// CREATE TABLE DDL for the StoreShipments staging table (Flow B - Tracking Link).
-    /// Column set matches the Tracking Update Scriban template (see WooCommerceEmailTemplates)
-    /// and WooCommerce's order/shipment tracking data. Same per-database-type shape as
-    /// GetStagingTableDdl, just a different target table and column set.
-    /// </summary>
     public static string GetShipmentsStagingTableDdl(string connectionType) => connectionType switch
     {
         "SqlServer" => """
@@ -169,7 +146,6 @@ public static class WooCommerceRecipe
             """
     };
 
-    /// <summary>Default export query selecting unsent tracking emails from the shipments staging table.</summary>
     public const string DefaultShipmentsExportQuery = "SELECT * FROM StoreShipments WHERE EmailSent = 0";
 
     public const string OrderConfirmationFlowGroup = "Order Confirmation";
@@ -182,7 +158,6 @@ public static class WooCommerceRecipe
         Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation, plus shipment tracking links.",
         Steps = new List<RecipeStepDefinition>
         {
-            // Shared
             new()
             {
                 StepKey = "connection",
@@ -197,7 +172,7 @@ public static class WooCommerceRecipe
                 Title = "Organize",
                 EntityType = RecipeEntityType.Group,
                 IsShared = true,
-                VerifierKind = null // Groups are pure UI organization, no live check applies
+                VerifierKind = null
             },
             new()
             {
@@ -208,7 +183,6 @@ public static class WooCommerceRecipe
                 VerifierKind = RecipeVerifierKind.EmailDestination
             },
 
-            // Order Confirmation flow (Flow A)
             new()
             {
                 StepKey = "staging-table",
@@ -248,11 +222,9 @@ public static class WooCommerceRecipe
                 EntityType = RecipeEntityType.Job,
                 IsOptional = true,
                 FlowGroup = OrderConfirmationFlowGroup,
-                VerifierKind = null // Jobs are optional automation on top of already-verified steps; no separate live check
+                VerifierKind = null
             },
 
-            // Tracking Link flow (Flow B) - same step shape as Flow A, reuses the shared
-            // Connection/Group/Destination above instead of re-collecting them.
             new()
             {
                 StepKey = "shipments-staging-table",
@@ -292,7 +264,7 @@ public static class WooCommerceRecipe
                 EntityType = RecipeEntityType.Job,
                 IsOptional = true,
                 FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = null // Jobs/webhook registration are optional automation on top of already-verified steps; no separate live check
+                VerifierKind = null
             }
         }
     };

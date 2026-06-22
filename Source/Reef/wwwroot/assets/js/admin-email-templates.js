@@ -168,9 +168,13 @@ async function resetTemplateToDefault() {
         return;
     }
 
-    if (!confirm(`Are you sure you want to reset "${currentTemplateType}" to its default template? This action cannot be undone.`)) {
-        return;
-    }
+    const confirmed = await showConfirmModal({
+        title: 'Reset this template?',
+        message: `Are you sure you want to reset "${currentTemplateType}" to its default template? This action cannot be undone.`,
+        confirmText: 'Reset',
+        danger: true
+    });
+    if (!confirmed) return;
 
     try {
         // Call reset endpoint
