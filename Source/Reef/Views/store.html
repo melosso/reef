@@ -1,0 +1,129 @@
+<!--REEF:TITLE-->Store · Reef<!--/REEF:TITLE-->
+<!--REEF:SCRIPTS--><script src="/assets/js/store.js"></script><!--/REEF:SCRIPTS-->
+<div class="flex-1 flex flex-col overflow-hidden">
+    <header class="bg-white border-b border-slate-200 shrink-0 z-10">
+        <div class="flex items-center justify-between px-6 h-16">
+            <h1 class="text-xl font-semibold text-slate-900 disable-select">Store</h1>
+            <div class="flex items-center gap-2">
+                <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1" aria-label="Help">
+                    <i data-lucide="help-circle" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 overflow-y-auto p-6">
+        <div id="message-container" aria-live="polite"></div>
+
+        <!-- Recipe gallery -->
+        <div id="recipe-gallery" class="space-y-4">
+            <div class="bg-white rounded-lg shadow p-6 text-center text-slate-500">
+                <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
+                Loading recipes...
+            </div>
+        </div>
+
+        <!-- Resume summary: shown once when reopening an in-progress run, before dropping
+             the user back into the step rail. Lists what's already done/verified vs pending. -->
+        <div id="resume-summary-view" class="hidden">
+            <button onclick="exitWizard()" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4">
+                <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+                Back to Store
+            </button>
+            <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+                <h2 id="resume-summary-recipe-name" class="text-lg font-semibold text-slate-900 mb-1">Resume setup</h2>
+                <p class="text-sm text-slate-500 mb-5">Here's what's already done. Pick up where you left off, or jump to any step.</p>
+                <div id="resume-summary-list" class="space-y-1.5 mb-6"></div>
+                <div class="flex items-center gap-3">
+                    <button onclick="confirmResumeFromSummary()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                        Resume where you left off
+                    </button>
+                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                        Not now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wizard -->
+        <div id="wizard-view" class="hidden">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <button onclick="exitWizard()" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-2">
+                        <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+                        Back to Store
+                    </button>
+                    <h2 id="wizard-recipe-name" class="text-lg font-semibold text-slate-900">Recipe</h2>
+                    <p id="wizard-recipe-description" class="text-sm text-slate-500"></p>
+                </div>
+                <button onclick="abandonWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    Abandon Setup
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
+                <!-- Step rail -->
+                <div class="bg-white rounded-lg shadow p-3">
+                    <div id="step-rail" class="space-y-1"></div>
+                </div>
+
+                <!-- Step panel -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div id="step-panel">
+                        <div class="text-center text-slate-500 py-8">
+                            <i data-lucide="loader" class="h-5 w-5 inline animate-spin"></i>
+                            Loading step...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completion screen -->
+        <div id="completion-view" class="hidden">
+            <div class="bg-white rounded-lg shadow p-8 text-center max-w-2xl mx-auto">
+                <div class="inline-flex items-center justify-center h-14 w-14 rounded-full bg-green-100 text-green-600 mb-4">
+                    <i data-lucide="check" class="h-7 w-7"></i>
+                </div>
+                <h2 class="text-lg font-semibold text-slate-900 mb-1">Setup complete</h2>
+                <p id="completion-description" class="text-sm text-slate-500 mb-6">Your setup is live and verified end to end.</p>
+                <div id="completion-links" class="flex flex-wrap items-center justify-center gap-2 mb-6"></div>
+                <button onclick="exitWizard()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    Done
+                </button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
+    <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="help-modal-title" class="text-xl font-bold text-gray-900 flex items-center">
+                <i data-lucide="lightbulb" class="h-6 w-6 mr-2 text-yellow-500"></i>
+                How to use the Store
+            </h3>
+            <button onclick="closeHelpModal()" class="text-gray-400 hover:text-gray-500 p-1" aria-label="Close help guide">
+                <i data-lucide="x" class="h-6 w-6"></i>
+            </button>
+        </div>
+        <div class="space-y-4 text-gray-700">
+            <p>The <b>Store</b> walks you through setting up a known-good integration end to end - it creates and live-verifies every piece (Connection, Import, Template, Export Profile, and more) instead of leaving you to wire up Reef's data model manually.</p>
+
+            <h4 class="text-l font-semibold text-gray-800"><b>Things to know:</b></h4>
+            <ul class="list-disc list-inside space-y-2 ml-4">
+                <li><b>Save &amp; Verify:</b> Each step saves your configuration, then runs a real live check (a real connection test, a real test email, a real template render) - not just a "saved to DB" checkmark.</li>
+                <li><b>Resume anytime:</b> Closing the wizard mid-setup never deletes what you've created. Come back later and pick up exactly where you left off.</li>
+                <li><b>Optional steps:</b> Some steps (like scheduling) can be skipped - you can always trigger things manually or come back later.</li>
+            </ul>
+
+            <blockquote class="border-l-4 border-blue-500 pl-4 py-2 italic text-gray-600 bg-blue-50 rounded-r-md pr-2">
+                <p><strong>Tip:</strong> Every entity the wizard creates (Connections, Profiles, Destinations, etc.) is a normal Reef record - you can keep editing it from the regular pages after setup.</p>
+            </blockquote>
+        </div>
+    </div>
+</div>
+
+<script>
+    queueLucideRender();
+    if (typeof init === 'function') init();
+</script>

@@ -22,8 +22,14 @@ namespace Reef;
 /// <summary>
 /// Main entry point
 /// </summary>
-public class Program
+public partial class Program
 {
+    [GeneratedRegex(@"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->")]
+    private static partial Regex TitleRegex();
+
+    [GeneratedRegex(@"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline)]
+    private static partial Regex ScriptsRegex();
+
     public static async Task Main(string[] args)
     {
         // Register Dapper type handlers for TimeSpan (must be done before any database operations)
@@ -363,6 +369,15 @@ public class Program
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
 
+        // Store guided recipe wizard
+        services.AddScoped<Reef.Core.Recipes.ConnectionVerifier>();
+        services.AddScoped<Reef.Core.Recipes.HttpSourceVerifier>();
+        services.AddScoped<Reef.Core.Recipes.StagingTableVerifier>();
+        services.AddScoped<Reef.Core.Recipes.EmailDestinationVerifier>();
+        services.AddScoped<Reef.Core.Recipes.ScribanTemplateVerifier>();
+        services.AddScoped<Reef.Core.Recipes.ExportQueryVerifier>();
+        services.AddScoped<RecipeService>();
+
         // Import Profile services
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
@@ -567,6 +582,7 @@ public class Program
                 "profiles.html",
                 "jobs.html",
                 "groups.html",
+                "store.html",
                 "executions.html",
                 "email-approvals.html",
                 "documentation.html",
@@ -575,7 +591,7 @@ public class Program
             };
 
             var navPages = new[] { "dashboard", "connections", "destinations", "templates",
-                                   "profiles", "jobs", "groups", "executions",
+                                   "profiles", "jobs", "groups", "store", "executions",
                                    "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
@@ -638,10 +654,10 @@ public class Program
                             ? char.ToUpper(username[0]) + username[1..]
                             : username.ToUpper();
 
-                        var titleMatch = Regex.Match(pageContent, @"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->");
+                        var titleMatch = TitleRegex().Match(pageContent);
                         var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
 
-                        var scriptsMatch = Regex.Match(pageContent, @"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline);
+                        var scriptsMatch = ScriptsRegex().Match(pageContent);
                         var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
 
                         var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
@@ -707,6 +723,7 @@ public class Program
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
+        RecipesEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
         app.MapFallback(async context =>
@@ -766,7 +783,7 @@ public class Program
             {
                 StartupToken = startupToken,
                 StartedAt = DateTime.UtcNow,
-                MachineName = Environment.MachineName,
+                Environment.MachineName,
                 Version = version
             });
 
