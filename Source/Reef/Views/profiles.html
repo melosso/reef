@@ -222,14 +222,14 @@
                     </div>
                     
                     <!-- Scheduling Notice -->
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4" id="scheduling-notice" style="display:none;">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4" id="scheduling-notice" style="display:none;">
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
                             </div>
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-blue-800">Need to schedule this profile?</h3>
-                                <p class="mt-1 text-sm text-blue-700">
+                                <p class="mt-1 text-xs text-blue-700">
 After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
                             </div>
                         </div>
@@ -350,9 +350,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="recipientsToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedRecipients">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedRecipients" class="sr-only peer" onchange="updateRecipientsModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="recipientsMode">Hardcoded</span>
                                 </div>
@@ -379,9 +379,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="ccToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedCc">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedCc" class="sr-only peer" onchange="updateCcModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="ccMode">Hardcoded</span>
                                 </div>
@@ -408,9 +408,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="subjectToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedSubject">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedSubject" class="sr-only peer" onchange="updateSubjectModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="subjectMode">Hardcoded</span>
                                 </div>
@@ -550,6 +550,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
 
                             <div id="preprocess-script-fields" class="hidden space-y-3">
+                                <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                    <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                    <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                    </div>
+                                </details>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="preprocess-script-interpreter" class="block text-sm font-medium text-slate-700">
@@ -678,6 +686,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
 
                             <div id="postprocess-script-fields" class="hidden space-y-3">
+                                <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                    <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                    <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                    </div>
+                                </details>
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="postprocess-script-interpreter" class="block text-sm font-medium text-slate-700">
@@ -1515,7 +1531,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                     <h2 id="email-preview-modal-title" class="text-lg font-semibold text-slate-900">Preview</h2>
-                    <button onclick="closeEmailPreviewModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeEmailPreviewModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
@@ -1564,7 +1580,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <span id="query-results-delta-summary" class="hidden ml-2 space-x-2"></span>
                         </p>
                     </div>
-                    <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
@@ -1616,21 +1632,21 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 disable-select">
                     <h2 id="email-execute-confirmation-modal-title" class="text-lg font-semibold text-slate-900">Are you sure?</h2>
-                    <button onclick="closeEmailExecutionConfirmationModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeEmailExecutionConfirmationModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
 
                 <!-- Content -->
                 <div class="px-6 py-4">
-                    <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
-                        <div class="flex items-start">
-                            <i data-lucide="alert-triangle" class="h-6 w-6 text-yellow-500 mr-3 mt-1"></i>
-                            <div>
-                                <p class="text-sm font-semibold text-yellow-900 mb-1">
-                                    Warning
-                                </p>
-                                <p class="text-sm text-yellow-800">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-900">Warning</h3>
+                                <p class="mt-1 text-sm text-yellow-800">
                                     This action will send emails to the recipients defined in your profile. Proceed with caution.
                                 </p>
                             </div>
@@ -2221,7 +2237,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <i data-lucide="file-symlink" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
                                 <div>
                                     <p class="text-sm font-medium text-blue-800">Binary / File Passthrough</p>
-                                    <p class="text-sm text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
+                                    <p class="text-xs text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
                                 </div>
                             </div>
                         </div>
@@ -2704,6 +2720,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
 
                                 <div id="imp-preprocess-script-fields" class="hidden space-y-3">
+                                    <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                        <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                        <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                        </div>
+                                    </details>
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label for="imp-preprocess-script-interpreter" class="block text-sm font-medium text-slate-700">Interpreter</label>
@@ -2797,6 +2821,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
 
                                 <div id="imp-postprocess-script-fields" class="hidden space-y-3">
+                                    <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                        <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                        <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                        </div>
+                                    </details>
                                     <div class="grid grid-cols-2 gap-4">
                                         <div>
                                             <label for="imp-postprocess-script-interpreter" class="block text-sm font-medium text-slate-700">Interpreter</label>
@@ -2981,7 +3013,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-5xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-preview-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-preview-modal-title" class="text-lg font-semibold text-slate-900">Data Preview</h3>
-                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="h-6 w-6"></i></button>
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close"><i data-lucide="x" class="h-6 w-6"></i></button>
             </div>
             <div id="import-preview-content" class="overflow-auto max-h-[60vh]">
                 <p class="text-gray-500 text-center py-8">Loading preview...</p>
@@ -3212,6 +3244,82 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const div = document.createElement('div');
             div.textContent = text ?? '';
             return div.innerHTML;
+        }
+
+        // Condensed versions of the shipped example Script Templates
+        // (Templates/Script_-_*.ScriptTemplate.*), embedded directly rather
+        // than fetched - Templates/ isn't served by the app (it's a
+        // reference folder for manual copy-paste), so this is the "show,
+        // don't tell" path: pick a pattern, get a working starting point
+        // already filled into the form, edit from there.
+        const SCRIPT_STARTERS = {
+            webhook: {
+                interpreter: 'sh',
+                body: [
+                    '#!/bin/sh',
+                    '# Forwards the execution context (this stdin payload) to a webhook/n8n URL.',
+                    '# Add the env var below to this step\'s Env Allowlist.',
+                    'set -eu',
+                    'CONTEXT=$(cat)',
+                    'URL="${N8N_WEBHOOK_URL:?N8N_WEBHOOK_URL is not set}"',
+                    'curl -sS -f -X POST "$URL" -H "Content-Type: application/json" -d "$CONTEXT"'
+                ].join('\n'),
+                envAllowlist: 'N8N_WEBHOOK_URL'
+            },
+            slack: {
+                interpreter: 'python',
+                body: [
+                    '#!/usr/bin/env python3',
+                    '# Posts a one-line status summary to a Slack/Teams incoming webhook.',
+                    '# Add the env var below to this step\'s Env Allowlist.',
+                    'import json, os, sys, urllib.request',
+                    'context = json.load(sys.stdin)',
+                    'url = os.environ.get("SLACK_WEBHOOK_URL")',
+                    'if not url:',
+                    '    print("SLACK_WEBHOOK_URL is not set", file=sys.stderr); sys.exit(1)',
+                    'text = f\'Reef {context.get("Status")}: {context.get("RowCount")} rows -> {context.get("OutputPath")}\'',
+                    'req = urllib.request.Request(url, data=json.dumps({"text": text}).encode(), headers={"Content-Type": "application/json"})',
+                    'urllib.request.urlopen(req, timeout=10)'
+                ].join('\n'),
+                envAllowlist: 'SLACK_WEBHOOK_URL'
+            },
+            erp: {
+                interpreter: 'node',
+                body: [
+                    '// Posts an execution summary to a REST API. Add the env vars below to',
+                    '// this step\'s Env Allowlist.',
+                    'const url = process.env.API_URL;',
+                    'const key = process.env.API_KEY;',
+                    'if (!url || !key) { console.error("API_URL and API_KEY must be set"); process.exit(1); }',
+                    '',
+                    'let raw = "";',
+                    'process.stdin.on("data", c => raw += c);',
+                    'process.stdin.on("end", async () => {',
+                    '    const context = JSON.parse(raw);',
+                    '    const res = await fetch(url, {',
+                    '        method: "POST",',
+                    '        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },',
+                    '        body: JSON.stringify({ status: context.Status, rowCount: context.RowCount })',
+                    '    });',
+                    '    if (!res.ok) { console.error(`API call failed: ${res.status}`); process.exit(1); }',
+                    '    console.log(`API call succeeded: ${res.status}`);',
+                    '});'
+                ].join('\n'),
+                envAllowlist: 'API_URL, API_KEY'
+            }
+        };
+
+        function applyScriptStarter(prefix, kind) {
+            const starter = SCRIPT_STARTERS[kind];
+            if (!starter) return;
+
+            const bodyEl = document.getElementById(`${prefix}-script-body`);
+            if (bodyEl.value.trim() && !confirm('Replace the current script with this starting point?')) return;
+
+            document.getElementById(`${prefix}-script-interpreter`).value = starter.interpreter;
+            document.getElementById(`${prefix}-script-source`).value = 'inline';
+            bodyEl.value = starter.body;
+            document.getElementById(`${prefix}-script-env-allowlist`).value = starter.envAllowlist;
         }
 
         // Runs the current Script step in isolation (sample context, not a real
@@ -5066,7 +5174,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 id="testWebhookModal-title" class="text-lg font-medium text-gray-900">Test Webhook</h3>
-                                <button onclick="closeTestWebhookModal()" class="text-gray-400 hover:text-gray-500">
+                                <button onclick="closeTestWebhookModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                     <i data-lucide="x" class="w-6 h-6"></i>
                                 </button>
                             </div>
@@ -6155,7 +6263,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 id="testImportWebhookModal-title" class="text-lg font-medium text-gray-900">Test Import Webhook</h3>
-                                <button onclick="closeTestImportWebhookModal()" class="text-gray-400 hover:text-gray-500">
+                                <button onclick="closeTestImportWebhookModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                     <i data-lucide="x" class="w-6 h-6"></i>
                                 </button>
                             </div>
@@ -6813,70 +6921,23 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             queueLucideRender();
         }
 
-        // Dirty-state tracking for the Profile and Import Profile editor
-        // modals. A snapshot of every input/select/textarea value inside the
-        // form is taken shortly after the modal becomes visible (covering
-        // both "new" and "edit" - population finishes via different code
-        // paths for each, so a MutationObserver on the modal's own class
-        // list is more robust than hooking every population function).
-        // Closing (backdrop click, Escape, X, or Cancel) compares the
-        // current snapshot against it and confirms before discarding.
-        let profileModalSnapshot = '';
-        let importProfileModalSnapshot = '';
-
-        // Scoped to the whole modal, not the <form> tag: profile-form closes
-        // at line ~853, but the Webhooks/Delta Sync/Split Output/Email
-        // Options tabs (lines 855+) are siblings of the form INSIDE
-        // profile-modal, not nested inside it. Scoping to the <form> meant
-        // edits in any of those tabs were invisible to dirty tracking -
-        // closing via backdrop/Escape silently discarded them, no warning.
-        function snapshotFormState(containerId) {
-            const container = document.getElementById(containerId);
-            if (!container) return '';
-            return Array.from(container.querySelectorAll('input, select, textarea'))
-                .map(el => {
-                    const key = el.id || el.name;
-                    const value = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
-                    return `${key}=${value}`;
-                })
-                .join('|');
-        }
-
-        function isProfileModalDirty() {
-            return snapshotFormState('profile-modal') !== profileModalSnapshot;
-        }
-
-        function isImportProfileModalDirty() {
-            return snapshotFormState('import-profile-modal') !== importProfileModalSnapshot;
-        }
-
+        // Dirty-state confirm for the X/Cancel buttons (not just backdrop
+        // click/Escape, which main.js's generic watcher already covers for
+        // every modal on every page). These two forms are big and complex
+        // enough to warrant the explicit button-level guard too; thin
+        // wrappers over the shared window.reefIsModalDirty() in main.js -
+        // no bespoke snapshot logic duplicated here.
         function attemptCloseProfileModal() {
-            if (isProfileModalDirty() && !confirm('You have unsaved changes. Discard them and close?')) return;
+            const modal = document.getElementById('profile-modal');
+            if (window.reefIsModalDirty(modal) && !confirm('You have unsaved changes. Discard them and close?')) return;
             closeProfileModal();
         }
 
         function attemptCloseImportProfileModal() {
-            if (isImportProfileModalDirty() && !confirm('You have unsaved changes. Discard them and close?')) return;
+            const modal = document.getElementById('import-profile-modal');
+            if (window.reefIsModalDirty(modal) && !confirm('You have unsaved changes. Discard them and close?')) return;
             closeImportProfileModal();
         }
-
-        (function setupModalDirtyTracking() {
-            const profileModalEl = document.getElementById('profile-modal');
-            const importProfileModalEl = document.getElementById('import-profile-modal');
-
-            const snapshotWhenShown = (modalEl, takeSnapshot) => {
-                if (!modalEl) return;
-                new MutationObserver(() => {
-                    if (!modalEl.classList.contains('hidden')) {
-                        // Let synchronous population finish before snapshotting.
-                        setTimeout(takeSnapshot, 50);
-                    }
-                }).observe(modalEl, { attributes: true, attributeFilter: ['class'] });
-            };
-
-            snapshotWhenShown(profileModalEl, () => { profileModalSnapshot = snapshotFormState('profile-modal'); });
-            snapshotWhenShown(importProfileModalEl, () => { importProfileModalSnapshot = snapshotFormState('import-profile-modal'); });
-        })();
 
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.add('hidden');
@@ -7622,7 +7683,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white" role="dialog" aria-modal="true" aria-labelledby="resetRowsModal-title">
                         <div class="flex justify-between items-center mb-4">
                             <h3 id="resetRowsModal-title" class="text-lg font-semibold text-slate-900">Reset Specific Rows</h3>
-                            <button onclick="closeResetRowsModal()" class="text-gray-400 hover:text-gray-500">
+                            <button onclick="closeResetRowsModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                 <i data-lucide="x" class="h-6 w-6"></i>
                             </button>
                         </div>
@@ -8307,53 +8368,26 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         // Toggle handlers for hardcoded email addresses
         function setupEmailToggleHandlers() {
-            const recipientsToggle = document.getElementById('recipientsToggle');
             const recipientsCheckbox = document.getElementById('useHardcodedRecipients');
             const recipientsColumnInput = document.getElementById('emailRecipientsColumn');
             const recipientsHardcodedInput = document.getElementById('emailRecipientsHardcoded');
-            const recipientsMode = document.getElementById('recipientsMode');
             const recipientsHelp = document.getElementById('recipientsHelp');
 
-            const ccToggle = document.getElementById('ccToggle');
             const ccCheckbox = document.getElementById('useHardcodedCc');
             const ccColumnInput = document.getElementById('emailCcColumn');
             const ccHardcodedInput = document.getElementById('emailCcHardcoded');
-            const ccMode = document.getElementById('ccMode');
             const ccHelp = document.getElementById('ccHelp');
 
-            const subjectToggle = document.getElementById('subjectToggle');
             const subjectCheckbox = document.getElementById('useHardcodedSubject');
             const subjectColumnInput = document.getElementById('emailSubjectColumn');
             const subjectHardcodedInput = document.getElementById('emailSubjectHardcoded');
-            const subjectMode = document.getElementById('subjectMode');
             const subjectHelp = document.getElementById('subjectHelp');
 
-            // Recipients toggle handler
-            if (recipientsToggle) {
-                recipientsToggle.addEventListener('click', function() {
-                    const isChecked = !recipientsCheckbox.checked;
-                    recipientsCheckbox.checked = isChecked;
-                    updateRecipientsModeDisplay();
-                });
-            }
-
-            // CC toggle handler
-            if (ccToggle) {
-                ccToggle.addEventListener('click', function() {
-                    const isChecked = !ccCheckbox.checked;
-                    ccCheckbox.checked = isChecked;
-                    updateCcModeDisplay();
-                });
-            }
-
-            // Subject toggle handler
-            if (subjectToggle) {
-                subjectToggle.addEventListener('click', function() {
-                    const isChecked = !subjectCheckbox.checked;
-                    subjectCheckbox.checked = isChecked;
-                    updateSubjectModeDisplay();
-                });
-            }
+            // The three toggles above call updateRecipientsModeDisplay() /
+            // updateCcModeDisplay() / updateSubjectModeDisplay() directly via
+            // their onchange attribute - they're standard peer-checked
+            // checkboxes now (matching every other toggle in this modal),
+            // not the hand-rolled click-to-flip-state pattern this used to be.
 
             // Subject variables toggle handler
             const subjectVariablesToggle = document.getElementById('subjectVariablesToggle');
@@ -8370,25 +8404,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 });
             }
 
-            // Returns the inactive toggle track colour for the current theme
-            function toggleOffColor() {
-                return document.documentElement.classList.contains('dark') ? '#475569' : '#d1d5db';
-            }
-
             function updateRecipientsModeDisplay() {
                 const isHardcoded = recipientsCheckbox.checked;
                 if (isHardcoded) {
                     recipientsColumnInput.style.display = 'none';
                     recipientsHardcodedInput.style.display = 'block';
                     recipientsHelp.textContent = 'Enter a hardcoded email address (e.g., recipient@example.com or Name;email@example.com)';
-                    recipientsToggle.style.backgroundColor = '#3b82f6';
-                    recipientsToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     recipientsColumnInput.style.display = 'block';
                     recipientsHardcodedInput.style.display = 'none';
                     recipientsHelp.textContent = 'Column name from query that contains recipient email address (supports "Name;email@address.com" format)';
-                    recipientsToggle.style.backgroundColor = toggleOffColor();
-                    recipientsToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 
@@ -8398,14 +8423,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     ccColumnInput.style.display = 'none';
                     ccHardcodedInput.style.display = 'block';
                     ccHelp.textContent = 'Enter a hardcoded email address (e.g., cc@example.com or Name;email@example.com)';
-                    ccToggle.style.backgroundColor = '#3b82f6';
-                    ccToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     ccColumnInput.style.display = 'block';
                     ccHardcodedInput.style.display = 'none';
                     ccHelp.textContent = 'Column name from query that contains CC email address (supports "Name;email@address.com" format, optional)';
-                    ccToggle.style.backgroundColor = toggleOffColor();
-                    ccToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 
@@ -8419,16 +8440,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     subjectHardcodedInput.style.display = 'block';
                     subjectHelp.textContent = 'Enter hardcoded text with variable support (click "Variables" to see options)';
                     variablesToggle.style.display = 'flex';
-                    subjectToggle.style.backgroundColor = '#3b82f6';
-                    subjectToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     subjectColumnInput.style.display = 'block';
                     subjectHardcodedInput.style.display = 'none';
                     subjectHelp.textContent = 'Column name from query that contains email subject. If not provided, will use profile name.';
                     variablesToggle.style.display = 'none';
                     variablesPanel.classList.add('hidden');
-                    subjectToggle.style.backgroundColor = toggleOffColor();
-                    subjectToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 

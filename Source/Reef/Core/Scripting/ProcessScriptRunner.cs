@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Serilog;
 
@@ -108,6 +109,22 @@ public class ProcessScriptRunner : IScriptRunner
                 Stdout = stdout,
                 Stderr = stderr,
                 ErrorMessage = process.ExitCode == 0 ? null : $"Script exited with code {process.ExitCode}",
+                ElapsedMs = stopwatch.ElapsedMilliseconds
+            };
+        }
+        catch (Win32Exception ex)
+        {
+            // Interpreter binary not found/not runnable (e.g. pwsh/cmd missing
+            // on this host). One line, no stack trace - and only logged when
+            // the caller wants it (see LogIfUnavailable doc comment).
+            stopwatch.Stop();
+            if (request.LogIfUnavailable)
+                Log.Warning("Interpreter '{Interpreter}' unavailable: {Message}", request.Interpreter, ex.Message);
+            return new ScriptExecutionResult
+            {
+                Success = false,
+                ExitCode = -1,
+                ErrorMessage = $"Interpreter '{request.Interpreter}' unavailable: {ex.Message}",
                 ElapsedMs = stopwatch.ElapsedMilliseconds
             };
         }

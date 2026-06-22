@@ -618,6 +618,8 @@ let currentTooltipTarget = null;
 let tooltipRAF = null;
 let tooltipHideTimeout = null;
 
+let tooltipIdCounter = 0;
+
 function showTooltip(el) {
     const text = el.getAttribute('data-tooltip');
     if (!text) return;
@@ -631,6 +633,8 @@ function showTooltip(el) {
 
     if (!tooltipEl) {
         tooltipEl = document.createElement('div');
+        tooltipEl.id = 'reef-tooltip';
+        tooltipEl.setAttribute('role', 'tooltip');
         tooltipEl.className = `
             fixed z-[9999] bg-gray-800 text-white text-sm px-2 py-1 rounded-lg shadow-lg
             whitespace-pre-line max-w-xs break-words pointer-events-none
@@ -645,12 +649,18 @@ function showTooltip(el) {
     currentTooltipTarget = el;
     positionTooltip(el);
 
+    // Link trigger -> tooltip for screen readers (WCAG 4.1.2 / 1.3.1).
+    // data-tooltip is decorative HTML content otherwise invisible to AT.
+    if (!el.id) el.id = `reef-tooltip-trigger-${++tooltipIdCounter}`;
+    el.setAttribute('aria-describedby', 'reef-tooltip');
+
     requestAnimationFrame(() => {
         tooltipEl.style.opacity = '1';
     });
 }
 
 function hideTooltip() {
+    if (currentTooltipTarget) currentTooltipTarget.removeAttribute('aria-describedby');
     if (tooltipEl && !tooltipHideTimeout) {
         tooltipEl.style.opacity = '0';
         tooltipHideTimeout = setTimeout(() => {
@@ -665,9 +675,32 @@ function positionTooltip(el) {
     if (!tooltipEl) return;
     const rect = el.getBoundingClientRect();
     const offset = 8;
-    let top = rect.top - tooltipEl.offsetHeight - offset;
-    let left = rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2;
-    top = Math.max(4, top);
+    // data-tooltip-position is set throughout the app's markup ("top",
+    // "bottom", "left", "right") but was previously ignored entirely - every
+    // tooltip rendered above its trigger regardless, sometimes covering the
+    // very thing the tooltip was describing.
+    const position = el.getAttribute('data-tooltip-position') || 'top';
+
+    let top, left;
+    switch (position) {
+        case 'bottom':
+            top = rect.bottom + offset;
+            left = rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2;
+            break;
+        case 'left':
+            top = rect.top + rect.height / 2 - tooltipEl.offsetHeight / 2;
+            left = rect.left - tooltipEl.offsetWidth - offset;
+            break;
+        case 'right':
+            top = rect.top + rect.height / 2 - tooltipEl.offsetHeight / 2;
+            left = rect.right + offset;
+            break;
+        default: // 'top'
+            top = rect.top - tooltipEl.offsetHeight - offset;
+            left = rect.left + rect.width / 2 - tooltipEl.offsetWidth / 2;
+    }
+
+    top = Math.max(4, Math.min(top, window.innerHeight - tooltipEl.offsetHeight - 4));
     left = Math.max(4, Math.min(left, window.innerWidth - tooltipEl.offsetWidth - 4));
     tooltipEl.style.top = `${top}px`;
     tooltipEl.style.left = `${left}px`;
@@ -693,6 +726,18 @@ document.addEventListener('mouseout', (e) => {
     hideTooltip();
 });
 
+// Keyboard equivalent of mouseover/mouseout - tooltips were mouse-only
+// before this, invisible to anyone tabbing through the UI (WCAG 2.1.1).
+document.addEventListener('focusin', (e) => {
+    const el = e.target.closest('[data-tooltip]');
+    if (el) showTooltip(el);
+});
+
+document.addEventListener('focusout', (e) => {
+    const el = e.target.closest('[data-tooltip]');
+    if (el) hideTooltip();
+});
+
 document.addEventListener('mousemove', (e) => {
     if (tooltipEl && tooltipEl.style.display === 'block' && currentTooltipTarget) {
         if (tooltipRAF) cancelAnimationFrame(tooltipRAF);
@@ -707,6 +752,10 @@ document.addEventListener('click', (e) => {
         return;
     }
     hideTooltip();
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && currentTooltipTarget) hideTooltip();
 });
 
 // -----------------------------
@@ -1024,20 +1073,80 @@ function formatRelativeTime(dateString) {
     return null;
 }
 
-// Global Escape-to-close for modals
+// Generic modal dirty-state tracking + Escape/click-outside-to-close
+//
 // Every modal in this app follows the same shape: a root div with classes
 // `fixed inset-0` that's `hidden` when closed, with an inline
-// `onclick="if (event.target === this) closeXyz()"` for click-outside-closes.
-// Escape should do exactly the same thing as a click on that backdrop, so
-// instead of re-implementing close logic here (and risking it drift from the
-// click-outside behavior, e.g. missing a dirty-state confirm), this just
-// invokes the same onclick handler the backdrop already has, faking the one
-// thing it checks: that event.target === the modal itself.
+// `onclick="if (event.target === this) closeXyz()"` for click-outside-close.
 //
-// This lives in main.js (loaded on every page, survives SPA navigation via
-// router.js's document-level persistence) rather than per-page, so new
-// modals get Escape support for free as long as they follow the convention
-// above - no per-modal JS wiring needed.
+// This lives in main.js (loaded on every page, survives SPA navigation)
+// rather than per-page, so EVERY modal across every page gets the same
+// protection automatically - no per-modal markup or JS needed beyond the
+// onclick convention above, which was already there for click-outside-close.
+// A prior version of this only tracked dirty state for two modals on one
+// page (profiles.html); every other modal across the app got click-outside-
+// close with zero confirm-before-discard, which is strictly worse than
+// having no click-outside-close at all. This replaces that with one
+// mechanism that covers everything uniformly.
+
+const _reefModalSnapshots = new WeakMap();
+
+function reefSnapshotModalState(modalEl) {
+    return Array.from(modalEl.querySelectorAll('input, select, textarea'))
+        .map(el => {
+            const key = el.id || el.name;
+            const value = (el.type === 'checkbox' || el.type === 'radio') ? el.checked : el.value;
+            return `${key}=${value}`;
+        })
+        .join('|');
+}
+
+// Call once per page load and again after every SPA navigation (router.js
+// hooks this in alongside enhanceInteractions/enhanceTooltips). Watches every
+// modal-shaped element currently in the DOM; when one becomes visible, takes
+// a baseline snapshot of its form fields shortly after (letting any
+// synchronous/async population finish first).
+window.reefSetupModalDirtyWatchers = function () {
+    document.querySelectorAll('.fixed.inset-0').forEach(modal => {
+        if (modal.dataset.reefDirtyWatched) return;
+        modal.dataset.reefDirtyWatched = 'true';
+        new MutationObserver(() => {
+            if (!modal.classList.contains('hidden')) {
+                setTimeout(() => _reefModalSnapshots.set(modal, reefSnapshotModalState(modal)), 50);
+            }
+        }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+    });
+};
+
+window.reefIsModalDirty = function (modalEl) {
+    if (!modalEl) return false;
+    const baseline = _reefModalSnapshots.get(modalEl);
+    if (baseline === undefined) return false; // never snapshotted, or no form fields to lose
+    return reefSnapshotModalState(modalEl) !== baseline;
+};
+
+document.addEventListener('DOMContentLoaded', window.reefSetupModalDirtyWatchers);
+
+// Click-outside-to-close, intercepted in the capture phase so a dirty-state
+// confirm can run and potentially block the inline onclick from firing at
+// all (inline onclick="" runs at target phase, which is after capture).
+document.addEventListener('click', function (e) {
+    const modal = e.target.closest('.fixed.inset-0');
+    if (!modal || modal.classList.contains('hidden')) return;
+    if (e.target !== modal) return; // only the backdrop itself, not its content
+    if (!window.reefIsModalDirty(modal)) return; // not dirty - let the inline onclick proceed normally
+
+    if (!confirm('You have unsaved changes. Discard them and close?')) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        e.preventDefault();
+    }
+}, true);
+
+// Escape mirrors click-outside-close exactly: same dirty check, then invokes
+// the same onclick handler the backdrop already has (faking the one thing it
+// checks - that event.target === the modal itself) rather than
+// re-implementing close logic here.
 document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
 
@@ -1049,5 +1158,6 @@ document.addEventListener('keydown', function (e) {
     // as they're opened; nested/stacked modals aren't common here, but this
     // keeps behavior sane if it ever happens).
     const topmost = openModals[openModals.length - 1];
+    if (window.reefIsModalDirty(topmost) && !confirm('You have unsaved changes. Discard them and close?')) return;
     topmost.onclick.call(topmost, { target: topmost });
 });

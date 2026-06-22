@@ -171,10 +171,11 @@
         document.querySelectorAll('#sidebar nav a[href]').forEach(a => {
             const href = a.getAttribute('href').replace(/^\//, '');
             a.classList.remove('bg-slate-800', 'bg-slate-900', 'text-slate-100',
+                               'bg-blue-500/10', 'text-blue-400',
                                'hover:bg-slate-700', 'hover:bg-slate-800', 'hover:text-slate-100');
             a.removeAttribute('aria-current');
             if (href === pageName) {
-                a.classList.add('bg-slate-800', 'text-slate-100');
+                a.classList.add('bg-blue-500/10', 'text-blue-400');
                 a.setAttribute('aria-current', 'page');
             } else {
                 a.classList.add('hover:bg-slate-800', 'hover:text-slate-100');
@@ -314,6 +315,8 @@
         if (typeof window.enhanceInteractions === 'function') window.enhanceInteractions();
         if (typeof window.enhanceTooltips === 'function') window.enhanceTooltips();
         if (typeof window.responsiveGrids === 'function') window.responsiveGrids();
+        // New page swapped in new modal elements - watch them for dirty state too.
+        if (typeof window.reefSetupModalDirtyWatchers === 'function') window.reefSetupModalDirtyWatchers();
 
         // Scroll content area to top
         newContent.scrollTop = 0;

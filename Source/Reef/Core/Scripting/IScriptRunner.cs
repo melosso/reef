@@ -44,6 +44,17 @@ public class ScriptExecutionRequest
     /// Working directory for the script process. Defaults to a temp directory.
     /// </summary>
     public string? WorkingDirectory { get; init; }
+
+    /// <summary>
+    /// Whether to log a warning when the interpreter binary itself can't be
+    /// started (missing on this host). Real Profile/Import Script steps
+    /// always want this (a missing interpreter is the cause of a real
+    /// failure). InterpreterService's routine availability probe - run on
+    /// every Profile editor page load - sets this false to avoid logging the
+    /// same "pwsh not installed" warning on every load; it logs its own
+    /// summary once instead.
+    /// </summary>
+    public bool LogIfUnavailable { get; init; } = true;
 }
 
 public class ScriptExecutionResult
