@@ -253,6 +253,7 @@ public class RecipeService
             Name = StagingConnectionName,
             Type = "Sqlite",
             ConnectionString = $"Data Source={path}",
+            Tags = "",
             Hash = ""
         };
 
@@ -325,7 +326,7 @@ public class RecipeService
             CreatedAt = run.CreatedAt,
             UpdatedAt = run.UpdatedAt,
             CompletedAt = run.CompletedAt,
-            Steps = recipe.Steps.Select(step => ToDto(step, stepState.GetValueOrDefault(step.StepKey) ?? new RecipeStepState())).ToList()
+            Steps = recipe.Steps.Select(step => ToDto(step, stepState.GetValueOrDefault(step.StepKey) ?? new RecipeStepState(), recipe.Key)).ToList()
         };
     }
 
@@ -406,7 +407,7 @@ public class RecipeService
         stepState[stepKey] = newState;
         await PersistStepStateAsync(runId, stepKey, recipe, stepState, ct);
 
-        return ToDto(step, newState);
+        return ToDto(step, newState, recipe.Key);
     }
 
     public async Task<RecipeStepStateDto> SkipStepAsync(int runId, string stepKey, CancellationToken ct = default)
@@ -421,13 +422,53 @@ public class RecipeService
         if (!step.IsOptional)
             throw new InvalidOperationException($"Step '{step.Title}' is required and cannot be skipped.");
 
+        return await MarkStepSkippedAsync(runId, run, recipe, step, ct);
+    }
+
+    // Shared by both the per-step "Skip this step" button (optional steps only) and
+    // SkipFlowGroupAsync's bulk skip of a whole declined flow - the actual state mutation
+    // (write Skipped=true, persist) never duplicates, only the eligibility check above differs.
+    private async Task<RecipeStepStateDto> MarkStepSkippedAsync(int runId, RecipeRun run, RecipeDefinition recipe, RecipeStepDefinition step, CancellationToken ct)
+    {
         var stepState = DeserializeStepState(run.StepStateJson);
         var newState = new RecipeStepState { Skipped = true };
-        stepState[stepKey] = newState;
-        await PersistStepStateAsync(runId, stepKey, recipe, stepState, ct);
+        stepState[step.StepKey] = newState;
+        await PersistStepStateAsync(runId, step.StepKey, recipe, stepState, ct);
 
-        return ToDto(step, newState);
+        return ToDto(step, newState, recipe.Key);
     }
+
+    // Generic flow-group skip: any recipe with >1 distinct FlowGroup among its non-shared
+    // steps is eligible (checked by callers via HasMultipleFlowGroups), so this never needs
+    // to know which recipe it's skipping for. IsShared steps are never touched - they're
+    // skipped via FlowGroup filtering (shared steps have no FlowGroup) rather than a hardcoded
+    // exclusion. Required (non-optional) steps in a declined flow are skipped too, since
+    // "the user opted out of this entire flow" is a different, deliberate decision than the
+    // per-step "Skip this step" affordance IsOptional gates.
+    public async Task<List<RecipeStepStateDto>> SkipFlowGroupAsync(int runId, string flowGroup, CancellationToken ct = default)
+    {
+        var run = await GetRunOrThrowAsync(runId, ct);
+        var recipe = RecipeRegistry.GetByKey(run.RecipeKey)
+            ?? throw new InvalidOperationException($"Recipe '{run.RecipeKey}' no longer exists.");
+
+        var steps = recipe.Steps.Where(s => !s.IsShared && s.FlowGroup == flowGroup).ToList();
+        if (steps.Count == 0)
+            throw new InvalidOperationException($"Flow group '{flowGroup}' is not part of recipe '{run.RecipeKey}'.");
+
+        var results = new List<RecipeStepStateDto>();
+        foreach (var step in steps)
+        {
+            // Re-fetch so each iteration sees the previous iteration's persisted state.
+            run = await GetRunOrThrowAsync(runId, ct);
+            results.Add(await MarkStepSkippedAsync(runId, run, recipe, step, ct));
+        }
+
+        Log.Information("Recipe run {RunId} skipped flow group '{FlowGroup}' ({Count} steps)", runId, flowGroup, steps.Count);
+        return results;
+    }
+
+    public static bool HasMultipleFlowGroups(RecipeDefinition recipe) =>
+        recipe.Steps.Where(s => !s.IsShared).Select(s => s.FlowGroup).Distinct().Count() > 1;
 
     public async Task<RecipeStepStateDto> VerifyStepAsync(int runId, string stepKey, CancellationToken ct = default)
     {
@@ -458,7 +499,7 @@ public class RecipeService
 
         Log.Information("Recipe run {RunId} step {StepKey} verified={Success}: {Message}", runId, stepKey, result.Success, result.Message);
 
-        return ToDto(step, current);
+        return ToDto(step, current, recipe.Key);
     }
 
     private RecipeVerifyContext BuildVerifyContext(string recipeKey, RecipeStepDefinition step, RecipeStepState current, Dictionary<string, RecipeStepState> allSteps)
@@ -467,15 +508,14 @@ public class RecipeService
 
         // Falls back to the recipe's own staging-table step's saved name, never a hardcoded
         // default - otherwise a recipe with no staging table (ErrorDigestRecipe) would get
-        // defaulted to "StoreOrders" just because it reuses the same step keys.
+        // defaulted to "StoreOrders" just because it reuses the same step keys. Plain step
+        // keys are shared by WooCommerceRecipe, WooCommerceTrackingRecipe, and MagentoRecipe -
+        // each is a single-flow (or now-single-flow) recipe, so no "shipments-" prefix needed.
         var tableName = step.StepKey switch
         {
             "staging-table" => current.Params.GetValueOrDefault("tableName") as string,
             "query-template" => allSteps.GetValueOrDefault("staging-table")?.Params.GetValueOrDefault("tableName") as string,
             "export-profile" => allSteps.GetValueOrDefault("staging-table")?.Params.GetValueOrDefault("tableName") as string,
-            "shipments-staging-table" => current.Params.GetValueOrDefault("tableName") as string,
-            "shipments-query-template" => allSteps.GetValueOrDefault("shipments-staging-table")?.Params.GetValueOrDefault("tableName") as string,
-            "shipments-export-profile" => allSteps.GetValueOrDefault("shipments-staging-table")?.Params.GetValueOrDefault("tableName") as string,
             _ => null
         };
 
@@ -483,7 +523,12 @@ public class RecipeService
             ? ErrorDigestRecipe.MockDigestRow()
             : recipeKey.Equals(ExactGlobeRecipe.Key, StringComparison.OrdinalIgnoreCase)
                 ? (IsItemsStep(step.StepKey) ? ExactGlobeRecipe.MockItemRow() : ExactGlobeRecipe.MockDebtorRow())
-                : null;
+                : recipeKey.Equals(UblExportRecipe.Key, StringComparison.OrdinalIgnoreCase)
+                    ? (IsOrderStep(step.StepKey) ? UblExportRecipe.MockOrderRow()
+                        : IsDespatchStep(step.StepKey) ? UblExportRecipe.MockDespatchAdviceRow()
+                        : IsInventoryStep(step.StepKey) ? UblExportRecipe.MockInventoryRow()
+                        : UblExportRecipe.MockInvoiceRow())
+                    : null;
 
         return new RecipeVerifyContext
         {
@@ -511,7 +556,7 @@ public class RecipeService
             return id;
         }
 
-        var newConn = new Connection { Name = name, Type = type, ConnectionString = connectionString, Hash = "" };
+        var newConn = new Connection { Name = name, Type = type, ConnectionString = connectionString, Tags = "", Hash = "" };
         return await _connectionService.CreateAsync(newConn, userId, ct);
     }
 
@@ -580,7 +625,11 @@ public class RecipeService
         }
     }
 
-    private static bool IsShipmentsStep(string stepKey) => stepKey.StartsWith("shipments-", StringComparison.OrdinalIgnoreCase);
+    // WooCommerceTrackingRecipe is now its own RecipeDefinition (split out of WooCommerceRecipe's
+    // former Flow B) - dispatch on recipe.Key, the same way MagentoRecipe is told apart from
+    // WooCommerceRecipe, rather than a "shipments-" step-key prefix that no longer exists.
+    private static bool IsWooCommerceTrackingRecipe(string recipeKey) =>
+        recipeKey.Equals(WooCommerceTrackingRecipe.Key, StringComparison.OrdinalIgnoreCase);
 
     // ExactGlobeRecipe's two flows (Debtors/Items) are a different two-flow shape than
     // WooCommerce's Order Confirmation/Tracking Link - same "(recipeKey, topic)" dispatch
@@ -588,13 +637,21 @@ public class RecipeService
     private static bool IsDebtorsStep(string stepKey) => stepKey.StartsWith("debtors-", StringComparison.OrdinalIgnoreCase);
     private static bool IsItemsStep(string stepKey) => stepKey.StartsWith("items-", StringComparison.OrdinalIgnoreCase);
 
+    // UblExportRecipe's four flows (Invoice/Order/Despatch Advice/Inventory) - same
+    // "(recipeKey, topic)" dispatch mechanism as ExactGlobeRecipe's Debtors/Items pair, just
+    // four prefixes instead of two.
+    private static bool IsInvoiceStep(string stepKey) => stepKey.StartsWith("invoice-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsOrderStep(string stepKey) => stepKey.StartsWith("order-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsDespatchStep(string stepKey) => stepKey.StartsWith("despatch-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsInventoryStep(string stepKey) => stepKey.StartsWith("inventory-", StringComparison.OrdinalIgnoreCase);
+
     private async Task<int?> CreateStagingTableAsync(string recipeKey, string stepKey, Dictionary<string, object?> p, CancellationToken ct)
     {
-        var isShipments = IsShipmentsStep(stepKey);
+        var isTracking = IsWooCommerceTrackingRecipe(recipeKey);
         var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
         var defaultTableName = isMagento
             ? MagentoRecipe.StagingTableName
-            : isShipments ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
+            : isTracking ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
 
         var connectionId = RequireInt(p, "connectionId");
         var tableName = p.GetValueOrDefault("tableName") as string ?? defaultTableName;
@@ -607,7 +664,7 @@ public class RecipeService
         {
             var baseDdl = isMagento
                 ? MagentoRecipe.GetStagingTableDdl(connection.Type)
-                : isShipments
+                : isTracking
                     ? WooCommerceRecipe.GetShipmentsStagingTableDdl(connection.Type)
                     : WooCommerceRecipe.GetStagingTableDdl(connection.Type);
             var ddl = baseDdl.Replace(defaultTableName, tableName);
@@ -637,7 +694,7 @@ public class RecipeService
         var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
         var defaultTableName = isMagento
             ? MagentoRecipe.StagingTableName
-            : IsShipmentsStep(stepKey) ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
+            : IsWooCommerceTrackingRecipe(recipeKey) ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
         var defaultUpsertKey = isMagento ? "MagentoOrderId" : "WooOrderId";
         return new()
         {
@@ -660,20 +717,28 @@ public class RecipeService
         };
     }
 
+    private static (string Template, string Description, string Tags, string OutputFormat) GetQueryTemplateDefaults(string recipeKey, string stepKey)
+    {
+        var isItems = IsItemsStep(stepKey);
+        return recipeKey switch
+        {
+            ErrorDigestRecipe.Key => (ErrorDigestEmailTemplate.DailyDigestHtml, "Created by the Store System Error Daily Digest recipe", "store,digest", "HTML"),
+            MagentoRecipe.Key => (MagentoEmailTemplates.TrackingUpdateHtml, "Created by the Store Magento Tracking Link recipe", "store,magento", "HTML"),
+            WooCommerceTrackingRecipe.Key => (WooCommerceEmailTemplates.TrackingUpdateHtml, "Created by the Store WooCommerce Tracking Link recipe", "store,woocommerce", "HTML"),
+            ExactGlobeRecipe.Key when isItems => (ExactGlobeTemplates.ItemsXmlTemplate, "Created by the Store Exact Globe+ Items Export recipe", "store,exact-globe", "XML"),
+            ExactGlobeRecipe.Key => (ExactGlobeTemplates.DebtorsXmlTemplate, "Created by the Store Exact Globe+ Debtors Export recipe", "store,exact-globe", "XML"),
+            UblExportRecipe.Key when IsOrderStep(stepKey) => (UblExportTemplates.OrderXmlTemplate, "Created by the Store UBL Standard Order Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key when IsDespatchStep(stepKey) => (UblExportTemplates.DespatchAdviceXmlTemplate, "Created by the Store UBL Standard Despatch Advice Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key when IsInventoryStep(stepKey) => (UblExportTemplates.InventoryXmlTemplate, "Created by the Store UBL Standard Inventory Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key => (UblExportTemplates.InvoiceXmlTemplate, "Created by the Store UBL Standard Invoice Export recipe", "store,ubl", "XML"),
+            _ => (WooCommerceEmailTemplates.OrderConfirmationHtml, "Created by the Store WooCommerce Order Confirmation recipe", "store,woocommerce", "HTML")
+        };
+    }
+
     private async Task<int?> SaveQueryTemplateAsync(string recipeKey, string stepKey, RecipeStepState? existing, Dictionary<string, object?> p, CancellationToken ct)
     {
-        var isShipments = IsShipmentsStep(stepKey);
-        var isItems = IsItemsStep(stepKey);
         var name = RequireString(p, "name");
-        var (defaultTemplate, description, tags, outputFormat) = (recipeKey, isShipments) switch
-        {
-            (ErrorDigestRecipe.Key, _) => (ErrorDigestEmailTemplate.DailyDigestHtml, "Created by the Store System Error Daily Digest recipe", "store,digest", "HTML"),
-            (MagentoRecipe.Key, _) => (MagentoEmailTemplates.TrackingUpdateHtml, "Created by the Store Magento Tracking Link recipe", "store,magento", "HTML"),
-            (ExactGlobeRecipe.Key, _) when isItems => (ExactGlobeTemplates.ItemsXmlTemplate, "Created by the Store Exact Globe+ Items Export recipe", "store,exact-globe", "XML"),
-            (ExactGlobeRecipe.Key, _) => (ExactGlobeTemplates.DebtorsXmlTemplate, "Created by the Store Exact Globe+ Debtors Export recipe", "store,exact-globe", "XML"),
-            (_, true) => (WooCommerceEmailTemplates.TrackingUpdateHtml, "Created by the Store WooCommerce Tracking Link recipe", "store,woocommerce", "HTML"),
-            (_, false) => (WooCommerceEmailTemplates.OrderConfirmationHtml, "Created by the Store WooCommerce Order Confirmation recipe", "store,woocommerce", "HTML")
-        };
+        var (defaultTemplate, description, tags, outputFormat) = GetQueryTemplateDefaults(recipeKey, stepKey);
         var template = p.GetValueOrDefault("template") as string ?? defaultTemplate;
 
         if (existing?.EntityId is { } id)
@@ -717,11 +782,14 @@ public class RecipeService
         if (recipeKey.Equals(ExactGlobeRecipe.Key, StringComparison.OrdinalIgnoreCase))
             return BuildExactGlobeExportProfileFromParams(stepKey, p);
 
-        var isShipments = IsShipmentsStep(stepKey);
+        if (recipeKey.Equals(UblExportRecipe.Key, StringComparison.OrdinalIgnoreCase))
+            return BuildUblExportProfileFromParams(stepKey, p);
+
+        var isTracking = IsWooCommerceTrackingRecipe(recipeKey);
         var isErrorDigest = recipeKey.Equals(ErrorDigestRecipe.Key, StringComparison.OrdinalIgnoreCase);
         var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
 
-        var defaultQuery = (isErrorDigest, isMagento, isShipments) switch
+        var defaultQuery = (isErrorDigest, isMagento, isTracking) switch
         {
             (true, _, _) => ErrorDigestRecipe.DefaultExportQuery,
             (_, true, _) => MagentoRecipe.DefaultExportQuery,
@@ -752,7 +820,7 @@ public class RecipeService
         else
         {
             profile.EmailRecipientsColumn = p.GetValueOrDefault("emailRecipientsColumn") as string ?? "CustomerEmail";
-            profile.EmailSubjectHardcoded = p.GetValueOrDefault("emailSubject") as string ?? (isShipments || isMagento ? "Your order is on its way" : "Your order is confirmed");
+            profile.EmailSubjectHardcoded = p.GetValueOrDefault("emailSubject") as string ?? (isTracking || isMagento ? "Your order is on its way" : "Your order is confirmed");
             profile.UseHardcodedSubject = true;
         }
 
@@ -767,6 +835,40 @@ public class RecipeService
         var isItems = IsItemsStep(stepKey);
         var defaultQuery = isItems ? ExactGlobeRecipe.DefaultItemsExportQuery : ExactGlobeRecipe.DefaultDebtorsExportQuery;
         var defaultPath = isItems ? "exports/exact-globe/items" : "exports/exact-globe/debtors";
+
+        var outputPath = p.GetValueOrDefault("outputPath") as string ?? defaultPath;
+        var destinationConfig = JsonSerializer.Serialize(new { path = outputPath }, JsonOptions);
+
+        return new Profile
+        {
+            Name = RequireString(p, "name"),
+            ConnectionId = RequireInt(p, "connectionId"),
+            GroupId = p.GetValueOrDefault("groupId") is int gi ? gi : (p.GetValueOrDefault("groupId") as int?),
+            Query = p.GetValueOrDefault("query") as string ?? defaultQuery,
+            OutputFormat = "XML",
+            OutputDestinationType = "Local",
+            OutputDestinationConfig = destinationConfig,
+            IsEmailExport = false,
+            TemplateId = RequireInt(p, "templateId"),
+            Hash = ""
+        };
+    }
+
+    // Same file-export shape as BuildExactGlobeExportProfileFromParams (no email, inline
+    // OutputDestinationType="Local"/OutputDestinationConfig) but kept as its own method rather
+    // than folded into that one - ExactGlobe's is a 2-way isItems branch, UBL needs a 4-way
+    // branch across Invoice/Order/Despatch Advice/Inventory, and merging them would mean every
+    // call site juggling both step-key vocabularies at once for no shared benefit.
+    private static Profile BuildUblExportProfileFromParams(string stepKey, Dictionary<string, object?> p)
+    {
+        var (defaultQuery, defaultPathSegment) = (IsOrderStep(stepKey), IsDespatchStep(stepKey), IsInventoryStep(stepKey)) switch
+        {
+            (true, _, _) => (UblExportRecipe.DefaultOrderExportQuery, "orders"),
+            (_, true, _) => (UblExportRecipe.DefaultDespatchAdviceExportQuery, "despatch-advices"),
+            (_, _, true) => (UblExportRecipe.DefaultInventoryExportQuery, "inventory"),
+            _ => (UblExportRecipe.DefaultInvoiceExportQuery, "invoices")
+        };
+        var defaultPath = $"exports/ubl-standard-export/{defaultPathSegment}";
 
         var outputPath = p.GetValueOrDefault("outputPath") as string ?? defaultPath;
         var destinationConfig = JsonSerializer.Serialize(new { path = outputPath }, JsonOptions);
@@ -843,7 +945,7 @@ public class RecipeService
     {
         var run = await GetRunOrThrowAsync(runId, ct);
         var stepState = DeserializeStepState(run.StepStateJson);
-        var importStep = stepState.GetValueOrDefault("shipments-import-profile")
+        var importStep = stepState.GetValueOrDefault("import-profile")
             ?? throw new InvalidOperationException("The Tracking Link import step has not been saved yet.");
 
         var importProfileId = importStep.EntityId
@@ -957,24 +1059,36 @@ public class RecipeService
         "connectionString", "configurationJson", "smtpPassword", "consumerSecret", "sourceConfig"
     };
 
-    private static RecipeStepStateDto ToDto(RecipeStepDefinition step, RecipeStepState state) => new()
+    private static RecipeStepStateDto ToDto(RecipeStepDefinition step, RecipeStepState state, string recipeKey)
     {
-        StepKey = step.StepKey,
-        Title = step.Title,
-        EntityType = step.EntityType.ToString(),
-        IsOptional = step.IsOptional,
-        IsShared = step.IsShared,
-        FlowGroup = step.FlowGroup,
-        CanAutoProvision = step.CanAutoProvision,
-        HasVerifier = step.VerifierKind is not null,
-        EntityId = state.EntityId,
-        Verified = state.Verified,
-        Skipped = state.Skipped,
-        LastVerifiedAt = state.LastVerifiedAt,
-        LastVerifyMessage = state.LastVerifyMessage,
-        // Never echo secrets to the client - "leave unchanged" placeholders cover the UX.
-        Params = state.Params.Where(kv => !SecretParamKeys.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value)
-    };
+        var displayParams = state.Params.Where(kv => !SecretParamKeys.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        // Show the built-in default in the editor up front instead of leaving it blank with
+        // just an explanatory note - the user can see and tweak it before saving, rather than
+        // saving blind and hoping the "leave blank to use the built-in template" note was right.
+        if (step.EntityType == RecipeEntityType.QueryTemplate && state.EntityId is null && !displayParams.ContainsKey("template"))
+        {
+            displayParams["template"] = GetQueryTemplateDefaults(recipeKey, step.StepKey).Template;
+        }
+
+        return new()
+        {
+            StepKey = step.StepKey,
+            Title = step.Title,
+            EntityType = step.EntityType.ToString(),
+            IsOptional = step.IsOptional,
+            IsShared = step.IsShared,
+            FlowGroup = step.FlowGroup,
+            CanAutoProvision = step.CanAutoProvision,
+            HasVerifier = step.VerifierKind is not null,
+            EntityId = state.EntityId,
+            Verified = state.Verified,
+            Skipped = state.Skipped,
+            LastVerifiedAt = state.LastVerifiedAt,
+            LastVerifyMessage = state.LastVerifyMessage,
+            Params = displayParams
+        };
+    }
 
     private static string RequireString(Dictionary<string, object?> p, string key) =>
         p.GetValueOrDefault(key) as string ?? throw new InvalidOperationException($"'{key}' is required.");

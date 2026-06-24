@@ -16,6 +16,7 @@ public static class RecipesEndpoints
         g.MapGet("/runs/{runId:int}", GetRunState);
         g.MapPost("/runs/{runId:int}/steps/{stepKey}/save", SaveStep);
         g.MapPost("/runs/{runId:int}/steps/{stepKey}/skip", SkipStep);
+        g.MapPost("/runs/{runId:int}/flow-groups/{flowGroup}/skip", SkipFlowGroup);
         g.MapPost("/runs/{runId:int}/steps/{stepKey}/verify", VerifyStep);
         g.MapPost("/runs/{runId:int}/complete", Complete);
         g.MapPost("/runs/{runId:int}/abandon", Abandon);
@@ -104,6 +105,21 @@ public static class RecipesEndpoints
         }
         catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
         catch (Exception ex) { return ServerError($"skipping step '{stepKey}' for run {runId}", ex); }
+    }
+
+    private static async Task<IResult> SkipFlowGroup(
+        int runId,
+        string flowGroup,
+        [FromServices] RecipeService svc,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await svc.SkipFlowGroupAsync(runId, Uri.UnescapeDataString(flowGroup), ct);
+            return Results.Ok(result);
+        }
+        catch (InvalidOperationException ex) { return Results.BadRequest(new { error = ex.Message }); }
+        catch (Exception ex) { return ServerError($"skipping flow group '{flowGroup}' for run {runId}", ex); }
     }
 
     private static async Task<IResult> VerifyStep(

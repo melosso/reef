@@ -68,6 +68,8 @@ public class ConnectionService
     /// </summary>
     public async Task<int> CreateAsync(Connection conn, int? createdByUserId, CancellationToken ct = default)
     {
+        conn.Tags ??= ""; // column is NOT NULL DEFAULT ''
+
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct);
 

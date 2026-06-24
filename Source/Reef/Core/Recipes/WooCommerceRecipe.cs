@@ -1,7 +1,10 @@
 namespace Reef.Core.Recipes;
 
-// Order Confirmation (Flow A) + Tracking Link (Flow B) as one RecipeDefinition, both flows
-// sharing steps 1-3 (IsShared=true) and grouped in the UI via FlowGroup.
+// Order Confirmation only - Tracking Link split out into its own WooCommerceTrackingRecipe
+// (separate RecipeRun, separate Connection/Group/Destination) since the two were never
+// genuinely one setup, just two flows that happened to share infrastructure. The shipments
+// staging-table DDL statics stay here (rather than duplicated into WooCommerceTrackingRecipe)
+// since they're identical to before the split and WooCommerceTrackingRecipe references them.
 public static class WooCommerceRecipe
 {
     public const string Key = "woocommerce-order-confirmation";
@@ -192,14 +195,11 @@ public static class WooCommerceRecipe
 
     public const string DefaultShipmentsExportQuery = "SELECT * FROM StoreShipments WHERE EmailSent = 0";
 
-    public const string OrderConfirmationFlowGroup = "Order Confirmation";
-    public const string TrackingLinkFlowGroup = "Tracking Link";
-
     public static RecipeDefinition Definition { get; } = new()
     {
         Key = Key,
         Name = "WooCommerce Order Confirmation",
-        Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation, plus shipment tracking links.",
+        Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation.",
         Category = "E-commerce",
         Icon = "shopping-cart",
         Steps = new List<RecipeStepDefinition>
@@ -230,13 +230,11 @@ public static class WooCommerceRecipe
                 IsShared = true,
                 VerifierKind = RecipeVerifierKind.EmailDestination
             },
-
             new()
             {
                 StepKey = "staging-table",
                 Title = "Staging Table",
                 EntityType = RecipeEntityType.StagingTable,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.StagingTable
             },
             new()
@@ -244,7 +242,6 @@ public static class WooCommerceRecipe
                 StepKey = "import-profile",
                 Title = "Pull Orders from WooCommerce",
                 EntityType = RecipeEntityType.ImportProfile,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.HttpSource
             },
             new()
@@ -252,7 +249,6 @@ public static class WooCommerceRecipe
                 StepKey = "query-template",
                 Title = "Email Template",
                 EntityType = RecipeEntityType.QueryTemplate,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.ScribanTemplate
             },
             new()
@@ -260,7 +256,6 @@ public static class WooCommerceRecipe
                 StepKey = "export-profile",
                 Title = "Send Confirmation Emails",
                 EntityType = RecipeEntityType.Profile,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.ExportQuery
             },
             new()
@@ -269,49 +264,6 @@ public static class WooCommerceRecipe
                 Title = "Scheduling (optional)",
                 EntityType = RecipeEntityType.Job,
                 IsOptional = true,
-                FlowGroup = OrderConfirmationFlowGroup,
-                VerifierKind = null
-            },
-
-            new()
-            {
-                StepKey = "shipments-staging-table",
-                Title = "Staging Table",
-                EntityType = RecipeEntityType.StagingTable,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.StagingTable
-            },
-            new()
-            {
-                StepKey = "shipments-import-profile",
-                Title = "Pull Tracking Updates from WooCommerce",
-                EntityType = RecipeEntityType.ImportProfile,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.HttpSource
-            },
-            new()
-            {
-                StepKey = "shipments-query-template",
-                Title = "Email Template",
-                EntityType = RecipeEntityType.QueryTemplate,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.ScribanTemplate
-            },
-            new()
-            {
-                StepKey = "shipments-export-profile",
-                Title = "Send Tracking Emails",
-                EntityType = RecipeEntityType.Profile,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.ExportQuery
-            },
-            new()
-            {
-                StepKey = "shipments-jobs",
-                Title = "Scheduling & Webhook (optional)",
-                EntityType = RecipeEntityType.Job,
-                IsOptional = true,
-                FlowGroup = TrackingLinkFlowGroup,
                 VerifierKind = null
             }
         }

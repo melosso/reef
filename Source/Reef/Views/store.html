@@ -52,6 +52,28 @@
             </div>
         </div>
 
+        <!-- Shown once for a brand-new run of a recipe with >1 FlowGroup, before the step rail -->
+        <div id="flow-selection-view" class="hidden">
+            <button onclick="exitWizard()" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 mb-4">
+                <i data-lucide="arrow-left" class="h-3.5 w-3.5"></i>
+                Back to Store
+            </button>
+            <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
+                <h2 id="flow-selection-recipe-name" class="text-lg font-semibold text-slate-900 mb-1">Which exports do you want to set up?</h2>
+                <p class="text-sm text-slate-500 mb-5">You can always set up the rest later by reconfiguring this recipe.</p>
+                <div id="flow-selection-list" class="space-y-2 mb-2"></div>
+                <p id="flow-selection-error" class="hidden text-sm text-red-600 mb-4">Select at least one.</p>
+                <div class="flex items-center gap-3 mt-4">
+                    <button onclick="confirmFlowSelection()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                        Continue
+                    </button>
+                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div id="wizard-view" class="hidden">
             <div class="flex items-center justify-between mb-6">
                 <div>
@@ -100,6 +122,33 @@
             </div>
         </div>
     </main>
+</div>
+</div>
+
+<div id="template-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeTemplatePreviewModal()">
+    <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-4xl shadow-lg rounded-md bg-white mb-20">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Template Preview</h3>
+            <button onclick="closeTemplatePreviewModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close">
+                <i data-lucide="x" class="h-6 w-6"></i>
+            </button>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 disable-select">
+            <div class="flex items-start">
+                <i data-lucide="info" class="h-5 w-5 text-blue-500 mr-2 mt-0.5"></i>
+                <p class="text-sm text-blue-700">Rendered with sample data, the same way Save &amp; Verify previews it - your real data will differ.</p>
+            </div>
+        </div>
+        <div id="template-preview-html-wrap" class="hidden bg-gray-50 border border-gray-300 rounded-md h-96">
+            <iframe id="template-preview-iframe" style="width:100%;height:100%;border:none;" sandbox=""></iframe>
+        </div>
+        <div id="template-preview-text-wrap" class="hidden bg-gray-50 border border-gray-300 rounded-md p-4 max-h-96 overflow-auto">
+            <pre id="template-preview-output" class="text-sm font-mono whitespace-pre-wrap"></pre>
+        </div>
+        <div class="flex justify-end pt-4 mt-4 border-t border-gray-200">
+            <button onclick="closeTemplatePreviewModal()" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors">Close</button>
+        </div>
+    </div>
 </div>
 
 <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
