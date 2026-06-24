@@ -236,17 +236,9 @@
 
         const pageName = new URL(url, location.origin).pathname.replace(/^\//, '') || 'dashboard';
 
-        const doSwap = () => {
-            current.replaceWith(newContent);
-            document.title = newDoc.title;
-            setActiveNav(pageName);
-        };
-
-        if (document.startViewTransition) {
-            await document.startViewTransition(doSwap).finished;
-        } else {
-            doSwap();
-        }
+        current.replaceWith(newContent);
+        document.title = newDoc.title;
+        setActiveNav(pageName);
 
         // History
         if (pushState) {

@@ -7,18 +7,17 @@ using Serilog;
 
 namespace Reef.Core.Services;
 
-/// <summary>
-/// Pure orchestration for the Store guided recipe wizard. Delegates every actual
-/// create/update to the existing service for that entity type (ConnectionService,
-/// ImportProfileService, DestinationService, QueryTemplateService, GroupService,
-/// ProfileService, JobService, WebhookService) - this class adds no new
-/// entity-creation logic of its own. The one exception is the staging-table DDL step,
-/// which is genuinely new: Reef's import pipeline never auto-creates target tables
-/// (DatabaseImportTarget only checks existence), so the wizard must issue the
-/// CREATE TABLE itself.
-/// </summary>
+// Pure orchestration for the Store wizard - delegates every create/update to the existing
+// entity services. The one new piece of logic is the staging-table DDL step: Reef's import
+// pipeline never auto-creates target tables, so the wizard issues CREATE TABLE itself.
 public class RecipeService
 {
+    // Stable, recognizable name for the auto-provisioned Sqlite staging Connection - "find"
+    // half of find-or-create. A user who renames it breaks the auto-reuse (they've opted out
+    // by touching it), which is an acceptable edge case for a name-based marker.
+    public const string StagingConnectionName = "Store Staging Database";
+    private const string StagingDbFileName = "store-staging.db";
+
     private readonly string _connectionString;
     private readonly ConnectionService _connectionService;
     private readonly GroupService _groupService;
@@ -73,8 +72,6 @@ public class RecipeService
         };
     }
 
-    // Recipe listing
-
     public async Task<List<RecipeListItem>> GetAvailableRecipesAsync(int? userId, CancellationToken ct = default)
     {
         var runs = await GetRunsForUserAsync(userId, ct);
@@ -86,9 +83,8 @@ public class RecipeService
                 .OrderByDescending(r => r.UpdatedAt)
                 .FirstOrDefault();
 
-            // "Completed" lookup is independent of existingRun (which only tracks the most
-            // recent run regardless of status) - a Reconfigure action should stay offered
-            // even after the user has started a newer InProgress run for the same recipe.
+            // Independent of existingRun so Reconfigure stays offered even after a newer
+            // InProgress run exists for the same recipe.
             var lastCompletedRun = runs
                 .Where(r => r.RecipeKey.Equals(recipe.Key, StringComparison.OrdinalIgnoreCase) && r.Status == "Completed")
                 .OrderByDescending(r => r.CompletedAt)
@@ -99,9 +95,12 @@ public class RecipeService
                 Key = recipe.Key,
                 Name = recipe.Name,
                 Description = recipe.Description,
+                Category = recipe.Category,
+                Icon = recipe.Icon,
                 StepCount = recipe.Steps.Count,
                 ExistingRunId = existingRun?.Status == "InProgress" ? existingRun.Id : null,
-                LastCompletedRunId = lastCompletedRun?.Id
+                LastCompletedRunId = lastCompletedRun?.Id,
+                IsInstalled = lastCompletedRun is not null
             };
         }).ToList();
     }
@@ -116,25 +115,16 @@ public class RecipeService
         return rows.ToList();
     }
 
-    // Run lifecycle
-
-    /// <summary>
-    /// Starts a new run for a recipe. When <paramref name="cloneFromRunId"/> is given (the
-    /// "Reconfigure" action on a Completed run), the new run's StepStateJson is pre-seeded
-    /// from that prior run's saved step params/entity ids as defaults - WooCommerce-specific
-    /// config (the ImportProfile steps' consumer key/secret/store URL, carried in their
-    /// sourceConfig param) is left for the user to overwrite when they re-save those steps,
-    /// since "different store" means different credentials, not different Connections/Groups.
-    /// Cloned steps start unverified (Verified=false) even though EntityId/Params carry over -
-    /// pointing an existing entity at new WooCommerce credentials genuinely changes its
-    /// behavior, so the prior run's verification result no longer applies until re-checked.
-    /// </summary>
+    // cloneFromRunId (the "Reconfigure" action) pre-seeds the new run's StepStateJson from a
+    // prior Completed run's entity ids/params, but never the Verified flag - pointing an
+    // existing entity at new credentials means it's unverified until re-checked.
     public async Task<RecipeRun> StartRecipeAsync(string recipeKey, int? userId, int? cloneFromRunId = null, CancellationToken ct = default)
     {
         var recipe = RecipeRegistry.GetByKey(recipeKey)
             ?? throw new InvalidOperationException($"Unknown recipe '{recipeKey}'.");
 
         var seedStepState = await BuildCloneSeedStateAsync(recipe, cloneFromRunId, ct);
+        await ApplyAutoProvisioningAsync(recipe, seedStepState, userId, ct);
 
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -148,7 +138,11 @@ public class RecipeService
         var id = await conn.ExecuteScalarAsync<int>(new CommandDefinition(sql, new
         {
             RecipeKey = recipe.Key,
-            CurrentStepKey = recipe.Steps.First().StepKey,
+            // Skip past any already-auto-provisioned leading steps - simple mode hides them
+            // from the rail entirely, so landing the wizard on one of them on first load would
+            // show a step the user can't navigate to. Falls back to the very first step if
+            // every step happens to be auto-provisioned (defensive; not true for any recipe today).
+            CurrentStepKey = (recipe.Steps.FirstOrDefault(s => !s.CanAutoProvision || !seedStepState.ContainsKey(s.StepKey)) ?? recipe.Steps.First()).StepKey,
             StepStateJson = JsonSerializer.Serialize(seedStepState, JsonOptions),
             CreatedAt = now,
             UpdatedAt = now,
@@ -178,9 +172,6 @@ public class RecipeService
             if (sourceState.GetValueOrDefault(step.StepKey) is not { } sourceStepState)
                 continue;
 
-            // Carry over the entity id and saved params as defaults, but never the verified
-            // flag - re-pointing at a different store's credentials means the entity's
-            // current configuration is unverified until the user re-saves and re-verifies it.
             seeded[step.StepKey] = new RecipeStepState
             {
                 EntityId = sourceStepState.EntityId,
@@ -191,6 +182,130 @@ public class RecipeService
         }
 
         return seeded;
+    }
+
+    // "Simple mode" - for every CanAutoProvision step the run doesn't already have a value
+    // for (fresh start, or not carried over by Reconfigure-cloning), silently find-or-create
+    // a sensible default entity and seed it into the run's initial StepStateJson as Verified.
+    // These are real Connections/Groups the user can find on the normal pages afterward -
+    // "simple mode" only means the wizard doesn't ask up front. The Advanced toggle in
+    // store.js reveals these steps again so a user can override with their own entity, which
+    // just flows through the existing ExecuteStepAsync save path like any manual step.
+    private async Task ApplyAutoProvisioningAsync(RecipeDefinition recipe, Dictionary<string, RecipeStepState> seedStepState, int? userId, CancellationToken ct)
+    {
+        foreach (var step in recipe.Steps)
+        {
+            if (!step.CanAutoProvision || seedStepState.ContainsKey(step.StepKey))
+                continue;
+
+            int? entityId = step.EntityType switch
+            {
+                RecipeEntityType.Connection => await FindOrCreateStagingConnectionAsync(userId, ct),
+                RecipeEntityType.Group => await FindOrCreateRecipeGroupAsync(recipe, ct),
+                _ => null
+            };
+
+            if (entityId is null)
+                continue;
+
+            seedStepState[step.StepKey] = new RecipeStepState
+            {
+                EntityId = entityId,
+                Params = AutoProvisionedParams(recipe, step, entityId.Value),
+                // We control exactly what we just created/found, so it doesn't need the live
+                // ConnectionVerifier check a user-supplied entity would - mark it Verified so
+                // the rail's "done" status and canAdvance() work without the user clicking.
+                Verified = true,
+                Skipped = false
+            };
+
+            Log.Information("Recipe '{RecipeKey}' auto-provisioned {EntityType} {EntityId} for step '{StepKey}'",
+                recipe.Key, step.EntityType, entityId, step.StepKey);
+        }
+    }
+
+    private static Dictionary<string, object?> AutoProvisionedParams(RecipeDefinition recipe, RecipeStepDefinition step, int entityId) => step.EntityType switch
+    {
+        RecipeEntityType.Connection => new Dictionary<string, object?>
+        {
+            ["name"] = StagingConnectionName,
+            ["type"] = "Sqlite",
+            ["existingConnectionId"] = entityId
+        },
+        RecipeEntityType.Group => new Dictionary<string, object?>
+        {
+            ["name"] = $"{recipe.Name} (Store)"
+        },
+        _ => new Dictionary<string, object?>()
+    };
+
+    // Find-or-create by the stable StagingConnectionName marker - idempotent and reusable
+    // across every recipe run/recipe that opts into auto-provisioning, never a duplicate per run.
+    private async Task<int?> FindOrCreateStagingConnectionAsync(int? userId, CancellationToken ct)
+    {
+        var existing = await _connectionService.GetByNameAsync(StagingConnectionName, ct);
+        if (existing is not null)
+            return existing.Id;
+
+        var path = ResolveStagingDbPath();
+        var newConn = new Connection
+        {
+            Name = StagingConnectionName,
+            Type = "Sqlite",
+            ConnectionString = $"Data Source={path}",
+            Tags = "",
+            Hash = ""
+        };
+
+        var id = await _connectionService.CreateAsync(newConn, userId, ct);
+        Log.Information("Auto-provisioned Sqlite staging Connection '{Name}' (ID: {Id}) at {Path}", StagingConnectionName, id, path);
+        return id;
+    }
+
+    // Sibling file next to Reef's own app database (never that file itself) - e.g. app db at
+    // /data/Reef.db -> staging file at /data/store-staging.db. Microsoft.Data.Sqlite creates
+    // the file on first use, so there's no need to touch the filesystem here.
+    private string ResolveStagingDbPath()
+    {
+        var appDbPath = ExtractSqliteDataSource(_connectionString);
+        var directory = Path.GetDirectoryName(Path.GetFullPath(appDbPath));
+        return string.IsNullOrEmpty(directory)
+            ? StagingDbFileName
+            : Path.Combine(directory, StagingDbFileName);
+    }
+
+    private static string ExtractSqliteDataSource(string connectionString)
+    {
+        // Reef's own connection string is plain SQLite "Data Source=..." (e.g. "Data Source=Reef.db"),
+        // never a hybrid-encrypted user Connection string - safe to parse with the builder directly.
+        try
+        {
+            return new SqliteConnectionStringBuilder(connectionString).DataSource;
+        }
+        catch
+        {
+            return "Reef.db";
+        }
+    }
+
+    // Find-or-create by name "{Recipe.Name} (Store)" - one Group per recipe, reused across
+    // every run of that recipe rather than spawned anew each time.
+    private async Task<int?> FindOrCreateRecipeGroupAsync(RecipeDefinition recipe, CancellationToken ct)
+    {
+        var name = $"{recipe.Name} (Store)";
+        var existing = await _groupService.GetByNameAsync(name);
+        if (existing is not null)
+            return existing.Id;
+
+        var newGroup = new ProfileGroup
+        {
+            Name = name,
+            Description = $"Created automatically by the Store {recipe.Name} recipe."
+        };
+
+        var id = await _groupService.CreateAsync(newGroup, "store-wizard");
+        Log.Information("Auto-provisioned Group '{Name}' (ID: {Id}) for recipe '{RecipeKey}'", name, id, recipe.Key);
+        return id;
     }
 
     public async Task<RecipeRunStateDto> GetRunStateAsync(int runId, CancellationToken ct = default)
@@ -211,7 +326,7 @@ public class RecipeService
             CreatedAt = run.CreatedAt,
             UpdatedAt = run.UpdatedAt,
             CompletedAt = run.CompletedAt,
-            Steps = recipe.Steps.Select(step => ToDto(step, stepState.GetValueOrDefault(step.StepKey) ?? new RecipeStepState())).ToList()
+            Steps = recipe.Steps.Select(step => ToDto(step, stepState.GetValueOrDefault(step.StepKey) ?? new RecipeStepState(), recipe.Key)).ToList()
         };
     }
 
@@ -252,8 +367,6 @@ public class RecipeService
         Log.Information("Recipe run abandoned: {RunId}", runId);
     }
 
-    // Step execution (create-or-update the step's entity)
-
     public async Task<RecipeStepStateDto> ExecuteStepAsync(int runId, string stepKey, Dictionary<string, object?> stepParams, int? userId, CancellationToken ct = default)
     {
         var run = await GetRunOrThrowAsync(runId, ct);
@@ -271,8 +384,8 @@ public class RecipeService
             RecipeEntityType.Connection => await SaveConnectionAsync(existing, stepParams, userId, ct),
             RecipeEntityType.Group => await SaveGroupAsync(existing, stepParams, ct),
             RecipeEntityType.Destination => await SaveDestinationAsync(existing, stepParams, stepState, ct),
-            RecipeEntityType.StagingTable => await CreateStagingTableAsync(stepKey, stepParams, ct),
-            RecipeEntityType.ImportProfile => await SaveImportProfileAsync(stepKey, existing, stepParams, userId, ct),
+            RecipeEntityType.StagingTable => await CreateStagingTableAsync(recipe.Key, stepKey, stepParams, ct),
+            RecipeEntityType.ImportProfile => await SaveImportProfileAsync(recipe.Key, stepKey, existing, stepParams, userId, ct),
             RecipeEntityType.QueryTemplate => await SaveQueryTemplateAsync(recipe.Key, stepKey, existing, stepParams, ct),
             RecipeEntityType.Profile => await SaveProfileAsync(recipe.Key, stepKey, existing, stepParams, userId, ct),
             RecipeEntityType.Job => await SaveJobAsync(stepParams, ct),
@@ -282,10 +395,8 @@ public class RecipeService
         var newState = new RecipeStepState
         {
             EntityId = entityId,
-            // Steps with no verifier (Group, optional Jobs) are considered verified as soon
-            // as they're saved - there's nothing left to live-check. Steps with a verifier
-            // always require a fresh VerifyStepAsync call after a save, since the entity
-            // just changed and the previous verification result no longer applies.
+            // No verifier (Group, optional Jobs) means nothing left to live-check; steps
+            // with a verifier require a fresh VerifyStepAsync call after every save.
             Verified = step.VerifierKind is null,
             LastVerifiedAt = step.VerifierKind is null ? existing?.LastVerifiedAt : null,
             LastVerifyMessage = step.VerifierKind is null ? existing?.LastVerifyMessage : null,
@@ -296,7 +407,7 @@ public class RecipeService
         stepState[stepKey] = newState;
         await PersistStepStateAsync(runId, stepKey, recipe, stepState, ct);
 
-        return ToDto(step, newState);
+        return ToDto(step, newState, recipe.Key);
     }
 
     public async Task<RecipeStepStateDto> SkipStepAsync(int runId, string stepKey, CancellationToken ct = default)
@@ -311,15 +422,53 @@ public class RecipeService
         if (!step.IsOptional)
             throw new InvalidOperationException($"Step '{step.Title}' is required and cannot be skipped.");
 
-        var stepState = DeserializeStepState(run.StepStateJson);
-        var newState = new RecipeStepState { Skipped = true };
-        stepState[stepKey] = newState;
-        await PersistStepStateAsync(runId, stepKey, recipe, stepState, ct);
-
-        return ToDto(step, newState);
+        return await MarkStepSkippedAsync(runId, run, recipe, step, ct);
     }
 
-    // Verification
+    // Shared by both the per-step "Skip this step" button (optional steps only) and
+    // SkipFlowGroupAsync's bulk skip of a whole declined flow - the actual state mutation
+    // (write Skipped=true, persist) never duplicates, only the eligibility check above differs.
+    private async Task<RecipeStepStateDto> MarkStepSkippedAsync(int runId, RecipeRun run, RecipeDefinition recipe, RecipeStepDefinition step, CancellationToken ct)
+    {
+        var stepState = DeserializeStepState(run.StepStateJson);
+        var newState = new RecipeStepState { Skipped = true };
+        stepState[step.StepKey] = newState;
+        await PersistStepStateAsync(runId, step.StepKey, recipe, stepState, ct);
+
+        return ToDto(step, newState, recipe.Key);
+    }
+
+    // Generic flow-group skip: any recipe with >1 distinct FlowGroup among its non-shared
+    // steps is eligible (checked by callers via HasMultipleFlowGroups), so this never needs
+    // to know which recipe it's skipping for. IsShared steps are never touched - they're
+    // skipped via FlowGroup filtering (shared steps have no FlowGroup) rather than a hardcoded
+    // exclusion. Required (non-optional) steps in a declined flow are skipped too, since
+    // "the user opted out of this entire flow" is a different, deliberate decision than the
+    // per-step "Skip this step" affordance IsOptional gates.
+    public async Task<List<RecipeStepStateDto>> SkipFlowGroupAsync(int runId, string flowGroup, CancellationToken ct = default)
+    {
+        var run = await GetRunOrThrowAsync(runId, ct);
+        var recipe = RecipeRegistry.GetByKey(run.RecipeKey)
+            ?? throw new InvalidOperationException($"Recipe '{run.RecipeKey}' no longer exists.");
+
+        var steps = recipe.Steps.Where(s => !s.IsShared && s.FlowGroup == flowGroup).ToList();
+        if (steps.Count == 0)
+            throw new InvalidOperationException($"Flow group '{flowGroup}' is not part of recipe '{run.RecipeKey}'.");
+
+        var results = new List<RecipeStepStateDto>();
+        foreach (var step in steps)
+        {
+            // Re-fetch so each iteration sees the previous iteration's persisted state.
+            run = await GetRunOrThrowAsync(runId, ct);
+            results.Add(await MarkStepSkippedAsync(runId, run, recipe, step, ct));
+        }
+
+        Log.Information("Recipe run {RunId} skipped flow group '{FlowGroup}' ({Count} steps)", runId, flowGroup, steps.Count);
+        return results;
+    }
+
+    public static bool HasMultipleFlowGroups(RecipeDefinition recipe) =>
+        recipe.Steps.Where(s => !s.IsShared).Select(s => s.FlowGroup).Distinct().Count() > 1;
 
     public async Task<RecipeStepStateDto> VerifyStepAsync(int runId, string stepKey, CancellationToken ct = default)
     {
@@ -350,35 +499,36 @@ public class RecipeService
 
         Log.Information("Recipe run {RunId} step {StepKey} verified={Success}: {Message}", runId, stepKey, result.Success, result.Message);
 
-        return ToDto(step, current);
+        return ToDto(step, current, recipe.Key);
     }
 
     private RecipeVerifyContext BuildVerifyContext(string recipeKey, RecipeStepDefinition step, RecipeStepState current, Dictionary<string, RecipeStepState> allSteps)
     {
-        // The Connection step's entity is the staging Connection used by several
-        // later steps' verifiers (StagingTable, ScribanTemplate, ExportQuery).
         var connectionId = allSteps.GetValueOrDefault("connection")?.EntityId;
 
-        // Only recipes with an actual staging-table step (WooCommerceRecipe's Flow A/B) need
-        // a TableName here - fall back to the *recipe's own* staging-table step's saved name,
-        // never a hardcoded default, so a recipe with no staging table (ErrorDigestRecipe,
-        // which queries the user's own existing tables) correctly gets TableName = null instead
-        // of being defaulted to "StoreOrders" by accident just because it reuses the
-        // "query-template"/"export-profile" step keys.
+        // Falls back to the recipe's own staging-table step's saved name, never a hardcoded
+        // default - otherwise a recipe with no staging table (ErrorDigestRecipe) would get
+        // defaulted to "StoreOrders" just because it reuses the same step keys. Plain step
+        // keys are shared by WooCommerceRecipe, WooCommerceTrackingRecipe, and MagentoRecipe -
+        // each is a single-flow (or now-single-flow) recipe, so no "shipments-" prefix needed.
         var tableName = step.StepKey switch
         {
             "staging-table" => current.Params.GetValueOrDefault("tableName") as string,
             "query-template" => allSteps.GetValueOrDefault("staging-table")?.Params.GetValueOrDefault("tableName") as string,
             "export-profile" => allSteps.GetValueOrDefault("staging-table")?.Params.GetValueOrDefault("tableName") as string,
-            "shipments-staging-table" => current.Params.GetValueOrDefault("tableName") as string,
-            "shipments-query-template" => allSteps.GetValueOrDefault("shipments-staging-table")?.Params.GetValueOrDefault("tableName") as string,
-            "shipments-export-profile" => allSteps.GetValueOrDefault("shipments-staging-table")?.Params.GetValueOrDefault("tableName") as string,
             _ => null
         };
 
         var mockTemplateRow = recipeKey.Equals(ErrorDigestRecipe.Key, StringComparison.OrdinalIgnoreCase)
             ? ErrorDigestRecipe.MockDigestRow()
-            : null;
+            : recipeKey.Equals(ExactGlobeRecipe.Key, StringComparison.OrdinalIgnoreCase)
+                ? (IsItemsStep(step.StepKey) ? ExactGlobeRecipe.MockItemRow() : ExactGlobeRecipe.MockDebtorRow())
+                : recipeKey.Equals(UblExportRecipe.Key, StringComparison.OrdinalIgnoreCase)
+                    ? (IsOrderStep(step.StepKey) ? UblExportRecipe.MockOrderRow()
+                        : IsDespatchStep(step.StepKey) ? UblExportRecipe.MockDespatchAdviceRow()
+                        : IsInventoryStep(step.StepKey) ? UblExportRecipe.MockInventoryRow()
+                        : UblExportRecipe.MockInvoiceRow())
+                    : null;
 
         return new RecipeVerifyContext
         {
@@ -389,8 +539,6 @@ public class RecipeService
             MockTemplateRow = mockTemplateRow
         };
     }
-
-    // Entity save helpers - each delegates entirely to the existing entity service
 
     private async Task<int?> SaveConnectionAsync(RecipeStepState? existing, Dictionary<string, object?> p, int? userId, CancellationToken ct)
     {
@@ -408,7 +556,7 @@ public class RecipeService
             return id;
         }
 
-        var newConn = new Connection { Name = name, Type = type, ConnectionString = connectionString, Hash = "" };
+        var newConn = new Connection { Name = name, Type = type, ConnectionString = connectionString, Tags = "", Hash = "" };
         return await _connectionService.CreateAsync(newConn, userId, ct);
     }
 
@@ -432,10 +580,6 @@ public class RecipeService
 
     private async Task<int?> SaveDestinationAsync(RecipeStepState? existing, Dictionary<string, object?> p, Dictionary<string, RecipeStepState> allSteps, CancellationToken ct)
     {
-        // Destination-reuse: if the user explicitly chose to reuse an Email destination
-        // already created earlier in *this run* (Flow A's "destination" step), just point
-        // this step's state at that same entity instead of saving a second Destination.
-        // This only ever looks at the current run's own StepStateJson - no cross-run search.
         if (p.GetValueOrDefault("reuseExistingDestinationId") is { } reuseRaw && TryToInt(reuseRaw, out var reuseId))
         {
             var reused = await _destinationService.GetByIdForExecutionAsync(reuseId, ct)
@@ -460,13 +604,8 @@ public class RecipeService
         return created.Id;
     }
 
-    /// <summary>
-    /// Finds an Email Destination already created earlier in this same run (Flow A's shared
-    /// "destination" step), so the wizard can offer "reuse it?" instead of forcing the user
-    /// to re-enter SMTP credentials when starting Flow B. Pure "did THIS run already create
-    /// one" lookup - no cross-run search, since the "destination" step is IsShared=true and
-    /// every flow in this recipe writes to the same StepStateJson["destination"] entry.
-    /// </summary>
+    // "Did this run already create a Destination?" - no cross-run search, just this run's
+    // shared StepStateJson["destination"] entry.
     public async Task<int?> GetReusableDestinationIdAsync(int runId, CancellationToken ct = default)
     {
         var run = await GetRunOrThrowAsync(runId, ct);
@@ -486,12 +625,33 @@ public class RecipeService
         }
     }
 
-    private static bool IsShipmentsStep(string stepKey) => stepKey.StartsWith("shipments-", StringComparison.OrdinalIgnoreCase);
+    // WooCommerceTrackingRecipe is now its own RecipeDefinition (split out of WooCommerceRecipe's
+    // former Flow B) - dispatch on recipe.Key, the same way MagentoRecipe is told apart from
+    // WooCommerceRecipe, rather than a "shipments-" step-key prefix that no longer exists.
+    private static bool IsWooCommerceTrackingRecipe(string recipeKey) =>
+        recipeKey.Equals(WooCommerceTrackingRecipe.Key, StringComparison.OrdinalIgnoreCase);
 
-    private async Task<int?> CreateStagingTableAsync(string stepKey, Dictionary<string, object?> p, CancellationToken ct)
+    // ExactGlobeRecipe's two flows (Debtors/Items) are a different two-flow shape than
+    // WooCommerce's Order Confirmation/Tracking Link - same "(recipeKey, topic)" dispatch
+    // mechanism, distinct helper since "shipments" semantics don't apply here.
+    private static bool IsDebtorsStep(string stepKey) => stepKey.StartsWith("debtors-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsItemsStep(string stepKey) => stepKey.StartsWith("items-", StringComparison.OrdinalIgnoreCase);
+
+    // UblExportRecipe's four flows (Invoice/Order/Despatch Advice/Inventory) - same
+    // "(recipeKey, topic)" dispatch mechanism as ExactGlobeRecipe's Debtors/Items pair, just
+    // four prefixes instead of two.
+    private static bool IsInvoiceStep(string stepKey) => stepKey.StartsWith("invoice-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsOrderStep(string stepKey) => stepKey.StartsWith("order-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsDespatchStep(string stepKey) => stepKey.StartsWith("despatch-", StringComparison.OrdinalIgnoreCase);
+    private static bool IsInventoryStep(string stepKey) => stepKey.StartsWith("inventory-", StringComparison.OrdinalIgnoreCase);
+
+    private async Task<int?> CreateStagingTableAsync(string recipeKey, string stepKey, Dictionary<string, object?> p, CancellationToken ct)
     {
-        var isShipments = IsShipmentsStep(stepKey);
-        var defaultTableName = isShipments ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
+        var isTracking = IsWooCommerceTrackingRecipe(recipeKey);
+        var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
+        var defaultTableName = isMagento
+            ? MagentoRecipe.StagingTableName
+            : isTracking ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
 
         var connectionId = RequireInt(p, "connectionId");
         var tableName = p.GetValueOrDefault("tableName") as string ?? defaultTableName;
@@ -502,21 +662,22 @@ public class RecipeService
         var exists = await TableExistsAsync(connection, tableName, ct);
         if (!exists)
         {
-            var baseDdl = isShipments
-                ? WooCommerceRecipe.GetShipmentsStagingTableDdl(connection.Type)
-                : WooCommerceRecipe.GetStagingTableDdl(connection.Type);
+            var baseDdl = isMagento
+                ? MagentoRecipe.GetStagingTableDdl(connection.Type)
+                : isTracking
+                    ? WooCommerceRecipe.GetShipmentsStagingTableDdl(connection.Type)
+                    : WooCommerceRecipe.GetStagingTableDdl(connection.Type);
             var ddl = baseDdl.Replace(defaultTableName, tableName);
             await ExecuteDdlAsync(connection, ddl, ct);
             Log.Information("Recipe wizard created staging table {Table} on connection {ConnectionId}", tableName, connectionId);
         }
 
-        // StagingTable has no single owned entity id - we key its state on the Connection used.
         return connectionId;
     }
 
-    private async Task<int?> SaveImportProfileAsync(string stepKey, RecipeStepState? existing, Dictionary<string, object?> p, int? userId, CancellationToken ct)
+    private async Task<int?> SaveImportProfileAsync(string recipeKey, string stepKey, RecipeStepState? existing, Dictionary<string, object?> p, int? userId, CancellationToken ct)
     {
-        var profile = BuildImportProfileFromParams(stepKey, p);
+        var profile = BuildImportProfileFromParams(recipeKey, stepKey, p);
 
         if (existing?.EntityId is { } id)
         {
@@ -528,9 +689,13 @@ public class RecipeService
         return await _importProfileService.CreateAsync(profile, userId);
     }
 
-    private static ImportProfile BuildImportProfileFromParams(string stepKey, Dictionary<string, object?> p)
+    private static ImportProfile BuildImportProfileFromParams(string recipeKey, string stepKey, Dictionary<string, object?> p)
     {
-        var defaultTableName = IsShipmentsStep(stepKey) ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
+        var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
+        var defaultTableName = isMagento
+            ? MagentoRecipe.StagingTableName
+            : IsWooCommerceTrackingRecipe(recipeKey) ? WooCommerceRecipe.ShipmentsStagingTableName : WooCommerceRecipe.StagingTableName;
+        var defaultUpsertKey = isMagento ? "MagentoOrderId" : "WooOrderId";
         return new()
         {
             Name = RequireString(p, "name"),
@@ -546,22 +711,34 @@ public class RecipeService
             TargetConnectionId = RequireInt(p, "targetConnectionId"),
             TargetTable = p.GetValueOrDefault("targetTable") as string ?? defaultTableName,
             LoadStrategy = "Upsert",
-            UpsertKeyColumns = p.GetValueOrDefault("upsertKeyColumns") as string ?? "WooOrderId",
+            UpsertKeyColumns = p.GetValueOrDefault("upsertKeyColumns") as string ?? defaultUpsertKey,
             ColumnMappingsJson = p.GetValueOrDefault("columnMappingsJson") as string,
             Hash = ""
         };
     }
 
+    private static (string Template, string Description, string Tags, string OutputFormat) GetQueryTemplateDefaults(string recipeKey, string stepKey)
+    {
+        var isItems = IsItemsStep(stepKey);
+        return recipeKey switch
+        {
+            ErrorDigestRecipe.Key => (ErrorDigestEmailTemplate.DailyDigestHtml, "Created by the Store System Error Daily Digest recipe", "store,digest", "HTML"),
+            MagentoRecipe.Key => (MagentoEmailTemplates.TrackingUpdateHtml, "Created by the Store Magento Tracking Link recipe", "store,magento", "HTML"),
+            WooCommerceTrackingRecipe.Key => (WooCommerceEmailTemplates.TrackingUpdateHtml, "Created by the Store WooCommerce Tracking Link recipe", "store,woocommerce", "HTML"),
+            ExactGlobeRecipe.Key when isItems => (ExactGlobeTemplates.ItemsXmlTemplate, "Created by the Store Exact Globe+ Items Export recipe", "store,exact-globe", "XML"),
+            ExactGlobeRecipe.Key => (ExactGlobeTemplates.DebtorsXmlTemplate, "Created by the Store Exact Globe+ Debtors Export recipe", "store,exact-globe", "XML"),
+            UblExportRecipe.Key when IsOrderStep(stepKey) => (UblExportTemplates.OrderXmlTemplate, "Created by the Store UBL Standard Order Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key when IsDespatchStep(stepKey) => (UblExportTemplates.DespatchAdviceXmlTemplate, "Created by the Store UBL Standard Despatch Advice Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key when IsInventoryStep(stepKey) => (UblExportTemplates.InventoryXmlTemplate, "Created by the Store UBL Standard Inventory Export recipe", "store,ubl", "XML"),
+            UblExportRecipe.Key => (UblExportTemplates.InvoiceXmlTemplate, "Created by the Store UBL Standard Invoice Export recipe", "store,ubl", "XML"),
+            _ => (WooCommerceEmailTemplates.OrderConfirmationHtml, "Created by the Store WooCommerce Order Confirmation recipe", "store,woocommerce", "HTML")
+        };
+    }
+
     private async Task<int?> SaveQueryTemplateAsync(string recipeKey, string stepKey, RecipeStepState? existing, Dictionary<string, object?> p, CancellationToken ct)
     {
-        var isShipments = IsShipmentsStep(stepKey);
         var name = RequireString(p, "name");
-        var (defaultTemplate, description, tags) = (recipeKey, isShipments) switch
-        {
-            (ErrorDigestRecipe.Key, _) => (ErrorDigestEmailTemplate.DailyDigestHtml, "Created by the Store System Error Daily Digest recipe", "store,digest"),
-            (_, true) => (WooCommerceEmailTemplates.TrackingUpdateHtml, "Created by the Store WooCommerce Tracking Link recipe", "store,woocommerce"),
-            (_, false) => (WooCommerceEmailTemplates.OrderConfirmationHtml, "Created by the Store WooCommerce Order Confirmation recipe", "store,woocommerce")
-        };
+        var (defaultTemplate, description, tags, outputFormat) = GetQueryTemplateDefaults(recipeKey, stepKey);
         var template = p.GetValueOrDefault("template") as string ?? defaultTemplate;
 
         if (existing?.EntityId is { } id)
@@ -579,7 +756,7 @@ public class RecipeService
             Description = description,
             Type = QueryTemplateType.ScribanTemplate,
             Template = template,
-            OutputFormat = "HTML",
+            OutputFormat = outputFormat,
             Tags = tags
         };
         var created = await _queryTemplateService.CreateAsync(newTemplate);
@@ -602,14 +779,22 @@ public class RecipeService
 
     private static Profile BuildExportProfileFromParams(string recipeKey, string stepKey, Dictionary<string, object?> p)
     {
-        var isShipments = IsShipmentsStep(stepKey);
-        var isErrorDigest = recipeKey.Equals(ErrorDigestRecipe.Key, StringComparison.OrdinalIgnoreCase);
+        if (recipeKey.Equals(ExactGlobeRecipe.Key, StringComparison.OrdinalIgnoreCase))
+            return BuildExactGlobeExportProfileFromParams(stepKey, p);
 
-        var defaultQuery = (isErrorDigest, isShipments) switch
+        if (recipeKey.Equals(UblExportRecipe.Key, StringComparison.OrdinalIgnoreCase))
+            return BuildUblExportProfileFromParams(stepKey, p);
+
+        var isTracking = IsWooCommerceTrackingRecipe(recipeKey);
+        var isErrorDigest = recipeKey.Equals(ErrorDigestRecipe.Key, StringComparison.OrdinalIgnoreCase);
+        var isMagento = recipeKey.Equals(MagentoRecipe.Key, StringComparison.OrdinalIgnoreCase);
+
+        var defaultQuery = (isErrorDigest, isMagento, isTracking) switch
         {
-            (true, _) => ErrorDigestRecipe.DefaultExportQuery,
-            (false, true) => WooCommerceRecipe.DefaultShipmentsExportQuery,
-            (false, false) => WooCommerceRecipe.DefaultExportQuery
+            (true, _, _) => ErrorDigestRecipe.DefaultExportQuery,
+            (_, true, _) => MagentoRecipe.DefaultExportQuery,
+            (_, _, true) => WooCommerceRecipe.DefaultShipmentsExportQuery,
+            (_, _, false) => WooCommerceRecipe.DefaultExportQuery
         };
 
         var profile = new Profile
@@ -626,9 +811,6 @@ public class RecipeService
             Hash = ""
         };
 
-        // The digest recipe's query already projects an "email"/"subject" column per row
-        // (see ErrorDigestRecipe.DefaultExportQuery) rather than using a fixed customer
-        // address column and a single hardcoded subject like the WooCommerce flows do.
         if (isErrorDigest)
         {
             profile.EmailRecipientsColumn = p.GetValueOrDefault("emailRecipientsColumn") as string ?? "email";
@@ -638,21 +820,76 @@ public class RecipeService
         else
         {
             profile.EmailRecipientsColumn = p.GetValueOrDefault("emailRecipientsColumn") as string ?? "CustomerEmail";
-            profile.EmailSubjectHardcoded = p.GetValueOrDefault("emailSubject") as string ?? (isShipments ? "Your order is on its way" : "Your order is confirmed");
+            profile.EmailSubjectHardcoded = p.GetValueOrDefault("emailSubject") as string ?? (isTracking || isMagento ? "Your order is on its way" : "Your order is confirmed");
             profile.UseHardcodedSubject = true;
         }
 
         return profile;
     }
 
+    // File export, not email: OutputDestinationType="Local" + an inline OutputDestinationConfig
+    // JSON path (ExecutionService's "Priority 3: fall back to profile's inline configuration")
+    // writes straight to a configured folder, no separate Destination entity required.
+    private static Profile BuildExactGlobeExportProfileFromParams(string stepKey, Dictionary<string, object?> p)
+    {
+        var isItems = IsItemsStep(stepKey);
+        var defaultQuery = isItems ? ExactGlobeRecipe.DefaultItemsExportQuery : ExactGlobeRecipe.DefaultDebtorsExportQuery;
+        var defaultPath = isItems ? "exports/exact-globe/items" : "exports/exact-globe/debtors";
+
+        var outputPath = p.GetValueOrDefault("outputPath") as string ?? defaultPath;
+        var destinationConfig = JsonSerializer.Serialize(new { path = outputPath }, JsonOptions);
+
+        return new Profile
+        {
+            Name = RequireString(p, "name"),
+            ConnectionId = RequireInt(p, "connectionId"),
+            GroupId = p.GetValueOrDefault("groupId") is int gi ? gi : (p.GetValueOrDefault("groupId") as int?),
+            Query = p.GetValueOrDefault("query") as string ?? defaultQuery,
+            OutputFormat = "XML",
+            OutputDestinationType = "Local",
+            OutputDestinationConfig = destinationConfig,
+            IsEmailExport = false,
+            TemplateId = RequireInt(p, "templateId"),
+            Hash = ""
+        };
+    }
+
+    // Same file-export shape as BuildExactGlobeExportProfileFromParams (no email, inline
+    // OutputDestinationType="Local"/OutputDestinationConfig) but kept as its own method rather
+    // than folded into that one - ExactGlobe's is a 2-way isItems branch, UBL needs a 4-way
+    // branch across Invoice/Order/Despatch Advice/Inventory, and merging them would mean every
+    // call site juggling both step-key vocabularies at once for no shared benefit.
+    private static Profile BuildUblExportProfileFromParams(string stepKey, Dictionary<string, object?> p)
+    {
+        var (defaultQuery, defaultPathSegment) = (IsOrderStep(stepKey), IsDespatchStep(stepKey), IsInventoryStep(stepKey)) switch
+        {
+            (true, _, _) => (UblExportRecipe.DefaultOrderExportQuery, "orders"),
+            (_, true, _) => (UblExportRecipe.DefaultDespatchAdviceExportQuery, "despatch-advices"),
+            (_, _, true) => (UblExportRecipe.DefaultInventoryExportQuery, "inventory"),
+            _ => (UblExportRecipe.DefaultInvoiceExportQuery, "invoices")
+        };
+        var defaultPath = $"exports/ubl-standard-export/{defaultPathSegment}";
+
+        var outputPath = p.GetValueOrDefault("outputPath") as string ?? defaultPath;
+        var destinationConfig = JsonSerializer.Serialize(new { path = outputPath }, JsonOptions);
+
+        return new Profile
+        {
+            Name = RequireString(p, "name"),
+            ConnectionId = RequireInt(p, "connectionId"),
+            GroupId = p.GetValueOrDefault("groupId") is int gi ? gi : (p.GetValueOrDefault("groupId") as int?),
+            Query = p.GetValueOrDefault("query") as string ?? defaultQuery,
+            OutputFormat = "XML",
+            OutputDestinationType = "Local",
+            OutputDestinationConfig = destinationConfig,
+            IsEmailExport = false,
+            TemplateId = RequireInt(p, "templateId"),
+            Hash = ""
+        };
+    }
+
     private async Task<int?> SaveJobAsync(Dictionary<string, object?> p, CancellationToken ct)
     {
-        // Optional step: only creates Jobs when the user explicitly asked for scheduling.
-        // Recipes with both an import and an export side (WooCommerce's Flow A/B) chain the
-        // export job OnDependency after the import job. Recipes with no import side at all
-        // (ErrorDigestRecipe queries the user's own existing tables - nothing to import) still
-        // need their export Profile schedulable on its own Interval, so that path is handled
-        // here too rather than silently no-op'ing just because importProfileId is absent.
         int? lastId = null;
         var hasImportProfile = p.GetValueOrDefault("importProfileId") is int;
 
@@ -702,21 +939,13 @@ public class RecipeService
         return lastId;
     }
 
-    // Webhook registration (Tracking Link "fast path" - belt-and-suspenders on top of the polling Import Job)
-
-    /// <summary>
-    /// Creates a WebhookTrigger pointed at the Tracking Link's ImportProfile, reusing the
-    /// existing WebhookService/WebhookTriggers mechanism (Api/WebhooksEndpoints.cs's Create
-    /// handler, WebhookService.CreateWebhookForImportProfileAsync) rather than duplicating it.
-    /// Returns the webhook URL for the user to paste into WooCommerce's webhook settings.
-    /// This runs on top of the polling Import Job created by SaveJobAsync, not instead of it -
-    /// the webhook just fast-tracks an immediate re-pull instead of waiting for the interval.
-    /// </summary>
+    // Belt-and-suspenders fast path on top of the polling Import Job from SaveJobAsync -
+    // fast-tracks an immediate re-pull instead of waiting for the interval.
     public async Task<(int WebhookId, string Url)> RegisterTrackingWebhookAsync(int runId, string requestScheme, string requestHost, CancellationToken ct = default)
     {
         var run = await GetRunOrThrowAsync(runId, ct);
         var stepState = DeserializeStepState(run.StepStateJson);
-        var importStep = stepState.GetValueOrDefault("shipments-import-profile")
+        var importStep = stepState.GetValueOrDefault("import-profile")
             ?? throw new InvalidOperationException("The Tracking Link import step has not been saved yet.");
 
         var importProfileId = importStep.EntityId
@@ -730,8 +959,6 @@ public class RecipeService
         return (webhookId, url);
     }
 
-    // DDL execution against the target Connection (SqlServer/MySQL/PostgreSQL)
-
     private async Task<bool> TableExistsAsync(Connection connection, string tableName, CancellationToken ct)
     {
         await using var db = OpenTargetConnection(connection);
@@ -741,6 +968,7 @@ public class RecipeService
         {
             "MySQL" or "MariaDB" => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName",
             "PostgreSQL" => "SELECT COUNT(*) FROM pg_tables WHERE tablename = @TableName",
+            "Sqlite" => "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = @TableName",
             _ => "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @TableName"
         };
 
@@ -757,8 +985,6 @@ public class RecipeService
 
     private System.Data.Common.DbConnection OpenTargetConnection(Connection connection)
     {
-        // Connection.ConnectionString is encrypted at rest; ConnectionService always returns it
-        // encrypted from GetByIdAsync, so it must be decrypted before use here.
         var cs = _encryptionService.IsEncrypted(connection.ConnectionString)
             ? _encryptionService.Decrypt(connection.ConnectionString)
             : connection.ConnectionString;
@@ -768,11 +994,12 @@ public class RecipeService
             "SqlServer" => new Microsoft.Data.SqlClient.SqlConnection(cs),
             "MySQL" or "MariaDB" => new MySqlConnector.MySqlConnection(cs),
             "PostgreSQL" => new Npgsql.NpgsqlConnection(cs),
+            // The Sqlite Connection type here is the user's chosen staging file (from `cs`),
+            // never Reef's own app database (`_connectionString`).
+            "Sqlite" => new SqliteConnection(cs),
             _ => new Microsoft.Data.SqlClient.SqlConnection(cs)
         };
     }
-
-    // Persistence helpers
 
     private async Task PersistStepStateAsync(int runId, string stepKey, RecipeDefinition recipe, Dictionary<string, RecipeStepState> stepState, CancellationToken ct, bool advanceOnSuccess = false)
     {
@@ -832,24 +1059,36 @@ public class RecipeService
         "connectionString", "configurationJson", "smtpPassword", "consumerSecret", "sourceConfig"
     };
 
-    private static RecipeStepStateDto ToDto(RecipeStepDefinition step, RecipeStepState state) => new()
+    private static RecipeStepStateDto ToDto(RecipeStepDefinition step, RecipeStepState state, string recipeKey)
     {
-        StepKey = step.StepKey,
-        Title = step.Title,
-        EntityType = step.EntityType.ToString(),
-        IsOptional = step.IsOptional,
-        IsShared = step.IsShared,
-        FlowGroup = step.FlowGroup,
-        HasVerifier = step.VerifierKind is not null,
-        EntityId = state.EntityId,
-        Verified = state.Verified,
-        Skipped = state.Skipped,
-        LastVerifiedAt = state.LastVerifiedAt,
-        LastVerifyMessage = state.LastVerifyMessage,
-        // Never echo secrets back to the client - the wizard's "leave unchanged to keep
-        // existing value" placeholders cover the UX for password-style fields on resume.
-        Params = state.Params.Where(kv => !SecretParamKeys.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value)
-    };
+        var displayParams = state.Params.Where(kv => !SecretParamKeys.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value);
+
+        // Show the built-in default in the editor up front instead of leaving it blank with
+        // just an explanatory note - the user can see and tweak it before saving, rather than
+        // saving blind and hoping the "leave blank to use the built-in template" note was right.
+        if (step.EntityType == RecipeEntityType.QueryTemplate && state.EntityId is null && !displayParams.ContainsKey("template"))
+        {
+            displayParams["template"] = GetQueryTemplateDefaults(recipeKey, step.StepKey).Template;
+        }
+
+        return new()
+        {
+            StepKey = step.StepKey,
+            Title = step.Title,
+            EntityType = step.EntityType.ToString(),
+            IsOptional = step.IsOptional,
+            IsShared = step.IsShared,
+            FlowGroup = step.FlowGroup,
+            CanAutoProvision = step.CanAutoProvision,
+            HasVerifier = step.VerifierKind is not null,
+            EntityId = state.EntityId,
+            Verified = state.Verified,
+            Skipped = state.Skipped,
+            LastVerifiedAt = state.LastVerifiedAt,
+            LastVerifyMessage = state.LastVerifyMessage,
+            Params = displayParams
+        };
+    }
 
     private static string RequireString(Dictionary<string, object?> p, string key) =>
         p.GetValueOrDefault(key) as string ?? throw new InvalidOperationException($"'{key}' is required.");
@@ -867,16 +1106,17 @@ public class RecipeService
     }
 }
 
-// DTOs for the Recipes API
-
 public class RecipeListItem
 {
     public required string Key { get; set; }
     public required string Name { get; set; }
     public required string Description { get; set; }
+    public required string Category { get; set; }
+    public required string Icon { get; set; }
     public int StepCount { get; set; }
     public int? ExistingRunId { get; set; }
     public int? LastCompletedRunId { get; set; }
+    public bool IsInstalled { get; set; }
 }
 
 public class RecipeRunStateDto
@@ -900,6 +1140,7 @@ public class RecipeStepStateDto
     public bool IsOptional { get; set; }
     public bool IsShared { get; set; }
     public string? FlowGroup { get; set; }
+    public bool CanAutoProvision { get; set; }
     public bool HasVerifier { get; set; }
     public int? EntityId { get; set; }
     public bool Verified { get; set; }
@@ -907,11 +1148,5 @@ public class RecipeStepStateDto
     public DateTime? LastVerifiedAt { get; set; }
     public string? LastVerifyMessage { get; set; }
 
-    /// <summary>
-    /// The params this step was last saved with - lets the wizard UI re-populate its
-    /// form fields on resume (e.g. after closing the wizard mid-setup and reopening it).
-    /// Note: never carries raw secrets back to the client beyond what the entity service
-    /// itself would already return (e.g. SMTP password fields are write-only by convention).
-    /// </summary>
     public Dictionary<string, object?> Params { get; set; } = new();
 }

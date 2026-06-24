@@ -1,30 +1,18 @@
 namespace Reef.Core.Recipes;
 
-/// <summary>
-/// WooCommerce recipe: Order Confirmation emails (Flow A) + Tracking Link emails (Flow B).
-/// Both flows share steps 1-3 (Connection/Group/Destination, IsShared=true) and are grouped
-/// in the UI via RecipeStepDefinition.FlowGroup ("Order Confirmation" / "Tracking Link") -
-/// one RecipeDefinition, two flows as sections in its Steps list, per the Phase 1 step shape
-/// that already anticipated this (IsShared flag) rather than splitting into two recipes or
-/// redesigning the engine for cross-recipe-run lookups.
-/// </summary>
+// Order Confirmation only - Tracking Link split out into its own WooCommerceTrackingRecipe
+// (separate RecipeRun, separate Connection/Group/Destination) since the two were never
+// genuinely one setup, just two flows that happened to share infrastructure. The shipments
+// staging-table DDL statics stay here (rather than duplicated into WooCommerceTrackingRecipe)
+// since they're identical to before the split and WooCommerceTrackingRecipe references them.
 public static class WooCommerceRecipe
 {
     public const string Key = "woocommerce-order-confirmation";
-
-    /// <summary>Default staging table the wizard creates via raw DDL (Reef does not auto-create import target tables) - Flow A (Order Confirmation).</summary>
     public const string StagingTableName = "StoreOrders";
-
-    /// <summary>Default staging table for Flow B (Tracking Link).</summary>
     public const string ShipmentsStagingTableName = "StoreShipments";
 
-    /// <summary>
-    /// CREATE TABLE DDL for the StoreOrders staging table. Column set matches the fields
-    /// the Order Confirmation Scriban template (see WooCommerceEmailTemplates) and the
-    /// WooCommerce REST orders endpoint (/wp-json/wc/v3/orders) both expect.
-    /// Per-database-type because Reef's supported query sources are SqlServer/MySQL/PostgreSQL
-    /// and each has different identity/text-type syntax.
-    /// </summary>
+    // Per-database-type identity/text syntax for Reef's supported query sources.
+    // Sqlite here is the user's chosen staging file (never Reef's own app database).
     public static string GetStagingTableDdl(string connectionType) => connectionType switch
     {
         "SqlServer" => """
@@ -75,6 +63,30 @@ public static class WooCommerceRecipe
                 UNIQUE KEY UQ_StoreOrders_WooOrderId (WooOrderId)
             )
             """,
+        "Sqlite" => """
+            CREATE TABLE StoreOrders (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                WooOrderId INTEGER NOT NULL,
+                OrderNumber TEXT NULL,
+                OrderDate TEXT NULL,
+                OrderStatus TEXT NULL,
+                CustomerName TEXT NULL,
+                CustomerEmail TEXT NULL,
+                Company TEXT NULL,
+                CurrencySymbol TEXT NULL,
+                Total TEXT NULL,
+                Subtotal TEXT NULL,
+                Discount TEXT NULL,
+                Shipping TEXT NULL,
+                Tax TEXT NULL,
+                ShippingAddressJson TEXT NULL,
+                BillingAddressJson TEXT NULL,
+                ItemsJson TEXT NULL,
+                EmailSent INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (WooOrderId)
+            )
+            """,
         _ => """
             CREATE TABLE StoreOrders (
                 Id SERIAL PRIMARY KEY,
@@ -100,15 +112,8 @@ public static class WooCommerceRecipe
             """
     };
 
-    /// <summary>Default export query selecting unsent order confirmations from the staging table.</summary>
     public const string DefaultExportQuery = "SELECT * FROM StoreOrders WHERE EmailSent = 0";
 
-    /// <summary>
-    /// CREATE TABLE DDL for the StoreShipments staging table (Flow B - Tracking Link).
-    /// Column set matches the Tracking Update Scriban template (see WooCommerceEmailTemplates)
-    /// and WooCommerce's order/shipment tracking data. Same per-database-type shape as
-    /// GetStagingTableDdl, just a different target table and column set.
-    /// </summary>
     public static string GetShipmentsStagingTableDdl(string connectionType) => connectionType switch
     {
         "SqlServer" => """
@@ -149,6 +154,25 @@ public static class WooCommerceRecipe
                 UNIQUE KEY UQ_StoreShipments_WooOrderId (WooOrderId)
             )
             """,
+        "Sqlite" => """
+            CREATE TABLE StoreShipments (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                WooOrderId INTEGER NOT NULL,
+                OrderNumber TEXT NULL,
+                CustomerName TEXT NULL,
+                CustomerEmail TEXT NULL,
+                Company TEXT NULL,
+                TrackingNumber TEXT NULL,
+                Carrier TEXT NULL,
+                TrackingUrl TEXT NULL,
+                EstimatedDeliveryDate TEXT NULL,
+                ShippingAddressJson TEXT NULL,
+                ItemsJson TEXT NULL,
+                EmailSent INTEGER NOT NULL DEFAULT 0,
+                CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+                UNIQUE (WooOrderId)
+            )
+            """,
         _ => """
             CREATE TABLE StoreShipments (
                 Id SERIAL PRIMARY KEY,
@@ -169,27 +193,25 @@ public static class WooCommerceRecipe
             """
     };
 
-    /// <summary>Default export query selecting unsent tracking emails from the shipments staging table.</summary>
     public const string DefaultShipmentsExportQuery = "SELECT * FROM StoreShipments WHERE EmailSent = 0";
-
-    public const string OrderConfirmationFlowGroup = "Order Confirmation";
-    public const string TrackingLinkFlowGroup = "Tracking Link";
 
     public static RecipeDefinition Definition { get; } = new()
     {
         Key = Key,
         Name = "WooCommerce Order Confirmation",
-        Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation, plus shipment tracking links.",
+        Description = "Pull new orders from your WooCommerce store and automatically email customers a confirmation.",
+        Category = "E-commerce",
+        Icon = "shopping-cart",
         Steps = new List<RecipeStepDefinition>
         {
-            // Shared
             new()
             {
                 StepKey = "connection",
                 Title = "Database Connection",
                 EntityType = RecipeEntityType.Connection,
                 IsShared = true,
-                VerifierKind = RecipeVerifierKind.Connection
+                VerifierKind = RecipeVerifierKind.Connection,
+                CanAutoProvision = true
             },
             new()
             {
@@ -197,7 +219,8 @@ public static class WooCommerceRecipe
                 Title = "Organize",
                 EntityType = RecipeEntityType.Group,
                 IsShared = true,
-                VerifierKind = null // Groups are pure UI organization, no live check applies
+                VerifierKind = null,
+                CanAutoProvision = true
             },
             new()
             {
@@ -207,14 +230,11 @@ public static class WooCommerceRecipe
                 IsShared = true,
                 VerifierKind = RecipeVerifierKind.EmailDestination
             },
-
-            // Order Confirmation flow (Flow A)
             new()
             {
                 StepKey = "staging-table",
                 Title = "Staging Table",
                 EntityType = RecipeEntityType.StagingTable,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.StagingTable
             },
             new()
@@ -222,7 +242,6 @@ public static class WooCommerceRecipe
                 StepKey = "import-profile",
                 Title = "Pull Orders from WooCommerce",
                 EntityType = RecipeEntityType.ImportProfile,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.HttpSource
             },
             new()
@@ -230,7 +249,6 @@ public static class WooCommerceRecipe
                 StepKey = "query-template",
                 Title = "Email Template",
                 EntityType = RecipeEntityType.QueryTemplate,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.ScribanTemplate
             },
             new()
@@ -238,7 +256,6 @@ public static class WooCommerceRecipe
                 StepKey = "export-profile",
                 Title = "Send Confirmation Emails",
                 EntityType = RecipeEntityType.Profile,
-                FlowGroup = OrderConfirmationFlowGroup,
                 VerifierKind = RecipeVerifierKind.ExportQuery
             },
             new()
@@ -247,52 +264,7 @@ public static class WooCommerceRecipe
                 Title = "Scheduling (optional)",
                 EntityType = RecipeEntityType.Job,
                 IsOptional = true,
-                FlowGroup = OrderConfirmationFlowGroup,
-                VerifierKind = null // Jobs are optional automation on top of already-verified steps; no separate live check
-            },
-
-            // Tracking Link flow (Flow B) - same step shape as Flow A, reuses the shared
-            // Connection/Group/Destination above instead of re-collecting them.
-            new()
-            {
-                StepKey = "shipments-staging-table",
-                Title = "Staging Table",
-                EntityType = RecipeEntityType.StagingTable,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.StagingTable
-            },
-            new()
-            {
-                StepKey = "shipments-import-profile",
-                Title = "Pull Tracking Updates from WooCommerce",
-                EntityType = RecipeEntityType.ImportProfile,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.HttpSource
-            },
-            new()
-            {
-                StepKey = "shipments-query-template",
-                Title = "Email Template",
-                EntityType = RecipeEntityType.QueryTemplate,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.ScribanTemplate
-            },
-            new()
-            {
-                StepKey = "shipments-export-profile",
-                Title = "Send Tracking Emails",
-                EntityType = RecipeEntityType.Profile,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = RecipeVerifierKind.ExportQuery
-            },
-            new()
-            {
-                StepKey = "shipments-jobs",
-                Title = "Scheduling & Webhook (optional)",
-                EntityType = RecipeEntityType.Job,
-                IsOptional = true,
-                FlowGroup = TrackingLinkFlowGroup,
-                VerifierKind = null // Jobs/webhook registration are optional automation on top of already-verified steps; no separate live check
+                VerifierKind = null
             }
         }
     };

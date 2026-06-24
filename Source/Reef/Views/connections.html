@@ -85,6 +85,7 @@
                         <option value="SqlServer">SQL Server</option>
                         <option value="MySQL">MySQL</option>
                         <option value="PostgreSQL">PostgreSQL</option>
+                        <option value="Sqlite">SQLite</option>
                     </select>
                 </div>
                 
@@ -194,6 +195,9 @@
                     break;
                 case 'PostgreSQL':
                     exampleConnectionString = 'Host=localhost;Database=mydb;Username=postgres;Password=***;';
+                    break;
+                case 'Sqlite':
+                    exampleConnectionString = 'Data Source=/path/to/staging.db';
                     break;
                 default:
                     exampleConnectionString = 'Server=localhost;Database=mydb;User Id=user;Password=***;';
@@ -420,7 +424,8 @@
             const typeMap = {
                 'SqlServer': 'SQL Server',
                 'MySQL': 'MySQL',
-                'PostgreSQL': 'PostgreSQL'
+                'PostgreSQL': 'PostgreSQL',
+                'Sqlite': 'SQLite'
             };
             return typeMap[type] || type;
         }
