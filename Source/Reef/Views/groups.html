@@ -39,7 +39,7 @@
             </main>
         </div>
     </div>
-    <div id="group-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="group-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeGroupModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Group</h3>
@@ -64,7 +64,7 @@
             </form>
         </div>
     </div>
-    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
             <div id="help-modal-content-area">
                 <div class="flex justify-between items-center mb-4">

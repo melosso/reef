@@ -147,11 +147,11 @@
         </div>
     </div>
 
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseProfileModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Profile</h3>
-                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-500">
+                <button onclick="attemptCloseProfileModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -222,14 +222,14 @@
                     </div>
                     
                     <!-- Scheduling Notice -->
-                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4" id="scheduling-notice" style="display:none;">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4" id="scheduling-notice" style="display:none;">
                         <div class="flex">
                             <div class="flex-shrink-0">
                                 <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
                             </div>
                             <div class="ml-3">
                                 <h3 class="text-sm font-medium text-blue-800">Need to schedule this profile?</h3>
-                                <p class="mt-1 text-sm text-blue-700">
+                                <p class="mt-1 text-xs text-blue-700">
 After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
                             </div>
                         </div>
@@ -350,9 +350,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="recipientsToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedRecipients">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedRecipients" class="sr-only peer" onchange="updateRecipientsModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="recipientsMode">Hardcoded</span>
                                 </div>
@@ -379,9 +379,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="ccToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedCc">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedCc" class="sr-only peer" onchange="updateCcModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="ccMode">Hardcoded</span>
                                 </div>
@@ -408,9 +408,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-medium text-gray-600">Column</span>
-                                    <label class="relative inline-block w-12 h-6 bg-gray-300 rounded-full cursor-pointer transition" id="subjectToggle">
-                                        <input type="checkbox" class="hidden" id="useHardcodedSubject">
-                                        <span class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition"></span>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="useHardcodedSubject" class="sr-only peer" onchange="updateSubjectModeDisplay()">
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="subjectMode">Hardcoded</span>
                                 </div>
@@ -526,7 +526,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="mb-3">
                             <label for="preprocess-type" class="block text-sm font-medium text-slate-700 mb-1 flex items-center">
                                 Pre-Process Type
-                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Query: Use for SQL statements (SELECT, UPDATE, INSERT, DELETE, etc.)\nStored Procedure: Use for calling existing database procedures by name" data-tooltip-position="top">
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Query: Use for SQL statements (SELECT, UPDATE, INSERT, DELETE, etc.)\nStored Procedure: Use for calling existing database procedures by name\nScript: Run a script process (pwsh/python/node/bash/sh) before the main query" data-tooltip-position="top">
                                     <i data-lucide="info" class="w-4 h-4"></i>
                                 </span>
                             </label>
@@ -535,11 +535,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <option value="">None</option>
                                 <option value="Query">Query (SQL statements)</option>
                                 <option value="StoredProcedure">Stored Procedure (procedure name only)</option>
+                                <option value="Script">Script (run a process)</option>
                             </select>
                         </div>
-                        
+
                         <div id="preprocess-config-section" class="hidden space-y-3">
-                            <div>
+                            <div id="preprocess-sql-fields">
                                 <label for="preprocess-command" class="block text-sm font-medium text-slate-700">
                                     Command *
                                 </label>
@@ -547,7 +548,72 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                           class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
                                           placeholder="For Query: UPDATE Items SET Status='Processing' WHERE Id={executionid}&#10;For Stored Procedure: sp_PrepareData"></textarea>
                             </div>
-                            
+
+                            <div id="preprocess-script-fields" class="hidden space-y-3">
+                                <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                    <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                    <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                        <button type="button" onclick="applyScriptStarter('preprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                    </div>
+                                </details>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="preprocess-script-interpreter" class="block text-sm font-medium text-slate-700">
+                                            Interpreter
+                                        </label>
+                                        <select id="preprocess-script-interpreter"
+                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                            <option value="pwsh">PowerShell (pwsh)</option>
+                                            <option value="python">Python</option>
+                                            <option value="node">Node.js</option>
+                                            <option value="bash">Bash</option>
+                                            <option value="sh">sh</option>
+                                            <option value="cmd">cmd (Windows)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="preprocess-script-source" class="block text-sm font-medium text-slate-700">
+                                            Source
+                                        </label>
+                                        <select id="preprocess-script-source"
+                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                            <option value="inline">Inline script</option>
+                                            <option value="path">File path on server</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="preprocess-script-body" class="block text-sm font-medium text-slate-700">
+                                        Script *
+                                    </label>
+                                    <textarea id="preprocess-script-body" rows="6"
+                                              class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                              placeholder="Inline source, or an absolute path to a script file on the server"></textarea>
+                                </div>
+                                <div>
+                                    <label for="preprocess-script-env-allowlist" class="block text-sm font-medium text-slate-700">
+                                        Env Allowlist (comma-separated)
+                                    </label>
+                                    <input type="text" id="preprocess-script-env-allowlist" placeholder="e.g. SLACK_WEBHOOK_URL, N8N_API_KEY"
+                                           class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Only these environment variables are passed to the script. Everything else is withheld.</p>
+                                </div>
+                                <div>
+                                    <button type="button" onclick="testScript('preprocess')"
+                                            class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                        <svg id="preprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                        </svg>
+                                        <i data-lucide="terminal" class="w-3.5 h-3.5 mr-1.5"></i>
+                                        Test Script
+                                    </button>
+                                    <div id="preprocess-script-test-result" class="mt-2 hidden"></div>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label for="preprocess-timeout" class="block text-sm font-medium text-slate-700">
@@ -565,7 +631,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </label>
                                 </div>
                             </div>
-                            
+
+                            <div class="flex items-center">
+                                <input type="checkbox" id="preprocess-continue-on-error"
+                                       class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                <label for="preprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">
+                                    Continue execution if this step fails
+                                </label>
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="When checked, a failed Query/StoredProcedure/Script step here does not abort the whole profile execution." data-tooltip-position="top">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                </span>
+                            </div>
+
                             <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
                                 <p class="text-xs text-yellow-700">
                                     <strong>Tip:</strong> Use context variables like {executionid}, {profileid}, {triggeredby} in your command or parameters.
@@ -585,7 +662,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="mb-3">
                             <label for="postprocess-type" class="block text-sm font-medium text-slate-700 mb-1 flex items-center">
                                 Post-Process Type
-                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Query: Use for SQL statements (SELECT, UPDATE, INSERT, DELETE, etc.)&#10;Stored Procedure: Use for calling existing database procedures by name" data-tooltip-position="top">
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="Query: Use for SQL statements (SELECT, UPDATE, INSERT, DELETE, etc.)&#10;Stored Procedure: Use for calling existing database procedures by name&#10;Script: Run a script process (e.g. webhook/n8n delivery, Slack/Teams notify) after the main query" data-tooltip-position="top">
                                     <i data-lucide="info" class="w-4 h-4"></i>
                                 </span>
                             </label>
@@ -594,11 +671,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <option value="">None</option>
                                 <option value="Query">Query (SQL statements)</option>
                                 <option value="StoredProcedure">Stored Procedure (procedure name only)</option>
+                                <option value="Script">Script (run a process)</option>
                             </select>
                         </div>
-                        
+
                         <div id="postprocess-config-section" class="hidden space-y-3">
-                            <div>
+                            <div id="postprocess-sql-fields">
                                 <label for="postprocess-command" class="block text-sm font-medium text-slate-700">
                                     Command *
                                 </label>
@@ -606,7 +684,72 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                           class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
                                           placeholder="For Query: UPDATE log SET status='complete', rows={rowcount} WHERE execution_id={executionid}&#10;For Stored Procedure: sp_LogExport"></textarea>
                             </div>
-                            
+
+                            <div id="postprocess-script-fields" class="hidden space-y-3">
+                                <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                    <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                    <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                        <button type="button" onclick="applyScriptStarter('postprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                    </div>
+                                </details>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="postprocess-script-interpreter" class="block text-sm font-medium text-slate-700">
+                                            Interpreter
+                                        </label>
+                                        <select id="postprocess-script-interpreter"
+                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                            <option value="pwsh">PowerShell (pwsh)</option>
+                                            <option value="python">Python</option>
+                                            <option value="node">Node.js</option>
+                                            <option value="bash">Bash</option>
+                                            <option value="sh">sh</option>
+                                            <option value="cmd">cmd (Windows)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="postprocess-script-source" class="block text-sm font-medium text-slate-700">
+                                            Source
+                                        </label>
+                                        <select id="postprocess-script-source"
+                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                            <option value="inline">Inline script</option>
+                                            <option value="path">File path on server</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="postprocess-script-body" class="block text-sm font-medium text-slate-700">
+                                        Script *
+                                    </label>
+                                    <textarea id="postprocess-script-body" rows="6"
+                                              class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                              placeholder="Inline source, or an absolute path to a script file on the server. Use stdin JSON (executionid, outputpath, status, parameters, ...) to build a webhook/Slack/ERP call."></textarea>
+                                </div>
+                                <div>
+                                    <label for="postprocess-script-env-allowlist" class="block text-sm font-medium text-slate-700">
+                                        Env Allowlist (comma-separated)
+                                    </label>
+                                    <input type="text" id="postprocess-script-env-allowlist" placeholder="e.g. SLACK_WEBHOOK_URL, N8N_API_KEY"
+                                           class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm">
+                                    <p class="mt-1 text-xs text-gray-500">Only these environment variables are passed to the script. Everything else is withheld.</p>
+                                </div>
+                                <div>
+                                    <button type="button" onclick="testScript('postprocess')"
+                                            class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                        <svg id="postprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                        </svg>
+                                        <i data-lucide="terminal" class="w-3.5 h-3.5 mr-1.5"></i>
+                                        Test Script
+                                    </button>
+                                    <div id="postprocess-script-test-result" class="mt-2 hidden"></div>
+                                </div>
+                            </div>
+
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label for="postprocess-timeout" class="block text-sm font-medium text-slate-700">
@@ -635,7 +778,18 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <i data-lucide="info" class="w-4 h-4"></i>
                                 </span>
                             </div>
-                            
+
+                            <div class="flex items-center">
+                                <input type="checkbox" id="postprocess-continue-on-error"
+                                       class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                <label for="postprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">
+                                    Continue execution if this step fails
+                                </label>
+                                <span class="ml-1 text-gray-400 cursor-help" data-tooltip="When checked, a failed Query/StoredProcedure/Script step here does not mark the overall export as failed." data-tooltip-position="top">
+                                    <i data-lucide="info" class="w-4 h-4"></i>
+                                </span>
+                            </div>
+
                             <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
                                 <p class="text-xs text-blue-700">
                                     <strong>Available variables:</strong> {executionid}, {profileid}, {rowcount}, {outputpath}, {filesizebytes}, {executiontimems}, {outputformat}, {triggeredby}, {startedat}, {completedat}, {status}, {deltasynccolumn}, {splitkey}
@@ -702,7 +856,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                             </div>
                         </div>
-                        <button type="button" onclick="closeProfileModal()"
+                        <button type="button" onclick="attemptCloseProfileModal()"
                                 class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
                             Cancel
                         </button>
@@ -1126,7 +1280,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                     </div>
                 </div>
-                <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+                <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
                     <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
                         <div id="help-modal-content-area">
                             <div class="flex justify-between items-center mb-4">
@@ -1371,13 +1525,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Email HTML Preview Modal -->
-    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="email-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeEmailPreviewModal()">
         <div class="relative w-full max-w-4xl mx-auto my-8">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="email-preview-modal-title">
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
                     <h2 id="email-preview-modal-title" class="text-lg font-semibold text-slate-900">Preview</h2>
-                    <button onclick="closeEmailPreviewModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeEmailPreviewModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
@@ -1413,7 +1567,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Query Results Preview Modal -->
-    <div id="query-results-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="query-results-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeQueryResultsModal()">
         <div class="relative w-full max-w-6xl mx-auto my-8">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="query-results-modal-title">
                 <!-- Header -->
@@ -1426,7 +1580,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <span id="query-results-delta-summary" class="hidden ml-2 space-x-2"></span>
                         </p>
                     </div>
-                    <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeQueryResultsModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
@@ -1472,27 +1626,27 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Email Execution Confirmation Modal -->
-    <div id="email-execute-confirmation-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="email-execute-confirmation-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeEmailExecutionConfirmationModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl" role="dialog" aria-modal="true" aria-labelledby="email-execute-confirmation-modal-title">
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4 disable-select">
                     <h2 id="email-execute-confirmation-modal-title" class="text-lg font-semibold text-slate-900">Are you sure?</h2>
-                    <button onclick="closeEmailExecutionConfirmationModal()" class="text-gray-400 hover:text-gray-500">
+                    <button onclick="closeEmailExecutionConfirmationModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                         <i data-lucide="x" class="h-6 w-6"></i>
                     </button>
                 </div>
 
                 <!-- Content -->
                 <div class="px-6 py-4">
-                    <div class="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-md">
-                        <div class="flex items-start">
-                            <i data-lucide="alert-triangle" class="h-6 w-6 text-yellow-500 mr-3 mt-1"></i>
-                            <div>
-                                <p class="text-sm font-semibold text-yellow-900 mb-1">
-                                    Warning
-                                </p>
-                                <p class="text-sm text-yellow-800">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-400"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-yellow-900">Warning</h3>
+                                <p class="mt-1 text-sm text-yellow-800">
                                     This action will send emails to the recipients defined in your profile. Proceed with caution.
                                 </p>
                             </div>
@@ -1530,14 +1684,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Import Profile Modal -->
-    <div id="import-profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="import-profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseImportProfileModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-modal-title" class="text-lg font-semibold text-slate-900 flex items-center">
                     <i data-lucide="upload" class="h-5 w-5 mr-2 text-blue-500"></i>
                     New Profile
                 </h3>
-                <button onclick="closeImportProfileModal()" class="text-gray-400 hover:text-gray-500">
+                <button onclick="attemptCloseImportProfileModal()" class="text-gray-400 hover:text-gray-500">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -1565,6 +1719,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </button>
                     <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-failures" onclick="showImportTab('imp-failures')">
                         <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>Failures
+                    </button>
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-processing" onclick="showImportTab('imp-processing')">
+                        <i data-lucide="terminal" class="w-4 h-4 inline mr-1"></i>Processing
                     </button>
                     <button type="button" id="imp-output-targets-tab-btn" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300 opacity-50 cursor-not-allowed" data-tab="imp-output-targets" onclick="showImportTab('imp-output-targets')" aria-disabled="true">
                         <i data-lucide="send" class="w-4 h-4 inline mr-1"></i>Output Targets
@@ -2080,7 +2237,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <i data-lucide="file-symlink" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
                                 <div>
                                     <p class="text-sm font-medium text-blue-800">Binary / File Passthrough</p>
-                                    <p class="text-sm text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
+                                    <p class="text-xs text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
                                 </div>
                             </div>
                         </div>
@@ -2525,7 +2682,223 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 </div>
 
+                <!--  Processing Tab (pre/post-process Query/StoredProcedure/Script - Database target only) -->
+                <div id="imp-processing" class="import-tab-pane hidden">
+                    <div class="space-y-4">
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="flex">
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
+                                <div class="ml-3"><p class="text-sm text-blue-700">Run a SQL statement, stored procedure, or script before/after the import. Database target only - skipped for LocalFile targets.</p></div>
+                            </div>
+                        </div>
 
+                        <!-- Pre-Processing -->
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i data-lucide="play" class="w-4 h-4 mr-2 text-green-600"></i>
+                                Pre-Processing (Optional)
+                                <span class="ml-2 text-xs font-normal text-gray-500">Execute before the import pipeline</span>
+                            </h4>
+
+                            <div class="mb-3">
+                                <label for="imp-preprocess-type" class="block text-sm font-medium text-slate-700 mb-1">Pre-Process Type</label>
+                                <select id="imp-preprocess-type" onchange="toggleImportPreProcessConfig()"
+                                        class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                    <option value="">None</option>
+                                    <option value="Query">Query (SQL statements)</option>
+                                    <option value="StoredProcedure">Stored Procedure (procedure name only)</option>
+                                    <option value="Script">Script (run a process)</option>
+                                </select>
+                            </div>
+
+                            <div id="imp-preprocess-config-section" class="hidden space-y-3">
+                                <div id="imp-preprocess-sql-fields">
+                                    <label for="imp-preprocess-command" class="block text-sm font-medium text-slate-700">Command *</label>
+                                    <textarea id="imp-preprocess-command" rows="2"
+                                              class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                              placeholder="For Query: TRUNCATE TABLE staging_orders&#10;For Stored Procedure: sp_PrepareImport"></textarea>
+                                </div>
+
+                                <div id="imp-preprocess-script-fields" class="hidden space-y-3">
+                                    <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                        <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                        <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-preprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                        </div>
+                                    </details>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="imp-preprocess-script-interpreter" class="block text-sm font-medium text-slate-700">Interpreter</label>
+                                            <select id="imp-preprocess-script-interpreter"
+                                                    class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                                <option value="pwsh">PowerShell (pwsh)</option>
+                                                <option value="python">Python</option>
+                                                <option value="node">Node.js</option>
+                                                <option value="bash">Bash</option>
+                                                <option value="sh">sh</option>
+                                                <option value="cmd">cmd (Windows)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="imp-preprocess-script-source" class="block text-sm font-medium text-slate-700">Source</label>
+                                            <select id="imp-preprocess-script-source"
+                                                    class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                                <option value="inline">Inline script</option>
+                                                <option value="path">File path on server</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="imp-preprocess-script-body" class="block text-sm font-medium text-slate-700">Script *</label>
+                                        <textarea id="imp-preprocess-script-body" rows="6"
+                                                  class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                                  placeholder="Inline source, or an absolute path to a script file on the server"></textarea>
+                                    </div>
+                                    <div>
+                                        <label for="imp-preprocess-script-env-allowlist" class="block text-sm font-medium text-slate-700">Env Allowlist (comma-separated)</label>
+                                        <input type="text" id="imp-preprocess-script-env-allowlist" placeholder="e.g. SLACK_WEBHOOK_URL, N8N_API_KEY"
+                                               class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm">
+                                        <p class="mt-1 text-xs text-gray-500">Only these environment variables are passed to the script.</p>
+                                    </div>
+                                    <div>
+                                        <button type="button" onclick="testScript('imp-preprocess')"
+                                                class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                            <svg id="imp-preprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                            </svg>
+                                            <i data-lucide="terminal" class="w-3.5 h-3.5 mr-1.5"></i>Test Script
+                                        </button>
+                                        <div id="imp-preprocess-script-test-result" class="mt-2 hidden"></div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="imp-preprocess-timeout" class="block text-sm font-medium text-slate-700">Timeout (seconds)</label>
+                                        <input type="number" id="imp-preprocess-timeout" value="30" min="1"
+                                               class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                    </div>
+                                    <div class="flex items-center pt-6">
+                                        <input type="checkbox" id="imp-preprocess-rollback-on-failure" checked class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <label for="imp-preprocess-rollback-on-failure" class="ml-2 block text-sm text-gray-900">Rollback on failure</label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="imp-preprocess-continue-on-error" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <label for="imp-preprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">Continue execution if this step fails</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Post-Processing -->
+                        <div class="border-t border-gray-200 pt-4 mt-4">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                                <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-blue-600"></i>
+                                Post-Processing (Optional)
+                                <span class="ml-2 text-xs font-normal text-gray-500">Execute after the import pipeline</span>
+                            </h4>
+
+                            <div class="mb-3">
+                                <label for="imp-postprocess-type" class="block text-sm font-medium text-slate-700 mb-1">Post-Process Type</label>
+                                <select id="imp-postprocess-type" onchange="toggleImportPostProcessConfig()"
+                                        class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                    <option value="">None</option>
+                                    <option value="Query">Query (SQL statements)</option>
+                                    <option value="StoredProcedure">Stored Procedure (procedure name only)</option>
+                                    <option value="Script">Script (run a process)</option>
+                                </select>
+                            </div>
+
+                            <div id="imp-postprocess-config-section" class="hidden space-y-3">
+                                <div id="imp-postprocess-sql-fields">
+                                    <label for="imp-postprocess-command" class="block text-sm font-medium text-slate-700">Command *</label>
+                                    <textarea id="imp-postprocess-command" rows="2"
+                                              class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                              placeholder="For Query: UPDATE import_log SET status='complete' WHERE id={executionid}&#10;For Stored Procedure: sp_FinalizeImport"></textarea>
+                                </div>
+
+                                <div id="imp-postprocess-script-fields" class="hidden space-y-3">
+                                    <details class="bg-slate-50 border border-slate-200 rounded-md">
+                                        <summary class="px-3 py-2 text-sm font-medium text-slate-700 cursor-pointer select-none">New to scripting? Start from a pattern</summary>
+                                        <div class="px-3 pb-3 flex flex-wrap gap-2">
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'webhook')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Webhook / n8n delivery</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'slack')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">Slack / Teams notify</button>
+                                            <button type="button" onclick="applyScriptStarter('imp-postprocess', 'erp')" class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-200 rounded hover:bg-slate-50">REST API call</button>
+                                        </div>
+                                    </details>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="imp-postprocess-script-interpreter" class="block text-sm font-medium text-slate-700">Interpreter</label>
+                                            <select id="imp-postprocess-script-interpreter"
+                                                    class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                                <option value="pwsh">PowerShell (pwsh)</option>
+                                                <option value="python">Python</option>
+                                                <option value="node">Node.js</option>
+                                                <option value="bash">Bash</option>
+                                                <option value="sh">sh</option>
+                                                <option value="cmd">cmd (Windows)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="imp-postprocess-script-source" class="block text-sm font-medium text-slate-700">Source</label>
+                                            <select id="imp-postprocess-script-source"
+                                                    class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                                <option value="inline">Inline script</option>
+                                                <option value="path">File path on server</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="imp-postprocess-script-body" class="block text-sm font-medium text-slate-700">Script *</label>
+                                        <textarea id="imp-postprocess-script-body" rows="6"
+                                                  class="mt-1 block w-full px-3 py-2 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm"
+                                                  placeholder="Inline source, or an absolute path to a script file on the server. Use stdin JSON (executionid, status, parameters, ...) to build a webhook/Slack/ERP call."></textarea>
+                                    </div>
+                                    <div>
+                                        <label for="imp-postprocess-script-env-allowlist" class="block text-sm font-medium text-slate-700">Env Allowlist (comma-separated)</label>
+                                        <input type="text" id="imp-postprocess-script-env-allowlist" placeholder="e.g. SLACK_WEBHOOK_URL, N8N_API_KEY"
+                                               class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm">
+                                        <p class="mt-1 text-xs text-gray-500">Only these environment variables are passed to the script.</p>
+                                    </div>
+                                    <div>
+                                        <button type="button" onclick="testScript('imp-postprocess')"
+                                                class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                            <svg id="imp-postprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                            </svg>
+                                            <i data-lucide="terminal" class="w-3.5 h-3.5 mr-1.5"></i>Test Script
+                                        </button>
+                                        <div id="imp-postprocess-script-test-result" class="mt-2 hidden"></div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="imp-postprocess-timeout" class="block text-sm font-medium text-slate-700">Timeout (seconds)</label>
+                                        <input type="number" id="imp-postprocess-timeout" value="30" min="1"
+                                               class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
+                                    </div>
+                                    <div class="flex items-center pt-6">
+                                        <input type="checkbox" id="imp-postprocess-skip-on-failure" checked class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <label for="imp-postprocess-skip-on-failure" class="ml-2 block text-sm text-gray-900">Skip if import fails</label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="imp-postprocess-continue-on-error" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <label for="imp-postprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">Continue execution if this step fails</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="imp-postprocess-rollback-on-failure" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <label for="imp-postprocess-rollback-on-failure" class="ml-2 block text-sm text-gray-900">Rollback on failure</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!--  Output Targets Tab  -->
                 <div id="imp-output-targets" class="import-tab-pane hidden">
@@ -2624,7 +2997,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             class="hidden px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center">
                         <i data-lucide="play-circle" class="h-4 w-4 mr-1"></i>Run Now
                     </button>
-                    <button type="button" onclick="closeImportProfileModal()"
+                    <button type="button" onclick="attemptCloseImportProfileModal()"
                             class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                     <button type="submit"
                             class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
@@ -2636,11 +3009,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Import Preview Modal -->
-    <div id="import-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="import-preview-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closePreviewModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-5xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-preview-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-preview-modal-title" class="text-lg font-semibold text-slate-900">Data Preview</h3>
-                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-500"><i data-lucide="x" class="h-6 w-6"></i></button>
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close"><i data-lucide="x" class="h-6 w-6"></i></button>
             </div>
             <div id="import-preview-content" class="overflow-auto max-h-[60vh]">
                 <p class="text-gray-500 text-center py-8">Loading preview...</p>
@@ -2811,23 +3184,221 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             renderProfiles();
         }
 
-        function togglePreProcessConfig() {
-            const type = document.getElementById('preprocess-type').value;
-            const section = document.getElementById('preprocess-config-section');
-            if (type) {
-                section.classList.remove('hidden');
-            } else {
-                section.classList.add('hidden');
+        // Generic toggle for any pre/post-process section. `prefix` is one of
+        // 'preprocess', 'postprocess' (Export Profile) or 'imp-preprocess',
+        // 'imp-postprocess' (Import Profile) - same field naming convention.
+        function toggleProcessingConfig(prefix) {
+            const type = document.getElementById(`${prefix}-type`).value;
+            document.getElementById(`${prefix}-config-section`).classList.toggle('hidden', !type);
+            document.getElementById(`${prefix}-sql-fields`).classList.toggle('hidden', type === 'Script');
+            document.getElementById(`${prefix}-script-fields`).classList.toggle('hidden', type !== 'Script');
+        }
+
+        function togglePreProcessConfig() { toggleProcessingConfig('preprocess'); }
+        function togglePostProcessConfig() { toggleProcessingConfig('postprocess'); }
+        function toggleImportPreProcessConfig() { toggleProcessingConfig('imp-preprocess'); }
+        function toggleImportPostProcessConfig() { toggleProcessingConfig('imp-postprocess'); }
+
+        // Builds the ProcessingConfig JSON for a pre/post-process step from its
+        // form fields. `prefix` is 'preprocess' or 'postprocess'. Returns null when
+        // no type is selected, or throws (via thrown string) when required fields
+        // are missing so callers can showToast() and abort the save.
+        function buildProcessingConfigJson(prefix) {
+            const type = document.getElementById(`${prefix}-type`).value;
+            if (!type) return null;
+
+            const isPre = prefix.toLowerCase().includes('preprocess');
+            const timeout = parseInt(document.getElementById(`${prefix}-timeout`).value) || 30;
+            const continueOnErrorEl = document.getElementById(`${prefix}-continue-on-error`);
+            const continueOnError = continueOnErrorEl ? continueOnErrorEl.checked : false;
+
+            if (type === 'Script') {
+                const scriptBody = document.getElementById(`${prefix}-script-body`).value.trim();
+                if (!scriptBody) {
+                    throw new Error(`${isPre ? 'Pre' : 'Post'}-process script is required when type is Script`);
+                }
+                const interpreter = document.getElementById(`${prefix}-script-interpreter`).value;
+                const isInline = document.getElementById(`${prefix}-script-source`).value === 'inline';
+                const envAllowlist = document.getElementById(`${prefix}-script-env-allowlist`).value
+                    .split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+                return JSON.stringify({
+                    Type: 'Script',
+                    Timeout: timeout,
+                    ContinueOnError: continueOnError,
+                    Interpreter: interpreter,
+                    ScriptPathOrInline: scriptBody,
+                    ScriptIsInline: isInline,
+                    EnvAllowlist: envAllowlist.length > 0 ? envAllowlist : null
+                });
+            }
+
+            const command = document.getElementById(`${prefix}-command`).value.trim();
+            if (!command) {
+                throw new Error(`${isPre ? 'Pre' : 'Post'}-process command is required when type is selected`);
+            }
+            return JSON.stringify({ Type: type, Command: command, Timeout: timeout, ContinueOnError: continueOnError });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text ?? '';
+            return div.innerHTML;
+        }
+
+        // Condensed versions of the shipped example Script Templates
+        // (Templates/Script_-_*.ScriptTemplate.*), embedded directly rather
+        // than fetched - Templates/ isn't served by the app (it's a
+        // reference folder for manual copy-paste), so this is the "show,
+        // don't tell" path: pick a pattern, get a working starting point
+        // already filled into the form, edit from there.
+        const SCRIPT_STARTERS = {
+            webhook: {
+                interpreter: 'sh',
+                body: [
+                    '#!/bin/sh',
+                    '# Forwards the execution context (this stdin payload) to a webhook/n8n URL.',
+                    '# Add the env var below to this step\'s Env Allowlist.',
+                    'set -eu',
+                    'CONTEXT=$(cat)',
+                    'URL="${N8N_WEBHOOK_URL:?N8N_WEBHOOK_URL is not set}"',
+                    'curl -sS -f -X POST "$URL" -H "Content-Type: application/json" -d "$CONTEXT"'
+                ].join('\n'),
+                envAllowlist: 'N8N_WEBHOOK_URL'
+            },
+            slack: {
+                interpreter: 'python',
+                body: [
+                    '#!/usr/bin/env python3',
+                    '# Posts a one-line status summary to a Slack/Teams incoming webhook.',
+                    '# Add the env var below to this step\'s Env Allowlist.',
+                    'import json, os, sys, urllib.request',
+                    'context = json.load(sys.stdin)',
+                    'url = os.environ.get("SLACK_WEBHOOK_URL")',
+                    'if not url:',
+                    '    print("SLACK_WEBHOOK_URL is not set", file=sys.stderr); sys.exit(1)',
+                    'text = f\'Reef {context.get("Status")}: {context.get("RowCount")} rows -> {context.get("OutputPath")}\'',
+                    'req = urllib.request.Request(url, data=json.dumps({"text": text}).encode(), headers={"Content-Type": "application/json"})',
+                    'urllib.request.urlopen(req, timeout=10)'
+                ].join('\n'),
+                envAllowlist: 'SLACK_WEBHOOK_URL'
+            },
+            erp: {
+                interpreter: 'node',
+                body: [
+                    '// Posts an execution summary to a REST API. Add the env vars below to',
+                    '// this step\'s Env Allowlist.',
+                    'const url = process.env.API_URL;',
+                    'const key = process.env.API_KEY;',
+                    'if (!url || !key) { console.error("API_URL and API_KEY must be set"); process.exit(1); }',
+                    '',
+                    'let raw = "";',
+                    'process.stdin.on("data", c => raw += c);',
+                    'process.stdin.on("end", async () => {',
+                    '    const context = JSON.parse(raw);',
+                    '    const res = await fetch(url, {',
+                    '        method: "POST",',
+                    '        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },',
+                    '        body: JSON.stringify({ status: context.Status, rowCount: context.RowCount })',
+                    '    });',
+                    '    if (!res.ok) { console.error(`API call failed: ${res.status}`); process.exit(1); }',
+                    '    console.log(`API call succeeded: ${res.status}`);',
+                    '});'
+                ].join('\n'),
+                envAllowlist: 'API_URL, API_KEY'
+            }
+        };
+
+        async function applyScriptStarter(prefix, kind) {
+            const starter = SCRIPT_STARTERS[kind];
+            if (!starter) return;
+
+            const bodyEl = document.getElementById(`${prefix}-script-body`);
+            if (bodyEl.value.trim()) {
+                const confirmed = await showConfirmModal({
+                    title: 'Replace current script?',
+                    message: 'Replace the current script with this starting point?',
+                    confirmText: 'Replace',
+                    cancelText: 'Cancel'
+                });
+                if (!confirmed) return;
+            }
+
+            document.getElementById(`${prefix}-script-interpreter`).value = starter.interpreter;
+            document.getElementById(`${prefix}-script-source`).value = 'inline';
+            bodyEl.value = starter.body;
+            document.getElementById(`${prefix}-script-env-allowlist`).value = starter.envAllowlist;
+        }
+
+        // Runs the current Script step in isolation (sample context, not a real
+        // execution) so users can iterate on a script without running the whole
+        // profile. `prefix` is 'preprocess' or 'postprocess'.
+        async function testScript(prefix) {
+            const interpreter = document.getElementById(`${prefix}-script-interpreter`).value;
+            const scriptBody = document.getElementById(`${prefix}-script-body`).value.trim();
+            const isInline = document.getElementById(`${prefix}-script-source`).value === 'inline';
+            const envAllowlist = document.getElementById(`${prefix}-script-env-allowlist`).value
+                .split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const profileId = document.getElementById('profile-id')?.value;
+            const resultEl = document.getElementById(`${prefix}-script-test-result`);
+            const spinner = document.getElementById(`${prefix}-script-test-spinner`);
+
+            if (!scriptBody) {
+                showToast('Enter a script before testing', 'error');
+                return;
+            }
+
+            spinner.classList.remove('hidden');
+            resultEl.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/profiles/test-script`, {
+                    method: 'POST',
+                    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        profileId: profileId ? parseInt(profileId) : null,
+                        interpreter,
+                        scriptPathOrInline: scriptBody,
+                        scriptIsInline: isInline,
+                        envAllowlist: envAllowlist.length > 0 ? envAllowlist : null
+                    })
+                });
+
+                const result = await response.json();
+                const exitBadge = `<span class="px-2 py-0.5 text-xs font-mono rounded ${result.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">exit ${result.exitCode}</span>`;
+
+                resultEl.innerHTML = `
+                    <div class="border border-gray-200 rounded">
+                        <div class="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                            <span class="text-xs font-semibold text-gray-600">Result</span>
+                            ${exitBadge}
+                        </div>
+                        ${result.errorMessage ? `<div class="px-3 py-2 text-xs text-red-700">${escapeHtml(result.errorMessage)}</div>` : ''}
+                        ${result.stdout ? `<div class="px-3 py-2"><p class="text-xs text-gray-500 mb-1">stdout</p><pre class="text-xs text-gray-800 font-mono whitespace-pre-wrap">${escapeHtml(result.stdout)}</pre></div>` : ''}
+                        ${result.stderr ? `<div class="px-3 py-2 border-t border-gray-100"><p class="text-xs text-gray-500 mb-1">stderr</p><pre class="text-xs text-red-700 font-mono whitespace-pre-wrap">${escapeHtml(result.stderr)}</pre></div>` : ''}
+                    </div>`;
+                resultEl.classList.remove('hidden');
+            } catch (e) {
+                showToast(`Script test failed: ${e.message}`, 'error');
+            } finally {
+                spinner.classList.add('hidden');
             }
         }
 
-        function togglePostProcessConfig() {
-            const type = document.getElementById('postprocess-type').value;
-            const section = document.getElementById('postprocess-config-section');
-            if (type) {
-                section.classList.remove('hidden');
+        // Populates a pre/post-process section's form fields from a parsed
+        // ProcessingConfig object (mirror of buildProcessingConfigJson).
+        function populateProcessingConfigFields(prefix, config) {
+            document.getElementById(`${prefix}-timeout`).value = config.Timeout || 30;
+            const continueOnErrorEl = document.getElementById(`${prefix}-continue-on-error`);
+            if (continueOnErrorEl) continueOnErrorEl.checked = config.ContinueOnError === true;
+
+            if (config.Type === 'Script') {
+                document.getElementById(`${prefix}-script-interpreter`).value = config.Interpreter || 'pwsh';
+                document.getElementById(`${prefix}-script-source`).value = config.ScriptIsInline === false ? 'path' : 'inline';
+                document.getElementById(`${prefix}-script-body`).value = config.ScriptPathOrInline || '';
+                document.getElementById(`${prefix}-script-env-allowlist`).value = (config.EnvAllowlist || []).join(', ');
             } else {
-                section.classList.add('hidden');
+                document.getElementById(`${prefix}-command`).value = config.Command || '';
             }
         }
 
@@ -2909,6 +3480,43 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             }
             // Set up email toggle handlers (exposes updateRecipientsModeDisplay etc. on window)
             setupEmailToggleHandlers();
+            // Grey out Script interpreters that aren't actually runnable on this host
+            loadInterpreterAvailability();
+        }
+
+        // Disables <option> entries in every Script interpreter <select> for
+        // interpreters that aren't runnable on this host, so users can't pick
+        // one that's guaranteed to fail at execution time. Runs once on page
+        // load - the same <select> elements persist across modal open/close,
+        // so there's no need to reapply when a modal reopens.
+        async function loadInterpreterAvailability() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters`, { headers: getAuthHeaders() });
+                if (!resp.ok) return;
+                const interpreters = await resp.json();
+
+                const unavailable = interpreters.filter(i => !i.available);
+                if (unavailable.length === 0) return;
+
+                const selectIds = [
+                    'preprocess-script-interpreter', 'postprocess-script-interpreter',
+                    'imp-preprocess-script-interpreter', 'imp-postprocess-script-interpreter'
+                ];
+                for (const selectId of selectIds) {
+                    const select = document.getElementById(selectId);
+                    if (!select) continue;
+                    for (const opt of select.options) {
+                        const status = unavailable.find(i => i.name === opt.value);
+                        if (!status) continue;
+                        opt.disabled = true;
+                        if (!opt.dataset.originalText) opt.dataset.originalText = opt.textContent;
+                        opt.textContent = `${opt.dataset.originalText} (unavailable on this server)`;
+                        opt.title = status.error || 'Not available on this server';
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not check interpreter availability:', e.message);
+            }
         }
 
         async function applyFilters() {
@@ -3713,8 +4321,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     try {
                         const preConfig = JSON.parse(profile.preProcessConfig);
                         document.getElementById('preprocess-type').value = profile.preProcessType;
-                        document.getElementById('preprocess-command').value = preConfig.Command || '';
-                        document.getElementById('preprocess-timeout').value = preConfig.Timeout || 30;
+                        populateProcessingConfigFields('preprocess', preConfig);
                         togglePreProcessConfig();
                     } catch (e) {
                         console.error('Error parsing pre-process config:', e);
@@ -3723,7 +4330,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     document.getElementById('preprocess-type').value = '';
                     togglePreProcessConfig();
                 }
-                
+
                 document.getElementById('preprocess-rollback-on-failure').checked = profile.preProcessRollbackOnFailure !== false;
 
                 // Post-processing fields
@@ -3731,8 +4338,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     try {
                         const postConfig = JSON.parse(profile.postProcessConfig);
                         document.getElementById('postprocess-type').value = profile.postProcessType;
-                        document.getElementById('postprocess-command').value = postConfig.Command || '';
-                        document.getElementById('postprocess-timeout').value = postConfig.Timeout || 30;
+                        populateProcessingConfigFields('postprocess', postConfig);
                         togglePostProcessConfig();
                     } catch (e) {
                         console.error('Error parsing post-process config:', e);
@@ -4256,12 +4862,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('preprocess-command').value = '';
         document.getElementById('preprocess-timeout').value = '30';
         document.getElementById('preprocess-rollback-on-failure').checked = true;
+        document.getElementById('preprocess-continue-on-error').checked = false;
         togglePreProcessConfig();
-        
+
         document.getElementById('postprocess-type').value = '';
         document.getElementById('postprocess-command').value = '';
         document.getElementById('postprocess-timeout').value = '30';
         document.getElementById('postprocess-skip-on-failure').checked = true;
+        document.getElementById('postprocess-continue-on-error').checked = false;
         togglePostProcessConfig();
         
         // Reset to general tab
@@ -4574,7 +5182,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 id="testWebhookModal-title" class="text-lg font-medium text-gray-900">Test Webhook</h3>
-                                <button onclick="closeTestWebhookModal()" class="text-gray-400 hover:text-gray-500">
+                                <button onclick="closeTestWebhookModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                     <i data-lucide="x" class="w-6 h-6"></i>
                                 </button>
                             </div>
@@ -4875,6 +5483,34 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('imp-retry-count').value = p.retryCount || 3;
         document.getElementById('imp-rollback-abort').checked = p.rollbackOnAbort !== false;
 
+        // Processing (pre/post-process Query/StoredProcedure/Script)
+        if (p.preProcessType && p.preProcessConfig) {
+            try {
+                document.getElementById('imp-preprocess-type').value = p.preProcessType;
+                populateProcessingConfigFields('imp-preprocess', JSON.parse(p.preProcessConfig));
+            } catch (e) {
+                console.error('Error parsing import pre-process config:', e);
+            }
+        } else {
+            document.getElementById('imp-preprocess-type').value = '';
+        }
+        toggleImportPreProcessConfig();
+        document.getElementById('imp-preprocess-rollback-on-failure').checked = p.preProcessRollbackOnFailure !== false;
+
+        if (p.postProcessType && p.postProcessConfig) {
+            try {
+                document.getElementById('imp-postprocess-type').value = p.postProcessType;
+                populateProcessingConfigFields('imp-postprocess', JSON.parse(p.postProcessConfig));
+            } catch (e) {
+                console.error('Error parsing import post-process config:', e);
+            }
+        } else {
+            document.getElementById('imp-postprocess-type').value = '';
+        }
+        toggleImportPostProcessConfig();
+        document.getElementById('imp-postprocess-skip-on-failure').checked = p.postProcessSkipOnFailure !== false;
+        document.getElementById('imp-postprocess-rollback-on-failure').checked = p.postProcessRollbackOnFailure === true;
+
         queueLucideRender();
     }
 
@@ -4882,6 +5518,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         event.preventDefault();
         const id = document.getElementById('imp-id').value;
         const sourceType = document.getElementById('imp-source-type').value;
+
+        let impPreProcessConfig = null;
+        let impPostProcessConfig = null;
+        try {
+            impPreProcessConfig = buildProcessingConfigJson('imp-preprocess');
+            impPostProcessConfig = buildProcessingConfigJson('imp-postprocess');
+        } catch (e) {
+            showToast(e.message, 'error');
+            return;
+        }
 
         // Build source config JSON
         let sourceConfig = '{}';
@@ -5039,6 +5685,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             maxFailedRowsPercent: parseInt(document.getElementById('imp-max-fail-pct').value) || 0,
             retryCount: parseInt(document.getElementById('imp-retry-count').value) || 3,
             rollbackOnAbort: document.getElementById('imp-rollback-abort').checked,
+            preProcessType: document.getElementById('imp-preprocess-type').value || null,
+            preProcessConfig: impPreProcessConfig,
+            preProcessRollbackOnFailure: document.getElementById('imp-preprocess-rollback-on-failure').checked,
+            postProcessType: document.getElementById('imp-postprocess-type').value || null,
+            postProcessConfig: impPostProcessConfig,
+            postProcessSkipOnFailure: document.getElementById('imp-postprocess-skip-on-failure').checked,
+            postProcessRollbackOnFailure: document.getElementById('imp-postprocess-rollback-on-failure').checked,
             hash: '',
         };
 
@@ -5161,7 +5814,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('imp-binary-info').classList.toggle('hidden', !isBinary);
 
         // Grey-out Target/Mapping/SmartSync/Failures tabs for Binary passthrough
-        const binaryIrrelevantTabs = ['imp-target', 'imp-mapping', 'imp-sync', 'imp-failures'];
+        const binaryIrrelevantTabs = ['imp-target', 'imp-mapping', 'imp-sync', 'imp-failures', 'imp-processing'];
         binaryIrrelevantTabs.forEach(tabId => {
             const btn = document.querySelector(`#import-profile-modal [data-tab="${tabId}"]`);
             if (btn) {
@@ -5180,6 +5833,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         const isLocalFile = tgt === 'LocalFile';
         document.getElementById('imp-db-target-fields').classList.toggle('hidden', isLocalFile);
         document.getElementById('imp-file-target-fields').classList.toggle('hidden', !isLocalFile);
+
+        // Pre/post-processing only runs against Database targets - grey out for LocalFile
+        const processingTabBtn = document.querySelector('#import-profile-modal [data-tab="imp-processing"]');
+        if (processingTabBtn) {
+            processingTabBtn.classList.toggle('opacity-50', isLocalFile);
+            processingTabBtn.classList.toggle('pointer-events-none', isLocalFile);
+        }
     }
 
     function onLoadStrategyChange() {
@@ -5611,7 +6271,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                             <div class="flex items-center justify-between mb-4">
                                 <h3 id="testImportWebhookModal-title" class="text-lg font-medium text-gray-900">Test Import Webhook</h3>
-                                <button onclick="closeTestImportWebhookModal()" class="text-gray-400 hover:text-gray-500">
+                                <button onclick="closeTestImportWebhookModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                     <i data-lucide="x" class="w-6 h-6"></i>
                                 </button>
                             </div>
@@ -5989,34 +6649,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Validate pre-processing
             const preProcessType = document.getElementById('preprocess-type').value;
             let preProcessConfig = null;
-            if (preProcessType) {
-                const preCommand = document.getElementById('preprocess-command').value.trim();
-                if (!preCommand) {
-                    showToast('Pre-process command is required when type is selected', 'error');
-                    return;
-                }
-                preProcessConfig = JSON.stringify({
-                    Type: preProcessType,
-                    Command: preCommand,
-                    Timeout: parseInt(document.getElementById('preprocess-timeout').value) || 30
-                });
+            try {
+                preProcessConfig = buildProcessingConfigJson('preprocess');
+            } catch (e) {
+                showToast(e.message, 'error');
+                return;
             }
             const preProcessRollbackOnFailure = document.getElementById('preprocess-rollback-on-failure').checked;
 
             // Validate post-processing
             const postProcessType = document.getElementById('postprocess-type').value;
             let postProcessConfig = null;
-            if (postProcessType) {
-                const postCommand = document.getElementById('postprocess-command').value.trim();
-                if (!postCommand) {
-                    showToast('Post-process command is required when type is selected', 'error');
-                    return;
-                }
-                postProcessConfig = JSON.stringify({
-                    Type: postProcessType,
-                    Command: postCommand,
-                    Timeout: parseInt(document.getElementById('postprocess-timeout').value) || 30
-                });
+            try {
+                postProcessConfig = buildProcessingConfigJson('postprocess');
+            } catch (e) {
+                showToast(e.message, 'error');
+                return;
             }
             const postProcessSkipOnFailure = document.getElementById('postprocess-skip-on-failure').checked;
             const postProcessOnZeroRows = document.getElementById('postprocess-on-zero-rows').checked;
@@ -6281,6 +6929,42 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             queueLucideRender();
         }
 
+        // Dirty-state confirm for the X/Cancel buttons (not just backdrop
+        // click/Escape, which main.js's generic watcher already covers for
+        // every modal on every page). These two forms are big and complex
+        // enough to warrant the explicit button-level guard too; thin
+        // wrappers over the shared window.reefIsModalDirty() in main.js -
+        // no bespoke snapshot logic duplicated here.
+        async function attemptCloseProfileModal() {
+            const modal = document.getElementById('profile-modal');
+            if (window.reefIsModalDirty(modal)) {
+                const confirmed = await showConfirmModal({
+                    title: 'Discard unsaved changes?',
+                    message: 'You have unsaved changes. Discard them and close?',
+                    confirmText: 'Discard & close',
+                    cancelText: 'Stay here',
+                    danger: true
+                });
+                if (!confirmed) return;
+            }
+            closeProfileModal();
+        }
+
+        async function attemptCloseImportProfileModal() {
+            const modal = document.getElementById('import-profile-modal');
+            if (window.reefIsModalDirty(modal)) {
+                const confirmed = await showConfirmModal({
+                    title: 'Discard unsaved changes?',
+                    message: 'You have unsaved changes. Discard them and close?',
+                    confirmText: 'Discard & close',
+                    cancelText: 'Stay here',
+                    danger: true
+                });
+                if (!confirmed) return;
+            }
+            closeImportProfileModal();
+        }
+
         function closeProfileModal() {
             document.getElementById('profile-modal').classList.add('hidden');
             closeTestActionsMenu();
@@ -6425,34 +7109,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     // Pre-processing fields
                     const preProcessType = document.getElementById('preprocess-type').value;
                     let preProcessConfig = null;
-                    if (preProcessType) {
-                        const preCommand = document.getElementById('preprocess-command').value.trim();
-                        if (!preCommand) {
-                            showToast('Pre-process command is required when type is selected', 'error');
-                            throw new Error('Pre-process command required');
-                        }
-                        preProcessConfig = JSON.stringify({
-                            Type: preProcessType,
-                            Command: preCommand,
-                            Timeout: parseInt(document.getElementById('preprocess-timeout').value) || 30
-                        });
+                    try {
+                        preProcessConfig = buildProcessingConfigJson('preprocess');
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                        throw e;
                     }
                     const preProcessRollbackOnFailure = document.getElementById('preprocess-rollback-on-failure').checked;
 
                     // Post-processing fields
                     const postProcessType = document.getElementById('postprocess-type').value;
                     let postProcessConfig = null;
-                    if (postProcessType) {
-                        const postCommand = document.getElementById('postprocess-command').value.trim();
-                        if (!postCommand) {
-                            showToast('Post-process command is required when type is selected', 'error');
-                            throw new Error('Post-process command required');
-                        }
-                        postProcessConfig = JSON.stringify({
-                            Type: postProcessType,
-                            Command: postCommand,
-                            Timeout: parseInt(document.getElementById('postprocess-timeout').value) || 30
-                        });
+                    try {
+                        postProcessConfig = buildProcessingConfigJson('postprocess');
+                    } catch (e) {
+                        showToast(e.message, 'error');
+                        throw e;
                     }
                     const postProcessSkipOnFailure = document.getElementById('postprocess-skip-on-failure').checked;
                     const postProcessOnZeroRows = document.getElementById('postprocess-on-zero-rows').checked;
@@ -7033,11 +7705,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const profileName = document.getElementById('profile-name').value;
             
             const modal = `
-                <div id="resetRowsModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+                <div id="resetRowsModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeResetRowsModal()">
                     <div class="relative top-20 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white" role="dialog" aria-modal="true" aria-labelledby="resetRowsModal-title">
                         <div class="flex justify-between items-center mb-4">
                             <h3 id="resetRowsModal-title" class="text-lg font-semibold text-slate-900">Reset Specific Rows</h3>
-                            <button onclick="closeResetRowsModal()" class="text-gray-400 hover:text-gray-500">
+                            <button onclick="closeResetRowsModal()" class="text-gray-400 hover:text-gray-500" aria-label="Close">
                                 <i data-lucide="x" class="h-6 w-6"></i>
                             </button>
                         </div>
@@ -7722,53 +8394,26 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         // Toggle handlers for hardcoded email addresses
         function setupEmailToggleHandlers() {
-            const recipientsToggle = document.getElementById('recipientsToggle');
             const recipientsCheckbox = document.getElementById('useHardcodedRecipients');
             const recipientsColumnInput = document.getElementById('emailRecipientsColumn');
             const recipientsHardcodedInput = document.getElementById('emailRecipientsHardcoded');
-            const recipientsMode = document.getElementById('recipientsMode');
             const recipientsHelp = document.getElementById('recipientsHelp');
 
-            const ccToggle = document.getElementById('ccToggle');
             const ccCheckbox = document.getElementById('useHardcodedCc');
             const ccColumnInput = document.getElementById('emailCcColumn');
             const ccHardcodedInput = document.getElementById('emailCcHardcoded');
-            const ccMode = document.getElementById('ccMode');
             const ccHelp = document.getElementById('ccHelp');
 
-            const subjectToggle = document.getElementById('subjectToggle');
             const subjectCheckbox = document.getElementById('useHardcodedSubject');
             const subjectColumnInput = document.getElementById('emailSubjectColumn');
             const subjectHardcodedInput = document.getElementById('emailSubjectHardcoded');
-            const subjectMode = document.getElementById('subjectMode');
             const subjectHelp = document.getElementById('subjectHelp');
 
-            // Recipients toggle handler
-            if (recipientsToggle) {
-                recipientsToggle.addEventListener('click', function() {
-                    const isChecked = !recipientsCheckbox.checked;
-                    recipientsCheckbox.checked = isChecked;
-                    updateRecipientsModeDisplay();
-                });
-            }
-
-            // CC toggle handler
-            if (ccToggle) {
-                ccToggle.addEventListener('click', function() {
-                    const isChecked = !ccCheckbox.checked;
-                    ccCheckbox.checked = isChecked;
-                    updateCcModeDisplay();
-                });
-            }
-
-            // Subject toggle handler
-            if (subjectToggle) {
-                subjectToggle.addEventListener('click', function() {
-                    const isChecked = !subjectCheckbox.checked;
-                    subjectCheckbox.checked = isChecked;
-                    updateSubjectModeDisplay();
-                });
-            }
+            // The three toggles above call updateRecipientsModeDisplay() /
+            // updateCcModeDisplay() / updateSubjectModeDisplay() directly via
+            // their onchange attribute - they're standard peer-checked
+            // checkboxes now (matching every other toggle in this modal),
+            // not the hand-rolled click-to-flip-state pattern this used to be.
 
             // Subject variables toggle handler
             const subjectVariablesToggle = document.getElementById('subjectVariablesToggle');
@@ -7785,25 +8430,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 });
             }
 
-            // Returns the inactive toggle track colour for the current theme
-            function toggleOffColor() {
-                return document.documentElement.classList.contains('dark') ? '#475569' : '#d1d5db';
-            }
-
             function updateRecipientsModeDisplay() {
                 const isHardcoded = recipientsCheckbox.checked;
                 if (isHardcoded) {
                     recipientsColumnInput.style.display = 'none';
                     recipientsHardcodedInput.style.display = 'block';
                     recipientsHelp.textContent = 'Enter a hardcoded email address (e.g., recipient@example.com or Name;email@example.com)';
-                    recipientsToggle.style.backgroundColor = '#3b82f6';
-                    recipientsToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     recipientsColumnInput.style.display = 'block';
                     recipientsHardcodedInput.style.display = 'none';
                     recipientsHelp.textContent = 'Column name from query that contains recipient email address (supports "Name;email@address.com" format)';
-                    recipientsToggle.style.backgroundColor = toggleOffColor();
-                    recipientsToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 
@@ -7813,14 +8449,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     ccColumnInput.style.display = 'none';
                     ccHardcodedInput.style.display = 'block';
                     ccHelp.textContent = 'Enter a hardcoded email address (e.g., cc@example.com or Name;email@example.com)';
-                    ccToggle.style.backgroundColor = '#3b82f6';
-                    ccToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     ccColumnInput.style.display = 'block';
                     ccHardcodedInput.style.display = 'none';
                     ccHelp.textContent = 'Column name from query that contains CC email address (supports "Name;email@address.com" format, optional)';
-                    ccToggle.style.backgroundColor = toggleOffColor();
-                    ccToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 
@@ -7834,16 +8466,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     subjectHardcodedInput.style.display = 'block';
                     subjectHelp.textContent = 'Enter hardcoded text with variable support (click "Variables" to see options)';
                     variablesToggle.style.display = 'flex';
-                    subjectToggle.style.backgroundColor = '#3b82f6';
-                    subjectToggle.querySelector('span').style.transform = 'translateX(24px)';
                 } else {
                     subjectColumnInput.style.display = 'block';
                     subjectHardcodedInput.style.display = 'none';
                     subjectHelp.textContent = 'Column name from query that contains email subject. If not provided, will use profile name.';
                     variablesToggle.style.display = 'none';
                     variablesPanel.classList.add('hidden');
-                    subjectToggle.style.backgroundColor = toggleOffColor();
-                    subjectToggle.querySelector('span').style.transform = 'translateX(0)';
                 }
             }
 

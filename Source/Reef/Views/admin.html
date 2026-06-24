@@ -83,6 +83,10 @@
                             <i data-lucide="mail" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Templates
                         </button>
+                        <button id="tab-interpreters" onclick="showTab('interpreters')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="terminal-square" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Interpreters
+                        </button>
                     </div>
                 </div>
                 <!-- Danger -->
@@ -1106,6 +1110,35 @@
                         </div>
                     </div>
 
+                    <!-- Interpreters Tab -->
+                    <div id="content-interpreters" class="tab-content hidden relative">
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900">Script Interpreters</h3>
+                                    <p class="text-sm text-slate-600 mt-1">
+                                        Profile pre/post-process Script steps run via one of these interpreters.
+                                        Verify which are actually runnable on this host before relying on them.
+                                    </p>
+                                </div>
+                                <button onclick="loadInterpreters()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center">
+                                    <svg id="interpreters-refresh-spinner" class="animate-spin h-4 w-4 mr-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+                                    Verify All
+                                </button>
+                            </div>
+
+                            <div class="p-6">
+                                <div id="interpretersList" class="space-y-2">
+                                    <p class="text-gray-500 text-center py-4">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Danger Zone Tab -->
                     <div id="content-danger" class="tab-content hidden relative">
                         <!-- Admin Only Permission Blur Overlay -->
@@ -1299,7 +1332,7 @@
     </div>
 
     <!-- Database Reset Confirmation Modal -->
-    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeResetModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1329,7 +1362,7 @@
     </div>
 
     <!-- Clear All Executions Confirmation Modal -->
-    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeClearAllModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1359,7 +1392,7 @@
     </div>
 
     <!-- Clear Old Audits Confirmation Modal -->
-    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldAuditsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1386,7 +1419,7 @@
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
-    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldExecutionsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1413,7 +1446,7 @@
     </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addUserModal-title" class="text-lg font-semibold text-slate-900">Add New User</h3>
@@ -1445,7 +1478,7 @@
     </div>
 
     <!-- Edit User Modal -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeEditUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <div class="flex items-center justify-between">
@@ -1513,7 +1546,7 @@
     </div>
 
     <!-- Change Username Modal -->
-    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeChangeUsernameModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-slate-900">Change Username</h3>
@@ -1539,7 +1572,7 @@
     </div>
 
     <!-- Add API Key Modal -->
-    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddApiKeyModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-slate-900">Add API Key</h3>
@@ -1572,7 +1605,7 @@
     </div>
 
     <!-- API Key Display Modal -->
-    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyDisplayModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-slate-900">API Key Generated</h3>
@@ -1594,7 +1627,7 @@
     </div>
 
     <!-- User Roles Help Modal -->
-    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeUserHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="userHelpModal-title" class="text-lg font-semibold text-slate-900">About Users</h3>
@@ -1679,7 +1712,7 @@
     </div>
 
     <!-- API Key Help Modal -->
-    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-slate-900">About API Keys</h3>
@@ -1811,7 +1844,15 @@
             window.addEventListener('DOMContentLoaded', initAdmin);
         } else if (window._pendingAdminInit) {
             window._pendingAdminInit = false;
-            initAdmin();
+            // Defer: on SPA navigation router.js rewrites top-level `function`
+            // declarations (e.g. showTab, further down this same script) into
+            // plain `window.x = function` assignments, which - unlike real
+            // function declarations - only exist once that line actually runs.
+            // Calling initAdmin() synchronously here, before the script has
+            // finished executing top to bottom, throws "showTab is not
+            // defined". setTimeout pushes the call to a macrotask, after the
+            // whole script (and all those assignments) has finished.
+            setTimeout(initAdmin, 0);
         }
 
         function getLogLevelColor(level) {
@@ -1875,6 +1916,70 @@
             else if (tab === 'apikeys') loadApiKeys();
             else if (tab === 'system') loadSystemInfo();
             else if (tab === 'notifications' && typeof window.loadNotificationSettings === 'function') loadNotificationSettings();
+            else if (tab === 'interpreters') loadInterpreters();
+        }
+
+        async function loadInterpreters() {
+            const list = document.getElementById('interpretersList');
+            const spinner = document.getElementById('interpreters-refresh-spinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters`, { headers: getAuthHeaders() });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const interpreters = await resp.json();
+                renderInterpretersList(interpreters);
+            } catch (e) {
+                list.innerHTML = `<p class="text-red-500 text-center py-4">Failed to load interpreters: ${e.message}</p>`;
+            } finally {
+                spinner.classList.add('hidden');
+                queueLucideRender();
+            }
+        }
+
+        function interpreterRowHtml(i) {
+            return `
+                <div id="interpreter-row-${i.name}" class="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="${i.available ? 'check-circle' : 'x-circle'}" class="h-5 w-5 ${i.available ? 'text-green-500' : 'text-red-500'} shrink-0"></i>
+                        <div>
+                            <p class="text-sm font-medium text-slate-900">${escapeHtml(i.displayName)} <span class="text-xs text-slate-400 font-mono">${escapeHtml(i.name)}</span></p>
+                            <p class="text-xs ${i.available ? 'text-slate-500' : 'text-red-600'}">
+                                ${i.available ? (i.output ? escapeHtml(i.output) : 'Available') : (i.error || 'Not available on this host')}
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="testInterpreter('${i.name}')" class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                        <i data-lucide="play" class="w-3.5 h-3.5 mr-1.5"></i>Test
+                    </button>
+                </div>`;
+        }
+
+        function renderInterpretersList(interpreters) {
+            document.getElementById('interpretersList').innerHTML = interpreters.map(interpreterRowHtml).join('');
+            queueLucideRender();
+        }
+
+        async function testInterpreter(name) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters/${name}/test`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const status = await resp.json();
+
+                const existingRow = document.getElementById(`interpreter-row-${name}`);
+                if (existingRow) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = interpreterRowHtml(status).trim();
+                    existingRow.replaceWith(wrapper.firstElementChild);
+                    queueLucideRender();
+                }
+                showToast(`${status.displayName}: ${status.available ? 'available' : 'not available'}`, status.available ? 'success' : 'error');
+            } catch (e) {
+                showToast(`Test failed: ${e.message}`, 'error');
+            }
         }
 
         /**
@@ -2553,9 +2658,13 @@
                     document.getElementById('system-uptime').textContent = data.uptime.days + ' days';
                 }
 
-                // Start real-time clock
+                // Start real-time clock. Clear any previous interval first -
+                // loadSystemInfo() runs every time the System Info tab is
+                // reselected, and without this, switching tabs back and forth
+                // stacked one interval per visit.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
                 updateServerTime();
-                setInterval(updateServerTime, 1000);
+                window.systemTimeInterval = setInterval(updateServerTime, 1000);
 
             } catch (error) {
                 console.error('Error loading system info:', error);
@@ -2563,19 +2672,25 @@
         }
 
         function updateServerTime() {
+            const timeEl = document.getElementById('system-time');
+            const dateEl = document.getElementById('system-date');
+            if (!timeEl || !dateEl) {
+                // Tab content no longer in the DOM (navigated away) - stop polling.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
+                return;
+            }
+
             const now = new Date();
-            
+
             // Format time as HH:MM:SS
-            const timeStr = now.toUTCString().split(' ')[4];
-            document.getElementById('system-time').textContent = timeStr;
-            
+            timeEl.textContent = now.toUTCString().split(' ')[4];
+
             // Format date more compactly
-            const dateStr = now.toLocaleDateString('nl-NL', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            dateEl.textContent = now.toLocaleDateString('nl-NL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
-            document.getElementById('system-date').textContent = dateStr;
         }
         window.onload = async function() {
 
