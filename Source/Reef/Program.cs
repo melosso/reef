@@ -22,8 +22,14 @@ namespace Reef;
 /// <summary>
 /// Main entry point
 /// </summary>
-public class Program
+public partial class Program
 {
+    [GeneratedRegex(@"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->")]
+    private static partial Regex TitleRegex();
+
+    [GeneratedRegex(@"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline)]
+    private static partial Regex ScriptsRegex();
+
     public static async Task Main(string[] args)
     {
         // Register Dapper type handlers for TimeSpan (must be done before any database operations)
@@ -219,6 +225,14 @@ public class Program
             var mfaMigration = new MfaMigration(connectionString);
             await mfaMigration.ApplyAsync();
 
+            // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
+            Log.Debug("Running Scripting database migration...");
+            var scriptingMigration = new ScriptingMigration(connectionString);
+            await scriptingMigration.ApplyAsync();
+
+            var scriptingStats = await scriptingMigration.GetStatsAsync();
+            Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
@@ -344,14 +358,25 @@ public class Program
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
         services.AddScoped<ProfileService>();
+        services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
         services.AddScoped<ExecutionService>();
         services.AddScoped<WebhookService>();
         services.AddScoped<AuditService>();
         services.AddScoped<AdminService>();
+        services.AddScoped<InterpreterService>();
         services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
+
+        // Store guided recipe wizard
+        services.AddScoped<Reef.Core.Recipes.ConnectionVerifier>();
+        services.AddScoped<Reef.Core.Recipes.HttpSourceVerifier>();
+        services.AddScoped<Reef.Core.Recipes.StagingTableVerifier>();
+        services.AddScoped<Reef.Core.Recipes.EmailDestinationVerifier>();
+        services.AddScoped<Reef.Core.Recipes.ScribanTemplateVerifier>();
+        services.AddScoped<Reef.Core.Recipes.ExportQueryVerifier>();
+        services.AddScoped<RecipeService>();
 
         // Import Profile services
         services.AddScoped<ImportProfileService>();
@@ -557,6 +582,7 @@ public class Program
                 "profiles.html",
                 "jobs.html",
                 "groups.html",
+                "store.html",
                 "executions.html",
                 "email-approvals.html",
                 "documentation.html",
@@ -565,7 +591,7 @@ public class Program
             };
 
             var navPages = new[] { "dashboard", "connections", "destinations", "templates",
-                                   "profiles", "jobs", "groups", "executions",
+                                   "profiles", "jobs", "groups", "store", "executions",
                                    "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
@@ -628,10 +654,10 @@ public class Program
                             ? char.ToUpper(username[0]) + username[1..]
                             : username.ToUpper();
 
-                        var titleMatch = Regex.Match(pageContent, @"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->");
+                        var titleMatch = TitleRegex().Match(pageContent);
                         var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
 
-                        var scriptsMatch = Regex.Match(pageContent, @"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline);
+                        var scriptsMatch = ScriptsRegex().Match(pageContent);
                         var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
 
                         var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
@@ -647,7 +673,7 @@ public class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-slate-800 text-slate-100"
+                                ? "bg-blue-500/10 text-blue-400"
                                 : "hover:bg-slate-800 hover:text-slate-100";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
@@ -697,6 +723,7 @@ public class Program
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
+        RecipesEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
         app.MapFallback(async context =>
@@ -756,7 +783,7 @@ public class Program
             {
                 StartupToken = startupToken,
                 StartedAt = DateTime.UtcNow,
-                MachineName = Environment.MachineName,
+                Environment.MachineName,
                 Version = version
             });
 
