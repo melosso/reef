@@ -83,7 +83,7 @@ function renderCategoryChips() {
         const isActive = cat === activeCategory;
         return `
             <button type="button" onclick="setActiveCategory('${escapeForJS(cat)}')"
-                    class="h-8 px-3 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${isActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+                    class="h-8 px-3 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 ${isActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
                 ${escapeHtml(cat)}
             </button>`;
     }).join('');
@@ -147,7 +147,7 @@ function recipeCardHtml(recipe) {
 
     const reconfigureButton = hasCompletedRun
         ? `<button onclick="startReconfigure('${escapeForJS(recipe.key)}', ${recipe.lastCompletedRunId})"
-                   class="h-9 px-3 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">
+                   class="h-9 px-3 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 shrink-0">
                Reconfigure
            </button>`
         : '';
@@ -155,12 +155,12 @@ function recipeCardHtml(recipe) {
     return `
         <div class="bg-white rounded-lg shadow p-5 flex flex-col gap-3">
             <div class="flex items-start gap-3">
-                <div class="h-10 w-10 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <div class="h-10 w-10 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
                     <i data-lucide="${escapeHtml(recipe.icon)}" class="h-5 w-5"></i>
                 </div>
                 <div class="min-w-0">
                     <h3 class="text-base font-semibold text-slate-900">${escapeHtml(recipe.name)}</h3>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 mt-1">${escapeHtml(recipe.category)}</span>
+                    <span class="text-xs font-medium text-slate-500 mt-1">${escapeHtml(recipe.category)}</span>
                 </div>
             </div>
             <p class="text-sm text-slate-500 flex-1">${escapeHtml(recipe.description)}</p>
@@ -171,7 +171,7 @@ function recipeCardHtml(recipe) {
             <div class="flex items-center gap-2 pt-1">
                 ${reconfigureButton}
                 <button onclick="${primaryAction}"
-                        class="h-9 px-3 flex-1 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                        class="h-9 px-3 flex-1 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                     ${primaryLabel}
                 </button>
             </div>
@@ -229,7 +229,7 @@ function showFlowSelection(flowGroups) {
     list.innerHTML = flowGroups.map((group, idx) => `
         <label class="flex items-center gap-3 px-3 py-2 rounded-md border border-slate-200 cursor-pointer hover:bg-slate-50">
             <input type="checkbox" id="flow-selection-${idx}" data-flow-group="${escapeForJS(group)}" checked
-                   class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                   class="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
             <span class="text-sm text-slate-700">${escapeHtml(group)}</span>
         </label>`).join('');
 
@@ -338,7 +338,7 @@ function showResumeSummary() {
 
         return `
             <button onclick="resumeAtStep('${escapeForJS(step.stepKey)}')"
-                    class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    class="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                 ${icon}
                 <span class="text-sm text-slate-700 flex-1">${escapeHtml(step.title)}</span>
                 <span class="text-xs font-medium ${statusClass}">${status}</span>
@@ -448,7 +448,7 @@ function renderAdvancedToggle() {
     if (!hasAutoProvisionedSteps) return '';
     return `
         <button type="button" onclick="toggleAdvancedMode()"
-                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${advancedMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 ${advancedMode ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}">
             <i data-lucide="sliders-horizontal" class="h-3.5 w-3.5"></i>
             Advanced${advancedMode ? ': on' : ''}
         </button>`;
@@ -484,11 +484,11 @@ function renderStepRail() {
 function renderRailItem(step) {
     const isActive = step.stepKey === currentRun.currentStepKey;
     const icon = stepStatusIcon(step);
-    const activeClass = isActive ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50';
+    const activeClass = isActive ? 'bg-teal-50 text-teal-700 font-medium' : 'text-slate-600 hover:bg-slate-50';
 
     return `
         <button onclick="goToStep('${escapeForJS(step.stepKey)}')" aria-current="${isActive ? 'step' : 'false'}"
-                class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${activeClass}">
+                class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 ${activeClass}">
             ${icon}
             <span class="truncate">${escapeHtml(step.title)}</span>
             ${step.isOptional ? '<span class="ml-auto text-[10px] text-slate-400 uppercase">optional</span>' : ''}
@@ -540,14 +540,14 @@ function renderActiveStep() {
         <div id="step-result-area" class="mt-4" aria-live="polite"></div>
         <div class="flex items-center gap-3 mt-6">
             <button type="button" id="step-save-btn" onclick="saveCurrentStep()"
-                    class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 flex items-center">
+                    class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 flex items-center">
                 <svg id="step-save-spinner" class="animate-spin h-4 w-4 mr-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                 </svg>
                 <span id="step-save-btn-text">${step.hasVerifier ? 'Save & Verify' : 'Save'}</span>
             </button>
-            ${canAdvance() ? `<button type="button" onclick="advanceOrComplete()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">Next step</button>` : ''}
+            ${canAdvance() ? `<button type="button" onclick="advanceOrComplete()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">Next step</button>` : ''}
         </div>
     `;
 
@@ -682,8 +682,8 @@ function connectionForm(p) {
     const exactGlobe = isExactGlobeRecipe();
     const ublExport = isUblExportRecipe();
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">${exactGlobe
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">${exactGlobe
                 ? 'This is your real Exact Globe+ business database - Debtors and Items are queried directly from it, so pick the actual connection rather than a staging copy.'
                 : ublExport
                     ? 'This is your real business database - Invoices, Orders, Despatch Advices, and Inventory Reports are queried directly from it, so pick the actual connection rather than a staging copy.'
@@ -729,8 +729,8 @@ function renderDestinationReuseBanner(stepKey) {
     const step = getStep(stepKey);
     if (step && step.entityId && step.verified) {
         banner.innerHTML = `
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                <p class="text-sm text-blue-800"><i data-lucide="check-circle-2" class="h-4 w-4 inline -mt-0.5 mr-1 text-blue-600"></i>You already created and verified an Email destination in this setup - reusing it here. Editing the fields below updates that same destination for both flows.</p>
+            <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+                <p class="text-sm text-teal-800"><i data-lucide="check-circle-2" class="h-4 w-4 inline -mt-0.5 mr-1 text-teal-600"></i>You already created and verified an Email destination in this setup - reusing it here. Editing the fields below updates that same destination for both flows.</p>
             </div>`;
         queueLucideRender();
     } else {
@@ -752,8 +752,8 @@ function applyExistingConnection(idStr) {
 
 function groupForm(p) {
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">Groups are purely organizational - they let you find the Import and Export Profiles this recipe creates from the regular Groups/Profiles pages later.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">Groups are purely organizational - they let you find the Import and Export Profiles this recipe creates from the regular Groups/Profiles pages later.</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
@@ -771,8 +771,8 @@ function groupForm(p) {
 
 function destinationForm(p, stepKey) {
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">Order confirmation and tracking emails are both sent through this single SMTP destination - set it up once and both flows reuse it. Verifying this step sends a real test email.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">Order confirmation and tracking emails are both sent through this single SMTP destination - set it up once and both flows reuse it. Verifying this step sends a real test email.</p>
         </div>
         <div id="destination-reuse-banner"></div>
         <div class="space-y-4 max-w-lg">
@@ -818,8 +818,8 @@ function stagingTableForm(p, stepKey) {
     const shipments = isWooCommerceTrackingRecipe();
     const defaultTable = shipments ? 'StoreShipments' : 'StoreOrders';
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">Reef doesn't auto-create tables for incoming data, so the wizard issues the <code>CREATE TABLE</code> for you here. Safe to re-run - it only creates the table if it doesn't already exist.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">Reef doesn't auto-create tables for incoming data, so the wizard issues the <code>CREATE TABLE</code> for you here. Safe to re-run - it only creates the table if it doesn't already exist.</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
@@ -872,8 +872,8 @@ function importProfileForm(p, stepKey) {
             </div>`;
 
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">${magento
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">${magento
                 ? `Pulls shipment tracking data from your Magento store's REST API (<code>${endpoint}</code>) using an integration token as a Bearer token.`
                 : shipments
                     ? `Pulls shipment tracking data for orders from your WooCommerce store's REST API (<code>${endpoint}</code>) using your store's Consumer Key/Secret as Basic Auth.`
@@ -919,7 +919,7 @@ function importProfileForm(p, stepKey) {
 function templatePreviewButtonHtml(outputFormat) {
     return `
         <button type="button" onclick="previewWizardTemplate('${outputFormat}')"
-                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                class="inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-xs font-medium border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
             <i data-lucide="eye" class="h-3.5 w-3.5"></i>
             Preview
         </button>`;
@@ -930,8 +930,8 @@ function queryTemplateForm(p, stepKey) {
     if (exactGlobe) {
         const items = isItemsStep(stepKey);
         return `
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                <p class="text-sm text-blue-800">A ready-made eExact-compliant XML template for ${items ? 'Items' : 'Debtors'} is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${items ? 'item' : 'debtor'} row.</p>
+            <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+                <p class="text-sm text-teal-800">A ready-made eExact-compliant XML template for ${items ? 'Items' : 'Debtors'} is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${items ? 'item' : 'debtor'} row.</p>
             </div>
             <div class="space-y-4 max-w-2xl">
                 <div>
@@ -945,7 +945,7 @@ function queryTemplateForm(p, stepKey) {
                         ${templatePreviewButtonHtml('XML')}
                     </div>
                     <textarea id="wf-template-content" rows="14"
-                              class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
+                              class="w-full px-3 py-2 bg-white border border-slate-200 text-xs rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
                     <p class="text-xs text-gray-500 mt-1">Pre-filled with the built-in eExact XML template for ${items ? 'Items' : 'Debtors'} - edit freely.</p>
                 </div>
             </div>`;
@@ -954,8 +954,8 @@ function queryTemplateForm(p, stepKey) {
     if (isUblExportRecipe()) {
         const docType = ublDocTypeLabel(stepKey);
         return `
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                <p class="text-sm text-blue-800">A ready-made vendor-neutral UBL 2.1 XML template for ${docType} is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) row.</p>
+            <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+                <p class="text-sm text-teal-800">A ready-made vendor-neutral UBL 2.1 XML template for ${docType} is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) row.</p>
             </div>
             <div class="space-y-4 max-w-2xl">
                 <div>
@@ -969,7 +969,7 @@ function queryTemplateForm(p, stepKey) {
                         ${templatePreviewButtonHtml('XML')}
                     </div>
                     <textarea id="wf-template-content" rows="14"
-                              class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
+                              class="w-full px-3 py-2 bg-white border border-slate-200 text-xs rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
                     <p class="text-xs text-gray-500 mt-1">Pre-filled with the built-in UBL 2.1 XML template for ${docType} - edit freely.</p>
                 </div>
             </div>`;
@@ -979,8 +979,8 @@ function queryTemplateForm(p, stepKey) {
     const magento = isMagentoRecipe();
     const brand = magento ? 'Magento' : 'WooCommerce';
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">A ready-made ${shipments || magento ? 'tracking link' : 'order confirmation'} email template is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${shipments || magento ? 'shipment' : 'order'} row.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">A ready-made ${shipments || magento ? 'tracking link' : 'order confirmation'} email template is pre-filled below. Customize it if you like, or save as-is - verifying renders it with a real (or sample) ${shipments || magento ? 'shipment' : 'order'} row.</p>
         </div>
         <div class="space-y-4 max-w-2xl">
             <div>
@@ -994,7 +994,7 @@ function queryTemplateForm(p, stepKey) {
                     ${templatePreviewButtonHtml('HTML')}
                 </div>
                 <textarea id="wf-template-content" rows="10"
-                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
+                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.template !== undefined ? p.template : '')}</textarea>
                 <p class="text-xs text-gray-500 mt-1">Pre-filled with the built-in ${brand} ${shipments || magento ? 'Tracking Update' : 'Order Confirmation'} template - edit freely.</p>
             </div>
         </div>`;
@@ -1058,8 +1058,8 @@ function exportProfileForm(p, stepKey) {
         ? 'SELECT * FROM MagentoShipments WHERE EmailSent = 0'
         : (shipments ? 'SELECT * FROM StoreShipments WHERE EmailSent = 0' : 'SELECT * FROM StoreOrders WHERE EmailSent = 0');
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">This Export Profile selects unsent ${shipments || magento ? 'shipments' : 'orders'} and emails each one using the template from the previous step.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">This Export Profile selects unsent ${shipments || magento ? 'shipments' : 'orders'} and emails each one using the template from the previous step.</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
@@ -1076,7 +1076,7 @@ function exportProfileForm(p, stepKey) {
             <div>
                 <label for="wf-export-query" class="block text-sm font-medium text-slate-700 mb-1">Query</label>
                 <textarea id="wf-export-query" rows="3"
-                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.query || defaultQuery)}</textarea>
+                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.query || defaultQuery)}</textarea>
             </div>
             <input type="hidden" id="wf-export-destinationId" value="${sharedDest?.entityId || ''}">
             <input type="hidden" id="wf-export-emailTemplateId" value="${templateStep?.entityId || ''}">
@@ -1121,8 +1121,8 @@ function exactGlobeExportProfileForm(p, stepKey) {
     const templateStep = getStep(templateStepKey);
 
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">This Export Profile runs the query below against ${bannerSubject} and writes the result as an XML file using the template from the previous step - no email, no separate Destination to configure.</p>
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">This Export Profile runs the query below against ${bannerSubject} and writes the result as an XML file using the template from the previous step - no email, no separate Destination to configure.</p>
         </div>
         <div class="space-y-4 max-w-lg">
             <div>
@@ -1139,7 +1139,7 @@ function exactGlobeExportProfileForm(p, stepKey) {
             <div>
                 <label for="wf-export-query" class="block text-sm font-medium text-slate-700 mb-1">Query</label>
                 <textarea id="wf-export-query" rows="3"
-                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.query || defaultQuery)}</textarea>
+                          class="w-full px-3 py-2 bg-white border border-slate-200 text-xs rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10">${escapeHtml(p.query || defaultQuery)}</textarea>
             </div>
             <input type="hidden" id="wf-export-templateId" value="${templateStep?.entityId || ''}">
             <input type="hidden" id="wf-export-groupId" value="${sharedGroup?.entityId || ''}">
@@ -1184,8 +1184,8 @@ function jobsForm(p, stepKey) {
             : (shipments || magento ? 'Send Tracking Emails' : exportStep ? 'Send Order Confirmations' : 'Run Scheduled Export'));
 
     return `
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-            <p class="text-sm text-blue-800">${hasImport
+        <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+            <p class="text-sm text-teal-800">${hasImport
                 ? `Optional: schedule the import to poll automatically, with the export running right after. Skip this if you'd rather trigger things manually via <code>POST /api/${shipments ? 'import-profiles' : 'profiles'}/{id}/execute</code>.`
                 : `Optional: schedule this export to run automatically on an interval. Skip this if you'd rather trigger it manually via <code>POST /api/profiles/{id}/execute</code>.`}</p>
         </div>
@@ -1217,11 +1217,11 @@ function jobsForm(p, stepKey) {
 function renderWebhookSection() {
     return `
         <div class="border-t border-slate-200 pt-4 mt-2">
-            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
-                <p class="text-sm text-blue-800">Optional fast path: register a webhook so WooCommerce can push tracking updates to Reef immediately instead of waiting for the next poll. This runs <strong>on top of</strong> the polling import job above, not instead of it.</p>
+            <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
+                <p class="text-sm text-teal-800">Optional fast path: register a webhook so WooCommerce can push tracking updates to Reef immediately instead of waiting for the next poll. This runs <strong>on top of</strong> the polling import job above, not instead of it.</p>
             </div>
             <button type="button" onclick="registerTrackingWebhook()"
-                    class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                 Generate Webhook URL
             </button>
             <div id="webhook-result-area" class="mt-3"></div>
@@ -1337,8 +1337,8 @@ async function registerTrackingWebhook() {
                     <p class="text-sm text-green-800 mb-2">Webhook registered. Paste this URL into WooCommerce &rarr; Settings &rarr; Advanced &rarr; Webhooks (topic: order status changed):</p>
                     <div class="flex items-center gap-2">
                         <input type="text" readonly value="${escapeHtml(result.url)}" id="webhook-url-input"
-                               class="flex-1 h-9 px-3 py-1 bg-white border border-slate-200 text-xs font-mono rounded-md outline-none">
-                        <button type="button" onclick="copyWebhookUrl()" class="h-9 px-3 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 shrink-0">Copy</button>
+                               class="flex-1 h-9 px-3 py-1 bg-white border border-slate-200 text-xs rounded-md outline-none">
+                        <button type="button" onclick="copyWebhookUrl()" class="h-9 px-3 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 shrink-0">Copy</button>
                     </div>
                 </div>`;
         }
@@ -1503,17 +1503,17 @@ function showCompletion() {
 
     const buttons = [];
     if (groupStep?.entityId) {
-        buttons.push(`<a href="/groups" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 inline-flex items-center">View Group</a>`);
+        buttons.push(`<a href="/groups" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 inline-flex items-center">View Group</a>`);
     }
     if (importStep?.entityId) {
         const importLabel = (magento || tracking) ? 'Run Tracking Import Now' : 'Run Order Import Now';
-        buttons.push(`<button onclick="runProfileNow(${importStep.entityId}, true)" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">${importLabel}</button>`);
+        buttons.push(`<button onclick="runProfileNow(${importStep.entityId}, true)" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">${importLabel}</button>`);
     }
     if (exportStep?.entityId) {
         const label = (magento || tracking) ? 'Run Tracking Export Now' : 'Run Order Export Now';
-        buttons.push(`<button onclick="runProfileNow(${exportStep.entityId}, false)" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">${label}</button>`);
+        buttons.push(`<button onclick="runProfileNow(${exportStep.entityId}, false)" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">${label}</button>`);
     }
-    buttons.push(`<a href="/profiles" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 inline-flex items-center">View Profiles</a>`);
+    buttons.push(`<a href="/profiles" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1 inline-flex items-center">View Profiles</a>`);
 
     links.innerHTML = buttons.join('');
     queueLucideRender();
@@ -1531,15 +1531,7 @@ async function runProfileNow(id, isImport) {
 }
 
 function showMessage(message, type) {
-    if (typeof window.showToast === 'function') {
-        window.showToast(message, type === 'error' ? 'error' : type === 'success' ? 'success' : 'info');
-        return;
-    }
-    const container = document.getElementById('message-container');
-    if (!container) return;
-    const bgColor = type === 'success' ? 'bg-green-50 border-green-400 text-green-800' : 'bg-red-50 border-red-400 text-red-800';
-    container.innerHTML = `<div class="${bgColor} border-l-4 p-4 mb-4 rounded">${escapeHtml(message)}</div>`;
-    setTimeout(() => { container.innerHTML = ''; }, 5000);
+    window.showToast(message, type === 'error' ? 'error' : type === 'success' ? 'success' : 'info');
 }
 
 window.addEventListener('beforeunload', (e) => {

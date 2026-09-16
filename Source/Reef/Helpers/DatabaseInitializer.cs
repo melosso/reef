@@ -1108,7 +1108,7 @@ public class DatabaseInitializer
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin, password: admin123)");
+            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
             Log.Warning("! Password change will be required on first login");
             Log.Information("");
         }

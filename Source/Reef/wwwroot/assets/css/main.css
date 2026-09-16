@@ -1,9 +1,12 @@
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('/assets/fonts/Inter-Variable.woff2') format('woff2');
+}
 body {
     font-family: 'Inter', sans-serif;
-    /* Hide body for one render tick so Tailwind's MutationObserver can
-       inject all styles before the first paint.  The animation fires
-       immediately (0s duration, 0ms delay) which is enough to push
-       visibility into the next microtask batch. */
     animation: reef-reveal 0s 20ms forwards;
     visibility: hidden;
 }
@@ -11,17 +14,10 @@ body {
     to { visibility: visible; }
 }
 
-/* ── Sidebar active nav indicator */
-/* Use box-shadow (inset) for the left-rail accent, zero layout impact. */
+/* Active state is a filled background class set server-side (Program.cs), not a colored left border. */
 #sidebar nav a[href] {
-    box-shadow: inset 2px 0 0 transparent;
-    transition: box-shadow 150ms ease, background-color 150ms ease, color 150ms ease;
+    transition: background-color 150ms ease, color 150ms ease;
 }
-#sidebar nav a[aria-current="page"] {
-    box-shadow: inset 2px 0 0 #3b82f6;
-}
-/* User menu collapse/expand using grid-template-rows, GPU-composited, no layout thrashing.
-   The inner wrapper uses overflow:hidden + min-height:0 to collapse correctly. */
 #user-menu {
     display: grid;
     overflow: hidden;
@@ -47,18 +43,11 @@ body {
     -ms-user-select: none;
     user-select: none;
 }
-/* ── Touch targets─ */
-/* Buttons with data-tooltip are exclusively icon buttons in table rows/cards. */
 button[data-tooltip] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
 }
-
-/* ── User avatar */
-/* Uses a ::before pseudo-element for the animated gradient so that the
-   transform animation stays GPU-composited and doesn't affect the text layer.
-   (Replaced: background-position animation which caused layout repaints.) */
 #user-initial {
     position: relative;
     overflow: hidden;
@@ -120,7 +109,6 @@ button[data-tooltip] {
     50%       { opacity: 0.8; }
 }
 
-/* ── Interaction system */
 /* Tier 1, primary action buttons (bg-slate-900): lift + shadow on hover.
    Gives a consistent "press-able" feel across all header CTAs. */
 button.bg-slate-900:not(:disabled):hover {
@@ -139,7 +127,6 @@ button[type="submit"]:not(:disabled):active {
     transition: transform 0.08s ease-out;
 }
 
-/* ── Dark mode */
 /* Class-based dark mode. 'dark' is added to <html> by main.js on load.
    The sidebar (bg-slate-900) is already dark, no overrides needed there.
    Specificity (.dark .utility) beats single-class Tailwind utilities. */
@@ -301,7 +288,6 @@ button[type="submit"]:not(:disabled):active {
 .dark .hover\:bg-blue-50:hover   { background-color: #0c1a3a; }
 .dark .hover\:bg-blue-100:hover  { background-color: #1e3a5f; }
 
-/* ── Reduced motion */
 /* Respect the user's operating system preference for reduced motion.
    This disables all CSS transitions and animations globally except the
    reef-reveal visibility flip, which must still fire so the body becomes

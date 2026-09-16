@@ -62,7 +62,7 @@
                             <span class="text-red-500 ml-1">*</span>
                         </label>
                         <input type="text" id="template-name" required
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
                                placeholder="Customer Export Template">
                     </div>
                     
@@ -72,7 +72,7 @@
                             <span class="text-red-500 ml-1">*</span>
                         </label>
                         <select id="template-type" required onchange="onTemplateTypeChange()"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                             <option value="">Select type...</option>
                             <option value="ScribanTemplate">Scriban Template (CSV, XML, JSON, EDI, etc.)</option>
                             
@@ -96,7 +96,7 @@
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                     <textarea id="template-description" rows="2"
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
                               placeholder="Optional description"></textarea>
                 </div>
 
@@ -112,12 +112,12 @@
                         </span>
                     </label>
                     <textarea id="template-content" rows="10" required
-                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 text-sm"
                               placeholder="Enter template content..."
                               oninput="onTemplateContentChange()"></textarea>
                     <div class="flex items-center mt-1 space-x-2">
                         <button type="button" id="validate-btn" onclick="validateScribanTemplate()"
-                                class="hidden px-3 py-1 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition duration-200 ease-in-out active:scale-95">
+                                class="hidden px-3 py-1 text-xs bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center transition duration-200 ease-in-out active:scale-95">
                             <i data-lucide="check-circle" class="h-3 w-3 mr-1"></i>
                             Validate
                         </button>
@@ -136,7 +136,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
                         <select id="template-outputFormat"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                             <option value="XML">XML</option>
                             <option value="JSON">JSON</option>
                             <option value="CSV">CSV</option>
@@ -150,14 +150,14 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
                         <input type="text" id="template-tags"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
                                placeholder="xml, transformation">
                         <span class="text-xs text-gray-400 mt-1 block">Comma-separated</span>
                     </div>
 
                     <div class="flex items-center mt-6">
                         <input type="checkbox" id="template-active" checked
-                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                               class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
                         <label for="template-active" class="ml-2 block text-sm text-gray-900">Active</label>
                     </div>
                 </div>
@@ -173,7 +173,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Page Size</label>
                             <select id="doc-page-size" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                 <option value="A4">A4 (210 × 297 mm)</option>
                                 <option value="Letter">Letter (8.5 × 11 in)</option>
                                 <option value="Legal">Legal (8.5 × 14 in)</option>
@@ -183,7 +183,7 @@
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Orientation</label>
                             <select id="doc-orientation" 
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                 <option value="Portrait">Portrait</option>
                                 <option value="Landscape">Landscape</option>
                             </select>
@@ -193,7 +193,7 @@
                     <div class="mt-3">
                         <label class="flex items-center">
                             <input type="checkbox" id="doc-page-numbers" checked 
-                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                   class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
                             <span class="ml-2 text-sm text-gray-700">Include page numbers (Page X of Y)</span>
                         </label>
                     </div>
@@ -201,7 +201,7 @@
                     <div class="mt-3">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Watermark (optional)</label>
                         <input type="text" id="doc-watermark" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500" 
                                placeholder="e.g., DRAFT, CONFIDENTIAL">
                         <span class="text-xs text-gray-400 mt-1 block">Displayed diagonally across each page</span>
                     </div>
@@ -213,7 +213,7 @@
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            class="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800">
                         Save
                     </button>
                 </div>
@@ -239,7 +239,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Template Type</label>
-                            <select id="import-filter-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <select id="import-filter-type" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                 <option value="">All Types</option>
                                 <option value="ScribanTemplate">Scriban Template</option>
                                 <option value="DocumentTemplate">Document Template</option>
@@ -255,7 +255,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
-                            <select id="import-filter-format" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <select id="import-filter-format" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                 <option value="">All Formats</option>
                                 <option value="XML">XML</option>
                                 <option value="JSON">JSON</option>
@@ -268,7 +268,7 @@
                         </div>
                     </div>
 
-                    <button onclick="fetchGitHubTemplates()" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center">
+                    <button onclick="fetchGitHubTemplates()" class="w-full px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center justify-center">
                         <i data-lucide="search" class="h-4 w-4 mr-2"></i>
                         Search Templates
                     </button>
@@ -278,7 +278,7 @@
                 <div id="import-step-2" class="hidden flex flex-col h-full">
                     <div class="flex items-center justify-between mb-4 flex-shrink-0">
                         <p class="text-sm text-gray-600">Select a template to import:</p>
-                        <button onclick="showImportStep1()" class="text-sm text-blue-600 hover:text-blue-700">
+                        <button onclick="showImportStep1()" class="text-sm text-teal-600 hover:text-teal-700">
                             <i data-lucide="chevron-left" class="h-4 w-4 inline"></i>
                             Back
                         </button>
@@ -286,7 +286,7 @@
 
                     <div class="mb-4 flex-shrink-0">
                         <input type="text" id="import-search" placeholder="Search templates..."
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                                onkeyup="filterImportTemplates()">
                     </div>
 
@@ -299,7 +299,7 @@
                 <div id="import-step-3" class="hidden flex flex-col h-full">
                     <div class="flex items-center justify-between mb-4 flex-shrink-0">
                         <p class="text-sm text-gray-600">Preview and edit before importing:</p>
-                        <button onclick="showImportStep2()" class="text-sm text-blue-600 hover:text-blue-700">
+                        <button onclick="showImportStep2()" class="text-sm text-teal-600 hover:text-teal-700">
                             <i data-lucide="chevron-left" class="h-4 w-4 inline"></i>
                             Back
                         </button>
@@ -311,14 +311,14 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
                                     <input type="text" id="import-name" required
-                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                 </div>
 
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Type</label>
                                     <select id="import-type" required
                                             onchange="updateOutputFormatOptions(this.value, 'import-outputFormat')"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                         <option value="">Select type...</option>
                                         <option value="ScribanTemplate">Scriban Template (CSV, XML, JSON, EDI, etc.)</option>
                                         <option disabled style="color: #cbd5e0;">──────────</option>
@@ -338,19 +338,19 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
                                 <textarea id="import-description" rows="2"
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"></textarea>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Template Content</label>
                                 <textarea id="import-content" rows="10" required
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500 text-sm"></textarea>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Output Format</label>
                                 <select id="import-outputFormat"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500">
                                     <option value="XML">XML</option>
                                     <option value="JSON">JSON</option>
                                     <option value="CSV">CSV</option>
@@ -367,13 +367,13 @@
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Tags</label>
                                 <input type="text" id="import-tags"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
                                        placeholder="github, imported">
                             </div>
 
                             <div class="flex items-center">
                                 <input type="checkbox" id="import-active" checked
-                                       class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                       class="h-4 w-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500">
                                 <label for="import-active" class="ml-2 block text-sm text-gray-900">Active</label>
                             </div>
                         </div>
@@ -384,7 +384,7 @@
                                 Cancel
                             </button>
                             <button type="submit"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                    class="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800">
                                 Import Template
                             </button>
                         </div>
@@ -405,10 +405,10 @@
             </div>
 
             <div class="space-y-4">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 disable-select">
+                <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 disable-select">
                     <div class="flex items-start">
-                        <i data-lucide="info" class="h-5 w-5 text-blue-500 mr-2 mt-0.5"></i>
-                        <div class="text-sm text-blue-700">
+                        <i data-lucide="info" class="h-5 w-5 text-teal-600 mr-2 mt-0.5"></i>
+                        <div class="text-sm text-teal-700">
                             <p> 
                                 This preview window uses sample data to show how your template will look. Each variable is filled with a sample value that matches its original data type.
                                 <br>
@@ -435,7 +435,7 @@
                         </div>
                     </div>
                     <div class="bg-gray-50 border border-gray-300 rounded-md p-4 max-h-96 overflow-auto">
-                        <pre id="preview-output" class="text-sm font-mono whitespace-pre-wrap"></pre>
+                        <pre id="preview-output" class="text-sm whitespace-pre-wrap"></pre>
                     </div>
                 </div>
 
@@ -633,7 +633,7 @@
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
                                     <div class="flex items-center space-x-3 mb-2">
-                                        <i data-lucide="file-code" class="h-5 w-5 text-blue-500"></i>
+                                        <i data-lucide="file-code" class="h-5 w-5 text-teal-600"></i>
                                         <h3 class="font-medium text-gray-900">${escapeHtml(template.name)}</h3>
                                         <span class="px-2 py-1 text-xs ${template.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-500'} rounded">
                                             ${template.isActive ? 'Active' : 'Inactive'}
@@ -644,20 +644,20 @@
                                         <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded cursor-pointer hover:bg-gray-200 transition" data-type-filter="${escapeHtml(typeLabel)}">
                                             <i data-lucide="tag" class="h-3 w-3 mr-1"></i>${typeLabel}
                                         </span>
-                                        <span class="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-output-filter="${escapeHtml(outputFormat)}">
+                                        <span class="inline-flex items-center px-2 py-1 text-teal-700 cursor-pointer hover:underline" data-output-filter="${escapeHtml(outputFormat)}">
                                             <i data-lucide="file-output" class="h-3 w-3 mr-1"></i>${outputFormat}
                                         </span>
                                     </div>
                                     ${template.tags ? `<div class="flex flex-wrap gap-1">
                                         ${template.tags.split(',').map(tag => `
-                                            <span class="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded cursor-pointer hover:bg-blue-200 transition" data-tag-filter="${escapeHtml(tag.trim())}">
+                                            <span class="inline-block px-2 py-1 text-xs text-teal-700 cursor-pointer hover:underline" data-tag-filter="${escapeHtml(tag.trim())}">
                                                 ${escapeHtml(tag.trim())}
                                             </span>
                                         `).join('')}
                                     </div>` : ''}
                                 </div>
                                 <div class="flex items-center space-x-2 ml-4">
-                                    <button class="p-2 text-gray-400 hover:text-blue-600" onclick="exportTemplateToml(${template.id})" data-tooltip="Export as TOML">
+                                    <button class="p-2 text-gray-400 hover:text-teal-600" onclick="exportTemplateToml(${template.id})" data-tooltip="Export as TOML">
                                         <i data-lucide="download" class="h-4 w-4"></i>
                                     </button>
                                     <button class="p-2 text-gray-400 hover:text-gray-600" onclick="editTemplate(${template.id})" data-tooltip="Edit">
@@ -694,9 +694,9 @@
                     searchInput.value = newSearch;
 
                     // Briefly flash the search input to indicate the change
-                    searchInput.classList.add('ring-2', 'ring-blue-400');
+                    searchInput.classList.add('ring-2', 'ring-teal-400');
                     setTimeout(() => {
-                        searchInput.classList.remove('ring-2', 'ring-blue-400');
+                        searchInput.classList.remove('ring-2', 'ring-teal-400');
                     }, 500);
 
                     // Trigger the filter update
@@ -1033,7 +1033,7 @@
                     <div class="relative mx-auto p-6 border border-slate-200 w-full max-w-2xl shadow-lg rounded-lg bg-white max-h-[90vh] overflow-y-auto">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-lg font-semibold text-gray-900">
-                                <i data-lucide="${icon}" class="h-5 w-5 inline mr-2 text-blue-600"></i>
+                                <i data-lucide="${icon}" class="h-5 w-5 inline mr-2 text-teal-600"></i>
                                 Import Template
                             </h3>
                             <button onclick="closeEmailGuidanceModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close">
@@ -1058,28 +1058,28 @@
 
                                 <!-- Database Selection Tabs -->
                                 <div class="flex gap-2 mb-3 border-b border-gray-200">
-                                    ${availableDbs.includes('sql-server') ? `<button onclick="switchDbType('sql-server')" id="db-tab-sql-server" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'sql-server' ? 'border-blue-600 text-blue-600' : ''}">SQL Server</button>` : ''}
-                                    ${availableDbs.includes('mysql') ? `<button onclick="switchDbType('mysql')" id="db-tab-mysql" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'mysql' ? 'border-blue-600 text-blue-600' : ''}">MySQL</button>` : ''}
-                                    ${availableDbs.includes('postgresql') ? `<button onclick="switchDbType('postgresql')" id="db-tab-postgresql" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'postgresql' ? 'border-blue-600 text-blue-600' : ''}">PostgreSQL</button>` : ''}
+                                    ${availableDbs.includes('sql-server') ? `<button onclick="switchDbType('sql-server')" id="db-tab-sql-server" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'sql-server' ? 'border-teal-600 text-teal-600' : ''}">SQL Server</button>` : ''}
+                                    ${availableDbs.includes('mysql') ? `<button onclick="switchDbType('mysql')" id="db-tab-mysql" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'mysql' ? 'border-teal-600 text-teal-600' : ''}">MySQL</button>` : ''}
+                                    ${availableDbs.includes('postgresql') ? `<button onclick="switchDbType('postgresql')" id="db-tab-postgresql" class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-transparent hover:text-gray-900 ${initialDb === 'postgresql' ? 'border-teal-600 text-teal-600' : ''}">PostgreSQL</button>` : ''}
                                 </div>
 
                                 <div class="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-3">
                                     <div class="flex items-center justify-between mb-2">
                                         <span class="text-xs font-semibold text-gray-600 uppercase">SQL Query</span>
                                         <button type="button" onclick="copySqlToClipboard()"
-                                                class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center transition duration-200 ease-in-out active:scale-95">
+                                                class="px-2 py-1 text-xs bg-slate-900 text-white rounded hover:bg-slate-800 flex items-center transition duration-200 ease-in-out active:scale-95">
                                             <i data-lucide="copy" class="h-3 w-3 mr-1"></i>
                                             <span id="copy-sql-btn-text">Copy SQL</span>
                                         </button>
                                     </div>
 
-                                    ${sqlServer ? `<pre id="sql-snippet-sql-server" class="text-xs font-mono whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'sql-server' ? 'hidden' : ''}">${escapeHtml(sqlServer)}</pre>` : ''}
-                                    ${mysql ? `<pre id="sql-snippet-mysql" class="text-xs font-mono whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'mysql' ? 'hidden' : ''}">${escapeHtml(mysql)}</pre>` : ''}
-                                    ${postgres ? `<pre id="sql-snippet-postgresql" class="text-xs font-mono whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'postgresql' ? 'hidden' : ''}">${escapeHtml(postgres)}</pre>` : ''}
+                                    ${sqlServer ? `<pre id="sql-snippet-sql-server" class="text-xs whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'sql-server' ? 'hidden' : ''}">${escapeHtml(sqlServer)}</pre>` : ''}
+                                    ${mysql ? `<pre id="sql-snippet-mysql" class="text-xs whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'mysql' ? 'hidden' : ''}">${escapeHtml(mysql)}</pre>` : ''}
+                                    ${postgres ? `<pre id="sql-snippet-postgresql" class="text-xs whitespace-pre-wrap text-gray-700 max-h-64 overflow-y-auto ${initialDb !== 'postgresql' ? 'hidden' : ''}">${escapeHtml(postgres)}</pre>` : ''}
                                 </div>
 
                                 <p class="text-sm text-gray-700 mt-3">
-                                    <i data-lucide="info" class="h-4 w-4 inline mr-1 text-blue-500"></i>
+                                    <i data-lucide="info" class="h-4 w-4 inline mr-1 text-teal-600"></i>
                                     For detailed information about the available template variables, see the documentation in the Profiles section.
                                 </p>
                             </div>
@@ -1090,7 +1090,7 @@
                                     Close
                                 </button>
                                 <button type="button" onclick="navigateToProfiles()"
-                                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                                        class="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 flex items-center">
                                     <i data-lucide="arrow-right" class="h-4 w-4 mr-2"></i>
                                     Go to Profiles
                                 </button>
@@ -1132,14 +1132,14 @@
             // Update tab styling
             const tabs = document.querySelectorAll('[id^="db-tab-"]');
             tabs.forEach(tab => {
-                tab.classList.remove('border-blue-600', 'text-blue-600');
+                tab.classList.remove('border-teal-600', 'text-teal-600');
                 tab.classList.add('border-transparent', 'text-gray-700');
             });
 
             const selectedTab = document.getElementById(`db-tab-${dbType}`);
             if (selectedTab) {
                 selectedTab.classList.remove('border-transparent', 'text-gray-700');
-                selectedTab.classList.add('border-blue-600', 'text-blue-600');
+                selectedTab.classList.add('border-teal-600', 'text-teal-600');
             }
         }
 
@@ -1387,7 +1387,7 @@
                     previewBtn.disabled = true;
                     break;
                 case 'validating':
-                    validationStatus.innerHTML = '<i data-lucide="loader" class="h-3 w-3 text-blue-500 mr-1 animate-spin"></i><span class="text-blue-600">Validating...</span>';
+                    validationStatus.innerHTML = '<i data-lucide="loader" class="h-3 w-3 text-teal-600 mr-1 animate-spin"></i><span class="text-teal-600">Validating...</span>';
                     previewBtn.disabled = true;
                     break;
             }
@@ -1962,7 +1962,7 @@
                     <div class="flex items-start justify-between">
                         <div class="flex-1">
                             <div class="flex items-center space-x-2 mb-1">
-                                <i data-lucide="file-text" class="h-4 w-4 text-blue-500"></i>
+                                <i data-lucide="file-text" class="h-4 w-4 text-teal-600"></i>
                                 <h4 class="font-medium text-gray-900">${escapeHtml(template.displayName)}</h4>
                             </div>
                             <div class="flex items-center space-x-3 text-xs text-gray-500">
@@ -2013,7 +2013,7 @@
                         <div class="text-center py-8">
                             <i data-lucide="inbox" class="h-12 w-12 text-gray-300 mx-auto mb-4"></i>
                             <p class="text-sm text-gray-500">No templates found matching your filters.</p>
-                            <button onclick="showImportStep1()" class="mt-4 text-sm text-blue-600 hover:text-blue-700">
+                            <button onclick="showImportStep1()" class="mt-4 text-sm text-teal-600 hover:text-teal-700">
                                 Try different filters
                             </button>
                         </div>
@@ -2035,7 +2035,7 @@
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2 mb-1">
-                                    <i data-lucide="file-text" class="h-4 w-4 text-blue-500"></i>
+                                    <i data-lucide="file-text" class="h-4 w-4 text-teal-600"></i>
                                     <h4 class="font-medium text-gray-900">${escapeHtml(template.displayName)}</h4>
                                 </div>
                                 <div class="flex items-center space-x-3 text-xs text-gray-500">
@@ -2058,7 +2058,7 @@
                     <div class="text-center py-8">
                         <i data-lucide="alert-circle" class="h-12 w-12 text-red-300 mx-auto mb-4"></i>
                         <p class="text-sm text-red-600">Error: ${escapeHtml(error.message)}</p>
-                        <button onclick="showImportStep1()" class="mt-4 text-sm text-blue-600 hover:text-blue-700">
+                        <button onclick="showImportStep1()" class="mt-4 text-sm text-teal-600 hover:text-teal-700">
                             Try again
                         </button>
                     </div>

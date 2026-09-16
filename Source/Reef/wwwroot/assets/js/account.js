@@ -25,23 +25,10 @@ function showTab(tab) {
 // ── Feedback helpers ──────────────────────────────────────────────────────────
 
 function showFeedback(containerId, message, type = 'error') {
-    const el = document.getElementById(containerId);
-    if (!el) return;
-    const colors = type === 'success'
-        ? 'bg-green-50 border-green-200 text-green-700'
-        : 'bg-red-50 border-red-200 text-red-700';
-    const icon = type === 'success' ? 'circle-check' : 'alert-circle';
-    el.innerHTML = `<div class="${colors} border rounded-md px-3.5 py-3 flex items-center gap-2.5">
-        <i data-lucide="${icon}" class="h-4 w-4 shrink-0"></i>
-        <p class="text-sm font-medium">${message}</p>
-    </div>`;
-    queueLucideRender();
+    window.showToast(message, type);
 }
 
-function clearFeedback(containerId) {
-    const el = document.getElementById(containerId);
-    if (el) el.innerHTML = '';
-}
+function clearFeedback(containerId) {}
 
 // ── API helper ────────────────────────────────────────────────────────────────
 

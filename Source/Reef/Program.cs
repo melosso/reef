@@ -678,8 +678,8 @@ public partial class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-blue-500/10 text-blue-400"
-                                : "hover:bg-slate-800 hover:text-slate-100";
+                                ? "bg-teal-600 text-white"
+                                : "hover:bg-zinc-800 hover:text-slate-100";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
 

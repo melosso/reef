@@ -49,7 +49,7 @@
 
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-sm font-semibold text-gray-700">Filters</h2>
-                        <button onclick="clearAllFilters()" class="text-sm text-blue-600 hover:text-blue-700 font-medium" id="clear-filters-btn" style="display:none;">
+                        <button onclick="clearAllFilters()" class="text-sm text-teal-600 hover:text-teal-700 font-medium" id="clear-filters-btn" style="display:none;">
                             Clear All
                         </button>
                     </div>
@@ -147,40 +147,41 @@
         </div>
     </div>
 
-    <div id="profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseProfileModal()">
-        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div class="flex justify-between items-center mb-4">
+    <div id="profile-modal" class="hidden fixed inset-0 bg-white overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseProfileModal()">
+        <div class="relative mx-auto p-6 w-full max-w-5xl" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <div class="flex justify-between items-center mb-6">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Profile</h3>
-                <button onclick="attemptCloseProfileModal()" class="text-gray-400 hover:text-gray-500">
-                    <i data-lucide="x" class="h-6 w-6"></i>
+                <button onclick="attemptCloseProfileModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md transition-colors">
+                    <i data-lucide="x" class="h-5 w-5"></i>
                 </button>
             </div>
 
-            <div class="border-b border-gray-200 mb-4">
-                <nav class="-mb-px flex space-x-4" aria-label="Tabs">
-                    <button id="generalTabButton" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600"
+            <div class="flex items-stretch gap-0 mb-6 relative">
+                <div class="absolute top-1/2 left-0 right-0 h-px bg-slate-200" style="z-index:0;"></div>
+                <nav class="flex gap-3 relative" style="z-index:1;" aria-label="Pipeline stages">
+                    <button id="generalTabButton" class="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-teal-600 text-white border border-teal-600 rounded-md shadow-sm"
                             onclick="showTab('general')">
-                        <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>
+                        <i data-lucide="settings" class="w-4 h-4"></i>
                         General
                     </button>
-                    <button id="webhooksTabButton" class="webhook-tab px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-slate-300"
+                    <button id="webhooksTabButton" class="webhook-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
                             onclick="showTab('webhooks')">
-                        <i data-lucide="link" class="w-4 h-4 inline mr-1"></i>
+                        <i data-lucide="link" class="w-4 h-4"></i>
                         Webhooks
                     </button>
-                    <button id="deltaSyncTabButton" class="deltasync-tab px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-slate-300"
+                    <button id="deltaSyncTabButton" class="deltasync-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
                             onclick="showTab('deltaSync')">
-                        <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i>
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                         Smart Sync
                     </button>
-                    <button id="splitOutputTabButton" class="split-tab px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-slate-300"
+                    <button id="splitOutputTabButton" class="split-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
                             onclick="showTab('splitOutput')">
-                        <i data-lucide="scissors" class="w-4 h-4 inline mr-1"></i>
+                        <i data-lucide="scissors" class="w-4 h-4"></i>
                         Split Output
                     </button>
-                    <button id="emailOptionsTabButton" class="email-options-tab px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border-b-2 border-transparent hover:border-slate-300"
+                    <button id="emailOptionsTabButton" class="email-options-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
                             onclick="showTab('emailOptions')" style="display:none;">
-                        <i data-lucide="mail" class="w-4 h-4 inline mr-1"></i>
+                        <i data-lucide="mail" class="w-4 h-4"></i>
                         Attachments
                     </button>
                 </nav>
@@ -222,15 +223,15 @@
                     </div>
                     
                     <!-- Scheduling Notice -->
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4" id="scheduling-notice" style="display:none;">
+                    <div class="bg-teal-50 border-l-4 border-teal-400 p-4" id="scheduling-notice" style="display:none;">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
+                                <i data-lucide="info" class="h-5 w-5 text-teal-500"></i>
                             </div>
                             <div class="ml-3">
-                                <h3 class="text-sm font-medium text-blue-800">Need to schedule this profile?</h3>
-                                <p class="mt-1 text-xs text-blue-700">
-After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-blue-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
+                                <h3 class="text-sm font-medium text-teal-800">Need to schedule this profile?</h3>
+                                <p class="mt-1 text-xs text-teal-700">
+After saving this profile, head to the <a href="/jobs" class="font-semibold underline hover:text-teal-900">Jobs</a> page to set up a scheduled task with options such as retries, dependencies, and more. You can also enable Webhooks to trigger this profile directly, skipping the need for scheduling entirely.                                </p>
                             </div>
                         </div>
                     </div>
@@ -255,7 +256,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div>
                             <label for="template-id" class="block text-sm font-medium text-slate-700">
                                 Custom Template (Optional)
-                                <span class="text-blue-600 text-xs">- Overrides format</span>
+                                <span class="text-teal-600 text-xs">- Overrides format</span>
                             </label>
                             <select id="template-id" onchange="updateTemplateInfo()"
                                     class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
@@ -280,7 +281,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <!-- Will be populated dynamically -->
                             </select>
                             <p class="mt-1 text-xs text-gray-500">
-                                <a href="/destinations" class="text-blue-600 hover:underline">→ Manage Destinations</a>
+                                <a href="/destinations" class="text-teal-600 hover:underline">→ Manage Destinations</a>
                             </p>
                         </div>
 
@@ -323,7 +324,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <!-- Email Configuration Section (Email Export Only) -->
                     <div id="emailConfigSection" class="hidden border-t border-gray-200 pt-4 mt-4">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i data-lucide="mail" class="w-4 h-4 mr-2 text-blue-600"></i>
+                            <i data-lucide="mail" class="w-4 h-4 mr-2 text-teal-600"></i>
                             Email Configuration
                         </h4>
 
@@ -336,7 +337,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <option value="">-- Select HTML email template --</option>
                             </select>
                             <p class="mt-1 text-xs text-gray-500">
-                                Only Scriban templates with HTML output format are available. <a href="/templates" class="text-blue-600 hover:underline">→ Create a new email template</a>
+                                Only Scriban templates with HTML output format are available. <a href="/templates" class="text-teal-600 hover:underline">→ Create a new email template</a>
                             </p>
                         </div>
 
@@ -352,7 +353,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <span class="text-xs font-medium text-gray-600">Column</span>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="useHardcodedRecipients" class="sr-only peer" onchange="updateRecipientsModeDisplay()">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="recipientsMode">Hardcoded</span>
                                 </div>
@@ -381,7 +382,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <span class="text-xs font-medium text-gray-600">Column</span>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="useHardcodedCc" class="sr-only peer" onchange="updateCcModeDisplay()">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="ccMode">Hardcoded</span>
                                 </div>
@@ -410,7 +411,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <span class="text-xs font-medium text-gray-600">Column</span>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="useHardcodedSubject" class="sr-only peer" onchange="updateSubjectModeDisplay()">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                     <span class="text-xs font-medium text-gray-600" id="subjectMode">Hardcoded</span>
                                 </div>
@@ -427,14 +428,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <p class="text-xs text-gray-500" id="subjectHelp">
                                         Column name from query that contains email subject. If not provided, will use profile name.
                                     </p>
-                                    <button type="button" id="subjectVariablesToggle" class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors" style="display: none;">
+                                    <button type="button" id="subjectVariablesToggle" class="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1 transition-colors" style="display: none;">
                                         <span>Variables</span>
                                         <i data-lucide="chevron-down" class="h-3 w-3 transition-transform duration-200"></i>
                                     </button>
                                 </div>
-                                <div id="subjectVariablesPanel" class="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200 hidden">
-                                    <p class="text-xs font-medium text-blue-900 mb-2">Available variables:</p>
-                                    <ul class="text-xs text-blue-800 space-y-1 ml-2">
+                                <div id="subjectVariablesPanel" class="mt-2 p-3 bg-teal-50 rounded-md border border-teal-200 hidden">
+                                    <p class="text-xs font-medium text-teal-900 mb-2">Available variables:</p>
+                                    <ul class="text-xs text-teal-800 space-y-1 ml-2">
                                         <li><code class="bg-blue-100 px-2 py-1 rounded">{{ columnName }}</code> - Any column from your query</li>
                                         <li><code class="bg-blue-100 px-2 py-1 rounded">{{ system.profileId }}</code> - Profile number</li>
                                         <li><code class="bg-blue-100 px-2 py-1 rounded">{{ system.profileName }}</code> - Profile name</li>
@@ -480,7 +481,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="emailApprovalRequired" class="sr-only peer" onchange="toggleEmailApprovalConfig()">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                             </label>
                         </div>
 
@@ -494,11 +495,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </label>
                                 <div id="emailApprovalRolesCheckboxes" class="space-y-2 p-3 bg-gray-50 border border-gray-200 rounded-md">
                                     <label class="flex items-center">
-                                        <input type="checkbox" value="Admin" data-role-checkbox class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <input type="checkbox" value="Admin" data-role-checkbox class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         <span class="ml-2 text-sm text-gray-700 disable-select">Admin</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" value="User" data-role-checkbox class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <input type="checkbox" value="User" data-role-checkbox class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         <span class="ml-2 text-sm text-gray-700 disable-select">User</span>
                                     </label>
                                 </div>
@@ -507,8 +508,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </p>
                             </div>
 
-                            <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
-                                <p class="text-xs text-blue-700">
+                            <div class="bg-teal-50 border-l-4 border-teal-400 p-3">
+                                <p class="text-xs text-teal-700">
                                     <strong>Workflow:</strong> Emails will be held in "Pending" status until approved by an authorized user. A background service will send approved emails within 30 seconds.
                                 </p>
                             </div>
@@ -602,7 +603,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <div>
                                     <button type="button" onclick="testScript('preprocess')"
-                                            class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                            class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded hover:bg-blue-100 flex items-center">
                                         <svg id="preprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -625,7 +626,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 
                                 <div class="flex items-center pt-6">
                                     <input type="checkbox" id="preprocess-rollback-on-failure" checked
-                                           class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                           class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                     <label for="preprocess-rollback-on-failure" class="ml-2 block text-sm text-gray-900">
                                         Rollback on main query failure
                                     </label>
@@ -634,7 +635,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                             <div class="flex items-center">
                                 <input type="checkbox" id="preprocess-continue-on-error"
-                                       class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                       class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                 <label for="preprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">
                                     Continue execution if this step fails
                                 </label>
@@ -654,7 +655,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <!-- Post-Processing Section -->
                     <div class="border-t border-gray-200 pt-4 mt-4">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                            <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-blue-600"></i>
+                            <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-teal-600"></i>
                             Post-Processing (Optional)
                             <span class="ml-2 text-xs font-normal text-gray-500">Execute after main query</span>
                         </h4>
@@ -738,7 +739,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <div>
                                     <button type="button" onclick="testScript('postprocess')"
-                                            class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                            class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded hover:bg-blue-100 flex items-center">
                                         <svg id="postprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -761,7 +762,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                                 <div class="flex items-center pt-6">
                                     <input type="checkbox" id="postprocess-skip-on-failure" checked
-                                           class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                           class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                     <label for="postprocess-skip-on-failure" class="ml-2 block text-sm text-gray-900">
                                         Skip if main query fails
                                     </label>
@@ -770,7 +771,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                             <div class="flex items-center">
                                 <input type="checkbox" id="postprocess-on-zero-rows"
-                                       class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                       class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                 <label for="postprocess-on-zero-rows" class="ml-2 block text-sm text-gray-900">
                                     Run post-processing even when query returns 0 rows
                                 </label>
@@ -781,7 +782,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                             <div class="flex items-center">
                                 <input type="checkbox" id="postprocess-continue-on-error"
-                                       class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                       class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                 <label for="postprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">
                                     Continue execution if this step fails
                                 </label>
@@ -790,8 +791,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </span>
                             </div>
 
-                            <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
-                                <p class="text-xs text-blue-700">
+                            <div class="bg-teal-50 border-l-4 border-teal-400 p-3">
+                                <p class="text-xs text-teal-700">
                                     <strong>Available variables:</strong> {executionid}, {profileid}, {rowcount}, {outputpath}, {filesizebytes}, {executiontimems}, {outputformat}, {triggeredby}, {startedat}, {completedat}, {status}, {deltasynccolumn}, {splitkey}
                                 </p>
                             </div>
@@ -801,7 +802,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <div class="flex items-center space-x-4">
                         <div class="flex items-center">
                             <input type="checkbox" id="is-enabled" checked
-                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                   class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                             <label for="is-enabled" class="ml-2 block text-sm text-gray-900">
                                 Enabled
                             </label>
@@ -814,7 +815,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
                         <div class="relative inline-block text-left">
                             <button type="button" id="test-actions-btn" onclick="toggleTestActionsMenu()"
-                                    class="px-4 py-2.5 border border-blue-300 bg-blue-50 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center"
+                                    class="px-4 py-2.5 border border-blue-300 bg-teal-50 rounded-md text-sm font-medium text-teal-700 hover:bg-blue-100 flex items-center"
                                     title="Test Profile">
                                 <i data-lucide="play" class="h-4 w-4 mr-1"></i>
                                 <i data-lucide="chevron-down" class="h-4 w-4"></i>
@@ -824,7 +825,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <button type="button" onclick="testQueryInModal(); closeTestActionsMenu();"
                                             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                             title="Show first 25 rows from database">
-                                        <svg id="test-query-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <svg id="test-query-spinner" class="animate-spin h-4 w-4 mr-2 text-teal-600 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                                         </svg>
@@ -834,7 +835,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <button type="button" onclick="testProfileInModal(); closeTestActionsMenu();"
                                             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                             title="Run full export with template and destination">
-                                        <svg id="test-profile-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <svg id="test-profile-spinner" class="animate-spin h-4 w-4 mr-2 text-teal-600 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                                         </svg>
@@ -845,7 +846,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                         <button type="button" onclick="previewEmailHtml(); closeTestActionsMenu();"
                                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                                 title="Preview email HTML output">
-                                            <svg id="preview-email-spinner" class="animate-spin h-4 w-4 mr-2 text-blue-500 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <svg id="preview-email-spinner" class="animate-spin h-4 w-4 mr-2 text-teal-600 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                                             </svg>
@@ -861,7 +862,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             Cancel
                         </button>
                         <button type="submit"
-                                class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
+                                class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors flex items-center">
                             <i data-lucide="save" class="h-4 w-4 mr-2"></i>
                             Save Profile
                         </button>
@@ -870,13 +871,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
             <div id="webhooksTab" class="tab-content hidden">
                 <div class="space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                                <i data-lucide="info" class="w-5 h-5 text-teal-500"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-blue-700">
+                                <p class="text-sm text-teal-700">
                                     Webhooks allow you to trigger profile execution via HTTP POST requests from external systems.
                                     Each webhook has a unique token that must be included in the URL.
                                 </p>
@@ -895,16 +896,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
             <div id="deltaSyncTab" class="tab-content hidden">
                 <div class="space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                                <i data-lucide="info" class="w-5 h-5 text-teal-500"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-blue-700">
+                                <p class="text-sm text-teal-700">
                                     When this option is turned on, the profile only exports rows that have been added, updated, or removed since the last export. We call this Smart Sync.
 
-                                    To make this work, your query needs to include a unique ID column (called <code class="px-1 py-0.5 bg-blue-100 text-blue-900 rounded text-xs">ReefId</code>) so Reef can tell which rows have changed.
+                                    To make this work, your query needs to include a unique ID column (called <code class="px-1 py-0.5 bg-blue-100 text-teal-900 rounded text-xs">ReefId</code>) so Reef can tell which rows have changed.
                                 </p>
                             </div>
                         </div>
@@ -921,7 +922,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="deltaSyncEnabled" class="sr-only peer" onchange="toggleDeltaSyncFields()">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                         </label>
                     </div>
 
@@ -1011,7 +1012,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="deltaSyncTrackDeletes" checked class="sr-only peer">
-                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                 </div>
 
@@ -1026,12 +1027,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="excludeReefIdFromOutput" checked class="sr-only peer">
-                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                 </div>
                                 
                                 <p class="text-xs text-gray-500 italic flex items-start">
-                                    <i data-lucide="info" class="w-3 h-3 mr-1 mt-0.5 text-blue-500 flex-shrink-0"></i>
+                                    <i data-lucide="info" class="w-3 h-3 mr-1 mt-0.5 text-teal-600 flex-shrink-0"></i>
                                     <span>
                                         When enabled (recommended), the ReefId column is used internally for change detection 
                                         but won't appear in your exported files. Uncheck if you want the ReefId column included in the output.
@@ -1048,7 +1049,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     Smart Sync Statistics
                                 </h4>
                                 <button type="button" onclick="refreshDeltaSyncStats()" 
-                                        class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                                        class="text-xs text-teal-600 hover:text-teal-800 flex items-center">
                                     <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
                                     Refresh
                                 </button>
@@ -1059,7 +1060,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <div class="text-xs text-gray-500">Total Tracked</div>
                                 </div>
                                 <div class="text-center">
-                                    <div id="statLastSync" class="text-2xl font-bold text-blue-600">-</div>
+                                    <div id="statLastSync" class="text-2xl font-bold text-teal-600">-</div>
                                     <div class="text-xs text-gray-500">Last Sync</div>
                                 </div>
                                 <div class="text-center">
@@ -1086,15 +1087,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                             <div id="deltaSyncAdvancedContent" class="hidden space-y-4 pt-4 border-t border-gray-200">
                                 <!-- Generate Hashes Section -->
-                                <div class="flex items-start p-3 mt-4 bg-blue-50 border border-blue-200 rounded">
-                                    <i data-lucide="hash" class="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0"></i>
+                                <div class="flex items-start p-3 mt-4 bg-teal-50 border border-teal-200 rounded">
+                                    <i data-lucide="hash" class="w-5 h-5 text-teal-600 mt-0.5 mr-3 flex-shrink-0"></i>
                                     <div class="flex-1">
-                                        <h4 class="text-sm font-semibold text-blue-900 mb-1">Initialize Hash Baseline</h4>
-                                        <p class="text-xs text-blue-700 mb-3">
+                                        <h4 class="text-sm font-semibold text-teal-900 mb-1">Initialize Hash Baseline</h4>
+                                        <p class="text-xs text-teal-700 mb-3">
                                             Executes your query and generates hashes for all rows without marking them as changes. This establishes the baseline so only new/updated data is synced next time.
                                         </p>
                                         <button type="button" onclick="generateDeltaSyncHashes()"
-                                                class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-300 rounded hover:bg-blue-100">
+                                                class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-white border border-blue-300 rounded hover:bg-blue-100">
                                             <i data-lucide="hash" class="w-3 h-3 inline mr-1"></i>
                                             Generate Hashes from Query
                                         </button>
@@ -1132,17 +1133,17 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             <!-- Split Output Tab -->
             <div id="splitOutputTab" class="tab-content hidden">
                 <div class="space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                    <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i data-lucide="info" class="w-5 h-5 text-blue-400"></i>
+                                <i data-lucide="info" class="w-5 h-5 text-teal-500"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-blue-700">
+                                <p class="text-sm text-teal-700">
                                     <strong>Multi-Output Splitting</strong> allows you to generate multiple output files from a single query execution.
                                     Each file contains rows grouped by a specific column value (e.g., one XML file per customer).
                                 </p>
-                                <p class="text-xs text-blue-600 mt-2">
+                                <p class="text-xs text-teal-600 mt-2">
                                     <strong>Example:</strong> Query returns 100 customers → Split by CustomerId → Creates 100 separate files
                                 </p>
                             </div>
@@ -1160,7 +1161,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="splitEnabled" class="sr-only peer" onchange="toggleSplitFields()">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                         </label>
                     </div>
 
@@ -1177,13 +1178,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="emailGroupBySplitKey" class="sr-only peer" onchange="updateWorkflowHint()">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                             
                             <!-- Workflow hint when enabled -->
-                            <div id="emailGroupingHint" class="hidden mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p class="text-xs text-blue-800">
+                            <div id="emailGroupingHint" class="hidden mt-2 p-3 bg-teal-50 border border-teal-200 rounded-lg">
+                                <p class="text-xs text-teal-800">
                                     <i data-lucide="lightbulb" class="w-3 h-3 inline mr-1"></i>
                                     <strong>Pro tip:</strong> For workflows requiring multiple documents per email (e.g., invoice approvals), enable <strong>"Generate one document per row"</strong> in <strong>Email Options → Attachments → DocumentTemplate</strong> below to create separate PDFs for each row.
                                 </p>
@@ -1201,7 +1202,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="postProcessPerSplit" class="sr-only peer">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                             </label>
                         </div>
 
@@ -1249,17 +1250,17 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
 
                             <!-- Advanced Output Options for Split Key -->
-                            <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                            <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                                 <div class="flex items-start">
                                     <div class="flex-shrink-0">
-                                        <i data-lucide="eye-off" class="w-5 h-5 text-blue-400"></i>
+                                        <i data-lucide="eye-off" class="w-5 h-5 text-teal-500"></i>
                                     </div>
                                     <div class="ml-3 flex-1">
-                                        <h4 class="text-sm font-medium text-blue-800 mb-2">Advanced Output Options</h4>
-                                        <p class="text-xs text-blue-700 mb-3">
+                                        <h4 class="text-sm font-medium text-teal-800 mb-2">Advanced Output Options</h4>
+                                        <p class="text-xs text-teal-700 mb-3">
                                             Control whether the Split Key column appears in your exported files
                                         </p>
-                                        <div class="flex items-center justify-between p-3 bg-white rounded border border-blue-200">
+                                        <div class="flex items-center justify-between p-3 bg-white rounded border border-teal-200">
                                             <div class="flex items-center space-x-3">
                                                 <div>
                                                     <label for="excludeSplitKeyFromOutput" class="text-sm font-medium text-gray-900">Exclude Split Key from Exported Data</label>
@@ -1268,10 +1269,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                             </div>
                                             <label class="relative inline-flex items-center cursor-pointer">
                                                 <input type="checkbox" id="excludeSplitKeyFromOutput" class="sr-only peer">
-                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                             </label>
                                         </div>
-                                        <p class="text-xs text-blue-600 mt-2">
+                                        <p class="text-xs text-teal-600 mt-2">
                                             <strong>When enabled (recommended):</strong> The Split Key column is used internally for grouping/filename generation but won't appear in your exported files. Uncheck if you want the Split Key column included in the output.
                                         </p>
                                     </div>
@@ -1299,16 +1300,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <ol class="list-decimal list-inside space-y-2 ml-4">
                                     <li><b>Create Profile:</b> Click <b>"New Profile"</b> and configure your query, connection, output format, and destination.</li>
                                     <li><b>Test Profile:</b> Use the <i data-lucide="play-circle" class="h-4 w-4 inline text-green-600"></i> Test button to verify your query works correctly.</li>
-                                    <li><b>Schedule Execution:</b> Go to the <a href="/jobs" class="text-blue-600 hover:underline font-semibold">Jobs</a> page to create a scheduled task that runs this profile automatically.</li>
+                                    <li><b>Schedule Execution:</b> Go to the <a href="/jobs" class="text-teal-600 hover:underline font-semibold">Jobs</a> page to create a scheduled task that runs this profile automatically.</li>
                                 </ol>
                                 
                                 <p>
                                     Choose your database connection, select output format (JSON, CSV, XML, YAML, or custom), pick a destination (local, cloud, FTP/SFTP, APIs), optionally set up webhooks for manual triggers, and organize profiles into folders.
                                 </p>
                                 
-                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-4">
-                                    <p class="text-sm text-blue-800">
-                                        <strong>💡 Tip:</strong> Profiles are input configurations. For <em>scheduling</em> (WHEN to run), use the <a href="/jobs" class="text-blue-600 hover:underline font-semibold">Jobs</a> page.
+                                <div class="bg-teal-50 border-l-4 border-teal-400 p-3 mt-4">
+                                    <p class="text-sm text-teal-800">
+                                        <strong>💡 Tip:</strong> Profiles are input configurations. For <em>scheduling</em> (WHEN to run), use the <a href="/jobs" class="text-teal-600 hover:underline font-semibold">Jobs</a> page.
                                     </p>
                                 </div>
                             </div>
@@ -1331,29 +1332,29 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="attachmentsEnabled" class="sr-only peer" onchange="toggleAttachmentConfig()">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                         </label>
                     </div>
 
                     <div id="attachmentConfig" class="hidden space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 space-y-3">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4 space-y-3">
                             <div>
-                                <p class="text-xs text-blue-700 font-semibold mb-2">
+                                <p class="text-xs text-teal-700 font-semibold mb-2">
                                     <strong>Required Query Columns:</strong>
                                 </p>
-                                <div class="bg-white rounded border border-blue-200 p-3 space-y-2">
-                                    <div class="text-xs text-blue-800">
+                                <div class="bg-white rounded border border-teal-200 p-3 space-y-2">
+                                    <div class="text-xs text-teal-800">
                                         <div class="flex items-start">
-                                            <span class="inline-block bg-blue-100 text-blue-700 rounded px-2 py-1 mr-2 font-mono text-xs">1</span>
+                                            <span class="inline-block bg-blue-100 text-teal-700 rounded px-2 py-1 mr-2 font-mono text-xs">1</span>
                                             <div>
                                                 <strong>Binary Content Column</strong>
                                                 <div class="text-gray-600 text-xs">BLOB/VARBINARY data type containing file content</div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="text-xs text-blue-800">
+                                    <div class="text-xs text-teal-800">
                                         <div class="flex items-start">
-                                            <span class="inline-block bg-blue-100 text-blue-700 rounded px-2 py-1 mr-2 font-mono text-xs">2</span>
+                                            <span class="inline-block bg-blue-100 text-teal-700 rounded px-2 py-1 mr-2 font-mono text-xs">2</span>
                                             <div>
                                                 <strong>Filename Column</strong>
                                                 <div class="text-gray-600 text-xs">Field that returns the filename as text (e.g., "report.pdf", "invoice_2024.xlsx")</div>
@@ -1362,7 +1363,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                 </div>
                             </div>
-                            <p class="text-xs text-blue-700 border-t border-blue-200 pt-2">
+                            <p class="text-xs text-teal-700 border-t border-teal-200 pt-2">
                                 <strong>Example:</strong> SELECT email, pdf_content, filename FROM invoices
                             </p>
                         </div>
@@ -1484,8 +1485,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     Query must return this column with the desired filename (include extension: .pdf or .docx)
                                 </p>
                                 
-                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mt-3">
-                                    <p class="text-xs text-blue-700">
+                                <div class="bg-teal-50 border-l-4 border-teal-400 p-3 mt-3">
+                                    <p class="text-xs text-teal-700">
                                         <strong>How it works:</strong> Your query data will be passed to the document template, which generates a PDF/DOCX file dynamically. This file is then attached to the email.
                                     </p>
                                 </div>
@@ -1494,7 +1495,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <div class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                                     <label class="flex items-center">
                                         <input type="checkbox" id="emailAttachmentGeneratePerRow" onchange="saveAttachmentConfig()"
-                                               class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                               class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         <span class="ml-2 text-sm font-semibold text-gray-900">Generate one document per row</span>
                                         <span class="ml-1 text-gray-400 cursor-help" data-tooltip="When enabled, creates a separate PDF/DOCX for each row (e.g., one invoice PDF per row). When disabled, creates one document with all rows (e.g., one picklist with all items)." data-tooltip-position="top">
                                             <i data-lucide="info" class="w-4 h-4"></i>
@@ -1510,7 +1511,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
 
                         <button type="button" onclick="validateAttachmentConfig()"
-                                class="w-full h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
+                                class="w-full h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors text-sm font-medium">
                             <i data-lucide="check-circle" class="w-4 h-4 inline mr-2"></i>
                             Validate Configuration
                         </button>
@@ -1544,8 +1545,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!-- Info -->
-                <div class="px-6 py-3 bg-blue-50 border-b border-blue-200">
-                    <p class="text-xs text-blue-700 pb-0 mb-0">
+                <div class="px-6 py-3 bg-teal-50 border-b border-teal-200">
+                    <p class="text-xs text-teal-700 pb-0 mb-0">
                         <strong>Note:</strong> This preview uses the first row from your query. Make sure your query returns at least one row.
                     </p>
                 </div>
@@ -1557,7 +1558,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         Close
                     </button>
                     <button type="button" id="download-preview-btn" onclick="downloadEmailPreview()"
-                            class="px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-blue-700 hover:bg-blue-100 flex items-center font-medium">
+                            class="px-4 py-2 border border-blue-300 bg-teal-50 rounded-md text-teal-700 hover:bg-blue-100 flex items-center font-medium">
                         <i data-lucide="download" class="h-4 w-4 mr-2"></i>
                         Download HTML
                     </button>
@@ -1589,7 +1590,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <div class="px-6 py-4 max-h-96 overflow-auto bg-gray-50 border-b border-gray-200">
                     <div id="query-results-content">
                         <div class="flex items-center justify-center py-8">
-                            <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg class="animate-spin h-8 w-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                             </svg>
@@ -1688,7 +1689,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="import-modal-title" class="text-lg font-semibold text-slate-900 flex items-center">
-                    <i data-lucide="upload" class="h-5 w-5 mr-2 text-blue-500"></i>
+                    <i data-lucide="upload" class="h-5 w-5 mr-2 text-teal-600"></i>
                     New Profile
                 </h3>
                 <button onclick="attemptCloseImportProfileModal()" class="text-gray-400 hover:text-gray-500">
@@ -1699,7 +1700,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             <!-- Tab Navigation -->
             <div class="border-b border-gray-200 mb-4">
                 <nav class="-mb-px flex flex-wrap gap-1" aria-label="Import Tabs">
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600" data-tab="imp-basic" onclick="showImportTab('imp-basic')">
+                    <button type="button" class="px-4 py-2 text-sm font-medium text-teal-600 border-b-2 border-blue-600" data-tab="imp-basic" onclick="showImportTab('imp-basic')">
                         <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>General
                     </button>
                     <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-source" onclick="showImportTab('imp-source')">
@@ -1761,7 +1762,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="imp-is-enabled" class="sr-only peer" checked>
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                             </label>
                         </div>
                     </div>
@@ -1770,10 +1771,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Source Tab -->
                 <div id="imp-source" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Configure where the profile pulls or reads data from.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Configure where the profile pulls or reads data from.</p></div>
                             </div>
                         </div>
 
@@ -1826,7 +1827,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-archive-after" class="sr-only peer" onchange="toggleArchivePath()">
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                             <div id="imp-archive-path-row" class="hidden">
@@ -1904,7 +1905,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-sftp-archive-after" class="sr-only peer" onchange="toggleSftpArchivePath()">
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                             <div id="imp-sftp-archive-path-row" class="hidden">
@@ -1974,7 +1975,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-http-pagination" class="sr-only peer" onchange="togglePaginationConfig()">
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                             <div id="imp-pagination-config-row" class="hidden">
@@ -2113,10 +2114,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
 
                         <div class="border-t border-gray-200 pt-3 flex gap-2">
-                            <button type="button" onclick="testImportSource()" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md flex items-center">
+                            <button type="button" onclick="testImportSource()" class="px-3 py-1.5 text-sm border border-blue-300 bg-teal-50 text-teal-700 hover:bg-blue-100 rounded-md flex items-center">
                                 <i data-lucide="wifi" class="h-4 w-4 mr-1"></i>Test Source
                             </button>
-                            <button type="button" onclick="previewImportData()" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md flex items-center">
+                            <button type="button" onclick="previewImportData()" class="px-3 py-1.5 text-sm border border-blue-300 bg-teal-50 text-teal-700 hover:bg-blue-100 rounded-md flex items-center">
                                 <i data-lucide="eye" class="h-4 w-4 mr-1"></i>Preview Data
                             </button>
                         </div>
@@ -2127,10 +2128,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Format Tab -->
                 <div id="imp-format" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Select the format of your source data. Note, you may want to use <strong>Binary / File Passthrough</strong> to forward raw files directly to Output Targets without parsing.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Select the format of your source data. Note, you may want to use <strong>Binary / File Passthrough</strong> to forward raw files directly to Output Targets without parsing.</p></div>
                             </div>
                         </div>
 
@@ -2150,7 +2151,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <!-- CSV/TSV options -->
                         <div id="imp-csv-options" class="space-y-3">
                             <h4 class="text-sm font-semibold text-gray-700 flex items-center">
-                                <i data-lucide="table-2" class="w-4 h-4 mr-2 text-blue-600"></i>CSV / TSV Options
+                                <i data-lucide="table-2" class="w-4 h-4 mr-2 text-teal-600"></i>CSV / TSV Options
                             </h4>
                             <div class="grid grid-cols-3 gap-3">
                                 <div>
@@ -2176,14 +2177,14 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <label for="imp-csv-hasheader" class="text-sm text-gray-700">Has Header Row</label>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="imp-csv-hasheader" class="sr-only peer" checked>
-                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                 </div>
                                 <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
                                     <label for="imp-csv-trim" class="text-sm text-gray-700">Trim Whitespace</label>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="imp-csv-trim" class="sr-only peer" checked>
-                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                 </div>
                                 <div>
@@ -2233,11 +2234,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                         <!-- Binary passthrough info -->
                         <div id="imp-binary-info" class="hidden">
-                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                                <i data-lucide="file-symlink" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+                            <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 flex items-start gap-3">
+                                <i data-lucide="file-symlink" class="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5"></i>
                                 <div>
-                                    <p class="text-sm font-medium text-blue-800">Binary / File Passthrough</p>
-                                    <p class="text-xs text-blue-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
+                                    <p class="text-sm font-medium text-teal-800">Binary / File Passthrough</p>
+                                    <p class="text-xs text-teal-700 mt-1">Files will be forwarded as-is to configured Output Targets. No row parsing or database write occurs. Configure destinations in the <strong>Output Targets</strong> tab.</p>
                                 </div>
                             </div>
                         </div>
@@ -2247,10 +2248,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Target Tab -->
                 <div id="imp-target" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Choose where imported data is written. <strong>Database Connection</strong> inserts or upserts rows into a table. <strong>Local File</strong> saves the parsed data as CSV/JSON on the server, useful for transforming or archiving API responses.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Choose where imported data is written. <strong>Database Connection</strong> inserts or upserts rows into a table. <strong>Local File</strong> saves the parsed data as CSV/JSON on the server, useful for transforming or archiving API responses.</p></div>
                             </div>
                         </div>
 
@@ -2266,7 +2267,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div id="imp-db-target-fields">
                             <div class="space-y-4">
                                 <h4 class="text-sm font-semibold text-gray-700 flex items-center">
-                                    <i data-lucide="database" class="w-4 h-4 mr-2 text-blue-600"></i>Database Target
+                                    <i data-lucide="database" class="w-4 h-4 mr-2 text-teal-600"></i>Database Target
                                 </h4>
                                 <div>
                                     <label class="block text-sm font-medium text-slate-700">Target Connection <span class="text-red-500">*</span></label>
@@ -2315,7 +2316,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                 </div>
                                 <div class="flex gap-2 border-t border-gray-200 pt-3">
-                                    <button type="button" onclick="testImportTarget()" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md flex items-center">
+                                    <button type="button" onclick="testImportTarget()" class="px-3 py-1.5 text-sm border border-blue-300 bg-teal-50 text-teal-700 hover:bg-blue-100 rounded-md flex items-center">
                                         <i data-lucide="database" class="h-4 w-4 mr-1"></i>Test Target
                                     </button>
                                     <button type="button" onclick="loadTargetSchema()" class="px-3 py-1.5 text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-md flex items-center">
@@ -2369,7 +2370,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                             </div>
                             <div class="border-t border-gray-200 pt-3">
-                                <button type="button" onclick="testImportTarget()" class="px-3 py-1.5 text-sm border border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-md flex items-center">
+                                <button type="button" onclick="testImportTarget()" class="px-3 py-1.5 text-sm border border-blue-300 bg-teal-50 text-teal-700 hover:bg-blue-100 rounded-md flex items-center">
                                     <i data-lucide="file-check" class="h-4 w-4 mr-1"></i>Test Path
                                 </button>
                             </div>
@@ -2381,10 +2382,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Mapping Tab -->
                 <div id="imp-mapping" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">By default Reef auto-maps source columns to target columns by name. Add explicit mappings to rename columns, cast types, or apply transformations. Leave the list empty to rely entirely on auto-mapping.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">By default Reef auto-maps source columns to target columns by name. Add explicit mappings to rename columns, cast types, or apply transformations. Leave the list empty to rely entirely on auto-mapping.</p></div>
                             </div>
                         </div>
 
@@ -2396,7 +2397,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-auto-map" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                             <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -2409,7 +2410,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-skip-unmapped" class="sr-only peer" checked>
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
                         </div>
@@ -2417,7 +2418,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <label class="text-sm font-semibold text-gray-700 flex items-center">
-                                    <i data-lucide="arrow-right-left" class="w-4 h-4 mr-2 text-blue-600"></i>
+                                    <i data-lucide="arrow-right-left" class="w-4 h-4 mr-2 text-teal-600"></i>
                                     Column Mappings (optional overrides)
                                 </label>
                                 <button type="button" onclick="addColumnMapping()" class="text-xs px-2 py-1 border border-slate-200 hover:bg-slate-50 rounded-md flex items-center">
@@ -2433,10 +2434,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Smart Sync Tab─ -->
                 <div id="imp-sync" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">When Smart Sync is on, Reef hashes each record and only writes rows that are <strong>new or changed</strong> since the last run, skipping identical data to reduce load. You must specify a field that is <strong>unique per record</strong> in your source data (e.g. <code class="bg-blue-100 text-blue-900 rounded px-1">OrderId</code> in CSV/JSON, an element name in XML). Reef stores a hash fingerprint per ID and compares it each run.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">When Smart Sync is on, Reef hashes each record and only writes rows that are <strong>new or changed</strong> since the last run, skipping identical data to reduce load. You must specify a field that is <strong>unique per record</strong> in your source data (e.g. <code class="bg-blue-100 text-teal-900 rounded px-1">OrderId</code> in CSV/JSON, an element name in XML). Reef stores a hash fingerprint per ID and compares it each run.</p></div>
                             </div>
                         </div>
 
@@ -2451,7 +2452,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="imp-delta-enabled" class="sr-only peer" onchange="toggleDeltaSyncRows()">
-                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                             </label>
                         </div>
 
@@ -2490,7 +2491,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 </div>
                                 <label class="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" id="imp-delta-track-deletes" class="sr-only peer" onchange="toggleDeleteStrategy()">
-                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                                 </label>
                             </div>
 
@@ -2523,7 +2524,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     Smart Sync Statistics
                                 </h4>
                                 <button type="button" onclick="loadImportDeltaSyncStats()"
-                                        class="text-xs text-blue-600 hover:text-blue-800 flex items-center">
+                                        class="text-xs text-teal-600 hover:text-teal-800 flex items-center">
                                     <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i>
                                     Refresh
                                 </button>
@@ -2534,7 +2535,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     <div class="text-xs text-gray-500">Total Tracked</div>
                                 </div>
                                 <div class="text-center">
-                                    <div id="impStatLastSync" class="text-2xl font-bold text-blue-600">-</div>
+                                    <div id="impStatLastSync" class="text-2xl font-bold text-teal-600">-</div>
                                     <div class="text-xs text-gray-500">Last Sync</div>
                                 </div>
                                 <div class="text-center">
@@ -2583,10 +2584,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Failures Tab── -->
                 <div id="imp-failures" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Control how Reef responds when things go wrong at each stage. Conservative defaults keep bad data out; permissive settings maximise throughput at the cost of data quality.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Control how Reef responds when things go wrong at each stage. Conservative defaults keep bad data out; permissive settings maximise throughput at the cost of data quality.</p></div>
                             </div>
                         </div>
 
@@ -2676,7 +2677,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="imp-rollback-abort" class="sr-only peer" checked>
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                             </label>
                         </div>
                     </div>
@@ -2685,10 +2686,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Processing Tab (pre/post-process Query/StoredProcedure/Script - Database target only) -->
                 <div id="imp-processing" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Run a SQL statement, stored procedure, or script before/after the import. Database target only - skipped for LocalFile targets.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Run a SQL statement, stored procedure, or script before/after the import. Database target only - skipped for LocalFile targets.</p></div>
                             </div>
                         </div>
 
@@ -2764,7 +2765,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                     <div>
                                         <button type="button" onclick="testScript('imp-preprocess')"
-                                                class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                                class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded hover:bg-blue-100 flex items-center">
                                             <svg id="imp-preprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -2782,12 +2783,12 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     </div>
                                     <div class="flex items-center pt-6">
-                                        <input type="checkbox" id="imp-preprocess-rollback-on-failure" checked class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <input type="checkbox" id="imp-preprocess-rollback-on-failure" checked class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         <label for="imp-preprocess-rollback-on-failure" class="ml-2 block text-sm text-gray-900">Rollback on failure</label>
                                     </div>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="imp-preprocess-continue-on-error" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <input type="checkbox" id="imp-preprocess-continue-on-error" class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                     <label for="imp-preprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">Continue execution if this step fails</label>
                                 </div>
                             </div>
@@ -2796,7 +2797,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <!-- Post-Processing -->
                         <div class="border-t border-gray-200 pt-4 mt-4">
                             <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-                                <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-blue-600"></i>
+                                <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-teal-600"></i>
                                 Post-Processing (Optional)
                                 <span class="ml-2 text-xs font-normal text-gray-500">Execute after the import pipeline</span>
                             </h4>
@@ -2865,7 +2866,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                     </div>
                                     <div>
                                         <button type="button" onclick="testScript('imp-postprocess')"
-                                                class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 flex items-center">
+                                                class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded hover:bg-blue-100 flex items-center">
                                             <svg id="imp-postprocess-script-test-spinner" class="animate-spin h-3.5 w-3.5 mr-1.5 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
@@ -2883,16 +2884,16 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                                class="mt-1 block w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
                                     </div>
                                     <div class="flex items-center pt-6">
-                                        <input type="checkbox" id="imp-postprocess-skip-on-failure" checked class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                        <input type="checkbox" id="imp-postprocess-skip-on-failure" checked class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         <label for="imp-postprocess-skip-on-failure" class="ml-2 block text-sm text-gray-900">Skip if import fails</label>
                                     </div>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="imp-postprocess-continue-on-error" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <input type="checkbox" id="imp-postprocess-continue-on-error" class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                     <label for="imp-postprocess-continue-on-error" class="ml-2 block text-sm text-gray-900">Continue execution if this step fails</label>
                                 </div>
                                 <div class="flex items-center">
-                                    <input type="checkbox" id="imp-postprocess-rollback-on-failure" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                    <input type="checkbox" id="imp-postprocess-rollback-on-failure" class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                     <label for="imp-postprocess-rollback-on-failure" class="ml-2 block text-sm text-gray-900">Rollback on failure</label>
                                 </div>
                             </div>
@@ -2903,10 +2904,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Output Targets Tab  -->
                 <div id="imp-output-targets" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Output targets fan-out parsed rows to additional destinations after the primary database write. Use them to create backup files, push data to HTTP APIs, upload to S3, or any other configured destination.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Output targets fan-out parsed rows to additional destinations after the primary database write. Use them to create backup files, push data to HTTP APIs, upload to S3, or any other configured destination.</p></div>
                             </div>
                         </div>
 
@@ -2972,10 +2973,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Webhooks Tab── -->
                 <div id="imp-webhooks" class="import-tab-pane hidden">
                     <div class="space-y-4">
-                        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                        <div class="bg-teal-50 border-l-4 border-teal-400 p-4">
                             <div class="flex">
-                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-blue-400"></i></div>
-                                <div class="ml-3"><p class="text-sm text-blue-700">Webhooks allow external systems to trigger this import profile via HTTP POST. Each webhook has a unique, secret URL. Keep it safe.</p></div>
+                                <div class="flex-shrink-0"><i data-lucide="info" class="w-5 h-5 text-teal-500"></i></div>
+                                <div class="ml-3"><p class="text-sm text-teal-700">Webhooks allow external systems to trigger this import profile via HTTP POST. Each webhook has a unique, secret URL. Keep it safe.</p></div>
                             </div>
                         </div>
 
@@ -2994,13 +2995,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <!--  Footer buttons─ -->
                 <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
                     <button type="button" id="imp-run-btn" onclick="executeImportProfileFromModal()"
-                            class="hidden px-4 py-2 border border-blue-300 bg-blue-50 rounded-md text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center">
+                            class="hidden px-4 py-2 border border-blue-300 bg-teal-50 rounded-md text-sm font-medium text-teal-700 hover:bg-blue-100 flex items-center">
                         <i data-lucide="play-circle" class="h-4 w-4 mr-1"></i>Run Now
                     </button>
                     <button type="button" onclick="attemptCloseImportProfileModal()"
                             class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
                     <button type="submit"
-                            class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
+                            class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors flex items-center">
                         <i data-lucide="save" class="h-4 w-4 mr-2"></i>Save Profile
                     </button>
                 </div>
@@ -3935,19 +3936,19 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     : '';
 
                 return `
-                    <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500">
+                    <tr class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-teal-600">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                 <span class="text-sm font-medium text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profile.name)}</span>
+                                 <span class="text-sm font-medium text-gray-900 group-hover:text-teal-900 transition-colors">${escapeHtml(profile.name)}</span>
                                  ${profile.code ? `<span class="ml-2 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono flex-shrink-0">${escapeHtml(profile.code)}</span>` : ''}
-                                 <span class="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded flex-shrink-0">Export</span>
+                                 <span class="ml-2 px-1.5 py-0.5 text-xs bg-blue-100 text-teal-700 rounded flex-shrink-0">Export</span>
                             </div>
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">
                             ${escapeHtml(profile.connectionName || 'N/A')}${connectionBadge}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(profile.groupName || 'None')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${(() => {
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${escapeHtml(profile.groupName || 'None')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${(() => {
                             if (profile.templateId) {
                                 const template = templates.find(t => t.id === profile.templateId);
                                 return template ? escapeHtml(template.outputFormat) : escapeHtml(profile.outputFormat);
@@ -3958,10 +3959,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             if (!profile.outputDestinationId) return '<span class="text-sm text-gray-400">Not configured</span>';
                             const dest = destinations.find(d => d.id === profile.outputDestinationId);
                             if (!dest) return '<span class="text-sm text-gray-400">Unknown</span>';
-                            return `<div class="text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${escapeHtml(dest.name)}</div><div class="text-xs text-gray-400">${escapeHtml(dest.type)}</div>`;
+                            return `<div class="text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${escapeHtml(dest.name)}</div><div class="text-xs text-gray-400">${escapeHtml(dest.type)}</div>`;
                         })()}</td>
                         <td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">
                             ${(() => {
                                 const lastRun = formatDateTime(profile.lastExecutedAt);
                                 const lastRunRelative = formatRelativeTime(profile.lastExecutedAt);
@@ -3972,7 +3973,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <div class="flex items-center justify-end gap-2">
                                 ${executeButton}
                                 ${testButton}
-                                <button onclick="editProfile(${profile.id}, false)" class="text-blue-600 hover:text-blue-900" data-tooltip="Edit Profile">
+                                <button onclick="editProfile(${profile.id}, false)" class="text-teal-600 hover:text-teal-900" data-tooltip="Edit Profile">
                                     <i data-lucide="edit" class="h-4 w-4"></i>
                                 </button>
                                 <button onclick="exportProfileAsToml(${profile.id}, false)" class="text-purple-600 hover:text-purple-900" data-tooltip="Export as TOML">
@@ -4038,7 +4039,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                 <button id="play-btn-import-${p.id}" onclick="executeProfile(${p.id}, true, false)" class="text-green-600 hover:text-green-900" data-tooltip="Run Now">
                                     <i data-lucide="play-circle" class="h-4 w-4"></i>
                                 </button>
-                                <button onclick="editProfile(${p.id}, true)" class="text-blue-600 hover:text-blue-900" data-tooltip="Edit">
+                                <button onclick="editProfile(${p.id}, true)" class="text-teal-600 hover:text-teal-900" data-tooltip="Edit">
                                     <i data-lucide="edit" class="h-4 w-4"></i>
                                 </button>
                                 <button onclick="exportProfileAsToml(${p.id}, true)" class="text-purple-600 hover:text-purple-900" data-tooltip="Export as TOML">
@@ -4641,7 +4642,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     function openImportProfileModal(profileId = null) {
         currentImportProfileId = profileId;
         document.getElementById('import-modal-title').innerHTML =
-            `<i data-lucide="upload" class="h-5 w-5 mr-2 text-blue-500 inline"></i>${profileId ? 'Edit Profile' : 'New Profile'}`;
+            `<i data-lucide="upload" class="h-5 w-5 mr-2 text-teal-600 inline"></i>${profileId ? 'Edit Profile' : 'New Profile'}`;
         document.getElementById('imp-run-btn').classList.toggle('hidden', !profileId);
         document.getElementById('import-profile-form').reset();
         document.getElementById('imp-id').value = '';
@@ -5024,7 +5025,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                         </button>
                         <button onclick="testWebhook('${webhook.token}')"
-                                class="p-2 text-blue-400 hover:text-blue-600"
+                                class="p-2 text-teal-500 hover:text-teal-600"
                                 data-tooltip="Test Webhook"
                                 aria-label="Test webhook">
                             <i data-lucide="send" class="w-4 h-4"></i>
@@ -5224,19 +5225,19 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
                             <div class="sm:flex sm:items-start">
                                 <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                                    <i data-lucide="key" class="w-6 h-6 text-blue-600"></i>
+                                    <i data-lucide="key" class="w-6 h-6 text-teal-600"></i>
                                 </div>
                                 <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
                                     <h3 id="webhookTokenModal-title" class="text-lg leading-6 font-medium text-gray-900 mb-2">
                                         Your webhook is online now!
                                     </h3>
-                                    <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4">
+                                    <div class="bg-teal-50 border-l-4 border-teal-400 p-3 mb-4">
                                         <div class="flex">
                                             <div class="flex-shrink-0">
-                                                <i data-lucide="alert-triangle" class="h-5 w-5 text-blue-400"></i>
+                                                <i data-lucide="alert-triangle" class="h-5 w-5 text-teal-500"></i>
                                             </div>
                                             <div class="ml-3">
-                                                <p class="text-sm text-blue-700 font-medium pr-4">
+                                                <p class="text-sm text-teal-700 font-medium pr-4">
                                                     Go ahead and save this URL, you won’t be able to view the full token later!
                                                 </p>
                                             </div>
@@ -5248,7 +5249,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                                             <code class="flex-1 text-xs font-mono text-gray-800 break-all">
                                                 ${url}
                                             </code>
-                                            <button onclick="window.copyToClipboard('${url}').then(ok => window.showToast(ok ? 'URL copied!' : 'Failed to copy', ok ? 'success' : 'error'));" class="flex-shrink-0 p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors" data-tooltip="Copy URL">
+                                            <button onclick="window.copyToClipboard('${url}').then(ok => window.showToast(ok ? 'URL copied!' : 'Failed to copy', ok ? 'success' : 'error'));" class="flex-shrink-0 p-2 text-teal-600 hover:bg-blue-100 rounded transition-colors" data-tooltip="Copy URL">
                                                 <i data-lucide="copy" class="w-4 h-4"></i>
                                             </button>
                                         </div>
@@ -5258,7 +5259,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                         <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                             <button onclick="closeWebhookTokenModal()" 
-                                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 sm:ml-3 sm:w-auto sm:text-sm">
                                 <i data-lucide="check" class="w-4 h-4 mr-2"></i>
                                 Done
                             </button>
@@ -5294,11 +5295,11 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             fields.classList.remove('opacity-50', 'pointer-events-none');
             icon.setAttribute('data-lucide', 'toggle-right');
             icon.classList.remove('text-gray-400');
-            icon.classList.add('text-blue-600');
+            icon.classList.add('text-teal-600');
         } else {
             fields.classList.add('opacity-50', 'pointer-events-none');
             icon.setAttribute('data-lucide', 'toggle-left');
-            icon.classList.remove('text-blue-600');
+            icon.classList.remove('text-teal-600');
             icon.classList.add('text-gray-400');
         }
         
@@ -5735,7 +5736,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.querySelectorAll('.import-tab-pane').forEach(p => p.classList.add('hidden'));
         // Deactivate all import tab buttons
         document.querySelectorAll('#import-profile-modal [data-tab]').forEach(b => {
-            b.classList.remove('text-blue-600', 'border-blue-600');
+            b.classList.remove('text-teal-600', 'border-blue-600');
             b.classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
         });
         // Show active pane
@@ -5743,7 +5744,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         // Activate the selected button
         const _activeBtn = document.querySelector(`#import-profile-modal [data-tab="${tabId}"]`);
         if (_activeBtn) {
-            _activeBtn.classList.add('text-blue-600', 'border-blue-600');
+            _activeBtn.classList.add('text-teal-600', 'border-blue-600');
             _activeBtn.classList.remove('text-gray-700', 'border-transparent', 'hover:border-slate-300');
         }
         queueLucideRender();
@@ -5898,7 +5899,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             return;
         }
         const formatBadge = f => {
-            const colors = { JSON:'bg-blue-100 text-blue-700', CSV:'bg-green-100 text-green-700', JSONL:'bg-purple-100 text-purple-700', XML:'bg-orange-100 text-orange-700' };
+            const colors = { JSON:'bg-blue-100 text-teal-700', CSV:'bg-green-100 text-green-700', JSONL:'bg-purple-100 text-purple-700', XML:'bg-orange-100 text-orange-700' };
             return `<span class="text-xs px-2 py-0.5 rounded ${colors[f]||'bg-gray-100 text-gray-600'}">${f}</span>`;
         };
         list.innerHTML = _impOutputTargets.map((t, idx) => `
@@ -5921,9 +5922,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <div class="flex items-center gap-2">
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" class="sr-only peer" ${t.isEnabled?'checked':''} onchange="toggleOutputTarget(${t.id}, this.checked)">
-                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                        <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-600"></div>
                     </label>
-                    <button onclick="editOutputTarget(${t.id})" class="text-gray-400 hover:text-blue-600"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                    <button onclick="editOutputTarget(${t.id})" class="text-gray-400 hover:text-teal-600"><i data-lucide="pencil" class="w-4 h-4"></i></button>
                     <button onclick="deleteOutputTarget(${t.id})" class="text-gray-400 hover:text-red-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
                 </div>
             </div>
@@ -6138,7 +6139,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                         </button>
                         <button onclick="testImportWebhook('${webhook.token}')"
-                                class="p-2 text-blue-400 hover:text-blue-600"
+                                class="p-2 text-teal-500 hover:text-teal-600"
                                 data-tooltip="Test Webhook"
                                 aria-label="Test import webhook">
                             <i data-lucide="send" class="w-4 h-4"></i>
@@ -6442,7 +6443,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             const cols = await resp.json();
             schemaBody.innerHTML = cols.map(c =>
                 `<div class="px-3 py-1.5 flex justify-between">
-                    <span class="font-mono text-xs ${c.isPrimaryKey ? 'font-bold text-blue-700' : ''}">${escapeHtml(c.columnName)}</span>
+                    <span class="font-mono text-xs ${c.isPrimaryKey ? 'font-bold text-teal-700' : ''}">${escapeHtml(c.columnName)}</span>
                     <span class="text-xs text-gray-500">${escapeHtml(c.dataType)}${c.isNullable ? '' : ' NOT NULL'}${c.isPrimaryKey ? ' PK' : ''}</span>
                 </div>`
             ).join('');
@@ -6902,28 +6903,22 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 tab.classList.add('hidden');
             });
 
-            // Deactivate all tab buttons
-            document.getElementById('generalTabButton').classList.remove('text-blue-600', 'border-blue-600');
-            document.getElementById('generalTabButton').classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
-            document.getElementById('webhooksTabButton').classList.remove('text-blue-600', 'border-blue-600');
-            document.getElementById('webhooksTabButton').classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
-            document.getElementById('deltaSyncTabButton').classList.remove('text-blue-600', 'border-blue-600');
-            document.getElementById('deltaSyncTabButton').classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
-            document.getElementById('splitOutputTabButton').classList.remove('text-blue-600', 'border-blue-600');
-            document.getElementById('splitOutputTabButton').classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
-            const emailOptionsTabButton = document.getElementById('emailOptionsTabButton');
-            if (emailOptionsTabButton) {
-                emailOptionsTabButton.classList.remove('text-blue-600', 'border-blue-600');
-                emailOptionsTabButton.classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
-            }
+            // Deactivate all pipeline-stage node buttons
+            const nodeButtonIds = ['generalTabButton', 'webhooksTabButton', 'deltaSyncTabButton', 'splitOutputTabButton', 'emailOptionsTabButton'];
+            nodeButtonIds.forEach(id => {
+                const btn = document.getElementById(id);
+                if (!btn) return;
+                btn.classList.remove('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
+                btn.classList.add('bg-white', 'text-gray-700', 'border-slate-200');
+            });
 
             // Show the active tab content
             document.getElementById(tabName + 'Tab').classList.remove('hidden');
 
-            // Activate the active tab button
+            // Activate the active pipeline-stage node
             const activeButton = document.getElementById(tabName + 'TabButton');
-            activeButton.classList.add('text-blue-600', 'border-blue-600');
-            activeButton.classList.remove('text-gray-700', 'border-transparent', 'hover:border-slate-300');
+            activeButton.classList.remove('bg-white', 'text-gray-700', 'border-slate-200');
+            activeButton.classList.add('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
 
             // Re-render icons after tab switch
             queueLucideRender();
@@ -7926,7 +7921,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 // Reset content to loading state
                 document.getElementById('query-results-content').innerHTML = `
                     <div class="flex items-center justify-center py-8">
-                        <svg class="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg class="animate-spin h-8 w-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                         </svg>
@@ -8287,15 +8282,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
             if (result.info && result.info.length > 0) {
                 const infoSection = document.createElement('div');
-                infoSection.className = 'bg-blue-50 border border-blue-200 rounded p-3';
+                infoSection.className = 'bg-teal-50 border border-teal-200 rounded p-3';
                 const title = document.createElement('p');
-                title.className = 'text-sm font-semibold text-blue-800 mb-2';
+                title.className = 'text-sm font-semibold text-teal-800 mb-2';
                 title.textContent = 'Information:';
                 infoSection.appendChild(title);
 
                 for (const info of result.info) {
                     const item = document.createElement('p');
-                    item.className = 'text-xs text-blue-700 ml-2';
+                    item.className = 'text-xs text-teal-700 ml-2';
                     item.textContent = '✓ ' + info;
                     infoSection.appendChild(item);
                 }
