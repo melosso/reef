@@ -148,7 +148,7 @@
 
     <div id="profile-modal" class="hidden fixed inset-0 bg-white overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseProfileModal()">
         <div class="relative mx-auto p-6 w-full max-w-5xl" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-50 py-2 -mt-2">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Profile</h3>
                 <button onclick="attemptCloseProfileModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md transition-colors">
                     <i data-lucide="x" class="h-5 w-5"></i>
@@ -185,7 +185,7 @@
                     </button>
                 </nav>
             </div>
-            <div id="generalTab" class="tab-content">
+            <div id="generalTab" class="tab-content fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                 <form id="profile-form" class="space-y-4">
                     <input type="hidden" id="profile-id">
                     <input type="checkbox" id="isEmailExport" name="isEmailExport" style="display: none;">
@@ -868,7 +868,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 </form>
             </div>
-            <div id="webhooksTab" class="tab-content hidden">
+            <div id="webhooksTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -893,7 +893,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </button>
                 </div>
             </div>
-            <div id="deltaSyncTab" class="tab-content hidden">
+            <div id="deltaSyncTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -1130,7 +1130,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
 
             <!-- Split Output Tab -->
-            <div id="splitOutputTab" class="tab-content hidden">
+            <div id="splitOutputTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -1318,7 +1318,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
 
             <!-- Email Options Tab -->
-            <div id="emailOptionsTab" class="tab-content hidden">
+            <div id="emailOptionsTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                 <div class="space-y-4">
                     <!-- Attachment Configuration Section -->
                     <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1684,50 +1684,50 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
     </div>
 
     <!-- Import Profile Modal -->
-    <div id="import-profile-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseImportProfileModal()">
-        <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
-            <div class="flex justify-between items-center mb-4">
+    <div id="import-profile-modal" class="hidden fixed inset-0 bg-white overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) attemptCloseImportProfileModal()">
+        <div class="relative mx-auto p-6 w-full max-w-5xl" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+            <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-50 py-2 -mt-2">
                 <h3 id="import-modal-title" class="text-lg font-semibold text-slate-900 flex items-center">
                     <i data-lucide="upload" class="h-5 w-5 mr-2 text-teal-600"></i>
                     New Profile
                 </h3>
-                <button onclick="attemptCloseImportProfileModal()" class="text-gray-400 hover:text-gray-500">
-                    <i data-lucide="x" class="h-6 w-6"></i>
+                <button onclick="attemptCloseImportProfileModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md transition-colors">
+                    <i data-lucide="x" class="h-5 w-5"></i>
                 </button>
             </div>
 
-            <!-- Tab Navigation -->
-            <div class="border-b border-gray-200 mb-4">
-                <nav class="-mb-px flex flex-wrap gap-1" aria-label="Import Tabs">
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-teal-600 border-b-2 border-teal-600" data-tab="imp-basic" onclick="showImportTab('imp-basic')">
-                        <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>General
+            <!-- Pipeline stages -->
+            <div class="mb-6">
+                <nav class="flex flex-wrap gap-2" aria-label="Import Tabs">
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-teal-600 text-white border border-teal-600 rounded-md shadow-sm" data-tab="imp-basic" onclick="showImportTab('imp-basic')">
+                        <i data-lucide="settings" class="w-3.5 h-3.5"></i>General
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-source" onclick="showImportTab('imp-source')">
-                        <i data-lucide="database" class="w-4 h-4 inline mr-1"></i>Source
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-source" onclick="showImportTab('imp-source')">
+                        <i data-lucide="database" class="w-3.5 h-3.5"></i>Source
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-format" onclick="showImportTab('imp-format')">
-                        <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>Format
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-format" onclick="showImportTab('imp-format')">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>Format
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-target" onclick="showImportTab('imp-target')">
-                        <i data-lucide="table" class="w-4 h-4 inline mr-1"></i>Target
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-target" onclick="showImportTab('imp-target')">
+                        <i data-lucide="table" class="w-3.5 h-3.5"></i>Target
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-mapping" onclick="showImportTab('imp-mapping')">
-                        <i data-lucide="arrow-right-left" class="w-4 h-4 inline mr-1"></i>Mapping
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-mapping" onclick="showImportTab('imp-mapping')">
+                        <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>Mapping
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-sync" onclick="showImportTab('imp-sync')">
-                        <i data-lucide="refresh-cw" class="w-4 h-4 inline mr-1"></i>Smart Sync
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-sync" onclick="showImportTab('imp-sync')">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>Smart Sync
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-failures" onclick="showImportTab('imp-failures')">
-                        <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>Failures
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-failures" onclick="showImportTab('imp-failures')">
+                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>Failures
                     </button>
-                    <button type="button" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300" data-tab="imp-processing" onclick="showImportTab('imp-processing')">
-                        <i data-lucide="terminal" class="w-4 h-4 inline mr-1"></i>Processing
+                    <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm" data-tab="imp-processing" onclick="showImportTab('imp-processing')">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5"></i>Processing
                     </button>
-                    <button type="button" id="imp-output-targets-tab-btn" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300 opacity-50 cursor-not-allowed" data-tab="imp-output-targets" onclick="showImportTab('imp-output-targets')" aria-disabled="true">
-                        <i data-lucide="send" class="w-4 h-4 inline mr-1"></i>Output Targets
+                    <button type="button" id="imp-output-targets-tab-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm opacity-50 cursor-not-allowed" data-tab="imp-output-targets" onclick="showImportTab('imp-output-targets')" aria-disabled="true">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>Output Targets
                     </button>
-                    <button type="button" id="imp-webhooks-tab-btn" class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent hover:border-slate-300 opacity-50 cursor-not-allowed" data-tab="imp-webhooks" onclick="showImportTab('imp-webhooks')" aria-disabled="true">
-                        <i data-lucide="link" class="w-4 h-4 inline mr-1"></i>Webhooks
+                    <button type="button" id="imp-webhooks-tab-btn" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm opacity-50 cursor-not-allowed" data-tab="imp-webhooks" onclick="showImportTab('imp-webhooks')" aria-disabled="true">
+                        <i data-lucide="link" class="w-3.5 h-3.5"></i>Webhooks
                     </button>
                 </nav>
             </div>
@@ -1736,7 +1736,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <input type="hidden" id="imp-id" value="">
 
                 <!--  General Tab -->
-                <div id="imp-basic" class="import-tab-pane">
+                <div id="imp-basic" class="import-tab-pane fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="col-span-2">
@@ -1768,7 +1768,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Source Tab -->
-                <div id="imp-source" class="import-tab-pane hidden">
+                <div id="imp-source" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2125,7 +2125,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Format Tab -->
-                <div id="imp-format" class="import-tab-pane hidden">
+                <div id="imp-format" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2245,7 +2245,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Target Tab -->
-                <div id="imp-target" class="import-tab-pane hidden">
+                <div id="imp-target" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2379,7 +2379,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Mapping Tab -->
-                <div id="imp-mapping" class="import-tab-pane hidden">
+                <div id="imp-mapping" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2431,7 +2431,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Smart Sync Tab─ -->
-                <div id="imp-sync" class="import-tab-pane hidden">
+                <div id="imp-sync" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2581,7 +2581,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Failures Tab── -->
-                <div id="imp-failures" class="import-tab-pane hidden">
+                <div id="imp-failures" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2683,7 +2683,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Processing Tab (pre/post-process Query/StoredProcedure/Script - Database target only) -->
-                <div id="imp-processing" class="import-tab-pane hidden">
+                <div id="imp-processing" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2901,7 +2901,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Output Targets Tab  -->
-                <div id="imp-output-targets" class="import-tab-pane hidden">
+                <div id="imp-output-targets" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2970,7 +2970,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Webhooks Tab── -->
-                <div id="imp-webhooks" class="import-tab-pane hidden">
+                <div id="imp-webhooks" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -5733,18 +5733,15 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             return;
         }
         document.querySelectorAll('.import-tab-pane').forEach(p => p.classList.add('hidden'));
-        // Deactivate all import tab buttons
         document.querySelectorAll('#import-profile-modal [data-tab]').forEach(b => {
-            b.classList.remove('text-teal-600', 'border-teal-600');
-            b.classList.add('text-gray-700', 'border-transparent', 'hover:border-slate-300');
+            b.classList.remove('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
+            b.classList.add('bg-white', 'text-gray-700', 'border-slate-200');
         });
-        // Show active pane
         document.getElementById(tabId)?.classList.remove('hidden');
-        // Activate the selected button
         const _activeBtn = document.querySelector(`#import-profile-modal [data-tab="${tabId}"]`);
         if (_activeBtn) {
-            _activeBtn.classList.add('text-teal-600', 'border-teal-600');
-            _activeBtn.classList.remove('text-gray-700', 'border-transparent', 'hover:border-slate-300');
+            _activeBtn.classList.add('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
+            _activeBtn.classList.remove('bg-white', 'text-gray-700', 'border-slate-200');
         }
         queueLucideRender();
     }

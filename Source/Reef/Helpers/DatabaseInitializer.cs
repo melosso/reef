@@ -276,6 +276,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
                 Code TEXT NOT NULL DEFAULT '',
+                CanvasLayoutJson TEXT NULL,
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,

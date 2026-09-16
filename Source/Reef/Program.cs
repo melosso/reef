@@ -229,6 +229,14 @@ public partial class Program
             var oidcMigration = new OidcMigration(connectionString);
             await oidcMigration.ApplyAsync();
 
+            // Run Profile canvas migration to add the CanvasLayoutJson column to Profiles table
+            var profileCanvasMigration = new ProfileCanvasMigration(connectionString);
+            await profileCanvasMigration.ApplyAsync();
+
+            // Backfill CanvasLayoutJson with a synthesized graph for profiles that don't have one yet
+            var profileGraphBackfillMigration = new ProfileGraphBackfillMigration(connectionString);
+            await profileGraphBackfillMigration.ApplyAsync();
+
             // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
             Log.Debug("Running Scripting database migration...");
             var scriptingMigration = new ScriptingMigration(connectionString);

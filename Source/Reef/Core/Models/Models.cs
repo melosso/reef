@@ -105,6 +105,7 @@ public class Profile
     // Post-Processing Configuration (enhanced existing)
     public string? PostProcessType { get; set; } // null, Query, StoredProcedure, Webhook
     public string? PostProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
+    public string? CanvasLayoutJson { get; set; } // node positions and connections for the canvas editor
     public bool PostProcessSkipOnFailure { get; set; } = true; // Skip post-processing if main query fails
     public bool PostProcessRollbackOnFailure { get; set; } = false; // Rollback post-processing on its own failure
     public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
