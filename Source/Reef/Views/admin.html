@@ -79,6 +79,10 @@
                             <i data-lucide="bell" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Notifications
                         </button>
+                        <button id="tab-sso" onclick="showTab('sso')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="key-round" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Single Sign-On
+                        </button>
                         <button id="tab-email-templates" onclick="showTab('email-templates')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
                             <i data-lucide="mail" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Templates
@@ -960,6 +964,111 @@
                                         <i data-lucide="save" class="h-4 w-4"></i>
                                         Save Settings
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Single Sign-On Tab -->
+                    <div id="content-sso" class="tab-content hidden relative"
+                         x-data="{
+                            loading: true, saving: false, message: '',
+                            form: { isEnabled: false, name: 'Single Sign-On', authority: '', clientId: '', clientSecret: '', scopes: 'openid profile email', usernameClaim: 'preferred_username', emailClaim: 'email', createAccounts: false },
+                            hasClientSecret: false,
+                            redirectUri: window.location.origin + '/api/auth/oidc/callback',
+                            async load() {
+                                this.loading = true;
+                                const res = await fetch(`${API_BASE}/api/admin/oidc-settings`, { headers: getAuthHeaders() });
+                                if (res.ok) {
+                                    const d = await res.json();
+                                    this.hasClientSecret = !!d.hasClientSecret;
+                                    Object.assign(this.form, d, { clientSecret: '' });
+                                }
+                                this.loading = false;
+                            },
+                            async save() {
+                                this.saving = true; this.message = '';
+                                const body = { ...this.form };
+                                if (!body.clientSecret) delete body.clientSecret; else body.clientSecret = this.form.clientSecret;
+                                const res = await fetch(`${API_BASE}/api/admin/oidc-settings`, {
+                                    method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(body)
+                                });
+                                const d = await res.json();
+                                this.message = res.ok ? 'Saved.' : (d.error || 'Failed to save.');
+                                this.saving = false;
+                                if (res.ok) this.load();
+                            }
+                         }" x-init="load()">
+                        <div class="max-w-2xl">
+                            <h2 class="text-lg font-semibold text-slate-900 mb-1">Single Sign-On</h2>
+                            <p class="text-sm text-slate-500 mb-6">Connect one OpenID Connect provider &mdash; Pocket ID, Azure Entra ID, or any standard discovery-compliant provider. Accounts are matched by username or verified email on first sign-in.</p>
+
+                            <div class="space-y-4" x-show="!loading">
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="checkbox" x-model="form.isEnabled" class="h-4 w-4 rounded border-slate-300">
+                                    <span class="text-sm font-medium text-slate-700">Enabled</span>
+                                </label>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Button label</label>
+                                    <input type="text" x-model="form.name" placeholder="Pocket ID"
+                                           class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Authority (issuer URL)</label>
+                                    <input type="text" x-model="form.authority" placeholder="https://idp.example.com"
+                                           class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    <p class="text-xs text-slate-400">Discovery document is read from this address on save; a wrong URL is refused here instead of at sign-in.</p>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Redirect URL</label>
+                                    <input type="text" readonly :value="redirectUri" onclick="this.select()"
+                                           class="w-full h-9 px-3 border border-slate-200 bg-slate-50 text-sm rounded-md text-slate-500">
+                                    <p class="text-xs text-slate-400">Paste this into the provider's app registration.</p>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Client ID</label>
+                                        <input type="text" x-model="form.clientId" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Client secret</label>
+                                        <input type="password" x-model="form.clientSecret"
+                                               :placeholder="hasClientSecret ? 'Set. Type to replace it.' : 'Leave empty for a public client.'"
+                                               class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Scopes</label>
+                                        <input type="text" x-model="form.scopes" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Username claim</label>
+                                        <input type="text" x-model="form.usernameClaim" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Email claim</label>
+                                        <input type="text" x-model="form.emailClaim" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                </div>
+
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="checkbox" x-model="form.createAccounts" class="h-4 w-4 rounded border-slate-300">
+                                    <span class="text-sm font-medium text-slate-700">Create accounts on first sign-in</span>
+                                </label>
+
+                                <div class="flex items-center gap-3 pt-2">
+                                    <button @click="save()" :disabled="saving"
+                                            class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 disabled:opacity-60">
+                                        <span x-text="saving ? 'Saving…' : 'Save Settings'"></span>
+                                    </button>
+                                    <span class="text-sm text-slate-500" x-text="message"></span>
                                 </div>
                             </div>
                         </div>
@@ -1898,7 +2007,7 @@
             }
 
             // Check permissions for admin-only tabs
-            const adminOnlyTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates'];
+            const adminOnlyTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates', 'sso'];
             if (adminOnlyTabs.includes(tab)) {
                 checkTabPermissions(tab);
             }

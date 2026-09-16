@@ -24,6 +24,7 @@ public class User
     public string? TotpSecret { get; set; } // base32-encoded TOTP secret
     public string? PendingTotpSecret { get; set; } // in-flight during setup, before confirmation
     public string? BackupCodes { get; set; } // JSON array of SHA-256 hashed backup codes
+    public string OidcSubject { get; set; } = ""; // subject claim from the configured SSO provider, empty when unlinked
 }
 
 /// <summary>
@@ -822,6 +823,42 @@ public class NotificationSettings
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string Hash { get; set; } = string.Empty; // SHA256 for tamper detection
+}
+
+/// <summary>
+/// Single-provider generic OIDC SSO configuration (works with Pocket ID, Azure Entra ID,
+/// or any standard discovery-compliant provider). One row max.
+/// </summary>
+public class OidcSettings
+{
+    public int Id { get; set; }
+    public bool IsEnabled { get; set; } = false;
+    public string Name { get; set; } = "Single Sign-On"; // shown on the login button, e.g. "Continue with {Name}"
+    public string Authority { get; set; } = ""; // issuer base URL; discovery doc is read from {Authority}/.well-known/openid-configuration
+    public string ClientId { get; set; } = "";
+    public string? ClientSecretEncrypted { get; set; }
+    public string Scopes { get; set; } = "openid profile email";
+    public string UsernameClaim { get; set; } = "preferred_username";
+    public string EmailClaim { get; set; } = "email";
+    public bool CreateAccounts { get; set; } = false; // provision a new User on first sign-in when no match is found
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Admin request body for saving OIDC SSO settings. ClientSecret is plaintext and optional;
+/// omit it (null) to keep whatever secret is already stored.
+/// </summary>
+public class OidcSettingsRequest
+{
+    public bool IsEnabled { get; set; }
+    public string Name { get; set; } = "Single Sign-On";
+    public string Authority { get; set; } = "";
+    public string ClientId { get; set; } = "";
+    public string? ClientSecret { get; set; }
+    public string Scopes { get; set; } = "openid profile email";
+    public string UsernameClaim { get; set; } = "preferred_username";
+    public string EmailClaim { get; set; } = "email";
+    public bool CreateAccounts { get; set; }
 }
 
 /// <summary>

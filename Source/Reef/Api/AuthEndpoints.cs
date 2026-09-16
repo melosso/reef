@@ -499,7 +499,7 @@ public static class AuthEndpoints
     }
 
     /// <summary>Shared helper: generate JWT, set cookie, update last-login, return LoginResponse.</summary>
-    private static async Task<IResult> IssueToken(
+    internal static async Task<IResult> IssueToken(
         User user,
         SqliteConnection connection,
         JwtTokenService jwtService,
