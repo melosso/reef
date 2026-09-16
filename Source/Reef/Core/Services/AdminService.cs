@@ -998,4 +998,81 @@ public class AdminService
             return false;
         }
     }
+
+    /// <summary>
+    /// Get the single-provider OIDC SSO configuration. Never returns the decrypted client secret.
+    /// </summary>
+    public async Task<OidcSettings?> GetOidcSettingsAsync()
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        return await conn.QueryFirstOrDefaultAsync<OidcSettings>("SELECT * FROM OidcSettings LIMIT 1");
+    }
+
+    /// <summary>
+    /// Get the OIDC settings with the client secret decrypted, for use by the sign-in flow only.
+    /// </summary>
+    public async Task<(OidcSettings Settings, string? ClientSecret)?> GetOidcSettingsForSignInAsync()
+    {
+        var settings = await GetOidcSettingsAsync();
+        if (settings == null) return null;
+        var secret = _encryptionService.DecryptField(settings.ClientSecretEncrypted);
+        return (settings, secret);
+    }
+
+    /// <summary>
+    /// Update the single-provider OIDC SSO configuration. Leaves the stored client secret untouched
+    /// when <paramref name="newClientSecret"/> is null (the admin UI never echoes the secret back).
+    /// </summary>
+    public async Task<bool> UpdateOidcSettingsAsync(OidcSettings settings, string? newClientSecret)
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var existing = await conn.QueryFirstOrDefaultAsync<OidcSettings>("SELECT * FROM OidcSettings LIMIT 1");
+            settings.ClientSecretEncrypted = newClientSecret != null
+                ? _encryptionService.Encrypt(newClientSecret)
+                : existing?.ClientSecretEncrypted;
+            settings.UpdatedAt = DateTime.UtcNow;
+
+            if (existing != null)
+            {
+                const string updateSql = @"
+                    UPDATE OidcSettings SET
+                        IsEnabled = @IsEnabled,
+                        Name = @Name,
+                        Authority = @Authority,
+                        ClientId = @ClientId,
+                        ClientSecretEncrypted = @ClientSecretEncrypted,
+                        Scopes = @Scopes,
+                        UsernameClaim = @UsernameClaim,
+                        EmailClaim = @EmailClaim,
+                        CreateAccounts = @CreateAccounts,
+                        UpdatedAt = @UpdatedAt
+                    WHERE Id = (SELECT Id FROM OidcSettings LIMIT 1)";
+                await conn.ExecuteAsync(updateSql, settings);
+            }
+            else
+            {
+                const string insertSql = @"
+                    INSERT INTO OidcSettings (
+                        IsEnabled, Name, Authority, ClientId, ClientSecretEncrypted,
+                        Scopes, UsernameClaim, EmailClaim, CreateAccounts, UpdatedAt)
+                    VALUES (
+                        @IsEnabled, @Name, @Authority, @ClientId, @ClientSecretEncrypted,
+                        @Scopes, @UsernameClaim, @EmailClaim, @CreateAccounts, @UpdatedAt)";
+                await conn.ExecuteAsync(insertSql, settings);
+            }
+
+            Log.Information("Updated OIDC SSO settings");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating OIDC SSO settings");
+            return false;
+        }
+    }
 }

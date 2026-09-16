@@ -58,6 +58,7 @@ public class DatabaseInitializer
 
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
+        await CreateOidcSettingsTableAsync(connection);
 
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
@@ -501,7 +502,8 @@ public class DatabaseInitializer
                 LastSeenAt TEXT NULL,
                 IsDeleted INTEGER NOT NULL DEFAULT 0,
                 DeletedAt TEXT NULL,
-                DeletedBy TEXT NULL
+                DeletedBy TEXT NULL,
+                OidcSubject TEXT NOT NULL DEFAULT ''
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username COLLATE NOCASE);
@@ -847,6 +849,26 @@ public class DatabaseInitializer
 
             CREATE INDEX IF NOT EXISTS idx_notificationsettings_enabled ON NotificationSettings(IsEnabled);
             CREATE INDEX IF NOT EXISTS idx_notificationsettings_destination ON NotificationSettings(DestinationId);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateOidcSettingsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS OidcSettings (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                IsEnabled INTEGER NOT NULL DEFAULT 0,
+                Name TEXT NOT NULL DEFAULT 'Single Sign-On',
+                Authority TEXT NOT NULL DEFAULT '',
+                ClientId TEXT NOT NULL DEFAULT '',
+                ClientSecretEncrypted TEXT NULL,
+                Scopes TEXT NOT NULL DEFAULT 'openid profile email',
+                UsernameClaim TEXT NOT NULL DEFAULT 'preferred_username',
+                EmailClaim TEXT NOT NULL DEFAULT 'email',
+                CreateAccounts INTEGER NOT NULL DEFAULT 0,
+                UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            );
         ";
         await connection.ExecuteAsync(sql);
     }

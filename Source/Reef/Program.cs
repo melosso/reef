@@ -225,6 +225,10 @@ public partial class Program
             var mfaMigration = new MfaMigration(connectionString);
             await mfaMigration.ApplyAsync();
 
+            // Run OIDC migration to add the OidcSubject column to Users table
+            var oidcMigration = new OidcMigration(connectionString);
+            await oidcMigration.ApplyAsync();
+
             // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
             Log.Debug("Running Scripting database migration...");
             var scriptingMigration = new ScriptingMigration(connectionString);
@@ -337,6 +341,7 @@ public partial class Program
         services.AddSingleton<PasswordHasher>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ApiKeyValidator>();
+        services.AddHttpClient();
         services.AddSingleton(new DatabaseConfig { ConnectionString = connectionString });
         
         // Template engines
@@ -710,6 +715,7 @@ public partial class Program
 
         // API endpoints
         AuthEndpoints.Map(app);
+        OidcEndpoints.Map(app);
         AccountEndpoints.Map(app);
         ConnectionsEndpoints.Map(app);
         ProfilesEndpoints.Map(app);

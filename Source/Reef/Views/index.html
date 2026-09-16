@@ -9,6 +9,7 @@
         @variant dark (&:where(.dark, .dark *));
     </style>
     <script src="/assets/vendor/lucide.js"></script>
+    <script defer src="/assets/vendor/alpine.js"></script>
     <script src="/assets/js/auth.js"></script>
     <script src="/assets/js/main.js"></script>
     <link rel="stylesheet" type="text/css" href="/assets/css/main.css">
@@ -40,6 +41,7 @@
             -moz-user-select: none;
             user-select: none;
         }
+        [x-cloak] { display: none !important; }
 
         /* MFA digit inputs */
         .mfa-input {
@@ -133,6 +135,20 @@
 
                         <div id="error-container" class="empty:hidden"></div>
                     </form>
+
+                    <div x-data="{ enabled: false, name: 'Single Sign-On' }"
+                         x-init="fetch('/api/auth/oidc/status').then(r => r.json()).then(d => { enabled = d.enabled; name = d.name })"
+                         x-show="enabled" x-cloak class="mt-5">
+                        <div class="flex items-center gap-3 text-xs text-slate-400 disable-select">
+                            <div class="h-px flex-1 bg-slate-200"></div>
+                            <span>or</span>
+                            <div class="h-px flex-1 bg-slate-200"></div>
+                        </div>
+                        <a href="/api/auth/oidc/start" rel="nofollow"
+                           class="mt-4 w-full h-9 flex items-center justify-center gap-2 px-4 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-md shadow-xs transition-all hover:bg-slate-50 active:scale-[0.98]">
+                            <span x-text="'Continue with ' + name"></span>
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Step 2: MFA (shown after credentials accepted) -->
@@ -281,6 +297,22 @@
             });
         });
     });
+
+    const SSO_PROBLEMS = {
+        failed: 'Sign-in failed. Please try again.',
+        denied: 'Sign-in was cancelled.',
+        no_account: 'No account found matching this sign-in provider.',
+        disabled: 'Single sign-on is not enabled.'
+    };
+
+    (function reportSsoOutcome() {
+        const code = new URLSearchParams(location.search).get('sso');
+        if (!code) return;
+        const url = new URL(location.href);
+        url.searchParams.delete('sso');
+        history.replaceState(null, '', url.pathname + url.search + url.hash);
+        showError(SSO_PROBLEMS[code] || SSO_PROBLEMS.failed);
+    })();
 
     function showError(message) {
         errorContainer.innerHTML = `

@@ -34,6 +34,8 @@ public static class AdminEndpoints
         group.MapDelete("/api-keys/{id:int}", RevokeApiKey);
         group.MapGet("/notifications", GetNotificationSettings);
         group.MapPost("/notifications", UpdateNotificationSettings);
+        group.MapGet("/oidc-settings", GetOidcSettings);
+        group.MapPut("/oidc-settings", UpdateOidcSettings);
         group.MapPost("/notifications/test", TestNotificationSettings);
         group.MapGet("/notification-templates", GetAllNotificationTemplates);
         group.MapGet("/notification-templates/{templateType}", GetNotificationTemplate);
@@ -269,6 +271,99 @@ public static class AdminEndpoints
             Log.Error(ex, "Error updating notification settings");
             return Results.Problem("Error updating notification settings");
         }
+    }
+
+    /// <summary>
+    /// GET /api/admin/oidc-settings - Get the single-provider OIDC SSO configuration.
+    /// Never returns the client secret, only whether one is set.
+    /// </summary>
+    private static async Task<IResult> GetOidcSettings(
+        HttpContext context,
+        [FromServices] AdminService service)
+    {
+        if (!IsAdmin(context)) return Results.Forbid();
+
+        var settings = await service.GetOidcSettingsAsync();
+        if (settings == null) return Results.Ok(new { hasClientSecret = false });
+
+        return Results.Ok(new
+        {
+            settings.IsEnabled,
+            settings.Name,
+            settings.Authority,
+            settings.ClientId,
+            settings.Scopes,
+            settings.UsernameClaim,
+            settings.EmailClaim,
+            settings.CreateAccounts,
+            hasClientSecret = !string.IsNullOrEmpty(settings.ClientSecretEncrypted)
+        });
+    }
+
+    /// <summary>
+    /// PUT /api/admin/oidc-settings - Save the single-provider OIDC SSO configuration.
+    /// Validates the authority against its live discovery document before saving, same as
+    /// baseport's provider save path, so a bad issuer URL is rejected here, not at sign-in time.
+    /// </summary>
+    private static async Task<IResult> UpdateOidcSettings(
+        HttpContext context,
+        [FromBody] OidcSettingsRequest request,
+        [FromServices] AdminService service,
+        [FromServices] AuditService auditService)
+    {
+        if (!IsAdmin(context)) return Results.Forbid();
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 64)
+            return Results.BadRequest(new { error = "Name must be 1-64 characters." });
+
+        if (!Uri.TryCreate(request.Authority, UriKind.Absolute, out var authorityUri) ||
+            (authorityUri.Scheme != Uri.UriSchemeHttp && authorityUri.Scheme != Uri.UriSchemeHttps))
+            return Results.BadRequest(new { error = "Authority must be an absolute http(s) URL." });
+
+        if (authorityUri.Scheme == Uri.UriSchemeHttp && !Reef.Core.Security.OidcFlow.AllowsPlainHttp(request.Authority))
+            return Results.BadRequest(new { error = "Plain HTTP is only allowed for a loopback authority." });
+
+        if (string.IsNullOrWhiteSpace(request.ClientId) || request.ClientId.Length > 256)
+            return Results.BadRequest(new { error = "Client ID is required (max 256 characters)." });
+
+        var scopes = string.IsNullOrWhiteSpace(request.Scopes) ? "openid profile email" : request.Scopes.Trim();
+        if (!scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("openid"))
+            return Results.BadRequest(new { error = "Scopes must include openid." });
+
+        try
+        {
+            Reef.Core.Security.OidcFlow.Forget();
+            var document = await Reef.Core.Security.OidcFlow.DocumentAsync(request.Authority, context.RequestAborted);
+            if (string.IsNullOrEmpty(document.AuthorizationEndpoint) || string.IsNullOrEmpty(document.TokenEndpoint))
+                return Results.BadRequest(new { error = "The authority's discovery document is missing an authorization or token endpoint." });
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to read OIDC discovery document for {Authority}", request.Authority);
+            return Results.BadRequest(new { error = "Could not read the discovery document at this authority. Check the URL." });
+        }
+
+        var settings = new OidcSettings
+        {
+            IsEnabled = request.IsEnabled,
+            Name = request.Name.Trim(),
+            Authority = request.Authority.TrimEnd('/'),
+            ClientId = request.ClientId.Trim(),
+            Scopes = scopes,
+            UsernameClaim = string.IsNullOrWhiteSpace(request.UsernameClaim) ? "preferred_username" : request.UsernameClaim.Trim(),
+            EmailClaim = string.IsNullOrWhiteSpace(request.EmailClaim) ? "email" : request.EmailClaim.Trim(),
+            CreateAccounts = request.CreateAccounts
+        };
+
+        var success = await service.UpdateOidcSettingsAsync(settings, request.ClientSecret);
+        Reef.Core.Security.OidcFlow.Forget();
+
+        if (!success) return Results.Problem("Failed to update OIDC SSO settings");
+
+        var username = context.User.Identity?.Name ?? "Unknown";
+        await auditService.LogAsync("OidcSettings", 0, "Updated", username, null, context);
+
+        return Results.Ok(new { message = "OIDC SSO settings updated successfully" });
     }
 
     /// <summary>
