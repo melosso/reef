@@ -6,63 +6,39 @@
                 </div>
             </header>
             <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
-                <!-- Metrics Grid -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-6">
-                    <!-- Connections -->
-                    <button onclick="window.location.href='/connections'" class="text-left lg:col-span-2 bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="p-2 bg-green-50 rounded-lg">
-                                <i data-lucide="plug" class="h-5 w-5 text-green-600"></i>
-                            </div>
-                            <span class="text-sm font-semibold text-gray-700">Connections</span>
+                <!-- Metrics strip -->
+                <div class="flex items-stretch bg-white rounded-lg border border-slate-200 mb-6 divide-x divide-slate-100">
+                    <button onclick="window.location.href='/connections'" class="text-left flex-1 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-bold text-gray-900" id="dashboard-connections">-</span>
+                            <span class="text-xs text-gray-500">connections</span>
                         </div>
-                        <div class="text-3xl font-bold text-gray-900 mb-1" id="dashboard-connections">-</div>
-                        <p class="text-xs text-gray-400">Database sources</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Database sources</p>
                     </button>
-
-                    <!-- Profiles -->
-                    <button onclick="window.location.href='/profiles'" class="text-left lg:col-span-2 bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <div class="flex items-center gap-2 mb-4">
-                            <div class="p-2 bg-purple-50 rounded-lg">
-                                <i data-lucide="file-code" class="h-5 w-5 text-purple-600"></i>
-                            </div>
-                            <span class="text-sm font-semibold text-gray-700">Profiles</span>
+                    <button onclick="window.location.href='/profiles'" class="text-left flex-1 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-bold text-gray-900" id="dashboard-profiles">-</span>
+                            <span class="text-xs text-gray-500">profiles</span>
                         </div>
-                        <div class="text-3xl font-bold text-gray-900 mb-1" id="dashboard-profiles">-</div>
-                        <p class="text-xs text-gray-400">Configurations</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Configurations</p>
                     </button>
-
-                    <!-- Users -->
-                    <button onclick="window.location.href='/admin?tab=users'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <div class="flex items-center gap-1.5 mb-2.5">
-                            <div class="p-1.5 bg-blue-50 rounded-md">
-                                <i data-lucide="users" class="h-3.5 w-3.5 text-blue-600"></i>
-                            </div>
-                            <span class="text-xs font-medium text-gray-500">Users</span>
+                    <button onclick="window.location.href='/admin?tab=users'" class="text-left flex-1 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-xl font-bold text-gray-900" id="dashboard-users">-</span>
+                            <span class="text-xs text-gray-500">users</span>
                         </div>
-                        <div class="text-xl font-bold text-gray-900" id="dashboard-users">-</div>
                     </button>
-
-                    <!-- API Keys -->
-                    <button onclick="window.location.href='/admin?tab=apikeys'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <div class="flex items-center gap-1.5 mb-2.5">
-                            <div class="p-1.5 bg-yellow-50 rounded-md">
-                                <i data-lucide="key" class="h-3.5 w-3.5 text-yellow-600"></i>
-                            </div>
-                            <span class="text-xs font-medium text-gray-500">API Keys</span>
+                    <button onclick="window.location.href='/admin?tab=apikeys'" class="text-left flex-1 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-xl font-bold text-gray-900" id="dashboard-apikeys">-</span>
+                            <span class="text-xs text-gray-500">API keys</span>
                         </div>
-                        <div class="text-xl font-bold text-gray-900" id="dashboard-apikeys">-</div>
                     </button>
-
-                    <!-- Storage -->
-                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-slate-200 px-4 py-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <div class="flex items-center gap-1.5 mb-2.5">
-                            <div class="p-1.5 bg-indigo-50 rounded-md">
-                                <i data-lucide="database" class="h-3.5 w-3.5 text-indigo-600"></i>
-                            </div>
-                            <span class="text-xs font-medium text-gray-500">Storage</span>
+                    <button onclick="window.location.href='/admin?tab=metrics'" class="text-left flex-1 px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-xl font-bold text-gray-900" id="dashboard-storage">-</span>
+                            <span class="text-xs text-gray-500">storage</span>
                         </div>
-                        <div class="text-xl font-bold text-gray-900" id="dashboard-storage">-</div>
                     </button>
                 </div>
 
@@ -72,9 +48,7 @@
                     <button onclick="window.location.href='/admin?tab=metrics'" class="text-left bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center gap-2">
-                                <div class="p-2 bg-gray-50 rounded-lg">
-                                    <i data-lucide="hard-drive" class="h-4 w-4 text-gray-600"></i>
-                                </div>
+                                <i data-lucide="hard-drive" class="h-4 w-4 text-gray-500"></i>
                                 <span class="text-xs font-medium text-gray-600">Database</span>
                             </div>
                         </div>
@@ -89,9 +63,7 @@
                     <button onclick="window.location.href='/admin?tab=notifications'" class="text-left bg-white rounded-lg border border-slate-200 p-4 hover:border-slate-300 hover:bg-slate-50 transition-colors cursor-pointer">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center gap-2">
-                                <div class="p-2 bg-indigo-50 rounded-lg">
-                                    <i data-lucide="bell" class="h-4 w-4 text-indigo-600"></i>
-                                </div>
+                                <i data-lucide="bell" class="h-4 w-4 text-gray-500"></i>
                                 <span class="text-xs font-medium text-gray-600">Notifications</span>
                             </div>
                         </div>
@@ -102,15 +74,13 @@
                     </button>
 
                     <!-- Executions Today/Week -->
-                    <div id="executions-metric-card" class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-colors" onclick="toggleExecutionsMetric()">
+                    <div id="executions-metric-card" class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:border-teal-300 hover:bg-teal-50/30 transition-colors" onclick="toggleExecutionsMetric()">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex items-center gap-2">
-                                <div class="p-2 bg-orange-50 rounded-lg">
-                                    <i data-lucide="activity" class="h-4 w-4 text-orange-600"></i>
-                                </div>
+                                <i data-lucide="activity" class="h-4 w-4 text-gray-500"></i>
                                 <span class="text-xs font-medium text-gray-600" id="executions-metric-label">Executions</span>
                             </div>
-                            <span class="text-xs text-blue-600 font-medium">Switch</span>
+                            <span class="text-xs text-teal-600 font-medium">Switch</span>
                         </div>
                         <div class="text-2xl font-bold text-gray-900" id="dashboard-executions">-</div>
                     </div>
@@ -315,11 +285,11 @@
                     connTbody.innerHTML = activeConnections.map(conn => `
                         <tr
                             onclick="window.location.href='/connections?id=${conn.id}'"
-                            class="group hover:bg-slate-50 hover:z-10 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent hover:border-blue-500"
+                            class="group hover:bg-slate-50 hover:z-10 cursor-pointer transition-colors duration-200 ease-in-out"
                         >
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${conn.name}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${humanizeConnectionType(conn.type)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatRelativeTime(conn.lastTestedAt)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${conn.name}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${humanizeConnectionType(conn.type)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${formatRelativeTime(conn.lastTestedAt)}</td>
                         </tr>
                     `).join('');
                 }
@@ -335,8 +305,8 @@
                             : (exec.profileName || 'Unknown');
                         const profileCode = isImport ? (exec._profileCode || '') : (exec.profileCode || '');
                         const typeBadge = isImport
-                            ? '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">Import</span>'
-                            : '<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Export</span>';
+                            ? '<span class="text-xs font-semibold text-indigo-700">Import</span>'
+                            : '<span class="text-xs font-semibold text-teal-700">Export</span>';
                         const detailUrl = isImport
                             ? `/executions?importId=${exec.id}`
                             : `/executions?id=${exec.id}`;
@@ -347,20 +317,20 @@
                         return `
                         <tr
                             onclick="window.location.href='${detailUrl}'"
-                            class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out border-l-4 border-transparent ${isImport ? 'hover:border-indigo-400' : 'hover:border-blue-500'}"
+                            class="group hover:bg-slate-50 cursor-pointer transition-colors duration-200 ease-in-out"
                         >
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${exec.id}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">
-                                ${profileName}${profileCode ? ` <span class="px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${escapeHtml(profileCode)}</span>` : ''}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${exec.id}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">
+                                ${profileName}${profileCode ? ` <span class="text-xs text-slate-400">${escapeHtml(profileCode)}</span>` : ''}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">${typeBadge}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <span class="px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exec.status)}">${exec.status}</span>
+                                <span class="text-xs font-semibold ${getStatusColor(exec.status)}">${exec.status}</span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${formatDate(startedAt)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-blue-900 transition-colors">${duration}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${formatDate(startedAt)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 group-hover:text-teal-900 transition-colors">${duration}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <a href="${detailUrl}" onclick="event.stopPropagation()" class="text-blue-600 hover:text-blue-900 inline-flex items-center justify-center transition-transform hover:scale-110">
+                                <a href="${detailUrl}" onclick="event.stopPropagation()" class="text-teal-600 hover:text-teal-900 inline-flex items-center justify-center transition-transform hover:scale-110">
                                     <i data-lucide="eye" class="h-4 w-4"></i>
                                 </a>
                             </td>
@@ -375,11 +345,11 @@
         }
         function getStatusColor(status) {
             switch (status) {
-                case 'Success': return 'bg-green-100 text-green-800';
-                case 'Failed': return 'bg-red-100 text-red-800';
-                case 'Running': return 'bg-blue-100 text-blue-800';
-                case 'PartialSuccess': return 'bg-yellow-100 text-yellow-800';
-                default: return 'bg-gray-100 text-gray-800';
+                case 'Success': return 'text-green-700';
+                case 'Failed': return 'text-red-700';
+                case 'Running': return 'text-teal-700';
+                case 'PartialSuccess': return 'text-yellow-700';
+                default: return 'text-gray-600';
             }
         }
         function formatDate(dateStr) {
@@ -536,7 +506,7 @@
             </div>
 
             <div class="flex justify-end mt-6 space-x-3">
-                <button onclick="changePassword()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors flex items-center">
+                <button onclick="changePassword()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors flex items-center">
                     Change Password
                 </button>
             </div>

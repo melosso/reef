@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Reef.Core.Database;
 using Reef.Core.Formatters;
 using Reef.Core.Destinations;
 using Reef.Core.Models;
@@ -147,7 +148,16 @@ public class ExecutionService
                 }
                 Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
-            
+
+            var (graphNodeTypes, graphError) = ParseGraphNodeTypes(profile);
+            if (graphError != null)
+            {
+                Log.Error("Profile {ProfileCode} has an invalid execution graph: {Error}", profile.Code, graphError);
+                await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds,
+                    $"Invalid execution graph: {graphError}");
+                return (executionId, false, null, $"Invalid execution graph: {graphError}");
+            }
+
             // ===== PHASE 1: PRE-PROCESSING =====
             // Execute pre-processing if configured
             var preProcessContext = new ProcessingContext
@@ -196,7 +206,7 @@ public class ExecutionService
             int originalRowCount = rows.Count;
             DeltaSyncResult? deltaSyncResult = null;
             
-            if (profile.DeltaSyncEnabled)
+            if (graphNodeTypes.Contains("deltasync"))
             {
                 try
                 {
@@ -222,7 +232,7 @@ public class ExecutionService
                     deltaSyncResult = await _deltaSyncService.ProcessDeltaAsync(
                         profileId,
                         rows,
-                        profile);
+                        DeltaSyncConfig.FromProfile(profile));
                     
                     // Build rows to export (new + changed + optionally deleted)
                     var rowsToExport = new List<Dictionary<string, object>>();
@@ -352,7 +362,7 @@ public class ExecutionService
 
             // ===== PHASE 2.5.5: EMAIL EXPORT (IF ENABLED) =====
             // Skip email export if there's a destination override (test mode or manual override)
-            if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
+            if (graphNodeTypes.Contains("emailexport") && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
                 Log.Information("Profile {ProfileCode} ({ProfileName}) executing as email export (sending {RowCount} rows)", profile.Code, profile.Name, rows.Count);
 
@@ -417,7 +427,7 @@ public class ExecutionService
 
                             // Render emails without sending
                             var (renderedEmails, renderErrors) = await _emailExportService.RenderEmailsForApprovalAsync(
-                                profile,
+                                EmailExportConfig.FromProfile(profile),
                                 emailTemplate,
                                 rows,
                                 attachmentConfig,
@@ -560,7 +570,7 @@ public class ExecutionService
 
                     // Send emails directly (approval not required)
                     var (emailSuccess, emailMessage, successCount, failureCount, splits, emailFailures) = await _emailExportService.ExportToEmailAsync(
-                        profile,
+                        EmailExportConfig.FromProfile(profile),
                         emailDestination,
                         emailTemplate,
                         rows);
@@ -678,7 +688,7 @@ public class ExecutionService
             }
 
             // ===== PHASE 2.6: MULTI-OUTPUT SPLITTING (IF ENABLED) =====
-            if (profile.SplitEnabled && rows.Count > 0)
+            if (graphNodeTypes.Contains("splitoutput") && rows.Count > 0)
             {
                 Log.Debug("Profile {ProfileId} executing with multi-output splitting enabled", profile.Id);
                 var (splitExecId, splitSuccess, splitOutputPath, splitError) = await ExecuteWithSplittingAsync(
@@ -737,11 +747,11 @@ public class ExecutionService
             string actualOutputFormat = profile.OutputFormat;
 
             // For email profiles in test mode, use the EmailTemplateId and HTML format; otherwise use TemplateId
-            int? templateIdToUse = (profile.IsEmailExport && destinationOverrideId.HasValue)
+            int? templateIdToUse = (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
                 ? profile.EmailTemplateId
                 : profile.TemplateId;
 
-            if (profile.IsEmailExport && destinationOverrideId.HasValue)
+            if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
             {
                 actualOutputFormat = "HTML"; // Email test mode always outputs HTML
                 Log.Information("Email profile test mode: Using EmailTemplateId and HTML output format");
@@ -914,7 +924,7 @@ public class ExecutionService
                         Log.Debug("Copied document to temp: {TempPath}, Size: {FileSize} bytes", tempFilePath, fileSize);
                     }
                     // Template was applied - check if this is email test mode with multiple documents
-                    else if (profile.IsEmailExport && destinationOverrideId.HasValue)
+                    else if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
                     {
                         // Split HTML documents and save separately
                         var htmlDocs = SplitHtmlDocuments(transformedContent);
@@ -1019,11 +1029,11 @@ public class ExecutionService
                 }
 
                 // Check if this is email test mode with split HTML files
-                var emailTestHtmlDocs = (!string.IsNullOrEmpty(transformedContent) && profile.IsEmailExport && destinationOverrideId.HasValue)
+                var emailTestHtmlDocs = (!string.IsNullOrEmpty(transformedContent) && graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
                     ? SplitHtmlDocuments(transformedContent)
                     : new List<string>();
 
-                bool isEmailTestWithSplit = (profile.IsEmailExport && destinationOverrideId.HasValue &&
+                bool isEmailTestWithSplit = (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue &&
                                            finalPath != null && !string.IsNullOrEmpty(transformedContent) &&
                                            emailTestHtmlDocs.Count > 1);
 
@@ -1201,7 +1211,7 @@ public class ExecutionService
                 Log.Debug("Output saved to: {OutputPath}", finalPath);
 
                 // Create email metadata file if this is test mode for an email profile
-                if (profile.IsEmailExport && destinationOverrideId.HasValue && finalPath != null)
+                if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue && finalPath != null)
                 {
                     await CreateEmailMetadataFileAsync(profile, rows, finalPath);
                 }
@@ -1380,6 +1390,30 @@ public class ExecutionService
 
             return (executionId, false, null, ex.Message);
         }
+    }
+
+    private static (HashSet<string> NodeTypes, string? Error) ParseGraphNodeTypes(Reef.Core.Models.Profile profile)
+    {
+        Reef.Core.Models.ProfileGraph? graph;
+        try
+        {
+            graph = string.IsNullOrEmpty(profile.CanvasLayoutJson)
+                ? ProfileGraphBackfillMigration.Build(profile)
+                : System.Text.Json.JsonSerializer.Deserialize<Reef.Core.Models.ProfileGraph>(profile.CanvasLayoutJson);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            return (new HashSet<string>(), $"Failed to parse execution graph: {ex.Message}");
+        }
+
+        if (graph == null)
+            return (new HashSet<string>(), "Failed to parse execution graph");
+
+        var (_, sortError) = GraphExecutor.Sort(graph);
+        if (sortError != null)
+            return (new HashSet<string>(), sortError);
+
+        return (graph.Nodes.Select(n => n.Type).ToHashSet(), null);
     }
 
     /// <summary>

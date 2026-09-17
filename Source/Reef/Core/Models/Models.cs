@@ -105,6 +105,7 @@ public class Profile
     // Post-Processing Configuration (enhanced existing)
     public string? PostProcessType { get; set; } // null, Query, StoredProcedure, Webhook
     public string? PostProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
+    public string? CanvasLayoutJson { get; set; } // node positions and connections for the canvas editor
     public bool PostProcessSkipOnFailure { get; set; } = true; // Skip post-processing if main query fails
     public bool PostProcessRollbackOnFailure { get; set; } = false; // Rollback post-processing on its own failure
     public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
@@ -633,6 +634,22 @@ public class DeltaSyncConfig
     public int NumericPrecision { get; set; } = 6;
     public bool RemoveNonPrintable { get; set; }
     public string ReefIdNormalization { get; set; } = "Trim";
+    public bool ResetOnSchemaChange { get; set; }
+
+    public static DeltaSyncConfig FromProfile(Profile profile) => new()
+    {
+        Enabled = profile.DeltaSyncEnabled,
+        ReefIdColumn = profile.DeltaSyncReefIdColumn!,
+        HashAlgorithm = profile.DeltaSyncHashAlgorithm ?? "SHA256",
+        IncludeDeleted = profile.DeltaSyncTrackDeletes,
+        RetentionDays = profile.DeltaSyncRetentionDays,
+        DuplicateStrategy = profile.DeltaSyncDuplicateStrategy ?? "Strict",
+        NullStrategy = profile.DeltaSyncNullStrategy ?? "Strict",
+        NumericPrecision = profile.DeltaSyncNumericPrecision ?? 6,
+        RemoveNonPrintable = profile.DeltaSyncRemoveNonPrintable,
+        ReefIdNormalization = profile.DeltaSyncReefIdNormalization ?? "Trim",
+        ResetOnSchemaChange = profile.DeltaSyncResetOnSchemaChange
+    };
 }
 
 /// <summary>

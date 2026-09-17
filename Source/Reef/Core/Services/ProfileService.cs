@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Reef.Core.Database;
 using Reef.Core.Models;
 using Reef.Core.Security;
 using Serilog;
@@ -201,6 +202,11 @@ public class ProfileService
             profile.CreatedBy = createdByUserId;
             profile.CreatedAt = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
+            var profileGraph = ProfileGraphBackfillMigration.Build(profile);
+            var graphValidationError = ProfilePipelineValidator.Validate(profileGraph);
+            if (graphValidationError != null)
+                throw new InvalidOperationException($"Invalid profile pipeline: {graphValidationError}");
+            profile.CanvasLayoutJson = System.Text.Json.JsonSerializer.Serialize(profileGraph);
 
             // Generate unique short code (P-XXXX) with collision retry
             if (string.IsNullOrEmpty(profile.Code))
@@ -224,7 +230,7 @@ public class ProfileService
                     DeltaSyncTrackDeletes, DeltaSyncRetentionDays, DeltaSyncResetOnSchemaChange, DeltaSyncRemoveNonPrintable, DeltaSyncReefIdNormalization,
                     ExcludeReefIdFromOutput, ExcludeSplitKeyFromOutput,
                     SplitEnabled, SplitKeyColumn, SplitFilenameTemplate, SplitBatchSize, PostProcessPerSplit, EmailGroupBySplitKey, FilenameTemplate,
-                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
+                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code, CanvasLayoutJson
                 ) VALUES (
                     @Name, @ConnectionId, @GroupId, @Query, @ScheduleType, @ScheduleCron,
                     @ScheduleIntervalMinutes, @OutputFormat, @OutputDestinationType,
@@ -240,7 +246,7 @@ public class ProfileService
                     @DeltaSyncTrackDeletes, @DeltaSyncRetentionDays, @DeltaSyncResetOnSchemaChange, @DeltaSyncRemoveNonPrintable, @DeltaSyncReefIdNormalization,
                     @ExcludeReefIdFromOutput, @ExcludeSplitKeyFromOutput,
                     @SplitEnabled, @SplitKeyColumn, @SplitFilenameTemplate, @SplitBatchSize, @PostProcessPerSplit, @EmailGroupBySplitKey, @FilenameTemplate,
-                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
+                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code, @CanvasLayoutJson
                 );
                 SELECT last_insert_rowid();";
 
@@ -337,6 +343,11 @@ public class ProfileService
             // Recompute hash
             profile.Hash = _hashValidator.ComputeHash(profile);
             profile.UpdatedAt = DateTime.UtcNow;
+            var profileGraph = ProfileGraphBackfillMigration.Build(profile);
+            var graphValidationError = ProfilePipelineValidator.Validate(profileGraph);
+            if (graphValidationError != null)
+                throw new InvalidOperationException($"Invalid profile pipeline: {graphValidationError}");
+            profile.CanvasLayoutJson = System.Text.Json.JsonSerializer.Serialize(profileGraph);
 
             const string sql = @"
                 UPDATE Profiles SET
@@ -402,7 +413,8 @@ public class ProfileService
                     EmailGroupBySplitKey = @EmailGroupBySplitKey,
                     IsEnabled = @IsEnabled,
                     Hash = @Hash,
-                    UpdatedAt = @UpdatedAt
+                    UpdatedAt = @UpdatedAt,
+                    CanvasLayoutJson = @CanvasLayoutJson
                 WHERE Id = @Id";
 
             var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, profile, cancellationToken: ct));

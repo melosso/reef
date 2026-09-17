@@ -276,6 +276,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
                 Code TEXT NOT NULL DEFAULT '',
+                CanvasLayoutJson TEXT NULL,
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
@@ -1108,7 +1109,7 @@ public class DatabaseInitializer
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin, password: admin123)");
+            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
             Log.Warning("! Password change will be required on first login");
             Log.Information("");
         }

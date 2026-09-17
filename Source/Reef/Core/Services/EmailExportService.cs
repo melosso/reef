@@ -171,7 +171,7 @@ public class EmailExportService
     /// <param name="queryResults">Query result rows from execution</param>
     /// <returns>Success status, message, success count, failure count, and split details</returns>
     public async Task<(bool Success, string? Message, int SuccessCount, int FailureCount, List<ProfileExecutionSplit> Splits, List<(string Recipient, string Error)> Failures)> ExportToEmailAsync(
-        Profile profile,
+        EmailExportConfig profile,
         Destination emailDestination,
         QueryTemplate emailTemplate,
         List<Dictionary<string, object>> queryResults)
@@ -438,7 +438,7 @@ public class EmailExportService
     /// Send email for a batch of rows (typically one row or one split group)
     /// </summary>
     private async Task<(bool Success, string? Error)> SendEmailBatchAsync(
-        Profile profile,
+        EmailExportConfig profile,
         EmailDestinationConfiguration emailConfig,
         string emailBodyTemplate,
         List<Dictionary<string, object>> rows,
@@ -939,7 +939,7 @@ public class EmailExportService
     private List<EmailAttachment> ResolveAttachmentsForBatch(
         List<Dictionary<string, object>> rows,
         AttachmentConfig? attachmentConfig,
-        Profile profile)
+        EmailExportConfig profile)
     {
         var attachments = new List<EmailAttachment>();
 
@@ -1016,7 +1016,7 @@ public class EmailExportService
     private List<EmailAttachment> ResolveDocumentTemplateAttachments(
         List<Dictionary<string, object>> rows,
         AttachmentConfig attachmentConfig,
-        Profile profile)
+        EmailExportConfig profile)
     {
         var attachments = new List<EmailAttachment>();
 
@@ -1239,7 +1239,7 @@ public class EmailExportService
     private List<PreGeneratedAttachment> GenerateDocumentTemplateAttachmentsForApproval(
         List<Dictionary<string, object>> rows,
         AttachmentConfig attachmentConfig,
-        Profile profile)
+        EmailExportConfig profile)
     {
         var preGeneratedAttachments = new List<PreGeneratedAttachment>();
 
@@ -1501,7 +1501,7 @@ public class EmailExportService
     /// Returns recipients, subject, HTML body, and attachment config
     /// </summary>
     public async Task<(List<(string Recipients, string Subject, string HtmlBody, string? CcAddresses, string? AttachmentConfigJson, string? ReefId, string? DeltaSyncHash)> RenderedEmails, List<string> Errors)> RenderEmailsForApprovalAsync(
-        Profile profile,
+        EmailExportConfig profile,
         QueryTemplate emailTemplate,
         List<Dictionary<string, object>> queryResults,
         AttachmentConfig? attachmentConfig = null,

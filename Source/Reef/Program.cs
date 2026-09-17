@@ -229,6 +229,14 @@ public partial class Program
             var oidcMigration = new OidcMigration(connectionString);
             await oidcMigration.ApplyAsync();
 
+            // Run Profile canvas migration to add the CanvasLayoutJson column to Profiles table
+            var profileCanvasMigration = new ProfileCanvasMigration(connectionString);
+            await profileCanvasMigration.ApplyAsync();
+
+            // Backfill CanvasLayoutJson with a synthesized graph for profiles that don't have one yet
+            var profileGraphBackfillMigration = new ProfileGraphBackfillMigration(connectionString);
+            await profileGraphBackfillMigration.ApplyAsync();
+
             // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
             Log.Debug("Running Scripting database migration...");
             var scriptingMigration = new ScriptingMigration(connectionString);
@@ -600,9 +608,7 @@ public partial class Program
                                    "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
-            var layoutTemplate = File.Exists(layoutPath)
-                ? await File.ReadAllTextAsync(layoutPath)
-                : null;
+            var layoutExists = File.Exists(layoutPath);
 
             var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -636,7 +642,7 @@ public partial class Program
 
                 var pageName = Path.GetFileNameWithoutExtension(fileName);
 
-                if (layoutTemplate == null)
+                if (!layoutExists)
                 {
                     // Fallback: serve raw if layout is missing
                     app.MapGet(route, async context =>
@@ -652,6 +658,7 @@ public partial class Program
                     {
                         Log.Debug("Serving HTML route (layout): {Route} -> {File}", route, filePath);
 
+                        var layoutTemplate = await File.ReadAllTextAsync(layoutPath);
                         var pageContent = await File.ReadAllTextAsync(filePath);
                         var username = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
                         var userInitial = username.Length > 0 ? username[0].ToString().ToUpper() : "?";
@@ -678,8 +685,8 @@ public partial class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-blue-500/10 text-blue-400"
-                                : "hover:bg-slate-800 hover:text-slate-100";
+                                ? "bg-teal-500/10 text-teal-300"
+                                : "hover:bg-zinc-800/60 hover:text-zinc-200";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
 

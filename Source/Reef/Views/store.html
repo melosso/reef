@@ -5,21 +5,20 @@
         <div class="flex items-center justify-between px-6 h-16">
             <h1 class="text-xl font-semibold text-slate-900 disable-select">Store</h1>
             <div class="flex items-center gap-2">
-                <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1" aria-label="Help">
+                <button onclick="openHelpModal()" class="p-2 text-slate-500 border border-slate-200 rounded-md hover:bg-slate-50 hover:text-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1" aria-label="Help">
                     <i data-lucide="help-circle" class="h-4 w-4"></i>
                 </button>
             </div>
         </div>
     </header>
     <main class="flex-1 overflow-y-auto p-6">
-        <div id="message-container" aria-live="polite"></div>
 
         <div id="recipe-gallery">
             <div id="recipe-gallery-controls" class="hidden mb-5 space-y-3">
                 <div class="relative max-w-md">
                     <i data-lucide="search" class="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                     <input type="text" id="recipe-search-input" oninput="onRecipeFilterChanged()" placeholder="Search recipes..."
-                           class="w-full h-9 pl-9 pr-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                           class="w-full h-9 pl-9 pr-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                 </div>
                 <div id="recipe-category-chips" class="flex items-center gap-2 flex-wrap"></div>
             </div>
@@ -42,10 +41,10 @@
                 <p class="text-sm text-slate-500 mb-5">Here's what's already done. Pick up where you left off, or jump to any step.</p>
                 <div id="resume-summary-list" class="space-y-1.5 mb-6"></div>
                 <div class="flex items-center gap-3">
-                    <button onclick="confirmResumeFromSummary()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    <button onclick="confirmResumeFromSummary()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                         Resume where you left off
                     </button>
-                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                         Not now
                     </button>
                 </div>
@@ -64,10 +63,10 @@
                 <div id="flow-selection-list" class="space-y-2 mb-2"></div>
                 <p id="flow-selection-error" class="hidden text-sm text-red-600 mb-4">Select at least one.</p>
                 <div class="flex items-center gap-3 mt-4">
-                    <button onclick="confirmFlowSelection()" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    <button onclick="confirmFlowSelection()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                         Continue
                     </button>
-                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    <button onclick="exitWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                         Cancel
                     </button>
                 </div>
@@ -86,7 +85,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                     <span id="wizard-advanced-toggle-slot"></span>
-                    <button onclick="abandonWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                    <button onclick="abandonWizard()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                         Abandon Setup
                     </button>
                 </div>
@@ -116,7 +115,7 @@
                 <h2 class="text-lg font-semibold text-slate-900 mb-1">Setup complete</h2>
                 <p id="completion-description" class="text-sm text-slate-500 mb-6">Your setup is live and verified end to end.</p>
                 <div id="completion-links" class="flex flex-wrap items-center justify-center gap-2 mb-6"></div>
-                <button onclick="exitWizard()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1">
+                <button onclick="exitWizard()" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-1">
                     Done
                 </button>
             </div>
@@ -133,20 +132,20 @@
                 <i data-lucide="x" class="h-6 w-6"></i>
             </button>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 disable-select">
+        <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4 disable-select">
             <div class="flex items-start">
-                <i data-lucide="info" class="h-5 w-5 text-blue-500 mr-2 mt-0.5"></i>
-                <p class="text-sm text-blue-700">Rendered with sample data, the same way Save &amp; Verify previews it - your real data will differ.</p>
+                <i data-lucide="info" class="h-5 w-5 text-teal-600 mr-2 mt-0.5"></i>
+                <p class="text-sm text-teal-700">Rendered with sample data, the same way Save &amp; Verify previews it - your real data will differ.</p>
             </div>
         </div>
         <div id="template-preview-html-wrap" class="hidden bg-gray-50 border border-gray-300 rounded-md h-96">
             <iframe id="template-preview-iframe" style="width:100%;height:100%;border:none;" sandbox=""></iframe>
         </div>
         <div id="template-preview-text-wrap" class="hidden bg-gray-50 border border-gray-300 rounded-md p-4 max-h-96 overflow-auto">
-            <pre id="template-preview-output" class="text-sm font-mono whitespace-pre-wrap"></pre>
+            <pre id="template-preview-output" class="text-sm whitespace-pre-wrap"></pre>
         </div>
         <div class="flex justify-end pt-4 mt-4 border-t border-gray-200">
-            <button onclick="closeTemplatePreviewModal()" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors">Close</button>
+            <button onclick="closeTemplatePreviewModal()" class="px-4 py-2 text-sm font-semibold text-white bg-slate-900 border border-transparent rounded-lg hover:bg-slate-800 transition-colors">Close</button>
         </div>
     </div>
 </div>
@@ -172,9 +171,7 @@
                 <li><b>Optional steps:</b> Some steps (like scheduling) can be skipped - you can always trigger things manually or come back later.</li>
             </ul>
 
-            <blockquote class="border-l-4 border-blue-500 pl-4 py-2 italic text-gray-600 bg-blue-50 rounded-r-md pr-2">
-                <p><strong>Tip:</strong> Every entity the wizard creates (Connections, Profiles, Destinations, etc.) is a normal Reef record - you can keep editing it from the regular pages after setup.</p>
-            </blockquote>
+            <p class="border border-slate-200 bg-slate-50 rounded-md p-3 text-slate-600"><strong class="text-slate-700">Tip:</strong> Every entity the wizard creates (Connections, Profiles, Destinations, etc.) is a normal Reef record - you can keep editing it from the regular pages after setup.</p>
         </div>
     </div>
 </div>

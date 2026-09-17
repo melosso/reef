@@ -11,7 +11,7 @@ An enterprise-ready data export service for Microsoft SQL Server.
 ### Setup
 1. Install .NET Runetime:
 ```powershell
-winget install Microsoft.DotNet.Runtime.9
+winget install Microsoft.DotNet.Runtime.10
 ```
 
 2. Generate encryption key:
