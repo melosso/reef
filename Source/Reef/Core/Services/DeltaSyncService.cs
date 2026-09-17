@@ -58,21 +58,8 @@ public class DeltaSyncService
     public async Task<DeltaSyncResult> ProcessDeltaAsync(
         int profileId,
         List<Dictionary<string, object>> rows,
-        Profile profile)
+        DeltaSyncConfig config)
     {
-        var config = new DeltaSyncConfig
-        {
-            Enabled = profile.DeltaSyncEnabled,
-            ReefIdColumn = profile.DeltaSyncReefIdColumn!,
-            HashAlgorithm = profile.DeltaSyncHashAlgorithm ?? "SHA256",
-            IncludeDeleted = profile.DeltaSyncTrackDeletes,
-            DuplicateStrategy = profile.DeltaSyncDuplicateStrategy ?? "Strict",
-            NullStrategy = profile.DeltaSyncNullStrategy ?? "Strict",
-            NumericPrecision = profile.DeltaSyncNumericPrecision ?? 6,
-            RemoveNonPrintable = profile.DeltaSyncRemoveNonPrintable,
-            ReefIdNormalization = profile.DeltaSyncReefIdNormalization ?? "Trim"
-        };
-
         // Validate and clean rows
         rows = await ValidateAndCleanRowsAsync(rows, config, profileId);
 
@@ -95,7 +82,7 @@ public class DeltaSyncService
         if (rows.Any())
         {
             var currentSchema = rows.First().Keys.OrderBy(k => k).ToList();
-            await DetectSchemaChangeAsync(profileId, currentSchema, profile.DeltaSyncResetOnSchemaChange);
+            await DetectSchemaChangeAsync(profileId, currentSchema, config.ResetOnSchemaChange);
         }
 
         // Process each row
@@ -387,7 +374,7 @@ public class DeltaSyncService
 
         // Use the same ProcessDeltaAsync logic that works perfectly during normal execution
         // This calculates hashes using the exact same algorithm and validation
-        var deltaSyncResult = await ProcessDeltaAsync(profileId, queryResults, profile);
+        var deltaSyncResult = await ProcessDeltaAsync(profileId, queryResults, DeltaSyncConfig.FromProfile(profile));
 
         // Use ExecutionId = 0 to mark these as baseline hashes (synthetic execution)
         // We disable foreign key constraints temporarily since baseline execution record may not exist

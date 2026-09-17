@@ -634,6 +634,22 @@ public class DeltaSyncConfig
     public int NumericPrecision { get; set; } = 6;
     public bool RemoveNonPrintable { get; set; }
     public string ReefIdNormalization { get; set; } = "Trim";
+    public bool ResetOnSchemaChange { get; set; }
+
+    public static DeltaSyncConfig FromProfile(Profile profile) => new()
+    {
+        Enabled = profile.DeltaSyncEnabled,
+        ReefIdColumn = profile.DeltaSyncReefIdColumn!,
+        HashAlgorithm = profile.DeltaSyncHashAlgorithm ?? "SHA256",
+        IncludeDeleted = profile.DeltaSyncTrackDeletes,
+        RetentionDays = profile.DeltaSyncRetentionDays,
+        DuplicateStrategy = profile.DeltaSyncDuplicateStrategy ?? "Strict",
+        NullStrategy = profile.DeltaSyncNullStrategy ?? "Strict",
+        NumericPrecision = profile.DeltaSyncNumericPrecision ?? 6,
+        RemoveNonPrintable = profile.DeltaSyncRemoveNonPrintable,
+        ReefIdNormalization = profile.DeltaSyncReefIdNormalization ?? "Trim",
+        ResetOnSchemaChange = profile.DeltaSyncResetOnSchemaChange
+    };
 }
 
 /// <summary>

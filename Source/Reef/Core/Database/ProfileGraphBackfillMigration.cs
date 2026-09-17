@@ -106,7 +106,7 @@ public class ProfileGraphBackfillMigration(string connectionString)
             });
         }
 
-        if (profile.SplitEnabled)
+        if (profile.SplitEnabled && !profile.IsEmailExport)
         {
             AddNode("splitoutput", "splitoutput", new
             {
@@ -117,7 +117,7 @@ public class ProfileGraphBackfillMigration(string connectionString)
             });
         }
 
-        if (profile.TemplateId.HasValue)
+        if (profile.TemplateId.HasValue && !profile.IsEmailExport)
         {
             AddNode("template", "template", new
             {
@@ -126,17 +126,20 @@ public class ProfileGraphBackfillMigration(string connectionString)
             });
         }
 
-        AddNode("destination", "destination", new
+        if (!profile.IsEmailExport)
         {
-            outputFormat = profile.OutputFormat,
-            destinationType = profile.OutputDestinationType,
-            destinationConfig = profile.OutputDestinationConfig,
-            destinationId = profile.OutputDestinationId,
-            destinationEndpointId = profile.OutputDestinationEndpointId,
-            filenameTemplate = profile.FilenameTemplate,
-            excludeReefIdFromOutput = profile.ExcludeReefIdFromOutput,
-            excludeSplitKeyFromOutput = profile.ExcludeSplitKeyFromOutput,
-        });
+            AddNode("destination", "destination", new
+            {
+                outputFormat = profile.OutputFormat,
+                destinationType = profile.OutputDestinationType,
+                destinationConfig = profile.OutputDestinationConfig,
+                destinationId = profile.OutputDestinationId,
+                destinationEndpointId = profile.OutputDestinationEndpointId,
+                filenameTemplate = profile.FilenameTemplate,
+                excludeReefIdFromOutput = profile.ExcludeReefIdFromOutput,
+                excludeSplitKeyFromOutput = profile.ExcludeSplitKeyFromOutput,
+            });
+        }
 
         if (!string.IsNullOrEmpty(profile.PostProcessType))
         {

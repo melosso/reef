@@ -1552,7 +1552,7 @@ public static class ProfilesEndpoints
             var limitedRows = rows?.Take(25).ToList() ?? [];
 
             // Run delta comparison without committing hashes
-            var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, profile);
+            var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, DeltaSyncConfig.FromProfile(profile));
 
             // Tag each row with its status so the client can render accordingly
             List<Dictionary<string, object>> taggedRows = [];

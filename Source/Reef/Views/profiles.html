@@ -1,5 +1,5 @@
 <!--REEF:TITLE-->Profiles · Reef<!--/REEF:TITLE-->
-<!--REEF:SCRIPTS--><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
+<!--REEF:SCRIPTS--><link rel="stylesheet" href="/assets/vendor/drawflow.css"><link rel="stylesheet" href="/assets/css/profile-canvas.css"><script src="/assets/vendor/drawflow.js"></script><script src="/assets/js/profile-canvas.js"></script><script src="/assets/js/filter.js"></script><!--/REEF:SCRIPTS-->
 <div class="flex-1 flex flex-col overflow-hidden">
             <header class="bg-white border-b border-slate-200 shrink-0 z-10">
                 <div class="flex items-center justify-between px-6 h-16">
@@ -12,13 +12,9 @@
                                 <i data-lucide="chevron-down" class="h-3.5 w-3.5 opacity-70"></i>
                             </button>
                             <div id="newProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg z-50 border border-slate-200">
-                                <button onclick="openAddProfileModal('standard')" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
+                                <button onclick="openAddProfileModal()" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
                                     <i data-lucide="file-code" class="h-4 w-4 mr-2"></i>
                                     Export Profile
-                                </button>
-                                <button onclick="openAddProfileModal('email')" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
-                                    <i data-lucide="mail" class="h-4 w-4 mr-2"></i>
-                                    Export Email
                                 </button>
                                 <button onclick="openImportProfileModal(); toggleNewProfileMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 flex items-center">
                                     <i data-lucide="upload" class="h-4 w-4 mr-2"></i>
@@ -150,47 +146,60 @@
         <div class="relative mx-auto p-6 w-full max-w-5xl" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-6 sticky top-0 bg-white z-50 py-2 -mt-2">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Profile</h3>
-                <button onclick="attemptCloseProfileModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md transition-colors">
-                    <i data-lucide="x" class="h-5 w-5"></i>
-                </button>
-            </div>
-
-            <div class="flex items-stretch gap-0 mb-6 relative">
-                <div class="absolute top-1/2 left-0 right-0 h-px bg-slate-200" style="z-index:0;"></div>
-                <nav class="flex gap-3 relative" style="z-index:1;" aria-label="Pipeline stages">
-                    <button id="generalTabButton" class="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-teal-600 text-white border border-teal-600 rounded-md shadow-sm"
-                            onclick="showTab('general')">
-                        <i data-lucide="settings" class="w-4 h-4"></i>
-                        General
-                    </button>
-                    <button id="webhooksTabButton" class="webhook-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
-                            onclick="showTab('webhooks')">
-                        <i data-lucide="link" class="w-4 h-4"></i>
+                <div class="flex items-center gap-1">
+                    <button type="button" id="webhooks-nav-link" onclick="showTab('webhooks')"
+                            class="hidden px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors flex items-center gap-1.5"
+                            data-tooltip="Trigger this profile via HTTP POST" data-tooltip-position="bottom">
+                        <i data-lucide="link" class="h-4 w-4"></i>
                         Webhooks
                     </button>
-                    <button id="deltaSyncTabButton" class="deltasync-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
-                            onclick="showTab('deltaSync')">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <button onclick="attemptCloseProfileModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-slate-100 rounded-md transition-colors">
+                        <i data-lucide="x" class="h-5 w-5"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <div id="profile-canvas-wrap">
+                    <div id="profile-canvas"></div>
+                </div>
+                <div class="flex items-center gap-2 mt-3 flex-wrap">
+                    <span class="text-xs font-medium text-slate-500 mr-1">Add stage:</span>
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('preprocess')" data-tooltip="Run before the main query" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        Pre-process
+                    </button>
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('deltasync')" data-tooltip="Export only rows changed since last run" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
                         Smart Sync
                     </button>
-                    <button id="splitOutputTabButton" class="split-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
-                            onclick="showTab('splitOutput')">
-                        <i data-lucide="scissors" class="w-4 h-4"></i>
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('splitoutput')" data-tooltip="Generate multiple output files grouped by a column" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M20 4 8.12 15.88"></path><path d="M14.47 14.48 20 20"></path><path d="M8.12 8.12 12 12"></path></svg>
                         Split Output
                     </button>
-                    <button id="emailOptionsTabButton" class="email-options-tab flex items-center gap-2 px-3 py-2 text-sm font-medium bg-white text-gray-700 hover:text-gray-900 border border-slate-200 hover:border-slate-300 rounded-md shadow-sm"
-                            onclick="showTab('emailOptions')" style="display:none;">
-                        <i data-lucide="mail" class="w-4 h-4"></i>
-                        Attachments
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('template')" data-tooltip="Transform rows with a custom template" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="m10 13-2 2 2 2"></path><path d="m14 13 2 2-2 2"></path></svg>
+                        Template
                     </button>
-                </nav>
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('emailexport')" data-tooltip="Send rows as templated emails instead of saving a file" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                        Email Export
+                    </button>
+                    <button type="button" class="reef-palette-item" onclick="ReefProfileCanvas.addNodeFromPalette('postprocess')" data-tooltip="Run after the main query completes" data-tooltip-position="top">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.8 10A10 10 0 1 1 17 3.34"></path><path d="m9 11 3 3L22 4"></path></svg>
+                        Post-process
+                    </button>
+                    <span class="text-xs text-slate-400 ml-auto" data-tooltip="Click a stage to edit it. Double-click an optional stage to remove it. Ctrl+A select all, Ctrl+C copy, Ctrl+V paste onto this profile." data-tooltip-position="top">
+                        <i data-lucide="info" class="h-3.5 w-3.5"></i>
+                    </span>
+                </div>
             </div>
-            <div id="generalTab" class="tab-content fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+            <div id="generalTab" class="tab-content pt-2">
                 <form id="profile-form" class="space-y-4">
                     <input type="hidden" id="profile-id">
                     <input type="checkbox" id="isEmailExport" name="isEmailExport" style="display: none;">
                     
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-2 gap-4" id="node-section-source">
                         <div>
                             <label for="profile-name" class="block text-sm font-medium text-slate-700">Name *</label>
                             <input type="text" id="profile-name" required
@@ -252,7 +261,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                             <p class="mt-1 text-xs text-gray-500">Standard formatting (no customization)</p>
                         </div>
 
-                        <div>
+                        <div id="node-section-template">
                             <label for="template-id" class="block text-sm font-medium text-slate-700">
                                 Custom Template (Optional)
                                 <span class="text-teal-600 text-xs">- Overrides format</span>
@@ -266,7 +275,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                         </div>
                     </div>
                     
-                    <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="border-t border-gray-200 pt-4 mt-4" id="node-section-destination">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Output Destination *</h4>
                         
                         <div class="mb-4">
@@ -516,7 +525,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
 
                     <!-- Pre-Processing Section -->
-                    <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="border-t border-gray-200 pt-4 mt-4" id="node-section-preprocess">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
                             <i data-lucide="play" class="w-4 h-4 mr-2 text-green-600"></i>
                             Pre-Processing (Optional)
@@ -652,7 +661,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                     
                     <!-- Post-Processing Section -->
-                    <div class="border-t border-gray-200 pt-4 mt-4">
+                    <div class="border-t border-gray-200 pt-4 mt-4" id="node-section-postprocess">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center">
                             <i data-lucide="check-circle" class="w-4 h-4 mr-2 text-teal-600"></i>
                             Post-Processing (Optional)
@@ -868,7 +877,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </div>
                 </form>
             </div>
-            <div id="webhooksTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+            <div id="webhooksTab" class="tab-content hidden pt-2">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -893,7 +902,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     </button>
                 </div>
             </div>
-            <div id="deltaSyncTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+            <div id="deltaSyncTab" class="tab-content hidden pt-2">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -1130,7 +1139,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
 
             <!-- Split Output Tab -->
-            <div id="splitOutputTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+            <div id="splitOutputTab" class="tab-content hidden pt-2">
                 <div class="space-y-4">
                     <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                         <div class="flex">
@@ -1318,7 +1327,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             </div>
 
             <!-- Email Options Tab -->
-            <div id="emailOptionsTab" class="tab-content hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+            <div id="emailOptionsTab" class="tab-content hidden pt-2">
                 <div class="space-y-4">
                     <!-- Attachment Configuration Section -->
                     <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1736,7 +1745,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 <input type="hidden" id="imp-id" value="">
 
                 <!--  General Tab -->
-                <div id="imp-basic" class="import-tab-pane fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-basic" class="import-tab-pane pt-2">
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="col-span-2">
@@ -1768,7 +1777,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Source Tab -->
-                <div id="imp-source" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-source" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2125,7 +2134,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Format Tab -->
-                <div id="imp-format" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-format" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2245,7 +2254,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Target Tab -->
-                <div id="imp-target" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-target" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2379,7 +2388,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Mapping Tab -->
-                <div id="imp-mapping" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-mapping" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2431,7 +2440,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Smart Sync Tab─ -->
-                <div id="imp-sync" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-sync" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2581,7 +2590,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Failures Tab── -->
-                <div id="imp-failures" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-failures" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2683,7 +2692,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Processing Tab (pre/post-process Query/StoredProcedure/Script - Database target only) -->
-                <div id="imp-processing" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-processing" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2901,7 +2910,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Output Targets Tab  -->
-                <div id="imp-output-targets" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-output-targets" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -2970,7 +2979,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 </div>
 
                 <!--  Webhooks Tab── -->
-                <div id="imp-webhooks" class="import-tab-pane hidden fixed top-0 right-0 h-full w-full max-w-xl bg-white border-l border-slate-200 shadow-2xl overflow-y-auto z-40 p-8">
+                <div id="imp-webhooks" class="import-tab-pane hidden pt-2">
                     <div class="space-y-4">
                         <div class="bg-teal-50 border border-teal-200 rounded-md p-4">
                             <div class="flex">
@@ -4278,17 +4287,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                 // Reset to general tab
                 showTab('general');
-                
-                // Enable webhook tab
-                const webhooksTabButton = document.getElementById('webhooksTabButton');
-                webhooksTabButton.disabled = false;
-                webhooksTabButton.classList.remove('opacity-50', 'cursor-not-allowed');
 
-                // Enable delta sync tab
-                const deltaSyncTabButton = document.getElementById('deltaSyncTabButton');
-                deltaSyncTabButton.disabled = false;
-                deltaSyncTabButton.classList.remove('opacity-50', 'cursor-not-allowed');
-
+                document.getElementById('webhooks-nav-link')?.classList.remove('hidden');
                 document.getElementById('modal-title').textContent = 'Edit Profile';
                 document.getElementById('profile-id').value = profile.id;
                 document.getElementById('profile-name').value = profile.name;
@@ -4360,27 +4360,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 groupSelect.innerHTML = '<option value="">No Group</option>' +
                     groups.map(g => `<option value="${g.id}" ${g.id === profile.groupId ? 'selected' : ''}>${escapeHtml(g.name)}</option>`).join('');
 
-                const destinationSelect = document.getElementById('destination-id');
-                // Filter destinations based on profile type
-                if (profile.isEmailExport) {
-                    // Email profiles: only show Email/SMTP destinations
-                    const emailDestinations = destinations.filter(d => d.type === 'Email');
-                    if (emailDestinations.length === 0) {
-                        destinationSelect.innerHTML = '<option value="">-- No email destinations available --</option>';
-                    } else {
-                        destinationSelect.innerHTML = '<option value="">-- Select an email destination --</option>' +
-                            emailDestinations.map(d => `<option value="${d.id}" ${d.id === profile.outputDestinationId ? 'selected' : ''}>${escapeHtml(d.name)}</option>`).join('');
-                    }
-                } else {
-                    // Regular export profiles: exclude Email destinations
-                    const fileDestinations = destinations.filter(d => d.type !== 'Email');
-                    if (fileDestinations.length === 0) {
-                        destinationSelect.innerHTML = '<option value="">-- No file destinations available --</option>';
-                    } else {
-                        destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
-                            fileDestinations.map(d => `<option value="${d.id}" ${d.id === profile.outputDestinationId ? 'selected' : ''}>${escapeHtml(d.name)} (${d.type})</option>`).join('');
-                    }
-                }
+                populateDestinationDropdown(profile.isEmailExport, profile.outputDestinationId);
 
                 document.getElementById('profile-modal').classList.remove('hidden');
                 document.getElementById('scheduling-notice').style.display = 'none';
@@ -4412,23 +4392,9 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
                 // Load Email Export settings (isEmailExport already set above)
 
-                // Populate email template dropdown with HTML templates only (for consistency with new profiles)
                 if (profile.isEmailExport) {
-                    const emailTemplateSelect = document.getElementById('emailTemplateId');
-                    const htmlScribanTemplates = templates.filter(t =>
-                        (t.type === 'ScribanTemplate' || t.type === 10) &&
-                        (t.outputFormat === 'HTML' || t.outputFormat === 'html')
-                    );
-
-                    if (htmlScribanTemplates.length === 0) {
-                        emailTemplateSelect.innerHTML = '<option value="">-- No HTML Scriban templates available --</option>';
-                    } else {
-                        emailTemplateSelect.innerHTML = '<option value="">-- Select HTML email template --</option>' +
-                            htmlScribanTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.outputFormat})</option>`).join('');
-                    }
-
-                    // Set the selected template
-                    emailTemplateSelect.value = profile.emailTemplateId || '';
+                    populateEmailTemplateDropdown();
+                    document.getElementById('emailTemplateId').value = profile.emailTemplateId || '';
                 }
 
                 document.getElementById('emailRecipientsColumn').value = profile.emailRecipientsColumn || '';
@@ -4455,51 +4421,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                     checkbox.checked = approvalRoles.includes(checkbox.value);
                 });
 
-                // Show/hide email config section based on profile type
-                const emailConfigSection = document.getElementById('emailConfigSection');
-                const emailApprovalSection = document.getElementById('emailApprovalSection');
-                const previewEmailMenuItem = document.getElementById('preview-email-menu-item');
-                const nonEmailFields = document.getElementById('nonEmailFields');
-                const fileExportFields = document.getElementById('fileExportFields');
-                const fileExportSplitFields = document.getElementById('fileExportSplitFields');
-                const emailOptionsTabButton = document.getElementById('emailOptionsTabButton');
-                if (profile.isEmailExport) {
-                    emailConfigSection.classList.remove('hidden');
-                    emailApprovalSection.classList.remove('hidden');
-                    if (previewEmailMenuItem) {
-                        previewEmailMenuItem.classList.remove('hidden');
-                    }
-                    if (nonEmailFields) {
-                        nonEmailFields.classList.add('hidden');
-                    }
-                    if (fileExportFields) {
-                        fileExportFields.classList.add('hidden');
-                    }
-                    if (fileExportSplitFields) {
-                        fileExportSplitFields.classList.add('hidden');
-                    }
-                    if (emailOptionsTabButton) {
-                        emailOptionsTabButton.style.display = '';
-                    }
-                } else {
-                    emailConfigSection.classList.add('hidden');
-                    emailApprovalSection.classList.add('hidden');
-                    if (previewEmailMenuItem) {
-                        previewEmailMenuItem.classList.add('hidden');
-                    }
-                    if (nonEmailFields) {
-                        nonEmailFields.classList.remove('hidden');
-                    }
-                    if (fileExportFields) {
-                        fileExportFields.classList.remove('hidden');
-                    }
-                    if (fileExportSplitFields) {
-                        fileExportSplitFields.classList.remove('hidden');
-                    }
-                    if (emailOptionsTabButton) {
-                        emailOptionsTabButton.style.display = 'none';
-                    }
-                }
+                setProfileEmailMode(profile.isEmailExport || false);
 
                 // Restore approval config visibility
                 if (document.getElementById('emailApprovalRequired').checked) {
@@ -4710,60 +4632,54 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         currentImportProfileId = null;
     }
 
-    function openAddProfileModal(profileType = 'standard') {
-        // Hide email config section for standard profiles
+    function populateDestinationDropdown(isEmailExport, selectedId) {
+        const destinationSelect = document.getElementById('destination-id');
+        if (!destinationSelect) return;
+        const matching = destinations.filter(d => isEmailExport ? d.type === 'Email' : d.type !== 'Email');
+        if (matching.length === 0) {
+            destinationSelect.innerHTML = isEmailExport
+                ? '<option value="">-- No email destinations available --</option>'
+                : '<option value="">-- No file destinations available --</option>';
+            return;
+        }
+        const placeholder = isEmailExport ? '-- Select an email destination --' : '-- Select a destination --';
+        destinationSelect.innerHTML = `<option value="">${placeholder}</option>` +
+            matching.map(d => `<option value="${d.id}" ${d.id === selectedId ? 'selected' : ''}>${escapeHtml(d.name)}${isEmailExport ? '' : ` (${d.type})`}</option>`).join('');
+    }
+
+    function populateEmailTemplateDropdown() {
+        const emailTemplateSelect = document.getElementById('emailTemplateId');
+        if (!emailTemplateSelect) return;
+        const htmlScribanTemplates = templates.filter(t =>
+            (t.type === 'ScribanTemplate' || t.type === 10) &&
+            (t.outputFormat === 'HTML' || t.outputFormat === 'html')
+        );
+        emailTemplateSelect.innerHTML = htmlScribanTemplates.length === 0
+            ? '<option value="">-- No HTML Scriban templates available --</option>'
+            : '<option value="">-- Select HTML email template --</option>' +
+                htmlScribanTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.outputFormat})</option>`).join('');
+    }
+
+    function setProfileEmailMode(isEmailExport) {
         const emailConfigSection = document.getElementById('emailConfigSection');
         const emailApprovalSection = document.getElementById('emailApprovalSection');
         const previewEmailMenuItem = document.getElementById('preview-email-menu-item');
         const nonEmailFields = document.getElementById('nonEmailFields');
         const fileExportFields = document.getElementById('fileExportFields');
         const fileExportSplitFields = document.getElementById('fileExportSplitFields');
-        const emailOptionsTabButton = document.getElementById('emailOptionsTabButton');
-        const isEmailExport = profileType === 'email';
 
-        if (emailConfigSection) {
-            if (isEmailExport) {
-                emailConfigSection.classList.remove('hidden');
-            } else {
-                emailConfigSection.classList.add('hidden');
-            }
-        }
+        if (emailConfigSection) emailConfigSection.classList.toggle('hidden', !isEmailExport);
+        if (emailApprovalSection) emailApprovalSection.classList.toggle('hidden', !isEmailExport);
+        if (previewEmailMenuItem) previewEmailMenuItem.classList.toggle('hidden', !isEmailExport);
+        if (nonEmailFields) nonEmailFields.classList.toggle('hidden', isEmailExport);
+        if (fileExportFields) fileExportFields.classList.toggle('hidden', isEmailExport);
+        if (fileExportSplitFields) fileExportSplitFields.classList.toggle('hidden', isEmailExport);
 
-        if (emailApprovalSection) {
-            if (isEmailExport) {
-                emailApprovalSection.classList.remove('hidden');
-            } else {
-                emailApprovalSection.classList.add('hidden');
-            }
-        }
-        if (previewEmailMenuItem) {
-            if (isEmailExport) {
-                previewEmailMenuItem.classList.remove('hidden');
-            } else {
-                previewEmailMenuItem.classList.add('hidden');
-            }
-        }
-        if (nonEmailFields) {
-            if (isEmailExport) {
-                nonEmailFields.classList.add('hidden');
-            } else {
-                nonEmailFields.classList.remove('hidden');
-            }
-        }
-        if (fileExportFields) {
-            if (isEmailExport) {
-                fileExportFields.classList.add('hidden');
-            } else {
-                fileExportFields.classList.remove('hidden');
-            }
-        }
-        if (fileExportSplitFields) {
-            if (isEmailExport) {
-                fileExportSplitFields.classList.add('hidden');
-            } else {
-                fileExportSplitFields.classList.remove('hidden');
-            }
-        }
+        document.getElementById('isEmailExport').checked = isEmailExport;
+
+        const currentDestinationId = parseInt(document.getElementById('destination-id')?.value) || null;
+        populateDestinationDropdown(isEmailExport, currentDestinationId);
+        if (isEmailExport) populateEmailTemplateDropdown();
 
         // For email profiles, enable split by default (split key column is optional)
         if (isEmailExport) {
@@ -4775,8 +4691,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
             // Show email grouping option for email profiles when split is enabled
             toggleSplitFields();
         }
+    }
+    window.setProfileEmailMode = setProfileEmailMode;
 
-        document.getElementById('modal-title').textContent = isEmailExport ? 'New Profile' : 'New Profile';
+    function openAddProfileModal() {
+        setProfileEmailMode(false);
+
+        document.getElementById('modal-title').textContent = 'New Profile';
         document.getElementById('profile-form').reset();
         document.getElementById('profile-id').value = '';
 
@@ -4785,9 +4706,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         const epSelect  = document.getElementById('destination-endpoint-id');
         if (epSection) epSection.classList.add('hidden');
         if (epSelect)  epSelect.innerHTML = '<option value="">(use full destination config)</option>';
-
-        // Re-set the checkbox after form reset
-        document.getElementById('isEmailExport').checked = isEmailExport;
 
         // Close the dropdown menu
         document.getElementById('newProfileMenu').classList.add('hidden');
@@ -4801,45 +4719,6 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         const groupSelect = document.getElementById('profile-group');
         groupSelect.innerHTML = '<option value="">No Group</option>' +
             groups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
-
-        // Populate destination dropdown (filter based on profile type)
-        const destinationSelect = document.getElementById('destination-id');
-        if (isEmailExport) {
-            // Email profiles: only show Email/SMTP destinations
-            const emailDestinations = destinations.filter(d => d.type === 'Email');
-            if (emailDestinations.length === 0) {
-                destinationSelect.innerHTML = '<option value="">-- No email destinations available --</option>';
-            } else {
-                destinationSelect.innerHTML = '<option value="">-- Select an email destination --</option>' +
-                    emailDestinations.map(d => `<option value="${d.id}">${escapeHtml(d.name)}</option>`).join('');
-            }
-        } else {
-            // Regular export profiles: exclude Email destinations
-            const fileDestinations = destinations.filter(d => d.type !== 'Email');
-            if (fileDestinations.length === 0) {
-                destinationSelect.innerHTML = '<option value="">-- No file destinations available --</option>';
-            } else {
-                destinationSelect.innerHTML = '<option value="">-- Select a destination --</option>' +
-                    fileDestinations.map(d => `<option value="${d.id}">${escapeHtml(d.name)} (${d.type})</option>`).join('');
-            }
-        }
-
-        // Populate email template dropdown (for email profiles)
-        if (isEmailExport) {
-            const emailTemplateSelect = document.getElementById('emailTemplateId');
-            // Filter for Scriban templates with HTML output format only (emails must be HTML)
-            const htmlScribanTemplates = templates.filter(t =>
-                (t.type === 'ScribanTemplate' || t.type === 10) &&
-                (t.outputFormat === 'HTML' || t.outputFormat === 'html')
-            );
-
-            if (htmlScribanTemplates.length === 0) {
-                emailTemplateSelect.innerHTML = '<option value="">-- No HTML Scriban templates available --</option>';
-            } else {
-                emailTemplateSelect.innerHTML = '<option value="">-- Select HTML email template --</option>' +
-                    htmlScribanTemplates.map(t => `<option value="${t.id}">${escapeHtml(t.name)} (${t.outputFormat})</option>`).join('');
-            }
-        }
 
         // Explicitly initialize email export fields
         document.getElementById('emailTemplateId').value = '';
@@ -4875,25 +4754,8 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         // Reset to general tab
         showTab('general');
 
-        // Show/hide email options tab based on profile type
-        if (emailOptionsTabButton) {
-            if (isEmailExport) {
-                emailOptionsTabButton.style.display = '';
-            } else {
-                emailOptionsTabButton.style.display = 'none';
-            }
-        }
+        document.getElementById('webhooks-nav-link')?.classList.add('hidden');
 
-        // Disable webhook tab for new profiles
-        const webhooksTabButton = document.getElementById('webhooksTabButton');
-        webhooksTabButton.disabled = true;
-        webhooksTabButton.classList.add('opacity-50', 'cursor-not-allowed');
-
-        // Disable delta sync tab for new profiles
-        const deltaSyncTabButton = document.getElementById('deltaSyncTabButton');
-        deltaSyncTabButton.disabled = true;
-        deltaSyncTabButton.classList.add('opacity-50', 'cursor-not-allowed');
-        
         // Reset Delta Sync fields
         document.getElementById('deltaSyncEnabled').checked = false;
         document.getElementById('deltaSyncReefIdColumn').value = '';
@@ -4934,6 +4796,7 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
 
         document.getElementById('profile-modal').classList.remove('hidden');
         document.getElementById('scheduling-notice').style.display = '';
+        window.ReefProfileCanvas && window.ReefProfileCanvas.init();
     }
 
     // ========================================================
@@ -6598,6 +6461,10 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            if (window.ReefProfileCanvas && !window.ReefProfileCanvas.validateBeforeSave()) {
+                return;
+            }
+
             const profileId = document.getElementById('profile-id').value;
             const name = document.getElementById('profile-name').value;
             const connectionId = parseInt(document.getElementById('profile-connection').value);
@@ -6899,26 +6766,13 @@ After saving this profile, head to the <a href="/jobs" class="font-semibold unde
                 tab.classList.add('hidden');
             });
 
-            // Deactivate all pipeline-stage node buttons
-            const nodeButtonIds = ['generalTabButton', 'webhooksTabButton', 'deltaSyncTabButton', 'splitOutputTabButton', 'emailOptionsTabButton'];
-            nodeButtonIds.forEach(id => {
-                const btn = document.getElementById(id);
-                if (!btn) return;
-                btn.classList.remove('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
-                btn.classList.add('bg-white', 'text-gray-700', 'border-slate-200');
-            });
-
             // Show the active tab content
             document.getElementById(tabName + 'Tab').classList.remove('hidden');
-
-            // Activate the active pipeline-stage node
-            const activeButton = document.getElementById(tabName + 'TabButton');
-            activeButton.classList.remove('bg-white', 'text-gray-700', 'border-slate-200');
-            activeButton.classList.add('bg-teal-600', 'text-white', 'border-teal-600', 'shadow-sm');
 
             // Re-render icons after tab switch
             queueLucideRender();
         }
+        window.showTab = showTab;
 
         // Dirty-state confirm for the X/Cancel buttons (not just backdrop
         // click/Escape, which main.js's generic watcher already covers for

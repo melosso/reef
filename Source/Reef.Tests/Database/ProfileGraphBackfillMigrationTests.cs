@@ -43,8 +43,10 @@ public class ProfileGraphBackfillMigrationTests
     }
 
     [Fact]
-    public void Build_SplitAndEmailExportProfile_MatchesPhaseOrderInExecutionService()
+    public void Build_EmailExportProfile_OmitsDeadSplitTemplateAndDestinationNodes()
     {
+        // emailexport always returns before reaching splitoutput/template/destination in ExecuteProfileAsync,
+        // and email grouping goes through EmailGroupBySplitKey inside the emailexport node's own config, not a splitoutput node
         var profile = PlainProfile();
         profile.IsEmailExport = true;
         profile.EmailTemplateId = 5;
@@ -56,8 +58,20 @@ public class ProfileGraphBackfillMigrationTests
 
         var graph = ProfileGraphBackfillMigration.Build(profile);
 
-        graph.Nodes.Select(n => n.Type).Should().Equal(
-            "source", "emailexport", "splitoutput", "template", "destination", "postprocess");
+        graph.Nodes.Select(n => n.Type).Should().Equal("source", "emailexport", "postprocess");
+    }
+
+    [Fact]
+    public void Build_SplitProfile_KeepsTemplateAndDestinationAlongsideSplitoutput()
+    {
+        var profile = PlainProfile();
+        profile.SplitEnabled = true;
+        profile.SplitKeyColumn = "Region";
+        profile.TemplateId = 9;
+
+        var graph = ProfileGraphBackfillMigration.Build(profile);
+
+        graph.Nodes.Select(n => n.Type).Should().Equal("source", "splitoutput", "template", "destination");
     }
 
     [Fact]
