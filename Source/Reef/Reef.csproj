@@ -22,6 +22,8 @@
     <PackageReference Include="HtmlAgilityPack" />
     <PackageReference Include="MailKit" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols" />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
@@ -38,6 +40,7 @@
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.EventLog" />
     <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
     <PackageReference Include="SSH.NET" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="YamlDotNet" />

@@ -63,7 +63,13 @@ window.editConnection = function(id) {
 
 // Delete connection
 window.deleteConnection = async function(id, name) {
-    if (!confirm(`Are you sure you want to delete connection "${name}"? This action cannot be undone.`)) return;
+    const confirmed = await showConfirmModal({
+        title: 'Delete this connection?',
+        message: `Are you sure you want to delete connection "${name}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        danger: true
+    });
+    if (!confirmed) return;
     try {
         const response = await fetch(`/api/connections/${id}`, {
             method: 'DELETE',

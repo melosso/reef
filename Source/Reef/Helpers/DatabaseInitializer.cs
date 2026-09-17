@@ -58,6 +58,7 @@ public class DatabaseInitializer
 
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
+        await CreateOidcSettingsTableAsync(connection);
 
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
@@ -67,6 +68,9 @@ public class DatabaseInitializer
 
         // Application Startup Tracking
         await CreateApplicationStartupTableAsync(connection);
+
+        // Store guided recipe wizard run state
+        await CreateRecipeRunsTableAsync(connection);
 
         // Apply schema migrations for existing databases
         await ApplyMigrationsAsync(connection);
@@ -272,6 +276,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
                 Code TEXT NOT NULL DEFAULT '',
+                CanvasLayoutJson TEXT NULL,
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
@@ -498,7 +503,8 @@ public class DatabaseInitializer
                 LastSeenAt TEXT NULL,
                 IsDeleted INTEGER NOT NULL DEFAULT 0,
                 DeletedAt TEXT NULL,
-                DeletedBy TEXT NULL
+                DeletedBy TEXT NULL,
+                OidcSubject TEXT NOT NULL DEFAULT ''
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username COLLATE NOCASE);
@@ -848,6 +854,26 @@ public class DatabaseInitializer
         await connection.ExecuteAsync(sql);
     }
 
+    private async Task CreateOidcSettingsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS OidcSettings (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                IsEnabled INTEGER NOT NULL DEFAULT 0,
+                Name TEXT NOT NULL DEFAULT 'Single Sign-On',
+                Authority TEXT NOT NULL DEFAULT '',
+                ClientId TEXT NOT NULL DEFAULT '',
+                ClientSecretEncrypted TEXT NULL,
+                Scopes TEXT NOT NULL DEFAULT 'openid profile email',
+                UsernameClaim TEXT NOT NULL DEFAULT 'preferred_username',
+                EmailClaim TEXT NOT NULL DEFAULT 'email',
+                CreateAccounts INTEGER NOT NULL DEFAULT 0,
+                UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            );
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
     private async Task CreateNotificationEmailTemplateTableAsync(SqliteConnection connection)
     {
         var sql = @"
@@ -1031,6 +1057,30 @@ public class DatabaseInitializer
         }
     }
 
+    // Store guided recipe wizard run state - tracks progress through a recipe's steps
+    // so a user can close the wizard mid-setup and resume exactly where they left off.
+    private async Task CreateRecipeRunsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS RecipeRuns (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                RecipeKey TEXT NOT NULL,
+                Status TEXT NOT NULL DEFAULT 'InProgress',
+                CurrentStepKey TEXT NULL,
+                StepStateJson TEXT NULL,
+                CreatedAt TEXT NOT NULL,
+                UpdatedAt TEXT NOT NULL,
+                CreatedBy INTEGER NULL,
+                CompletedAt TEXT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_recipekey ON RecipeRuns(RecipeKey);
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_status ON RecipeRuns(Status);
+            CREATE INDEX IF NOT EXISTS idx_reciperuns_createdby ON RecipeRuns(CreatedBy);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
     private async Task CreateDefaultUser(SqliteConnection connection)
     {
         const string checkUserSql = "SELECT COUNT(*) FROM Users";
@@ -1059,7 +1109,7 @@ public class DatabaseInitializer
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin, password: admin123)");
+            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
             Log.Warning("! Password change will be required on first login");
             Log.Information("");
         }
@@ -1508,6 +1558,14 @@ public class DatabaseInitializer
 
         // Add OutputTargetsJson column to ImportProfileExecutions for fan-out results
         await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "OutputTargetsJson", "TEXT NULL");
+
+        // Add Script pre/post-process observability columns to ImportProfileExecutions
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessExitCode", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessExitCode", "INTEGER NULL");
 
         Log.Debug("Database schema migrations completed");
     }
@@ -3249,6 +3307,14 @@ public class DatabaseInitializer
 
                 -- Fan-out output target results (JSON array)
                 OutputTargetsJson       TEXT    NULL,
+
+                -- Script pre/post-process observability
+                PreProcessStdout        TEXT    NULL,
+                PreProcessStderr        TEXT    NULL,
+                PreProcessExitCode      INTEGER NULL,
+                PostProcessStdout       TEXT    NULL,
+                PostProcessStderr       TEXT    NULL,
+                PostProcessExitCode     INTEGER NULL,
 
                 FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
             );

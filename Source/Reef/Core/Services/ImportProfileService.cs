@@ -300,7 +300,13 @@ public class ImportProfileService
                 DeltaSyncUnchangedRows = @DeltaSyncUnchangedRows,
                 DeltaSyncDeletedRows = @DeltaSyncDeletedRows,
                 PhaseTimingsJson = @PhaseTimingsJson,
-                OutputTargetsJson = @OutputTargetsJson
+                OutputTargetsJson = @OutputTargetsJson,
+                PreProcessStdout = @PreProcessStdout,
+                PreProcessStderr = @PreProcessStderr,
+                PreProcessExitCode = @PreProcessExitCode,
+                PostProcessStdout = @PostProcessStdout,
+                PostProcessStderr = @PostProcessStderr,
+                PostProcessExitCode = @PostProcessExitCode
             WHERE Id = @Id";
 
         var rows = await conn.ExecuteAsync(sql, exec);

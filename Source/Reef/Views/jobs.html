@@ -31,7 +31,7 @@
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-sm font-semibold text-gray-700">Filters</h2>
                         <div class="flex items-center gap-3">
-                            <button onclick="clearAllFilters()" class="text-sm text-blue-600 hover:text-blue-700 font-medium" id="clear-filters-btn" style="display:none;">
+                            <button onclick="clearAllFilters()" class="text-sm text-teal-600 hover:text-teal-700 font-medium" id="clear-filters-btn" style="display:none;">
                                 Clear All
                             </button>
                             <button onclick="toggleQueueMetrics()"
@@ -111,65 +111,36 @@
                 <div id="queue-metrics-panel" class="bg-white rounded-lg shadow p-4 mb-6 hidden">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-lg font-semibold text-slate-900 flex items-center">
-                            <i data-lucide="layers" class="h-5 w-5 mr-2 text-blue-600"></i>
+                            <i data-lucide="layers" class="h-5 w-5 mr-2 text-teal-600"></i>
                             Queue Metrics
                         </h2>
                         <button onclick="refreshQueueMetrics()" 
-                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                                class="text-sm text-teal-600 hover:text-teal-800 flex items-center">
                             <i data-lucide="refresh-cw" class="h-4 w-4 mr-1"></i>
                             Refresh
                         </button>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <!-- Queue Depth -->
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-blue-600 font-medium">Queue Depth</p>
-                                    <p id="queue-depth" class="text-2xl font-bold text-blue-700">-</p>
-                                    <p class="text-xs text-blue-500 mt-1">Jobs waiting</p>
-                                </div>
-                                <i data-lucide="inbox" class="h-8 w-8 text-blue-400"></i>
-                            </div>
+                    <div class="flex items-stretch bg-white rounded-lg border border-slate-200 divide-x divide-slate-100">
+                        <div class="flex-1 px-5 py-4">
+                            <p class="text-gray-500 text-xs mb-1">Queue depth</p>
+                            <p id="queue-depth" class="text-2xl font-bold text-gray-900">-</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Jobs waiting</p>
                         </div>
-                        
-                        <!-- Active Jobs -->
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-green-600 font-medium">Active</p>
-                                    <p id="queue-active" class="text-2xl font-bold text-green-700">-</p>
-                                    <p class="text-xs text-green-500 mt-1">Currently running</p>
-                                </div>
-                                <i data-lucide="activity" class="h-8 w-8 text-green-400"></i>
-                            </div>
+                        <div class="flex-1 px-5 py-4">
+                            <p class="text-gray-500 text-xs mb-1">Active</p>
+                            <p id="queue-active" class="text-2xl font-bold text-gray-900">-</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Currently running</p>
                         </div>
-                        
-                        <!-- Available Slots -->
-                        <div class="bg-purple-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-purple-600 font-medium">Available</p>
-                                    <p id="queue-available" class="text-2xl font-bold text-purple-700">-</p>
-                                    <p class="text-xs text-purple-500 mt-1">
-                                        of <span id="queue-max">10</span> slots
-                                    </p>
-                                </div>
-                                <i data-lucide="cpu" class="h-8 w-8 text-purple-400"></i>
-                            </div>
+                        <div class="flex-1 px-5 py-4">
+                            <p class="text-gray-500 text-xs mb-1">Available</p>
+                            <p id="queue-available" class="text-2xl font-bold text-gray-900">-</p>
+                            <p class="text-xs text-gray-400 mt-0.5">of <span id="queue-max">10</span> slots</p>
                         </div>
-                        
-                        <!-- Throughput -->
-                        <div class="bg-orange-50 rounded-lg p-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <p class="text-sm text-orange-600 font-medium">Processed</p>
-                                    <p id="queue-processed" class="text-2xl font-bold text-orange-700">-</p>
-                                    <p class="text-xs text-orange-500 mt-1">Total executed</p>
-                                </div>
-                                <i data-lucide="trending-up" class="h-8 w-8 text-orange-400"></i>
-                            </div>
+                        <div class="flex-1 px-5 py-4">
+                            <p class="text-gray-500 text-xs mb-1">Processed</p>
+                            <p id="queue-processed" class="text-2xl font-bold text-gray-900">-</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Total executed</p>
                         </div>
                     </div>
                     
@@ -181,64 +152,39 @@
                         </div>
                         <div class="w-full bg-gray-200 rounded-full h-2">
                             <div id="queue-usage-bar" 
-                                 class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                                 class="bg-teal-600 h-2 rounded-full transition-all duration-300" 
                                  style="width: 0%">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Statistics Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-                    <div class="bg-gray-50 rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-slate-600">Total Jobs</p>
-                                <p id="stat-total" class="text-2xl font-bold text-gray-700">0</p>
-                            </div>
-                            <i data-lucide="briefcase" class="h-8 w-8 text-gray-400"></i>
-                        </div>
+                <!-- Statistics -->
+                <div class="flex items-stretch bg-white rounded-lg border border-slate-200 mb-6 divide-x divide-slate-100">
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Total jobs</p>
+                        <p id="stat-total" class="text-2xl font-bold text-gray-900">0</p>
                     </div>
-                    <div class="bg-green-50 rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-green-600">Running</p>
-                                <p id="stat-running" class="text-2xl font-bold text-green-700">0</p>
-                            </div>
-                            <i data-lucide="play-circle" class="h-8 w-8 text-green-500"></i>
-                        </div>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Running</p>
+                        <p id="stat-running" class="text-2xl font-bold text-green-600">0</p>
                     </div>
-                    <div class="bg-blue-50 rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-blue-600">Queued</p>
-                                <p id="stat-queued" class="text-2xl font-bold text-blue-700">0</p>
-                            </div>
-                            <i data-lucide="clock" class="h-8 w-8 text-blue-500"></i>
-                        </div>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Queued</p>
+                        <p id="stat-queued" class="text-2xl font-bold text-teal-600">0</p>
                     </div>
-                    <div class="bg-yellow-50 rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-yellow-600">Idle</p>
-                                <p id="stat-idle" class="text-2xl font-bold text-yellow-700">0</p>
-                            </div>
-                            <i data-lucide="pause-circle" class="h-8 w-8 text-yellow-500"></i>
-                        </div>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Idle</p>
+                        <p id="stat-idle" class="text-2xl font-bold text-yellow-600">0</p>
                     </div>
-                    <div class="bg-red-50 rounded-lg shadow p-4">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm text-red-600">Failed</p>
-                                <p id="stat-failed" class="text-2xl font-bold text-red-700">0</p>
-                            </div>
-                            <i data-lucide="alert-circle" class="h-8 w-8 text-red-500"></i>
-                        </div>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Failed</p>
+                        <p id="stat-failed" class="text-2xl font-bold text-red-600">0</p>
                     </div>
                 </div>
 
                 <!-- Auto-Paused Jobs Banner -->
-                <div id="auto-paused-banner" class="hidden bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-r-lg" style="display: none;">
+                <div id="auto-paused-banner" class="hidden bg-red-50 border border-red-200 p-4 mb-6 rounded-lg" style="display: none;">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-3">
                             <i data-lucide="pause-circle" class="h-6 w-6 text-red-600 flex-shrink-0"></i>
@@ -312,11 +258,11 @@
     </div>
 
     <!-- Add Job Modal -->
-    <div id="add-job-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="add-job-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeAddJobModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-3xl shadow-lg rounded-md bg-white mb-20">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="job-modal-title" class="text-lg font-semibold text-slate-900">New Job</h3>
-                <button onclick="closeAddJobModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closeAddJobModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -325,7 +271,7 @@
             <div class="border-b border-gray-200 mb-4">
                 <nav class="-mb-px flex space-x-8">
                     <button id="jobGeneralTabButton" onclick="showJobTab('jobGeneral')" 
-                            class="job-tab-btn job-tab-active border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                            class="job-tab-btn job-tab-active border-teal-600 text-teal-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
                         General
                     </button>
                     <button id="jobWebhooksTabButton" onclick="showJobTab('jobWebhooks')" 
@@ -443,7 +389,7 @@
 
                         <div class="flex items-center mt-6">
                             <input type="checkbox" id="job-allowConcurrent"
-                                   class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                   class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                             <label for="job-allowConcurrent" class="ml-2 block text-sm text-gray-900">Allow Concurrent</label>
                         </div>
                     </div>
@@ -457,13 +403,13 @@
 
                     <div class="flex items-center">
                         <input type="checkbox" id="job-enabled" checked
-                               class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                               class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                         <label for="job-enabled" class="ml-2 block text-sm text-gray-900">Enabled</label>
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" id="job-autoPauseEnabled" checked
-                               class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                               class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                         <label for="job-autoPauseEnabled" class="ml-2 block text-sm text-gray-900">
                             Auto-pause after 10 consecutive failures
                             <span class="text-gray-500 text-xs ml-1">* Recommended</span>
@@ -473,13 +419,13 @@
 
                 <!-- Webhooks Tab Content -->
                 <div id="jobWebhooks" class="job-tab-content hidden space-y-4">
-                    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                    <div class="bg-teal-50 border border-teal-200 p-4 mb-4 rounded-md">
                         <div class="flex">
                             <div class="flex-shrink-0">
-                                <i data-lucide="info" class="h-5 w-5 text-blue-400"></i>
+                                <i data-lucide="info" class="h-5 w-5 text-teal-500"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-blue-700">
+                                <p class="text-sm text-teal-700">
                                     Webhooks allow you to trigger this job via HTTP POST requests from external systems.
                                 </p>
                             </div>
@@ -489,7 +435,7 @@
                     <div class="flex justify-between items-center">
                         <h4 class="text-sm font-medium text-gray-900">Active Webhooks</h4>
                         <button type="button" id="createJobWebhookBtn" 
-                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
                             <i data-lucide="plus" class="h-4 w-4 mr-1"></i>
                             Create Webhook
                         </button>
@@ -506,7 +452,7 @@
                         Cancel
                     </button>
                     <button type="submit" 
-                            class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">
+                            class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">
                         Save Job
                     </button>
                 </div>
@@ -556,20 +502,20 @@
             const statusValue = typeof status === 'string' ? statusEnumMap[status] : status;
             
             switch(statusValue) {
-                case 0: return { label: 'Idle', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'pause-circle' };
-                case 1: return { label: 'Queued', color: 'text-blue-600', bg: 'bg-blue-100', icon: 'clock' };
-                case 2: return { label: 'Running', color: 'text-green-600', bg: 'bg-green-100', icon: 'play-circle' };
-                case 3: return { label: 'Completed', color: 'text-green-600', bg: 'bg-green-100', icon: 'check-circle' };
-                case 4: return { label: 'Failed', color: 'text-red-600', bg: 'bg-red-100', icon: 'alert-circle' };
-                case 5: return { label: 'Cancelled', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'x-circle' };
-                default: return { label: 'Unknown', color: 'text-gray-600', bg: 'bg-gray-100', icon: 'help-circle' };
+                case 0: return { label: 'Idle', color: 'text-gray-600', icon: 'pause-circle' };
+                case 1: return { label: 'Queued', color: 'text-teal-600', icon: 'clock' };
+                case 2: return { label: 'Running', color: 'text-green-600', icon: 'play-circle' };
+                case 3: return { label: 'Completed', color: 'text-green-600', icon: 'check-circle' };
+                case 4: return { label: 'Failed', color: 'text-red-600', icon: 'alert-circle' };
+                case 5: return { label: 'Cancelled', color: 'text-gray-600', icon: 'x-circle' };
+                default: return { label: 'Unknown', color: 'text-gray-600', icon: 'help-circle' };
             }
         }
 
         function getJobTypeInfo(type) {
             switch(type) {
                 case 'ProfileExecution': 
-                case 0: return { label: 'Profile Export', icon: 'file-code', color: 'text-blue-600' };
+                case 0: return { label: 'Profile Export', icon: 'file-code', color: 'text-teal-600' };
                 case 'DataTransfer': 
                 case 1: return { label: 'Data Transfer', icon: 'arrow-right-left', color: 'text-purple-600' };
                 case 'CustomScript': 
@@ -593,7 +539,7 @@
             switch(scheduleValue) {
                 case 0: return { label: 'Manual', icon: 'hand', color: 'text-gray-600' };
                 case 1: return { label: 'Cron', icon: 'calendar', color: 'text-purple-600' };
-                case 2: return { label: 'Interval', icon: 'repeat', color: 'text-blue-600' };
+                case 2: return { label: 'Interval', icon: 'repeat', color: 'text-teal-600' };
                 case 3: return { label: 'Daily', icon: 'sun', color: 'text-yellow-600' };
                 case 4: return { label: 'Weekly', icon: 'calendar-days', color: 'text-indigo-600' };
                 case 5: return { label: 'Monthly', icon: 'calendar-range', color: 'text-pink-600' };
@@ -616,7 +562,7 @@
             
             // Remove active class from all buttons
             document.querySelectorAll('.job-tab-btn').forEach(btn => {
-                btn.classList.remove('job-tab-active', 'border-blue-500', 'text-blue-600');
+                btn.classList.remove('job-tab-active', 'border-teal-600', 'text-teal-600');
                 btn.classList.add('border-transparent', 'text-gray-500');
             });
             
@@ -625,7 +571,7 @@
             
             // Add active class to selected button
             const activeBtn = document.getElementById(tabName + 'TabButton');
-            activeBtn.classList.add('job-tab-active', 'border-blue-500', 'text-blue-600');
+            activeBtn.classList.add('job-tab-active', 'border-teal-600', 'text-teal-600');
             activeBtn.classList.remove('border-transparent', 'text-gray-500');
             
             queueLucideRender();
@@ -661,7 +607,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">
                                 Start Time
-                                <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                                <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 inline-block" id="job-server-time">00:00:00</code>
                             </label>
                             <input type="time" id="job-startTime" value="02:00"
                                    class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
@@ -675,31 +621,31 @@
                                 <label class="block text-sm font-medium text-slate-700 mb-2">Days of Week</label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-0" value="0" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-0" value="0" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Monday</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-1" value="1" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-1" value="1" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Tuesday</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-2" value="2" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-2" value="2" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Wednesday</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-3" value="3" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-3" value="3" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Thursday</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-4" value="4" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-4" value="4" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Friday</span>
                                     </label>
                                     <label class="flex items-center">
-                                        <input type="checkbox" id="job-weekday-5" value="5" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-5" value="5" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Saturday</span>
                                     </label>
                                     <label class="flex items-center col-span-2">
-                                        <input type="checkbox" id="job-weekday-6" value="6" class="h-4 w-4 text-blue-600 rounded">
+                                        <input type="checkbox" id="job-weekday-6" value="6" class="h-4 w-4 text-teal-600 rounded">
                                         <span class="ml-2 text-sm text-gray-700">Sunday</span>
                                     </label>
                                 </div>
@@ -707,7 +653,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Start Time
-                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 inline-block" id="job-server-time">00:00:00</code>
                                 </label>
                                 <input type="time" id="job-startTime" value="02:00"
                                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
@@ -727,7 +673,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Start Time
-                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 font-mono inline-block" id="job-server-time">00:00:00</code>
+                                    <code class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs ml-2 inline-block" id="job-server-time">00:00:00</code>
                                 </label>
                                 <input type="time" id="job-startTime" value="02:00"
                                        class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]">
@@ -1325,7 +1271,6 @@
                     label: 'Auto-Paused',
                     icon: 'pause-circle',
                     color: 'text-red-700',
-                    bg: 'bg-red-100',
                     description: 'Paused after 10 consecutive failures'
                 };
             }
@@ -1337,7 +1282,6 @@
                     label: 'Failing',
                     icon: 'alert-triangle',
                     color: 'text-orange-700',
-                    bg: 'bg-orange-100',
                     description: `${failures} failures - may auto-pause soon`
                 };
             }
@@ -1347,7 +1291,6 @@
                     label: 'Warning',
                     icon: 'alert-circle',
                     color: 'text-yellow-700',
-                    bg: 'bg-yellow-100',
                     description: `${failures} consecutive failures`
                 };
             }
@@ -1357,7 +1300,6 @@
                     label: 'Disabled',
                     icon: 'x-circle',
                     color: 'text-gray-700',
-                    bg: 'bg-gray-100',
                     description: 'Manually disabled by user'
                 };
             }
@@ -1366,7 +1308,6 @@
                 label: 'Healthy',
                 icon: 'check-circle',
                 color: 'text-green-700',
-                bg: 'bg-green-100',
                 description: 'Running normally'
             };
         }
@@ -1546,7 +1487,7 @@
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center space-x-2">
                                         <p class="text-sm font-semibold text-gray-900 truncate">${escapeHtml(job.name)}</p>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${healthInfo.bg} ${healthInfo.color}">
+                                        <span class="inline-flex items-center text-xs font-semibold ${healthInfo.color}">
                                             <i data-lucide="${healthInfo.icon}" class="h-3 w-3 mr-1"></i>
                                             ${healthInfo.label}
                                         </span>
@@ -1601,7 +1542,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.bg} ${statusInfo.color}">
+                            <span class="inline-flex items-center text-xs font-semibold ${statusInfo.color}">
                                 <i data-lucide="${statusInfo.icon}" class="h-3 w-3 mr-1"></i>
                                 ${statusInfo.label}
                             </span>
@@ -1676,13 +1617,13 @@
                                         ${job.profileId ? `
                                         <div>
                                             <dt class="text-gray-500">Profile:</dt>
-                                            <dd class="font-medium text-blue-600">${escapeHtml(job.profileName || 'Unknown')}</dd>
+                                            <dd class="font-medium text-teal-600">${escapeHtml(job.profileName || 'Unknown')}</dd>
                                         </div>
                                         ` : ''}
                                         ${job.destinationId ? `
                                         <div>
                                             <dt class="text-gray-500">Destination:</dt>
-                                            <dd class="font-medium text-blue-600">${escapeHtml(destinations.find(d => d.id === job.destinationId)?.name || 'Unknown')}</dd>
+                                            <dd class="font-medium text-teal-600">${escapeHtml(destinations.find(d => d.id === job.destinationId)?.name || 'Unknown')}</dd>
                                         </div>
                                         ` : ''}
                                         <div>
@@ -1693,7 +1634,7 @@
                                 </div>
                             </div>
                             <div class="mt-4 flex justify-end">
-                                <button onclick="viewJobHistory(${job.id})" class="text-sm text-blue-600 hover:text-blue-800 flex items-center">
+                                <button onclick="viewJobHistory(${job.id})" class="text-sm text-teal-600 hover:text-teal-800 flex items-center">
                                     <i data-lucide="external-link" class="h-4 w-4 mr-1"></i>
                                     View Full Execution History
                                 </button>
@@ -2145,7 +2086,7 @@
                                         <span class="text-sm text-slate-500">Triggered ${webhook.triggerCount || 0} times</span>
                                     </div>
                                     <div class="flex items-center space-x-2 mb-2">
-                                        <code class="flex-1 px-3 py-2 bg-gray-100 rounded text-xs font-mono text-gray-700 overflow-x-auto">
+                                        <code class="flex-1 px-3 py-2 bg-gray-100 rounded text-xs text-gray-700 overflow-x-auto">
                                             ${window.location.origin}/webhooks/${webhook.token}
                                         </code>
                                         <button onclick="copyJobWebhookUrl('${webhook.token}')" class="p-2 text-gray-400 hover:text-gray-600" title="Copy URL" aria-label="Copy webhook URL">
@@ -2168,7 +2109,7 @@
                                         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
                                     </button>
                                     <button onclick="testJobWebhook('${webhook.token}')"
-                                            class="p-2 text-blue-400 hover:text-blue-600"
+                                            class="p-2 text-teal-500 hover:text-teal-600"
                                             title="Test Webhook"
                                             aria-label="Test webhook">
                                         <i data-lucide="send" class="w-4 h-4"></i>
@@ -2324,31 +2265,31 @@
                         <div class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
                             <div class="flex items-start justify-between mb-4">
                                 <h3 class="text-lg font-medium text-gray-900">Test Webhook</h3>
-                                <button onclick="closeTestJobWebhookModal()" class="text-gray-400 hover:text-gray-600">
+                                <button onclick="closeTestJobWebhookModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close">
                                     <i data-lucide="x" class="w-5 h-5"></i>
                                 </button>
                             </div>
                             <div class="space-y-4">
                                 <div>
                                     <p class="text-sm text-gray-600 mb-2">Use this curl command to test the webhook:</p>
-                                    <div class="bg-gray-900 text-gray-100 rounded p-4 font-mono text-xs overflow-x-auto">
+                                    <div class="bg-gray-900 text-gray-100 rounded p-4 text-xs overflow-x-auto">
                                         ${curlCommand}
                                     </div>
                                     <button onclick="copyToClipboard(\`${curlCommand.replace(/`/g, '\\`')}\`).then(ok => showToast(ok ? 'Command copied!' : 'Failed to copy', ok ? 'success' : 'error'));"
-                                            class="mt-2 text-sm text-blue-600 hover:text-blue-700">
+                                            class="mt-2 text-sm text-teal-600 hover:text-teal-700">
                                         <i data-lucide="copy" class="w-4 h-4 inline mr-1"></i>
                                         Copy command
                                     </button>
                                 </div>
-                                <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
-                                    <p class="text-sm text-blue-700">
+                                <div class="bg-teal-50 border border-teal-200 p-3 rounded-md">
+                                    <p class="text-sm text-teal-700">
                                         <strong>Tip:</strong> You can add custom parameters in the JSON body to pass data to your job.
                                     </p>
                                 </div>
                             </div>
                             <div class="mt-6 flex justify-end">
                                 <button onclick="closeTestJobWebhookModal()"
-                                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                        class="px-4 py-2 bg-slate-900 text-white rounded hover:bg-slate-800">
                                     Close
                                 </button>
                             </div>
@@ -2372,12 +2313,12 @@
             const modal = `
                 <div id="jobWebhookTokenModal" class="fixed z-50 inset-0 overflow-y-auto">
                     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+                        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeJobWebhookTokenModal()"></div>
                         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div class="sm:flex sm:items-start">
-                                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                                        <i data-lucide="link" class="h-6 w-6 text-blue-600"></i>
+                                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-slate-100 sm:mx-0 sm:h-10 sm:w-10">
+                                        <i data-lucide="link" class="h-6 w-6 text-teal-600"></i>
                                     </div>
                                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
                                         <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Webhook URL</h3>
@@ -2390,8 +2331,8 @@
                                             <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
                                             Copy URL
                                         </button>
-                                        <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
-                                            <p class="text-sm text-blue-700">
+                                        <div class="bg-teal-50 border border-teal-200 p-3 rounded-md">
+                                            <p class="text-sm text-teal-700">
                                                 <strong>Example:</strong><br>
                                                 <code class="text-xs">curl -X POST ${webhookUrl}</code>
                                             </p>
@@ -2401,7 +2342,7 @@
                             </div>
                             <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                                 <button onclick="closeJobWebhookTokenModal()" 
-                                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-slate-900 text-base font-medium text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 sm:ml-3 sm:w-auto sm:text-sm">
                                     <i data-lucide="check" class="w-4 h-4 mr-2"></i>
                                     Done
                                 </button>

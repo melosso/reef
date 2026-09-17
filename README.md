@@ -1,38 +1,36 @@
-# 🌟 Reef
+# 〰️ Reef
 
 [![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
 [![Latest Release](https://img.shields.io/github/v/release/melosso/reef)](https://github.com/melosso/reef/releases/latest)
+[![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
 
-This is **Reef**. It's a web-based integration platform that orchestrates your data workflows. It lets you run queries, transform results, and deliver them to multiple destinations, all from a single easy-to-use interface. Manage connections, profiles, and scheduled executions centrally. All low code, no scripts unless you need them.
+**Reef** is a low-code web platform built to orchestrate your data workflows. Query databases, transform payloads, and deliver files to any destination from a single dashboard. Effortlessly manage connections, export profiles, and automated schedules with zero scripting required.
 
 ![Screenshot of Reef](https://github.com/melosso/reef/blob/main/.github/images/screenshot.webp?raw=true)
 
 ## What is Reef?
 
+Reef automates data exports, integration pipelines, and background synchronizations all from an intuitive interface. Query databases using native SQL, transform outputs with optional Scriban templates, and generate raw data or formatted documents directly through your browser.
+
 > [!IMPORTANT]  
-> Reef is currently in development, though stable to use. Expect breaking changes, be cautious during updates.
+> Reef is actively in development. While stable for production use, expect breaking changes during updates.
 
-Reef automates data exports for **reporting workflows**, **integration pipelines**, and **data synchronization** with customizable data structures. Keep it low-code, set-up your own custom templates if necessary, and export data effortlessly. 
+**Key Capabilities**
 
-**Some of the key capabilities:**
+* **Database Connections**: Connect natively to PostgreSQL, MySQL, or SQL Server with reusable connection profiles.
+* **Formats & Documents**: Export directly to JSON, XML, CSV, or YAML, or generate paginated PDF and DOCX files for invoices and reports.
+* **Destinations**: Deliver files to local storage, FTP/SFTP, AWS S3, Azure Blob, HTTP webhooks, SMB, or email.
+* **Automation**: Trigger jobs via cron expressions, fixed time intervals, or incoming webhooks.
+* **Security & Observability**: Includes credential encryption, JWT authentication, record validation, and complete execution history logging.
 
-- **Web-based interface**: Manage everything through the browser
-- **Connection management**:  PostgreSQL MySQL or SQL Server. Store and reuse database connections across profiles
-- **Multiple formats**: JSON, XML, CSV, YAML with optional [Scriban](https://github.com/scriban/scriban) templates
-- **Document generation**: Generate paginated PDF and DOCX documents (such as invoices, reports, picklists) 
-- **Flexible destinations**: Local, FTP/SFTP, AWS S3, Azure Blob, HTTP, SMB, SMTP
-- **Job scheduling**: Cron expressions, intervals, or webhook triggers
-- **Execution history**: Track all runs with detailed logging
-- **Security first**: Encrypted credentials, record validation and JWT's
-
-In other words, Reef can assist you in quickly getting data synchronisation going. Use your native database languages, or extend your results with (optional) advanced templating.
+Set up low-code export workflows in minutes using standard database queries and clean, lightweight tools.
 
 ---
 
 ## Getting Started
 
-We've prepared two methods to deploy Reef. It's up to you to choose your preferred method:
+The fastest way to get Reef running, is by using Docker:
+
 
 ### Docker Compose (Recommended)
 ```yaml
@@ -65,13 +63,16 @@ Access at **http://localhost:8085**
 
 Upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. After you log in, follow the steps to change your password right away.
 
-### Windows Installation
+<summary>
+<details>How to install on Windows</details>
+
+**Windows Installation**
 
 Download the latest release from Releases.
 
 1. **Install .NET 10 Runtime:**
 ```powershell
-   winget install --id Microsoft.DotNet.Runtime.9 -e
+   winget install --id Microsoft.DotNet.Runtime.10 -e
 ```
 
 2. **Set encryption key:**
@@ -89,13 +90,19 @@ Download the latest release from Releases.
 
 As mentioned hereabove, upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. You will be prompted to change them immediately.
 
+</summary>
+
 ---
 
 ## How It Works
 
-You can centralize your database credentials easily; create one connection for many profiles. You can tag these profiles by assigning a `Group` to them. Then, create an export definition by creating a `Profile` that'll be assigned a destination:
+You can centralize your database credentials easily; create one connection for many profiles. You can tag these profiles by assigning a `Group` to them. Then, create an export definition by creating a `Profile` that'll be assigned a destination and you'll be ready.
 
-#### Multiple Destinations
+<summary>
+<details>Multiple destinations</details>
+
+We support various destinations:
+
 - **Local filesystem**: with date/profile variables
 - **FTP/SFTP**: with SSL and passive mode
 - **Cloud storage**: AWS S3, Azure Blob
@@ -103,7 +110,11 @@ You can centralize your database credentials easily; create one connection for m
 - **SMB shares**: Windows network drives
 - **E-mail**: various SMTP providers supported
 
-#### Custom Templates
+</summary>
+
+<summary>
+<details>Custom Templates</details>
+
 Use Scriban for advanced transformations. If you're interested in more examples, make sure to checkout our `Examples/` folder.
 
 ```scriban
@@ -117,7 +128,10 @@ Use Scriban for advanced transformations. If you're interested in more examples,
 }
 ```
 
-#### Document Generation (PDF, DOCX)
+</summary>
+
+<summary>
+<details>Document Generation</details>
 
 Reef includes built-in document generation capabilities for creating professional PDF and DOCX documents directly from your query results:
 
@@ -168,7 +182,10 @@ Reef includes built-in document generation capabilities for creating professiona
 {{/ footer }}
 ```
 
-#### Job Scheduling
+</summary>
+
+<summary>
+<details>Scheduling</details>
 
 After creating a job, you can schedule it using various methods such as:
 
@@ -176,23 +193,10 @@ After creating a job, you can schedule it using various methods such as:
 - **Interval:** Every 15 minutes
 - **Webhooks:** Trigger via HTTP POST
 
-## Security
-
-We've made sure to keep your data safe. Here's a glimpse on how we do this:
-
-- **Encrypted credentials**: Sensitive data is stored using RSA+AES hybrid encryption
-- **Transient execution**: Exchanged data exists only in memory while being processed, nothing persists *
-- **Hash validation**: Detect configuration tampering
-- **Audit logging**: Every change is tracked for accountability
-
-Remark: * Outgoing mail temporarily persist recipient information, until approved by the (when using the email approval option).
+</summary>
 
 > [!IMPORTANT] 
 > Since this application is built for local data orchistration, make sure to **never expose** Reef outside of your network. If you need to reach it from outside, expose only the `/api` routes and run them through Nginx or whatever reverse proxy you use. There's an IIS example in [web.config.md](web.config.md) if you need a starting point, though you'l likely have to tweak it for your setup.
-
-## Lore
-
-> Reef comes from the idea of a coral reef, something that grows slowly from countless small bits until it becomes its own world. Database exports feel the same way. Each customer, each dump, each migration, another layer added to the structure. It's alive in its own way, even if it's just data.
 
 ## License
 

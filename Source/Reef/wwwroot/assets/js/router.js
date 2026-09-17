@@ -167,17 +167,19 @@
     }
 
     //  Active nav updater
+    // Must mirror the classes Program.cs writes into {{NAV_x}} server-side,
+    // so SPA navigation and a full page load always agree on the active page.
     function setActiveNav(pageName) {
         document.querySelectorAll('#sidebar nav a[href]').forEach(a => {
             const href = a.getAttribute('href').replace(/^\//, '');
-            a.classList.remove('bg-slate-800', 'bg-slate-900', 'text-slate-100',
-                               'hover:bg-slate-700', 'hover:bg-slate-800', 'hover:text-slate-100');
+            a.classList.remove('bg-teal-500/10', 'text-teal-300',
+                               'hover:bg-zinc-800/60', 'hover:text-zinc-200');
             a.removeAttribute('aria-current');
             if (href === pageName) {
-                a.classList.add('bg-slate-800', 'text-slate-100');
+                a.classList.add('bg-teal-500/10', 'text-teal-300');
                 a.setAttribute('aria-current', 'page');
             } else {
-                a.classList.add('hover:bg-slate-800', 'hover:text-slate-100');
+                a.classList.add('hover:bg-zinc-800/60', 'hover:text-zinc-200');
             }
         });
     }
@@ -235,17 +237,9 @@
 
         const pageName = new URL(url, location.origin).pathname.replace(/^\//, '') || 'dashboard';
 
-        const doSwap = () => {
-            current.replaceWith(newContent);
-            document.title = newDoc.title;
-            setActiveNav(pageName);
-        };
-
-        if (document.startViewTransition) {
-            await document.startViewTransition(doSwap).finished;
-        } else {
-            doSwap();
-        }
+        current.replaceWith(newContent);
+        document.title = newDoc.title;
+        setActiveNav(pageName);
 
         // History
         if (pushState) {
@@ -314,6 +308,8 @@
         if (typeof window.enhanceInteractions === 'function') window.enhanceInteractions();
         if (typeof window.enhanceTooltips === 'function') window.enhanceTooltips();
         if (typeof window.responsiveGrids === 'function') window.responsiveGrids();
+        // New page swapped in new modal elements - watch them for dirty state too.
+        if (typeof window.reefSetupModalDirtyWatchers === 'function') window.reefSetupModalDirtyWatchers();
 
         // Scroll content area to top
         newContent.scrollTop = 0;

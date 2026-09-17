@@ -71,7 +71,6 @@
                                     placeholder="you@example.com">
                                 <p class="mt-1 text-xs text-slate-500">Used for email-based two-factor authentication.</p>
                             </div>
-                            <div id="profile-feedback" class="empty:hidden"></div>
                         </div>
                         <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
                             <button onclick="saveProfile()"
@@ -132,7 +131,6 @@
                                     class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs placeholder-slate-400 outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]"
                                     placeholder="••••••••" autocomplete="new-password">
                             </div>
-                            <div id="password-feedback" class="empty:hidden"></div>
                         </div>
                         <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
                             <button onclick="changePassword()"
@@ -165,7 +163,7 @@
                                 <h2 class="text-base font-semibold text-slate-900">Authenticator app</h2>
                                 <p class="mt-0.5 text-sm text-slate-500">Use your preferred TOTP, e.g. Authy, Google Authenticator, 1Password…</p>
                             </div>
-                            <div id="totp-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</div>
+                            <div id="totp-badge" class="hidden text-xs font-semibold text-green-700"><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-600 mr-1.5 align-middle"></span>Active</div>
                         </div>
 
                         <!-- Reconfirm step: verify existing TOTP before allowing reconfigure -->
@@ -185,7 +183,6 @@
                                     Cancel
                                 </button>
                             </div>
-                            <div id="totp-reconfirm-feedback" class="mt-2 empty:hidden"></div>
                         </div>
 
                         <!-- Setup flow -->
@@ -199,7 +196,7 @@
                                 </div>
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-slate-700 mb-2">Or enter the key manually</p>
-                                    <code id="totp-manual-key" class="block text-sm font-mono bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-slate-700 tracking-widest break-all select-all"></code>
+                                    <code id="totp-manual-key" class="block text-sm bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-slate-700 tracking-widest break-all select-all"></code>
                                     <p class="mt-2 text-xs text-slate-500">TOTP · SHA-1 · 6 digits · 30 s</p>
                                 </div>
                             </div>
@@ -218,7 +215,6 @@
                                         Cancel
                                     </button>
                                 </div>
-                                <div id="totp-verify-feedback" class="mt-2 empty:hidden"></div>
                             </div>
                         </div>
 
@@ -238,7 +234,7 @@
                                 <h2 class="text-base font-semibold text-slate-900">Email one-time code</h2>
                                 <p class="mt-0.5 text-sm text-slate-500">A 6-digit code is sent to your email at each sign-in.</p>
                             </div>
-                            <div id="email-mfa-badge" class="hidden text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</div>
+                            <div id="email-mfa-badge" class="hidden text-xs font-semibold text-green-700"><span class="inline-block w-1.5 h-1.5 rounded-full bg-green-600 mr-1.5 align-middle"></span>Active</div>
                         </div>
                         <div class="px-6 py-4 flex items-center justify-between">
                             <p id="email-mfa-status-text" class="text-sm text-slate-500">Not configured</p>
@@ -247,7 +243,6 @@
                                 Enable
                             </button>
                         </div>
-                        <div id="email-mfa-feedback" class="px-6 pb-4 empty:hidden"></div>
                     </div>
 
                 </div><!-- /mfa -->
