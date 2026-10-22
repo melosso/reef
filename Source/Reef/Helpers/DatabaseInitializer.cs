@@ -69,9 +69,6 @@ public class DatabaseInitializer
         // Application Startup Tracking
         await CreateApplicationStartupTableAsync(connection);
 
-        // Store guided recipe wizard run state
-        await CreateRecipeRunsTableAsync(connection);
-
         // Apply schema migrations for existing databases
         await ApplyMigrationsAsync(connection);
 
@@ -411,7 +408,7 @@ public class DatabaseInitializer
         // Check if table exists first
         var tableExistsSql = "SELECT name FROM sqlite_master WHERE type='table' AND name='WebhookTriggers';";
         var tableExists = await connection.QueryFirstOrDefaultAsync<string>(tableExistsSql);
-        
+
         if (tableExists == null)
         {
             // Create new table with full schema
@@ -444,7 +441,7 @@ public class DatabaseInitializer
             var checkColumnSql = "PRAGMA table_info(WebhookTriggers);";
             var columns = await connection.QueryAsync<dynamic>(checkColumnSql);
             var hasJobId = columns.Any(c => ((string)c.name).Equals("JobId", StringComparison.OrdinalIgnoreCase));
-            
+
             if (!hasJobId)
             {
                 Log.Information("Migrating WebhookTriggers table to add JobId column");
@@ -729,13 +726,13 @@ public class DatabaseInitializer
         // Check if table exists with wrong foreign key reference
         var tableExists = await connection.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='DeltaSyncState'");
-        
+
         if (tableExists > 0)
         {
             // Check if it has the wrong foreign key (to ProfileExecution instead of ProfileExecutions)
             var tableSql = await connection.ExecuteScalarAsync<string>(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='DeltaSyncState'");
-            
+
             if (tableSql != null && tableSql.Contains("ProfileExecution(Id)") && !tableSql.Contains("ProfileExecutions(Id)"))
             {
                 Log.Warning("DeltaSyncState table has incorrect foreign key reference, dropping and recreating...");
@@ -743,7 +740,7 @@ public class DatabaseInitializer
                 tableExists = 0;
             }
         }
-        
+
         if (tableExists == 0)
         {
             var sql = @"
@@ -1057,30 +1054,6 @@ public class DatabaseInitializer
         }
     }
 
-    // Store guided recipe wizard run state - tracks progress through a recipe's steps
-    // so a user can close the wizard mid-setup and resume exactly where they left off.
-    private async Task CreateRecipeRunsTableAsync(SqliteConnection connection)
-    {
-        var sql = @"
-            CREATE TABLE IF NOT EXISTS RecipeRuns (
-                Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                RecipeKey TEXT NOT NULL,
-                Status TEXT NOT NULL DEFAULT 'InProgress',
-                CurrentStepKey TEXT NULL,
-                StepStateJson TEXT NULL,
-                CreatedAt TEXT NOT NULL,
-                UpdatedAt TEXT NOT NULL,
-                CreatedBy INTEGER NULL,
-                CompletedAt TEXT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_reciperuns_recipekey ON RecipeRuns(RecipeKey);
-            CREATE INDEX IF NOT EXISTS idx_reciperuns_status ON RecipeRuns(Status);
-            CREATE INDEX IF NOT EXISTS idx_reciperuns_createdby ON RecipeRuns(CreatedBy);
-        ";
-        await connection.ExecuteAsync(sql);
-    }
-
     private async Task CreateDefaultUser(SqliteConnection connection)
     {
         const string checkUserSql = "SELECT COUNT(*) FROM Users";
@@ -1123,13 +1096,13 @@ public class DatabaseInitializer
         // Insert sample local destination
         var destinationExists = await connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM Destinations WHERE Name = 'Local Exports'");
-        
+
         if (destinationExists == 0)
         {
             var destName = "Local Exports";
             var destType = "1";
             var destConfig = "{\"BasePath\":\"exports\",\"CreateDirectories\":true}";
-            
+
             // Encrypt the configuration if encryption service is available
             var destConfigToStore = destConfig;
             if (_encryptionService != null)
@@ -1141,9 +1114,9 @@ public class DatabaseInitializer
             {
                 Log.Warning("EncryptionService not available during seeding - storing unencrypted configuration");
             }
-            
+
             var destHash = Reef.Helpers.HashHelper.ComputeDestinationHash(destName, destType, destConfigToStore);
-            
+
             await connection.ExecuteAsync(@"
                 INSERT INTO Destinations (Name, Description, Type, ConfigurationJson, IsActive, Tags, CreatedAt, Hash)
                 VALUES (@Name, @Description, @Type, @ConfigurationJson, @IsActive, @Tags, datetime('now'), @Hash)",
@@ -1780,12 +1753,12 @@ public class DatabaseInitializer
         // Migration: Add Guid column to existing PendingEmailApprovals tables (for databases created before Guid was added)
         var columns = await connection.QueryAsync<dynamic>("PRAGMA table_info(PendingEmailApprovals)");
         var guidColumnExists = columns.Any(c => ((string)c.name).Equals("Guid", StringComparison.OrdinalIgnoreCase));
-        
+
         if (!guidColumnExists)
         {
             // Column doesn't exist, add it and populate GUIDs
             await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "Guid", "TEXT NULL");
-            
+
             // Populate GUIDs for existing records that don't have one
             const string populateGuids = @"
                 UPDATE PendingEmailApprovals 
@@ -1795,7 +1768,7 @@ public class DatabaseInitializer
             await connection.ExecuteAsync(populateGuids);
             Log.Debug("✓ Migrated existing records to include GUIDs");
         }
-        
+
         // Create the Guid index (for both new and migrated tables)
         try
         {
