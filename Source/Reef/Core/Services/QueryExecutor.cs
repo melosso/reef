@@ -283,7 +283,7 @@ public class QueryExecutor
             }
 
             // Validate command before execution
-            var validationResult = await _validationService.ValidateQueryAsync(command, connection.Type);
+            var validationResult = await _validationService.ValidateCommandAsync(command, connection.Type);
             if (!validationResult.IsValid)
             {
                 Log.Warning("Command validation failed for connection {ConnectionName}: {ErrorMessage}", connection.Name, validationResult.ErrorMessage);
