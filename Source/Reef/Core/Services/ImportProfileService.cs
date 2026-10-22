@@ -205,7 +205,7 @@ public class ImportProfileService
                     PostProcessType = @PostProcessType, PostProcessConfig = @PostProcessConfig,
                     PostProcessSkipOnFailure = @PostProcessSkipOnFailure,
                     NotificationConfig = @NotificationConfig,
-                    CanvasLayoutJson = @CanvasLayoutJson,
+                    CanvasLayoutJson = COALESCE(@CanvasLayoutJson, CanvasLayoutJson),
                     IsEnabled = @IsEnabled, Hash = @Hash, UpdatedAt = @UpdatedAt
                 WHERE Id = @Id";
 

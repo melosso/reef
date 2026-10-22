@@ -120,4 +120,30 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
         cmd.CommandText = "SELECT CustomerName FROM ImportedOrders WHERE OrderId = 11";
         (await cmd.ExecuteScalarAsync(_ct)).Should().Be("Delta");
     }
+
+    [Fact]
+    public async Task Legacy_import_update_keeps_canvas_positions()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        var document = new JsonObject
+        {
+            ["kind"] = "import",
+            ["settings"] = new JsonObject { ["Name"] = $"Layout {Guid.NewGuid():N}", ["IsEnabled"] = true },
+            ["nodes"] = new JsonArray(
+                Node("source", new JsonObject { ["SourceType"] = "Local", ["SourceFilePath"] = factory.DataFolder }),
+                Node("parse", new JsonObject { ["SourceFormat"] = "CSV" }),
+                Node("target", new JsonObject { ["TargetType"] = "Database", ["TargetConnectionId"] = connectionId, ["TargetTable"] = "ImportedOrders", ["LoadStrategy"] = "Append" }))
+        };
+        document["nodes"]![2]!["x"] = 640;
+        var created = await client.PostAsJsonAsync("/api/profile-documents/import", document, _ct);
+        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+
+        var legacy = await client.GetFromJsonAsync<JsonObject>($"/api/profiles/{id}?type=import", _ct);
+        legacy!.Remove("canvasLayoutJson");
+        legacy["batchSize"] = 250;
+        (await client.PutAsJsonAsync($"/api/profiles/{id}?type=import", legacy, _ct)).EnsureSuccessStatusCode();
+
+        var read = await client.GetFromJsonAsync<JsonObject>($"/api/profile-documents/import/{id}", _ct);
+        read!["nodes"]!.AsArray().Single(n => n!["type"]!.GetValue<string>() == "target")!["x"]!.GetValue<double>().Should().Be(640);
+    }
 }
