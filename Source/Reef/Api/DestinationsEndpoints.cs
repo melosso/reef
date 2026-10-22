@@ -31,9 +31,9 @@ public static class DestinationsEndpoints
                     request.ConfigurationJson,
                     request.TestFileName,
                     request.TestContent);
-                
-                return result.Success 
-                    ? Results.Ok(result) 
+
+                return result.Success
+                    ? Results.Ok(result)
                     : Results.BadRequest(result);
             }
             catch (Exception ex)
@@ -247,8 +247,8 @@ public static class DestinationsEndpoints
             try
             {
                 var success = await service.DeleteAsync(id);
-                return success 
-                    ? Results.NoContent() 
+                return success
+                    ? Results.NoContent()
                     : Results.NotFound(new { message = "Destination not found" });
             }
             catch (InvalidOperationException ex)
@@ -274,12 +274,12 @@ public static class DestinationsEndpoints
             try
             {
                 var result = await service.TestConnectionAsync(
-                    request?.DestinationId ?? id, 
-                    request?.TestFileName, 
+                    request?.DestinationId ?? id,
+                    request?.TestFileName,
                     request?.TestContent);
-                
-                return result.Success 
-                    ? Results.Ok(result) 
+
+                return result.Success
+                    ? Results.Ok(result)
                     : Results.BadRequest(result);
             }
             catch (Exception ex)
@@ -310,9 +310,9 @@ public static class DestinationsEndpoints
         group.MapGet("/types", () =>
         {
             var types = Enum.GetValues<DestinationType>()
-                .Select(t => new 
-                { 
-                    value = (int)t, 
+                .Select(t => new
+                {
+                    value = (int)t,
                     name = t.ToString(),
                     description = GetDestinationTypeDescription(t)
                 });

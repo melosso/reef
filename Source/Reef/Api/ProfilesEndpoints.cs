@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
+using Reef.Core.Scripting;
 using Reef.Core.Services;
 using Reef.Core.TemplateEngines;
 using Serilog;
@@ -27,13 +28,13 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/disable", DisableProfile);
         group.MapGet("/by-connection/{connectionId:int}", GetProfilesByConnection);
         group.MapGet("/by-group/{groupId:int}", GetProfilesByGroup);
-        
+
         // Delta Sync endpoints
         group.MapPost("/{id:int}/delta-sync/reset", ResetDeltaSyncState);
         group.MapPost("/{id:int}/delta-sync/reset-rows", ResetDeltaSyncRows);
         group.MapPost("/{id:int}/delta-sync/generate-hashes", GenerateDeltaSyncHashes);
         group.MapGet("/{id:int}/delta-sync/stats", GetDeltaSyncStats);
-        
+
         // Multi-Output Splitting endpoints
         group.MapGet("/executions/{executionId:int}/splits", GetExecutionSplits);
 
@@ -46,6 +47,9 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
         group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
+        group.MapPost("/test-script", TestScript);
+        group.MapGet("/interpreters", GetInterpreters);
+        group.MapPost("/interpreters/{name}/test", TestInterpreter);
 
         // Unified import profile execution endpoints (use ?type=import)
         group.MapPost("/{id:int}/execute", ExecuteProfile);
@@ -67,7 +71,7 @@ public static class ProfilesEndpoints
         try
         {
             bool wantImport = string.Equals(type, "import", StringComparison.OrdinalIgnoreCase);
-            bool wantAll    = string.Equals(type, "all",    StringComparison.OrdinalIgnoreCase);
+            bool wantAll = string.Equals(type, "all", StringComparison.OrdinalIgnoreCase);
 
             if (wantImport)
             {
@@ -246,7 +250,7 @@ public static class ProfilesEndpoints
                 {
                     return Results.BadRequest(new { error = "PreProcessConfig is required when PreProcessType is specified" });
                 }
-                
+
                 try
                 {
                     var config = System.Text.Json.JsonSerializer.Deserialize<ProcessingConfig>(profile.PreProcessConfig);
@@ -308,7 +312,8 @@ public static class ProfilesEndpoints
             {
                 if (string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
                 {
-                    return Results.BadRequest(new {
+                    return Results.BadRequest(new
+                    {
                         error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true"
                     });
                 }
@@ -316,7 +321,8 @@ public static class ProfilesEndpoints
                 // Validate ReefId column name format (basic SQL identifier validation)
                 if (!System.Text.RegularExpressions.Regex.IsMatch(profile.DeltaSyncReefIdColumn, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 {
-                    return Results.BadRequest(new {
+                    return Results.BadRequest(new
+                    {
                         error = "DeltaSyncReefIdColumn must be a valid SQL identifier"
                     });
                 }
@@ -342,10 +348,10 @@ public static class ProfilesEndpoints
             var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
 
             var id = await service.CreateAsync(profile, userId);
-            
-            await auditService.LogAsync("Profile", id, "Created", username, 
+
+            await auditService.LogAsync("Profile", id, "Created", username,
                 System.Text.Json.JsonSerializer.Serialize(new { profile.Name, profile.ConnectionId, profile.Query }));
-            
+
             return Results.Created($"/api/profiles/{id}", new { id });
         }
         catch (InvalidOperationException ex)
@@ -797,14 +803,14 @@ public static class ProfilesEndpoints
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            
+
             await deltaSyncService.ResetDeltaSyncStateAsync(id);
-            
+
             await auditService.LogAsync("Profile", id, "DeltaSyncStateReset", username,
                 "Delta sync state has been reset");
-            
+
             Log.Information("Delta sync state reset for profile {ProfileId} by {User}", id, username);
-            
+
             return Results.Ok(new { message = "Delta sync state reset successfully" });
         }
         catch (Exception ex)
@@ -835,31 +841,31 @@ public static class ProfilesEndpoints
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            
+
             if (request.ReefIds != null && request.ReefIds.Count > 0)
             {
                 // Reset specific rows by ReefId
                 var count = await deltaSyncService.ResetDeltaSyncRowsAsync(id, request.ReefIds);
-                
+
                 await auditService.LogAsync("Profile", id, "DeltaSyncRowsReset", username,
                     $"Reset {count} specific rows");
-                
+
                 Log.Information("Reset delta sync for {Count} specific rows in profile {ProfileId} by {User}",
                     count, id, username);
-                
+
                 return Results.Ok(new { message = $"Reset delta sync state for {count} rows" });
             }
             else if (request.Criteria != null)
             {
                 // Reset rows by criteria
                 var count = await deltaSyncService.ResetDeltaSyncByCriteriaAsync(id, request.Criteria);
-                
+
                 await auditService.LogAsync("Profile", id, "DeltaSyncCriteriaReset", username,
                     $"Reset {count} rows matching criteria");
-                
+
                 Log.Information("Reset delta sync for {Count} rows matching criteria in profile {ProfileId} by {User}",
                     count, id, username);
-                
+
                 return Results.Ok(new { message = $"Reset delta sync state for {count} rows" });
             }
             else
@@ -971,17 +977,18 @@ public static class ProfilesEndpoints
 
             if (!profile.DeltaSyncEnabled)
             {
-                return Results.Ok(new { 
+                return Results.Ok(new
+                {
                     enabled = false,
-                    message = "Delta sync is not enabled for this profile" 
+                    message = "Delta sync is not enabled for this profile"
                 });
             }
 
             var stats = await deltaSyncService.GetProfileStatsAsync(id);
-            
+
             // Get last execution metrics
             var lastExecution = await executionService.GetLastExecutionForProfileAsync(id);
-            
+
             return Results.Ok(new
             {
                 enabled = true,
@@ -1354,7 +1361,7 @@ public static class ProfilesEndpoints
 
                 result.Info.Add($"Page size: {config.DocumentTemplate.PageSize ?? "A4"}");
                 result.Info.Add($"Orientation: {config.DocumentTemplate.Orientation ?? "Portrait"}");
-                
+
                 if (!string.IsNullOrEmpty(config.DocumentTemplate.Watermark))
                 {
                     result.Info.Add($"Watermark: {config.DocumentTemplate.Watermark}");
@@ -1548,7 +1555,7 @@ public static class ProfilesEndpoints
             var limitedRows = rows?.Take(25).ToList() ?? [];
 
             // Run delta comparison without committing hashes
-            var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, profile);
+            var delta = await deltaSyncService.ProcessDeltaAsync(id, limitedRows, DeltaSyncConfig.FromProfile(profile));
 
             // Tag each row with its status so the client can render accordingly
             List<Dictionary<string, object>> taggedRows = [];
@@ -1696,12 +1703,116 @@ public static class ProfilesEndpoints
     }
 
     /// <summary>
+    /// Runs a Script-type pre/post-process step in isolation, without executing
+    /// the rest of the profile pipeline. Lets users iterate on a script
+    /// directly from the editor instead of having to run a full export to see
+    /// whether it works.
+    /// </summary>
+    private static async Task<IResult> TestScript(
+        [FromBody] TestScriptRequest request,
+        IScriptRunner scriptRunner)
+    {
+        if (string.IsNullOrWhiteSpace(request.Interpreter))
+        {
+            return Results.BadRequest(new { error = "Interpreter is required" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ScriptPathOrInline))
+        {
+            return Results.BadRequest(new { error = "Script is required" });
+        }
+
+        // Sample stdin payload mirroring what a real pre/post-processing run sends,
+        // so a script that reads context fields behaves the same way under test.
+        var sampleContext = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            ExecutionId = 0,
+            ProfileId = request.ProfileId ?? 0,
+            RowCount = 10,
+            OutputPath = "/data/exports/sample-output.csv",
+            FileSizeBytes = 1024,
+            ExecutionTimeMs = 100,
+            OutputFormat = "CSV",
+            TriggeredBy = "Test",
+            StartedAt = DateTime.UtcNow,
+            CompletedAt = DateTime.UtcNow,
+            Status = "Success",
+            ErrorMessage = (string?)null,
+            parameters = new Dictionary<string, string>()
+        });
+
+        try
+        {
+            var result = await scriptRunner.RunAsync(new ScriptExecutionRequest
+            {
+                Interpreter = request.Interpreter,
+                ScriptPathOrInline = request.ScriptPathOrInline,
+                IsInline = request.ScriptIsInline,
+                StdinJson = sampleContext,
+                TimeoutSeconds = request.Timeout ?? 30,
+                EnvAllowlist = request.EnvAllowlist
+            });
+
+            return Results.Ok(new
+            {
+                success = result.Success,
+                exitCode = result.ExitCode,
+                stdout = result.Stdout,
+                stderr = result.Stderr,
+                errorMessage = result.ErrorMessage,
+                elapsedMs = result.ElapsedMs
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Script test failed: {Message}", ex.Message);
+            return Results.Ok(new { success = false, exitCode = -1, stdout = "", stderr = "", errorMessage = ex.Message, elapsedMs = 0L });
+        }
+    }
+
+    /// <summary>
+    /// Checks which script interpreters (pwsh, python, node, bash, sh, cmd) are
+    /// actually runnable on this host, by running a trivial probe script through
+    /// each one via the real IScriptRunner path. Used by Admin's Interpreters
+    /// section and by the Profile editor to grey out Script interpreters that
+    /// won't work. Not Admin-gated - any authenticated user creating a profile
+    /// needs this to know which interpreters they can pick.
+    /// </summary>
+    private static async Task<IResult> GetInterpreters(InterpreterService interpreterService)
+    {
+        var statuses = await interpreterService.CheckAllAsync();
+        return Results.Ok(statuses);
+    }
+
+    /// <summary>
+    /// Re-checks a single interpreter on demand (Admin's "Test" button per row).
+    /// </summary>
+    private static async Task<IResult> TestInterpreter(string name, InterpreterService interpreterService)
+    {
+        var status = await interpreterService.CheckOneAsync(name);
+        return Results.Ok(status);
+    }
+
+    /// <summary>
     /// Request model for testing query preview without saved profile
     /// </summary>
     public class TestQueryPreviewRequest
     {
         public int ConnectionId { get; set; }
         public string Query { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request model for testing a Script-type pre/post-process step in isolation
+    /// </summary>
+    public class TestScriptRequest
+    {
+        public int? ProfileId { get; set; }
+        public string Interpreter { get; set; } = string.Empty;
+        public string ScriptPathOrInline { get; set; } = string.Empty;
+        public bool ScriptIsInline { get; set; }
+        public int? Timeout { get; set; }
+        public List<string>? EnvAllowlist { get; set; }
     }
 
     /// <summary>

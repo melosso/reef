@@ -15,7 +15,6 @@
                 </div>
             </header>
             <main class="flex-1 overflow-y-auto p-6">
-                <div id="message-container"></div>
                 <div class="bg-white rounded-lg shadow overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -39,7 +38,7 @@
             </main>
         </div>
     </div>
-    <div id="group-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="group-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeGroupModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-lg shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div class="flex justify-between items-center mb-4">
                 <h3 id="modal-title" class="text-lg font-semibold text-slate-900">Add Group</h3>
@@ -59,12 +58,12 @@
                 </div>
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" onclick="closeGroupModal()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">Cancel</button>
-                    <button type="submit" class="h-9 px-4 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors">Save Group</button>
+                    <button type="submit" class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 transition-colors">Save Group</button>
                 </div>
             </form>
         </div>
     </div>
-    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50">
+    <div id="help-modal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeHelpModal()">
         <div class="relative top-10 mx-auto p-5 border border-slate-200 w-full max-w-xl shadow-lg rounded-md bg-white mb-20" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
             <div id="help-modal-content-area">
                 <div class="flex justify-between items-center mb-4">
@@ -83,12 +82,10 @@
                     <ul class="list-disc list-inside space-y-2 ml-4">
                         <li><b>Create Group:</b> Use the <b>"New Group"</b> button to define a new group with a name and optional description.</li>
                         <li><b>View Profiles:</b> The <b>Profiles</b> column shows how many profiles are currently associated with each group.</li>
-                        <li><b>Edit/Delete:</b> Use the <i data-lucide="edit" class="h-4 w-4 inline text-blue-600"></i> (Edit) and <i data-lucide="trash-2" class="h-4 w-4 inline text-red-600"></i> (Delete) actions to manage your existing groups.</li>
+                        <li><b>Edit/Delete:</b> Use the <i data-lucide="edit" class="h-4 w-4 inline text-teal-600"></i> (Edit) and <i data-lucide="trash-2" class="h-4 w-4 inline text-red-600"></i> (Delete) actions to manage your existing groups.</li>
                     </ul>
 
-                    <blockquote class="border-l-4 border-blue-500 pl-4 py-2 italic text-gray-600 bg-blue-50 rounded-r-md pr-2">
-                        <p><strong>Tip:</strong> Groups are essential for bulk operations on your profiles in the <a href="/jobs" class="text-blue-600 hover:underline">Jobs</a> section.</p>
-                    </blockquote>
+                    <p class="border border-slate-200 bg-slate-50 rounded-md p-3 text-slate-600"><strong class="text-slate-700">Tip:</strong> Groups are essential for bulk operations on your profiles in the <a href="/jobs" class="text-teal-600 hover:underline">Jobs</a> section.</p>
                 </div>
             </div>
         </div>
@@ -165,7 +162,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${escapeHtml(group.description || '')}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${groupProfiles.length}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editGroup(${group.id})" aria-label="Edit group ${escapeHtml(group.name)}" class="text-blue-600 hover:text-blue-900 mr-3 p-1">
+                            <button onclick="editGroup(${group.id})" aria-label="Edit group ${escapeHtml(group.name)}" class="text-teal-600 hover:text-teal-800 mr-3 p-1">
                                 <i data-lucide="edit" class="h-4 w-4 inline"></i>
                             </button>
                             <button onclick="deleteGroup(${group.id}, '${escapeForJS(group.name)}')" aria-label="Delete group ${escapeHtml(group.name)}" class="text-red-600 hover:text-red-900 p-1">
@@ -270,19 +267,7 @@
         }
 
         function showMessage(message, type) {
-            const container = document.getElementById('message-container');
-            const bgColor = type === 'success' ? 'bg-green-50 border-green-400 text-green-800' : 'bg-red-50 border-red-400 text-red-800';
-            const icon = type === 'success' ? 'check-circle' : 'alert-circle';
-            container.innerHTML = `
-                <div class="${bgColor} border-l-4 p-4 mb-4 rounded" role="alert">
-                    <div class="flex items-center">
-                        <i data-lucide="${icon}" class="h-5 w-5 mr-2"></i>
-                        <p class="font-medium">${message}</p>
-                    </div>
-                </div>
-            `;
-            queueLucideRender();
-            setTimeout(() => container.innerHTML = '', 5000);
+            window.showToast(message, type);
         }
 
         function escapeHtml(text) {

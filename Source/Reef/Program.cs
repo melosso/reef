@@ -22,8 +22,14 @@ namespace Reef;
 /// <summary>
 /// Main entry point
 /// </summary>
-public class Program
+public partial class Program
 {
+    [GeneratedRegex(@"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->")]
+    private static partial Regex TitleRegex();
+
+    [GeneratedRegex(@"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline)]
+    private static partial Regex ScriptsRegex();
+
     public static async Task Main(string[] args)
     {
         // Register Dapper type handlers for TimeSpan (must be done before any database operations)
@@ -219,6 +225,22 @@ public class Program
             var mfaMigration = new MfaMigration(connectionString);
             await mfaMigration.ApplyAsync();
 
+            // Run OIDC migration to add the OidcSubject column to Users table
+            var oidcMigration = new OidcMigration(connectionString);
+            await oidcMigration.ApplyAsync();
+
+            // Run Profile canvas migration to add the CanvasLayoutJson column to Profiles table
+            var profileCanvasMigration = new ProfileCanvasMigration(connectionString);
+            await profileCanvasMigration.ApplyAsync();
+
+            // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
+            Log.Debug("Running Scripting database migration...");
+            var scriptingMigration = new ScriptingMigration(connectionString);
+            await scriptingMigration.ApplyAsync();
+
+            var scriptingStats = await scriptingMigration.GetStatsAsync();
+            Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
@@ -248,7 +270,7 @@ public class Program
 
             // Register shutdown handlers
             var lifetime = app.Lifetime;
-            
+
             lifetime.ApplicationStarted.Register(() =>
             {
                 Log.Information("✓ Application started successfully");
@@ -267,25 +289,25 @@ public class Program
             });
 
             await app.RunAsync();
-            
+
             Log.Information("Exit: Application shutdown complete");
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Application terminated unexpectedly");
-            
+
             // Show error if Serilog fails
             Console.WriteLine("");
             Console.WriteLine("Fatal error during application startup:");
             Console.WriteLine(ex.ToString());
-            
+
             // If running as console, wait for user input
             if (!OperatingSystem.IsWindows() || Environment.UserInteractive)
             {
                 Console.WriteLine("\nPress any key to exit...");
                 Console.ReadKey();
             }
-            
+
             Environment.Exit(1);
         }
         finally
@@ -310,8 +332,8 @@ public class Program
     }
 
     private static void RegisterServices(
-        IServiceCollection services, 
-        IConfiguration configuration, 
+        IServiceCollection services,
+        IConfiguration configuration,
         EncryptionService encryptionService,
         string connectionString)
     {
@@ -323,8 +345,9 @@ public class Program
         services.AddSingleton<PasswordHasher>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ApiKeyValidator>();
+        services.AddHttpClient();
         services.AddSingleton(new DatabaseConfig { ConnectionString = connectionString });
-        
+
         // Template engines
         services.AddSingleton<ScribanTemplateEngine>();
 
@@ -344,10 +367,12 @@ public class Program
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
         services.AddScoped<ProfileService>();
+        services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
         services.AddScoped<ExecutionService>();
         services.AddScoped<WebhookService>();
         services.AddScoped<AuditService>();
         services.AddScoped<AdminService>();
+        services.AddScoped<InterpreterService>();
         services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
@@ -355,6 +380,7 @@ public class Program
 
         // Import Profile services
         services.AddScoped<ImportProfileService>();
+        services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
@@ -382,14 +408,14 @@ public class Program
         // Query template service
         services.AddScoped<QueryTemplateService>(sp =>
             new QueryTemplateService(
-                connectionString, 
+                connectionString,
                 sp.GetRequiredService<HashValidator>(),
                 sp.GetRequiredService<ScribanTemplateEngine>()));
 
         // Jobs services - NEW SYSTEM
         services.AddScoped<JobService>(sp =>
             new JobService(sp.GetRequiredService<DatabaseConfig>(), sp.GetRequiredService<IConfiguration>()));
-        
+
         services.AddScoped<Reef.Api.JobExecutorService>();
 
         // Background services (hosted services)
@@ -516,7 +542,13 @@ public class Program
         });
 
         app.UseCors();
-        app.UseStaticFiles(); // Serve wwwroot static files
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+                ? "public, max-age=31536000, immutable"
+                : "no-cache"
+        });
+        var assetVersioner = new AssetVersioner(app.Environment.WebRootFileProvider);
 
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
@@ -569,9 +601,7 @@ public class Program
                                    "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
-            var layoutTemplate = File.Exists(layoutPath)
-                ? await File.ReadAllTextAsync(layoutPath)
-                : null;
+            var layoutExists = File.Exists(layoutPath);
 
             var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -588,7 +618,7 @@ public class Program
                         {
                             Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
                             context.Response.ContentType = "text/html";
-                            await context.Response.SendFileAsync(filePath);
+                            await context.Response.WriteAsync(assetVersioner.Apply(await File.ReadAllTextAsync(filePath)));
                         });
                     }
                 }
@@ -605,7 +635,7 @@ public class Program
 
                 var pageName = Path.GetFileNameWithoutExtension(fileName);
 
-                if (layoutTemplate == null)
+                if (!layoutExists)
                 {
                     // Fallback: serve raw if layout is missing
                     app.MapGet(route, async context =>
@@ -621,6 +651,7 @@ public class Program
                     {
                         Log.Debug("Serving HTML route (layout): {Route} -> {File}", route, filePath);
 
+                        var layoutTemplate = await File.ReadAllTextAsync(layoutPath);
                         var pageContent = await File.ReadAllTextAsync(filePath);
                         var username = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
                         var userInitial = username.Length > 0 ? username[0].ToString().ToUpper() : "?";
@@ -628,10 +659,10 @@ public class Program
                             ? char.ToUpper(username[0]) + username[1..]
                             : username.ToUpper();
 
-                        var titleMatch = Regex.Match(pageContent, @"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->");
+                        var titleMatch = TitleRegex().Match(pageContent);
                         var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
 
-                        var scriptsMatch = Regex.Match(pageContent, @"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline);
+                        var scriptsMatch = ScriptsRegex().Match(pageContent);
                         var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
 
                         var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
@@ -647,13 +678,13 @@ public class Program
                         foreach (var nav in navPages)
                         {
                             var activeClass = nav == pageName
-                                ? "bg-slate-800 text-slate-100"
-                                : "hover:bg-slate-800 hover:text-slate-100";
+                                ? "bg-teal-500/10 text-teal-300"
+                                : "hover:bg-zinc-800/60 hover:text-zinc-200";
                             html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
                         }
 
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(html);
+                        await context.Response.WriteAsync(assetVersioner.Apply(html));
                     });
                 }
             }
@@ -684,6 +715,7 @@ public class Program
 
         // API endpoints
         AuthEndpoints.Map(app);
+        OidcEndpoints.Map(app);
         AccountEndpoints.Map(app);
         ConnectionsEndpoints.Map(app);
         ProfilesEndpoints.Map(app);
@@ -697,6 +729,7 @@ public class Program
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
+        ProfileDocumentsEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
         app.MapFallback(async context =>
@@ -756,7 +789,7 @@ public class Program
             {
                 StartupToken = startupToken,
                 StartedAt = DateTime.UtcNow,
-                MachineName = Environment.MachineName,
+                Environment.MachineName,
                 Version = version
             });
 

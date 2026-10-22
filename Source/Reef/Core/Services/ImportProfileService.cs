@@ -123,7 +123,7 @@ public class ImportProfileService
                     MaxFailedRowsBeforeAbort, MaxFailedRowsPercent, RollbackOnAbort, RetryCount,
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure,
-                    NotificationConfig, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
+                    NotificationConfig, CanvasLayoutJson, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
                 ) VALUES (
                     @Name, @GroupId,
                     @SourceType, @SourceDestinationId, @SourceConfig,
@@ -142,7 +142,7 @@ public class ImportProfileService
                     @MaxFailedRowsBeforeAbort, @MaxFailedRowsPercent, @RollbackOnAbort, @RetryCount,
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure,
-                    @NotificationConfig, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
+                    @NotificationConfig, @CanvasLayoutJson, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
                 );
                 SELECT last_insert_rowid();";
 
@@ -205,6 +205,7 @@ public class ImportProfileService
                     PostProcessType = @PostProcessType, PostProcessConfig = @PostProcessConfig,
                     PostProcessSkipOnFailure = @PostProcessSkipOnFailure,
                     NotificationConfig = @NotificationConfig,
+                    CanvasLayoutJson = COALESCE(@CanvasLayoutJson, CanvasLayoutJson),
                     IsEnabled = @IsEnabled, Hash = @Hash, UpdatedAt = @UpdatedAt
                 WHERE Id = @Id";
 
@@ -300,7 +301,13 @@ public class ImportProfileService
                 DeltaSyncUnchangedRows = @DeltaSyncUnchangedRows,
                 DeltaSyncDeletedRows = @DeltaSyncDeletedRows,
                 PhaseTimingsJson = @PhaseTimingsJson,
-                OutputTargetsJson = @OutputTargetsJson
+                OutputTargetsJson = @OutputTargetsJson,
+                PreProcessStdout = @PreProcessStdout,
+                PreProcessStderr = @PreProcessStderr,
+                PreProcessExitCode = @PreProcessExitCode,
+                PostProcessStdout = @PostProcessStdout,
+                PostProcessStderr = @PostProcessStderr,
+                PostProcessExitCode = @PostProcessExitCode
             WHERE Id = @Id";
 
         var rows = await conn.ExecuteAsync(sql, exec);

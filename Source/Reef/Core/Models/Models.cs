@@ -24,6 +24,7 @@ public class User
     public string? TotpSecret { get; set; } // base32-encoded TOTP secret
     public string? PendingTotpSecret { get; set; } // in-flight during setup, before confirmation
     public string? BackupCodes { get; set; } // JSON array of SHA-256 hashed backup codes
+    public string OidcSubject { get; set; } = ""; // subject claim from the configured SSO provider, empty when unlinked
 }
 
 /// <summary>
@@ -104,6 +105,7 @@ public class Profile
     // Post-Processing Configuration (enhanced existing)
     public string? PostProcessType { get; set; } // null, Query, StoredProcedure, Webhook
     public string? PostProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
+    public string? CanvasLayoutJson { get; set; } // node positions and connections for the canvas editor
     public bool PostProcessSkipOnFailure { get; set; } = true; // Skip post-processing if main query fails
     public bool PostProcessRollbackOnFailure { get; set; } = false; // Rollback post-processing on its own failure
     public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
@@ -136,14 +138,14 @@ public class Profile
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
     public DateTime? LastExecutedAt { get; set; }
-    
+
     // Delta Sync Configuration - Basic
     public bool DeltaSyncEnabled { get; set; } = false;
     public string? DeltaSyncReefIdColumn { get; set; }
     public string? DeltaSyncHashAlgorithm { get; set; } = "SHA256";
     public bool DeltaSyncTrackDeletes { get; set; } = false;
     public int? DeltaSyncRetentionDays { get; set; }
-    
+
     // Delta Sync Configuration - Edge Case Handling
     public string? DeltaSyncDuplicateStrategy { get; set; } = "Strict"; // Strict, Composite, Skip
     public string? DeltaSyncNullStrategy { get; set; } = "Strict"; // Strict, Skip, Generate
@@ -151,7 +153,7 @@ public class Profile
     public int? DeltaSyncNumericPrecision { get; set; } = 6; // Decimal places for floating point
     public bool DeltaSyncRemoveNonPrintable { get; set; } = false; // Strip non-printable chars
     public string? DeltaSyncReefIdNormalization { get; set; } = "Trim"; // Trim, Lowercase, RemoveWhitespace
-    
+
     // Advanced Output Options
     public bool ExcludeReefIdFromOutput { get; set; } = true; // Don't include ReefId column in exports (internal use only)
     public bool ExcludeSplitKeyFromOutput { get; set; } = false; // Don't include SplitKey column in exports (internal use only)
@@ -190,20 +192,26 @@ public class ProfileExecution
     public string? OutputMessage { get; set; } // Success messages like HTTP responses
     public long? ExecutionTimeMs { get; set; }
     public string? TriggeredBy { get; set; }
-    
+
     // Pre-Processing Phase Tracking
     public DateTime? PreProcessStartedAt { get; set; }
     public DateTime? PreProcessCompletedAt { get; set; }
     public string? PreProcessStatus { get; set; } // null, Success, Failed, Skipped
     public string? PreProcessError { get; set; }
     public long? PreProcessTimeMs { get; set; }
-    
+    public string? PreProcessStdout { get; set; } // Script type only
+    public string? PreProcessStderr { get; set; } // Script type only
+    public int? PreProcessExitCode { get; set; } // Script type only
+
     // Post-Processing Phase Tracking
     public DateTime? PostProcessStartedAt { get; set; }
     public DateTime? PostProcessCompletedAt { get; set; }
     public string? PostProcessStatus { get; set; } // null, Success, Failed, Skipped
     public string? PostProcessError { get; set; }
     public long? PostProcessTimeMs { get; set; }
+    public string? PostProcessStdout { get; set; } // Script type only
+    public string? PostProcessStderr { get; set; } // Script type only
+    public int? PostProcessExitCode { get; set; } // Script type only
 
     // Email Approval Workflow Tracking
     public string? ApprovalStatus { get; set; } // null, Pending, Approved, Rejected, Sent (tracks approval status separately)
@@ -216,7 +224,7 @@ public class ProfileExecution
     public int? DeltaSyncDeletedRows { get; set; }
     public int? DeltaSyncUnchangedRows { get; set; }
     public int? DeltaSyncTotalHashedRows { get; set; }
-    
+
     // Multi-Output Splitting Tracking
     public bool WasSplit { get; set; } = false; // Whether this execution used multi-output splitting
     public int? SplitCount { get; set; } // Total number of splits generated
@@ -258,13 +266,13 @@ public class ProfileExecutionSplit
 /// </summary>
 public class ProfileExecutionError
 {
-    public int      Id           { get; set; }
-    public int      ExecutionId  { get; set; }
-    public string   ErrorType    { get; set; } = "Unknown";
-    public string?  Phase        { get; set; }
-    public string?  Detail       { get; set; }  // e.g. recipient address
-    public string   ErrorMessage { get; set; } = "";
-    public DateTime OccurredAt   { get; set; }
+    public int Id { get; set; }
+    public int ExecutionId { get; set; }
+    public string ErrorType { get; set; } = "Unknown";
+    public string? Phase { get; set; }
+    public string? Detail { get; set; }  // e.g. recipient address
+    public string ErrorMessage { get; set; } = "";
+    public DateTime OccurredAt { get; set; }
 }
 
 /// <summary>
@@ -336,31 +344,55 @@ public class ScheduledTask
 public class ProcessingConfig
 {
     /// <summary>
-    /// Type of processing: Query or StoredProcedure
+    /// Type of processing: Query, StoredProcedure, or Script
     /// </summary>
-    public required string Type { get; set; } // Query, StoredProcedure
-    
+    public required string Type { get; set; } // Query, StoredProcedure, Script
+
     /// <summary>
     /// SQL command to execute (can contain {placeholder} variables)
     /// For Query: SELECT, UPDATE, DELETE, INSERT, etc.
     /// For StoredProcedure: Procedure name (without EXEC/CALL)
+    /// Not used when Type is Script.
     /// </summary>
-    public required string Command { get; set; }
-    
+    public string? Command { get; set; }
+
     /// <summary>
     /// Optional parameters for stored procedure or parameterized query
     /// </summary>
     public List<ProcessingParameter>? Parameters { get; set; }
-    
+
     /// <summary>
     /// Timeout in seconds (default 30)
     /// </summary>
     public int Timeout { get; set; } = 30;
-    
+
     /// <summary>
     /// Whether to continue execution if this processing step fails
     /// </summary>
     public bool ContinueOnError { get; set; } = false;
+
+    /// <summary>
+    /// Script interpreter to use when Type is Script: pwsh, python, node, bash, sh, cmd
+    /// </summary>
+    public string? Interpreter { get; set; }
+
+    /// <summary>
+    /// When Type is Script: either the inline script source or a path to a script
+    /// file, depending on <see cref="ScriptIsInline"/>.
+    /// </summary>
+    public string? ScriptPathOrInline { get; set; }
+
+    /// <summary>
+    /// When Type is Script: whether ScriptPathOrInline holds inline source (true)
+    /// or a file path (false).
+    /// </summary>
+    public bool ScriptIsInline { get; set; }
+
+    /// <summary>
+    /// When Type is Script: names of environment variables to pass through to
+    /// the script process. Everything else is withheld to avoid leaking secrets.
+    /// </summary>
+    public List<string>? EnvAllowlist { get; set; }
 }
 
 /// <summary>
@@ -372,12 +404,12 @@ public class ProcessingParameter
     /// Parameter name (e.g., "@userId", "p_userId")
     /// </summary>
     public required string Name { get; set; }
-    
+
     /// <summary>
     /// Parameter value (can be literal or {placeholder} variable)
     /// </summary>
     public required string Value { get; set; }
-    
+
     /// <summary>
     /// SQL data type (e.g., "INT", "VARCHAR(50)", "DATETIME")
     /// Optional - used for explicit type casting
@@ -397,67 +429,67 @@ public class ProcessingContext
     /// Available as: {executionid}
     /// </summary>
     public int ExecutionId { get; set; }
-    
+
     /// <summary>
     /// Profile ID being executed
     /// Available as: {profileid}
     /// </summary>
     public int ProfileId { get; set; }
-    
+
     /// <summary>
     /// Number of rows returned by main query
     /// Available as: {rowcount}
     /// </summary>
     public int RowCount { get; set; }
-    
+
     /// <summary>
     /// Output file path (for Local destinations)
     /// Available as: {outputpath}
     /// </summary>
     public string? OutputPath { get; set; }
-    
+
     /// <summary>
     /// File size in bytes
     /// Available as: {filesizebytes}
     /// </summary>
     public long? FileSizeBytes { get; set; }
-    
+
     /// <summary>
     /// Main query execution time in milliseconds
     /// Available as: {executiontimems}
     /// </summary>
     public long ExecutionTimeMs { get; set; }
-    
+
     /// <summary>
     /// Output format (JSON, CSV, XML, etc.)
     /// Available as: {outputformat}
     /// </summary>
     public string OutputFormat { get; set; } = "JSON";
-    
+
     /// <summary>
     /// Who/what triggered the execution
     /// Available as: {triggeredby}
     /// </summary>
     public string? TriggeredBy { get; set; }
-    
+
     /// <summary>
     /// Execution start timestamp (ISO 8601 UTC)
     /// Available as: {startedat}
     /// </summary>
     public DateTime StartedAt { get; set; }
-    
+
     /// <summary>
     /// Execution completion timestamp (ISO 8601 UTC)
     /// Available as: {completedat}
     /// </summary>
     public DateTime? CompletedAt { get; set; }
-    
+
     /// <summary>
     /// Main query execution status (Success, Failed)
     /// Available as: {status}
     /// </summary>
     public string Status { get; set; } = "Running";
-    
+
     /// <summary>
     /// Error message from main query (if failed)
     /// Available as: {errormessage}
@@ -481,6 +513,13 @@ public class ProcessingContext
     /// Available as: {splitkey}
     /// </summary>
     public string? SplitKey { get; set; }
+
+    /// <summary>
+    /// Webhook/job trigger parameters passed into ExecuteProfileAsync.
+    /// Forwarded to Script-type processing steps as part of the stdin JSON
+    /// context, so a post-process webhook script can see what triggered the run.
+    /// </summary>
+    public Dictionary<string, string>? WebhookParameters { get; set; }
 }
 
 // ===== Email Approval Workflow Models =====
@@ -595,6 +634,22 @@ public class DeltaSyncConfig
     public int NumericPrecision { get; set; } = 6;
     public bool RemoveNonPrintable { get; set; }
     public string ReefIdNormalization { get; set; } = "Trim";
+    public bool ResetOnSchemaChange { get; set; }
+
+    public static DeltaSyncConfig FromProfile(Profile profile) => new()
+    {
+        Enabled = profile.DeltaSyncEnabled,
+        ReefIdColumn = profile.DeltaSyncReefIdColumn!,
+        HashAlgorithm = profile.DeltaSyncHashAlgorithm ?? "SHA256",
+        IncludeDeleted = profile.DeltaSyncTrackDeletes,
+        RetentionDays = profile.DeltaSyncRetentionDays,
+        DuplicateStrategy = profile.DeltaSyncDuplicateStrategy ?? "Strict",
+        NullStrategy = profile.DeltaSyncNullStrategy ?? "Strict",
+        NumericPrecision = profile.DeltaSyncNumericPrecision ?? 6,
+        RemoveNonPrintable = profile.DeltaSyncRemoveNonPrintable,
+        ReefIdNormalization = profile.DeltaSyncReefIdNormalization ?? "Trim",
+        ResetOnSchemaChange = profile.DeltaSyncResetOnSchemaChange
+    };
 }
 
 /// <summary>
@@ -785,6 +840,42 @@ public class NotificationSettings
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string Hash { get; set; } = string.Empty; // SHA256 for tamper detection
+}
+
+/// <summary>
+/// Single-provider generic OIDC SSO configuration (works with Pocket ID, Azure Entra ID,
+/// or any standard discovery-compliant provider). One row max.
+/// </summary>
+public class OidcSettings
+{
+    public int Id { get; set; }
+    public bool IsEnabled { get; set; } = false;
+    public string Name { get; set; } = "Single Sign-On"; // shown on the login button, e.g. "Continue with {Name}"
+    public string Authority { get; set; } = ""; // issuer base URL; discovery doc is read from {Authority}/.well-known/openid-configuration
+    public string ClientId { get; set; } = "";
+    public string? ClientSecretEncrypted { get; set; }
+    public string Scopes { get; set; } = "openid profile email";
+    public string UsernameClaim { get; set; } = "preferred_username";
+    public string EmailClaim { get; set; } = "email";
+    public bool CreateAccounts { get; set; } = false; // provision a new User on first sign-in when no match is found
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Admin request body for saving OIDC SSO settings. ClientSecret is plaintext and optional;
+/// omit it (null) to keep whatever secret is already stored.
+/// </summary>
+public class OidcSettingsRequest
+{
+    public bool IsEnabled { get; set; }
+    public string Name { get; set; } = "Single Sign-On";
+    public string Authority { get; set; } = "";
+    public string ClientId { get; set; } = "";
+    public string? ClientSecret { get; set; }
+    public string Scopes { get; set; } = "openid profile email";
+    public string UsernameClaim { get; set; } = "preferred_username";
+    public string EmailClaim { get; set; } = "email";
+    public bool CreateAccounts { get; set; }
 }
 
 /// <summary>

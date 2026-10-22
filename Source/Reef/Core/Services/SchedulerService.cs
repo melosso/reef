@@ -22,17 +22,17 @@ public class SchedulerService : BackgroundService
     {
         _connectionString = config.ConnectionString;
         _serviceProvider = serviceProvider;
-        
+
         // Read configuration value with sensible default
         _checkIntervalSeconds = configuration.GetValue<int>("Reef:Scheduler:CheckIntervalSeconds", 60);
-        
+
         // Validate configuration
         if (_checkIntervalSeconds < 10 || _checkIntervalSeconds > 3600)
         {
             Log.Warning("Reef:Scheduler:CheckIntervalSeconds ({Value}) out of recommended range (10-3600 seconds), using default: 60", _checkIntervalSeconds);
             _checkIntervalSeconds = 60;
         }
-        
+
         Log.Information("SchedulerService initialized with {Interval}s check interval", _checkIntervalSeconds);
     }
 
@@ -72,7 +72,7 @@ public class SchedulerService : BackgroundService
         try
         {
             var now = DateTime.UtcNow;
-            
+
             await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync(cancellationToken);
 
@@ -95,7 +95,7 @@ public class SchedulerService : BackgroundService
 
                 try
                 {
-                    Log.Information("Executing scheduled profile: {ProfileName} (ID: {ProfileId})", 
+                    Log.Information("Executing scheduled profile: {ProfileName} (ID: {ProfileId})",
                         task.ProfileName, task.ProfileId);
 
                     // Mark as running
@@ -107,21 +107,21 @@ public class SchedulerService : BackgroundService
                     var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
 
                     var (executionId, success, outputPath, errorMessage) = await executionService.ExecuteProfileAsync(
-                        task.ProfileId, 
-                        parameters: null, 
+                        task.ProfileId,
+                        parameters: null,
                         triggeredBy: "Scheduler");
 
                     if (success)
                     {
                         Log.Information("Scheduled execution completed successfully. ExecutionId: {ExecutionId}", executionId);
-                        
+
                         // Reset failure count on success
                         await UpdateScheduledTaskAsync(task.Id, task.ProfileId, 0, null);
                     }
                     else
                     {
                         Log.Warning("Scheduled execution failed: {ErrorMessage}", errorMessage);
-                        
+
                         // Increment failure count
                         var failureCount = task.FailureCount + 1;
                         await UpdateScheduledTaskAsync(task.Id, task.ProfileId, failureCount, errorMessage);
@@ -129,7 +129,7 @@ public class SchedulerService : BackgroundService
                         // If too many failures, disable the profile or alert
                         if (failureCount >= 5)
                         {
-                            Log.Error("Profile {ProfileId} has failed {FailureCount} times. Consider investigation.", 
+                            Log.Error("Profile {ProfileId} has failed {FailureCount} times. Consider investigation.",
                                 task.ProfileId, failureCount);
                         }
                     }
@@ -140,7 +140,7 @@ public class SchedulerService : BackgroundService
                 catch (Exception ex)
                 {
                     Log.Error(ex, "Error executing scheduled task for profile {ProfileId}", task.ProfileId);
-                    
+
                     // Mark as not running and update failure count
                     await MarkTaskAsRunningAsync(task.Id, false);
                     var failureCount = task.FailureCount + 1;
@@ -249,19 +249,19 @@ public class SchedulerService : BackgroundService
                 // Parse cron expression using NCrontab
                 var schedule = CrontabSchedule.Parse(profile.ScheduleCron);
                 var nextOccurrence = schedule.GetNextOccurrence(now);
-                
-                Log.Debug("Next cron occurrence for profile {ProfileId}: {NextOccurrence}", 
+
+                Log.Debug("Next cron occurrence for profile {ProfileId}: {NextOccurrence}",
                     profile.Id, nextOccurrence);
-                
+
                 return nextOccurrence;
             }
             else if (profile.ScheduleType == "Interval" && profile.ScheduleIntervalMinutes.HasValue)
             {
                 var nextRun = now.AddMinutes(profile.ScheduleIntervalMinutes.Value);
-                
-                Log.Debug("Next interval run for profile {ProfileId}: {NextRun} ({Interval} minutes)", 
+
+                Log.Debug("Next interval run for profile {ProfileId}: {NextRun} ({Interval} minutes)",
                     profile.Id, nextRun, profile.ScheduleIntervalMinutes.Value);
-                
+
                 return nextRun;
             }
             else
@@ -286,4 +286,4 @@ public class ScheduledTaskWithProfile : ScheduledTask
 {
     public string? ProfileName { get; set; }
     public bool IsEnabled { get; set; }
-}   
+}

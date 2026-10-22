@@ -58,6 +58,7 @@ public class DatabaseInitializer
 
         // Notification Settings Table
         await CreateNotificationSettingsTableAsync(connection);
+        await CreateOidcSettingsTableAsync(connection);
 
         // Notification Email Templates Table
         await CreateNotificationEmailTemplateTableAsync(connection);
@@ -272,6 +273,7 @@ public class DatabaseInitializer
                 Hash TEXT NOT NULL,
                 LastExecutedAt TEXT NULL,
                 Code TEXT NOT NULL DEFAULT '',
+                CanvasLayoutJson TEXT NULL,
 
                 FOREIGN KEY (ConnectionId) REFERENCES Connections(Id) ON DELETE RESTRICT,
                 FOREIGN KEY (GroupId) REFERENCES ProfileGroups(Id) ON DELETE SET NULL,
@@ -406,7 +408,7 @@ public class DatabaseInitializer
         // Check if table exists first
         var tableExistsSql = "SELECT name FROM sqlite_master WHERE type='table' AND name='WebhookTriggers';";
         var tableExists = await connection.QueryFirstOrDefaultAsync<string>(tableExistsSql);
-        
+
         if (tableExists == null)
         {
             // Create new table with full schema
@@ -439,7 +441,7 @@ public class DatabaseInitializer
             var checkColumnSql = "PRAGMA table_info(WebhookTriggers);";
             var columns = await connection.QueryAsync<dynamic>(checkColumnSql);
             var hasJobId = columns.Any(c => ((string)c.name).Equals("JobId", StringComparison.OrdinalIgnoreCase));
-            
+
             if (!hasJobId)
             {
                 Log.Information("Migrating WebhookTriggers table to add JobId column");
@@ -498,7 +500,8 @@ public class DatabaseInitializer
                 LastSeenAt TEXT NULL,
                 IsDeleted INTEGER NOT NULL DEFAULT 0,
                 DeletedAt TEXT NULL,
-                DeletedBy TEXT NULL
+                DeletedBy TEXT NULL,
+                OidcSubject TEXT NOT NULL DEFAULT ''
             );
 
             CREATE INDEX IF NOT EXISTS idx_users_username ON Users(Username COLLATE NOCASE);
@@ -723,13 +726,13 @@ public class DatabaseInitializer
         // Check if table exists with wrong foreign key reference
         var tableExists = await connection.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='DeltaSyncState'");
-        
+
         if (tableExists > 0)
         {
             // Check if it has the wrong foreign key (to ProfileExecution instead of ProfileExecutions)
             var tableSql = await connection.ExecuteScalarAsync<string>(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='DeltaSyncState'");
-            
+
             if (tableSql != null && tableSql.Contains("ProfileExecution(Id)") && !tableSql.Contains("ProfileExecutions(Id)"))
             {
                 Log.Warning("DeltaSyncState table has incorrect foreign key reference, dropping and recreating...");
@@ -737,7 +740,7 @@ public class DatabaseInitializer
                 tableExists = 0;
             }
         }
-        
+
         if (tableExists == 0)
         {
             var sql = @"
@@ -844,6 +847,26 @@ public class DatabaseInitializer
 
             CREATE INDEX IF NOT EXISTS idx_notificationsettings_enabled ON NotificationSettings(IsEnabled);
             CREATE INDEX IF NOT EXISTS idx_notificationsettings_destination ON NotificationSettings(DestinationId);
+        ";
+        await connection.ExecuteAsync(sql);
+    }
+
+    private async Task CreateOidcSettingsTableAsync(SqliteConnection connection)
+    {
+        var sql = @"
+            CREATE TABLE IF NOT EXISTS OidcSettings (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                IsEnabled INTEGER NOT NULL DEFAULT 0,
+                Name TEXT NOT NULL DEFAULT 'Single Sign-On',
+                Authority TEXT NOT NULL DEFAULT '',
+                ClientId TEXT NOT NULL DEFAULT '',
+                ClientSecretEncrypted TEXT NULL,
+                Scopes TEXT NOT NULL DEFAULT 'openid profile email',
+                UsernameClaim TEXT NOT NULL DEFAULT 'preferred_username',
+                EmailClaim TEXT NOT NULL DEFAULT 'email',
+                CreateAccounts INTEGER NOT NULL DEFAULT 0,
+                UpdatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+            );
         ";
         await connection.ExecuteAsync(sql);
     }
@@ -1059,7 +1082,7 @@ public class DatabaseInitializer
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin, password: admin123)");
+            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
             Log.Warning("! Password change will be required on first login");
             Log.Information("");
         }
@@ -1073,13 +1096,13 @@ public class DatabaseInitializer
         // Insert sample local destination
         var destinationExists = await connection.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM Destinations WHERE Name = 'Local Exports'");
-        
+
         if (destinationExists == 0)
         {
             var destName = "Local Exports";
             var destType = "1";
             var destConfig = "{\"BasePath\":\"exports\",\"CreateDirectories\":true}";
-            
+
             // Encrypt the configuration if encryption service is available
             var destConfigToStore = destConfig;
             if (_encryptionService != null)
@@ -1091,9 +1114,9 @@ public class DatabaseInitializer
             {
                 Log.Warning("EncryptionService not available during seeding - storing unencrypted configuration");
             }
-            
+
             var destHash = Reef.Helpers.HashHelper.ComputeDestinationHash(destName, destType, destConfigToStore);
-            
+
             await connection.ExecuteAsync(@"
                 INSERT INTO Destinations (Name, Description, Type, ConfigurationJson, IsActive, Tags, CreatedAt, Hash)
                 VALUES (@Name, @Description, @Type, @ConfigurationJson, @IsActive, @Tags, datetime('now'), @Hash)",
@@ -1509,6 +1532,14 @@ public class DatabaseInitializer
         // Add OutputTargetsJson column to ImportProfileExecutions for fan-out results
         await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "OutputTargetsJson", "TEXT NULL");
 
+        // Add Script pre/post-process observability columns to ImportProfileExecutions
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PreProcessExitCode", "INTEGER NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStdout", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessStderr", "TEXT NULL");
+        await AddColumnIfNotExistsAsync(connection, "ImportProfileExecutions", "PostProcessExitCode", "INTEGER NULL");
+
         Log.Debug("Database schema migrations completed");
     }
 
@@ -1722,12 +1753,12 @@ public class DatabaseInitializer
         // Migration: Add Guid column to existing PendingEmailApprovals tables (for databases created before Guid was added)
         var columns = await connection.QueryAsync<dynamic>("PRAGMA table_info(PendingEmailApprovals)");
         var guidColumnExists = columns.Any(c => ((string)c.name).Equals("Guid", StringComparison.OrdinalIgnoreCase));
-        
+
         if (!guidColumnExists)
         {
             // Column doesn't exist, add it and populate GUIDs
             await AddColumnIfNotExistsAsync(connection, "PendingEmailApprovals", "Guid", "TEXT NULL");
-            
+
             // Populate GUIDs for existing records that don't have one
             const string populateGuids = @"
                 UPDATE PendingEmailApprovals 
@@ -1737,7 +1768,7 @@ public class DatabaseInitializer
             await connection.ExecuteAsync(populateGuids);
             Log.Debug("✓ Migrated existing records to include GUIDs");
         }
-        
+
         // Create the Guid index (for both new and migrated tables)
         try
         {
@@ -3249,6 +3280,14 @@ public class DatabaseInitializer
 
                 -- Fan-out output target results (JSON array)
                 OutputTargetsJson       TEXT    NULL,
+
+                -- Script pre/post-process observability
+                PreProcessStdout        TEXT    NULL,
+                PreProcessStderr        TEXT    NULL,
+                PreProcessExitCode      INTEGER NULL,
+                PostProcessStdout       TEXT    NULL,
+                PostProcessStderr       TEXT    NULL,
+                PostProcessExitCode     INTEGER NULL,
 
                 FOREIGN KEY (ImportProfileId) REFERENCES ImportProfiles(Id) ON DELETE CASCADE
             );

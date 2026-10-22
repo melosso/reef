@@ -604,8 +604,9 @@ public class AdminService
                       DeletedBy = @DeletedBy,
                       IsActive = 0
                   WHERE Id = @Id AND IsDeleted = 0",
-                new { 
-                    Id = userId, 
+                new
+                {
+                    Id = userId,
                     DeletedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
                     DeletedBy = deletedBy
                 });
@@ -636,7 +637,7 @@ public class AdminService
 
             var keys = await conn.QueryAsync<ApiKey>(
                 "SELECT * FROM ApiKeys ORDER BY CreatedAt DESC");
-            
+
             return keys;
         }
         catch (Exception ex)
@@ -730,7 +731,7 @@ public class AdminService
         var random = new Random();
         var randomPart = new string(Enumerable.Repeat(chars, 32)
             .Select(s => s[random.Next(s.Length)]).ToArray());
-        
+
         return $"reef_live_{randomPart}";
     }
 
@@ -756,7 +757,7 @@ public class AdminService
         var word1 = words[random.Next(words.Length)];
         var word2 = words[random.Next(words.Length)];
         var word3 = words[random.Next(words.Length)];
-        
+
         return $"{word1}_{word2}_{word3}";
     }
 
@@ -769,7 +770,7 @@ public class AdminService
         try
         {
             var dbPath = new SqliteConnectionStringBuilder(_connectionString).DataSource;
-            
+
             if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
             {
                 Log.Warning("Database file not found at {DbPath}", dbPath);
@@ -777,19 +778,19 @@ public class AdminService
             }
 
             Log.Warning("DANGER: Resetting database at {DbPath}", dbPath);
-            
+
             // Close any existing connections
             SqliteConnection.ClearAllPools();
-            
+
             // Delete the database file
             File.Delete(dbPath);
             Log.Information("Database file deleted successfully");
-            
+
             // Recreate the database
             var dbInitializer = new DatabaseInitializer(_connectionString, _encryptionService);
             await dbInitializer.InitializeAsync();
             await dbInitializer.SeedSampleDataAsync();
-            
+
             Log.Information("Database reset and reseeded successfully");
             return true;
         }
@@ -995,6 +996,83 @@ public class AdminService
         catch (Exception ex)
         {
             Log.Error(ex, "Error updating notification settings");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Get the single-provider OIDC SSO configuration. Never returns the decrypted client secret.
+    /// </summary>
+    public async Task<OidcSettings?> GetOidcSettingsAsync()
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        await conn.OpenAsync();
+        return await conn.QueryFirstOrDefaultAsync<OidcSettings>("SELECT * FROM OidcSettings LIMIT 1");
+    }
+
+    /// <summary>
+    /// Get the OIDC settings with the client secret decrypted, for use by the sign-in flow only.
+    /// </summary>
+    public async Task<(OidcSettings Settings, string? ClientSecret)?> GetOidcSettingsForSignInAsync()
+    {
+        var settings = await GetOidcSettingsAsync();
+        if (settings == null) return null;
+        var secret = _encryptionService.DecryptField(settings.ClientSecretEncrypted);
+        return (settings, secret);
+    }
+
+    /// <summary>
+    /// Update the single-provider OIDC SSO configuration. Leaves the stored client secret untouched
+    /// when <paramref name="newClientSecret"/> is null (the admin UI never echoes the secret back).
+    /// </summary>
+    public async Task<bool> UpdateOidcSettingsAsync(OidcSettings settings, string? newClientSecret)
+    {
+        try
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            var existing = await conn.QueryFirstOrDefaultAsync<OidcSettings>("SELECT * FROM OidcSettings LIMIT 1");
+            settings.ClientSecretEncrypted = newClientSecret != null
+                ? _encryptionService.Encrypt(newClientSecret)
+                : existing?.ClientSecretEncrypted;
+            settings.UpdatedAt = DateTime.UtcNow;
+
+            if (existing != null)
+            {
+                const string updateSql = @"
+                    UPDATE OidcSettings SET
+                        IsEnabled = @IsEnabled,
+                        Name = @Name,
+                        Authority = @Authority,
+                        ClientId = @ClientId,
+                        ClientSecretEncrypted = @ClientSecretEncrypted,
+                        Scopes = @Scopes,
+                        UsernameClaim = @UsernameClaim,
+                        EmailClaim = @EmailClaim,
+                        CreateAccounts = @CreateAccounts,
+                        UpdatedAt = @UpdatedAt
+                    WHERE Id = (SELECT Id FROM OidcSettings LIMIT 1)";
+                await conn.ExecuteAsync(updateSql, settings);
+            }
+            else
+            {
+                const string insertSql = @"
+                    INSERT INTO OidcSettings (
+                        IsEnabled, Name, Authority, ClientId, ClientSecretEncrypted,
+                        Scopes, UsernameClaim, EmailClaim, CreateAccounts, UpdatedAt)
+                    VALUES (
+                        @IsEnabled, @Name, @Authority, @ClientId, @ClientSecretEncrypted,
+                        @Scopes, @UsernameClaim, @EmailClaim, @CreateAccounts, @UpdatedAt)";
+                await conn.ExecuteAsync(insertSql, settings);
+            }
+
+            Log.Information("Updated OIDC SSO settings");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error updating OIDC SSO settings");
             return false;
         }
     }

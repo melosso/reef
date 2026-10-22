@@ -22,7 +22,7 @@ public class JsonFormatter : IFormatter
     /// Format data as JSON and write to file
     /// </summary>
     public async Task<(bool Success, long FileSizeBytes, string? ErrorMessage)> FormatAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string outputPath)
     {
         try

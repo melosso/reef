@@ -75,7 +75,7 @@ public class DependencyResolver
         {
             // Validate profiles exist
             await using var connection = new SqliteConnection(_connectionString);
-            
+
             var profileExists = await connection.ExecuteScalarAsync<bool>(
                 "SELECT COUNT(*) FROM Profiles WHERE Id = @Id", new { Id = profileId });
             var dependsOnExists = await connection.ExecuteScalarAsync<bool>(
@@ -127,14 +127,14 @@ public class DependencyResolver
                 ExecutionOrder = executionOrder
             });
 
-            Log.Information("Added dependency: Profile {ProfileId} depends on {DependsOnProfileId}", 
+            Log.Information("Added dependency: Profile {ProfileId} depends on {DependsOnProfileId}",
                 profileId, dependsOnProfileId);
 
             return dependencyId;
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error adding dependency from {ProfileId} to {DependsOnProfileId}", 
+            Log.Error(ex, "Error adding dependency from {ProfileId} to {DependsOnProfileId}",
                 profileId, dependsOnProfileId);
             throw;
         }
@@ -182,7 +182,7 @@ public class DependencyResolver
                 // Check if dependency profile exists
                 await using var connection = new SqliteConnection(_connectionString);
                 var dependencyExists = await connection.ExecuteScalarAsync<bool>(
-                    "SELECT COUNT(*) FROM Profiles WHERE Id = @Id", 
+                    "SELECT COUNT(*) FROM Profiles WHERE Id = @Id",
                     new { Id = dependency.DependsOnProfileId });
 
                 if (!dependencyExists)
@@ -192,7 +192,7 @@ public class DependencyResolver
 
                 // Check if dependency profile is enabled
                 var dependencyEnabled = await connection.ExecuteScalarAsync<bool>(
-                    "SELECT IsEnabled FROM Profiles WHERE Id = @Id", 
+                    "SELECT IsEnabled FROM Profiles WHERE Id = @Id",
                     new { Id = dependency.DependsOnProfileId });
 
                 if (!dependencyEnabled)
@@ -238,13 +238,13 @@ public class DependencyResolver
                     AND Status = 'Success' 
                     AND CompletedAt >= datetime('now', '-1 hour')";
 
-                var hasRecentSuccess = await connection.ExecuteScalarAsync<int>(sql, 
+                var hasRecentSuccess = await connection.ExecuteScalarAsync<int>(sql,
                     new { ProfileId = dependency.DependsOnProfileId }) > 0;
 
                 if (!hasRecentSuccess)
                 {
                     pendingDependencies.Add(dependency.DependsOnProfileId);
-                    Log.Warning("Profile {ProfileId} dependency {DependencyId} has not completed successfully recently", 
+                    Log.Warning("Profile {ProfileId} dependency {DependencyId} has not completed successfully recently",
                         profileId, dependency.DependsOnProfileId);
                 }
             }
@@ -314,7 +314,7 @@ public class DependencyResolver
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error checking circular dependency between {ProfileId} and {DependsOnProfileId}", 
+            Log.Error(ex, "Error checking circular dependency between {ProfileId} and {DependsOnProfileId}",
                 profileId, dependsOnProfileId);
             throw;
         }

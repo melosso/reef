@@ -125,7 +125,7 @@ public class HealthCheckService : BackgroundService
             Log.Error(ex, "Health check failed");
             status.Status = "Unhealthy";
             status.ErrorMessage = ex.Message;
-            
+
             lock (_statusLock)
             {
                 _currentStatus = status;

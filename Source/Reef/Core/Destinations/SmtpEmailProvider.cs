@@ -67,6 +67,7 @@ public class SmtpEmailProvider : IEmailProvider
             // Authenticate if credentials provided
             if (!string.IsNullOrEmpty(username))
             {
+                ArgumentNullException.ThrowIfNull(password);
                 await client.AuthenticateAsync(username, password);
             }
 

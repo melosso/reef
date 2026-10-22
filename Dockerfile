@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4
 
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0.100-rc.2 AS build
 WORKDIR /src
 
 # Copy solution and project files first to leverage layer caching
@@ -24,8 +24,7 @@ WORKDIR /src/Reef
 # (MinVer requires .git to determine version from tags)
 RUN git init && \
     git remote add origin $(git -C /src remote get-url origin 2>/dev/null || echo "https://github.com/melosso/reef.git") && \
-    git fetch --tags origin main && \
-    git reset --soft FETCH_HEAD
+    { { git fetch --tags origin main && git reset --soft FETCH_HEAD; } || echo "Tags unavailable, MinVer falls back to its default version"; }
 
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false
@@ -40,7 +39,7 @@ RUN ls -la /src/Reef/ && \
     fi
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.2 AS runtime
 WORKDIR /app
 
 # Install sqlite3 and curl for runtime healthchecks and basic tools

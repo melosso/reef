@@ -26,7 +26,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_SimpleJsonArray_ReturnsCorrectRows()
     {
         var json = """[{"name":"Alice","age":30},{"name":"Bob","age":25}]""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
         rows[0].Columns["name"].Should().Be("Alice");
@@ -41,7 +41,7 @@ public class JsonImportParserTests
         var config = DefaultConfig();
         config.DataRootPath = "$.data";
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
         rows[0].Columns["id"].Should().Be(1L);
@@ -53,7 +53,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_SingleJsonObject_ReturnsOneRow()
     {
         var json = """{"name":"Alice","age":30}""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].Columns["name"].Should().Be("Alice");
@@ -63,7 +63,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_JsonWithNullValues_ReturnsNullForNullFields()
     {
         var json = """[{"name":"Alice","email":null}]""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].Columns["email"].Should().BeNull();
@@ -73,7 +73,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_JsonWithBoolValues_ParsesCorrectly()
     {
         var json = """[{"name":"Alice","active":true,"deleted":false}]""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].Columns["active"].Should().Be(true);
@@ -91,7 +91,7 @@ public class JsonImportParserTests
         var config = DefaultConfig();
         config.IsJsonLines = true;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(3);
         rows[0].Columns["id"].Should().Be(1L);
@@ -105,7 +105,7 @@ public class JsonImportParserTests
         var config = DefaultConfig();
         config.IsJsonLines = true;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
     }
@@ -114,7 +114,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_InvalidJson_ReturnsParseErrorRow()
     {
         var json = "this is not json";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].ParseError.Should().NotBeNull();
@@ -128,7 +128,7 @@ public class JsonImportParserTests
         var config = DefaultConfig();
         config.IsJsonLines = true;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(jsonl), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(3);
         rows[1].ParseError.Should().NotBeNull();
@@ -143,7 +143,7 @@ public class JsonImportParserTests
         var config = DefaultConfig();
         config.DataRootPath = "$.results.items";
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
         rows[0].Columns["x"].Should().Be(1L);
@@ -152,7 +152,7 @@ public class JsonImportParserTests
     [Fact]
     public async Task ParseAsync_EmptyJsonArray_ReturnsNoRows()
     {
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream("[]"), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream("[]"), DefaultConfig(), TestContext.Current.CancellationToken));
         rows.Should().BeEmpty();
     }
 
@@ -160,7 +160,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_LineNumbersAssigned_AreSequential()
     {
         var json = """[{"a":1},{"a":2},{"a":3}]""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows[0].LineNumber.Should().Be(1);
         rows[1].LineNumber.Should().Be(2);
@@ -171,7 +171,7 @@ public class JsonImportParserTests
     public async Task ParseAsync_DecimalNumber_ParsesAsDouble()
     {
         var json = """[{"price":19.99}]""";
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].Columns["price"].Should().Be(19.99);

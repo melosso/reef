@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Reef.Core.Database;
 using Reef.Core.Models;
 using Reef.Core.Security;
 using Serilog;
@@ -224,7 +225,7 @@ public class ProfileService
                     DeltaSyncTrackDeletes, DeltaSyncRetentionDays, DeltaSyncResetOnSchemaChange, DeltaSyncRemoveNonPrintable, DeltaSyncReefIdNormalization,
                     ExcludeReefIdFromOutput, ExcludeSplitKeyFromOutput,
                     SplitEnabled, SplitKeyColumn, SplitFilenameTemplate, SplitBatchSize, PostProcessPerSplit, EmailGroupBySplitKey, FilenameTemplate,
-                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
+                    IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code, CanvasLayoutJson
                 ) VALUES (
                     @Name, @ConnectionId, @GroupId, @Query, @ScheduleType, @ScheduleCron,
                     @ScheduleIntervalMinutes, @OutputFormat, @OutputDestinationType,
@@ -240,7 +241,7 @@ public class ProfileService
                     @DeltaSyncTrackDeletes, @DeltaSyncRetentionDays, @DeltaSyncResetOnSchemaChange, @DeltaSyncRemoveNonPrintable, @DeltaSyncReefIdNormalization,
                     @ExcludeReefIdFromOutput, @ExcludeSplitKeyFromOutput,
                     @SplitEnabled, @SplitKeyColumn, @SplitFilenameTemplate, @SplitBatchSize, @PostProcessPerSplit, @EmailGroupBySplitKey, @FilenameTemplate,
-                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
+                    @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code, @CanvasLayoutJson
                 );
                 SELECT last_insert_rowid();";
 
@@ -402,7 +403,8 @@ public class ProfileService
                     EmailGroupBySplitKey = @EmailGroupBySplitKey,
                     IsEnabled = @IsEnabled,
                     Hash = @Hash,
-                    UpdatedAt = @UpdatedAt
+                    UpdatedAt = @UpdatedAt,
+                    CanvasLayoutJson = @CanvasLayoutJson
                 WHERE Id = @Id";
 
             var rowsAffected = await connection.ExecuteAsync(new CommandDefinition(sql, profile, cancellationToken: ct));
@@ -572,7 +574,7 @@ public class ProfileService
         try
         {
             var config = System.Text.Json.JsonSerializer.Deserialize<ProcessingConfig>(configJson);
-            
+
             if (config == null)
             {
                 throw new InvalidOperationException($"{fieldName} could not be deserialized");
@@ -584,13 +586,19 @@ public class ProfileService
                 throw new InvalidOperationException($"{fieldName}: 'type' is required");
             }
 
-            if (!config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase) && 
+            if (config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(config.Interpreter) || string.IsNullOrWhiteSpace(config.ScriptPathOrInline))
+                {
+                    throw new InvalidOperationException($"{fieldName}: 'interpreter' and 'scriptPathOrInline' are required for a script");
+                }
+            }
+            else if (!config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase) &&
                 !config.Type.Equals("StoredProcedure", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"{fieldName}: 'type' must be 'Query' or 'StoredProcedure'");
+                throw new InvalidOperationException($"{fieldName}: 'type' must be 'Query', 'StoredProcedure' or 'Script'");
             }
-
-            if (string.IsNullOrWhiteSpace(config.Command))
+            else if (string.IsNullOrWhiteSpace(config.Command))
             {
                 throw new InvalidOperationException($"{fieldName}: 'command' is required");
             }
@@ -610,7 +618,7 @@ public class ProfileService
                     {
                         throw new InvalidOperationException($"{fieldName}: parameter 'name' cannot be empty");
                     }
-                    
+
                     if (param.Value == null)
                     {
                         throw new InvalidOperationException($"{fieldName}: parameter '{param.Name}' value cannot be null");
@@ -618,8 +626,9 @@ public class ProfileService
                 }
             }
 
-            Log.Debug("{FieldName} validation passed: Type={Type}, Command={Command}", 
-                fieldName, config.Type, config.Command.Substring(0, Math.Min(50, config.Command.Length)));
+            var summary = config.Command ?? config.Interpreter ?? "";
+            Log.Debug("{FieldName} validation passed: Type={Type}, Command={Command}",
+                fieldName, config.Type, summary[..Math.Min(50, summary.Length)]);
         }
         catch (System.Text.Json.JsonException ex)
         {

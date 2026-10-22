@@ -112,8 +112,8 @@ public static class ConfigurationValidator
             try
             {
                 // Try to create exports directory if it doesn't exist
-                var fullPath = Path.IsPathRooted(exportsPath) 
-                    ? exportsPath 
+                var fullPath = Path.IsPathRooted(exportsPath)
+                    ? exportsPath
                     : Path.Combine(AppContext.BaseDirectory, exportsPath);
 
                 if (!Directory.Exists(fullPath))

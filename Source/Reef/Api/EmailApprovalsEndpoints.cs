@@ -81,7 +81,7 @@ public static class EmailApprovalsEndpoints
             var count = await service.GetPendingCountAsync();
             // Cap at 99 for display purposes
             var displayCount = count > 99 ? 99 : count;
-            
+
             return Results.Ok(new { count = displayCount });
         }
         catch (Exception ex)

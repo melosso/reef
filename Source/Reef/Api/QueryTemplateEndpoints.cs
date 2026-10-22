@@ -32,8 +32,8 @@ public static class QueryTemplatesEndpoints
             [FromServices] QueryTemplateService service) =>
         {
             var template = await service.GetByIdAsync(id);
-            return template != null 
-                ? Results.Ok(template) 
+            return template != null
+                ? Results.Ok(template)
                 : Results.NotFound(new { message = "Template not found" });
         })
         .WithName("GetQueryTemplateById")
@@ -73,8 +73,8 @@ public static class QueryTemplatesEndpoints
             try
             {
                 var success = await service.UpdateAsync(template);
-                return success 
-                    ? Results.Ok(template) 
+                return success
+                    ? Results.Ok(template)
                     : Results.NotFound(new { message = "Template not found" });
             }
             catch (Exception ex)
@@ -95,8 +95,8 @@ public static class QueryTemplatesEndpoints
             try
             {
                 var success = await service.DeleteAsync(id);
-                return success 
-                    ? Results.NoContent() 
+                return success
+                    ? Results.NoContent()
                     : Results.NotFound(new { message = "Template not found" });
             }
             catch (InvalidOperationException ex)
@@ -142,8 +142,8 @@ public static class QueryTemplatesEndpoints
                     Options = request.Options
                 });
 
-                return result.Success 
-                    ? Results.Ok(result) 
+                return result.Success
+                    ? Results.Ok(result)
                     : Results.BadRequest(result);
             }
             catch (Exception ex)
@@ -174,9 +174,9 @@ public static class QueryTemplatesEndpoints
         group.MapGet("/types", () =>
         {
             var types = Enum.GetValues<QueryTemplateType>()
-                .Select(t => new 
-                { 
-                    value = (int)t, 
+                .Select(t => new
+                {
+                    value = (int)t,
                     name = t.ToString(),
                     description = GetTemplateTypeDescription(t),
                     category = GetTemplateTypeCategory(t)
@@ -587,7 +587,7 @@ public static class QueryTemplatesEndpoints
     private static string GenerateForXmlQuery(ForXmlGeneratorRequest request)
     {
         var parts = new List<string>();
-        
+
         switch (request.Type)
         {
             case QueryTemplateType.ForXmlRaw:
@@ -595,11 +595,11 @@ public static class QueryTemplatesEndpoints
                 if (!string.IsNullOrEmpty(request.RowElement))
                     parts.Add($"('{request.RowElement}')");
                 break;
-                
+
             case QueryTemplateType.ForXmlAuto:
                 parts.Add("FOR XML AUTO");
                 break;
-                
+
             case QueryTemplateType.ForXmlPath:
                 parts.Add("FOR XML PATH");
                 if (!string.IsNullOrEmpty(request.RowElement))
@@ -609,7 +609,7 @@ public static class QueryTemplatesEndpoints
 
         if (request.ElementsMode)
             parts.Add("ELEMENTS");
-            
+
         if (!string.IsNullOrEmpty(request.RootElement))
             parts.Add($"ROOT('{request.RootElement}')");
 
@@ -620,7 +620,7 @@ public static class QueryTemplatesEndpoints
     private static string GenerateForJsonQuery(ForJsonGeneratorRequest request)
     {
         var parts = new List<string>();
-        
+
         if (request.Type == QueryTemplateType.ForJsonPath)
         {
             parts.Add("FOR JSON PATH");
@@ -634,7 +634,7 @@ public static class QueryTemplatesEndpoints
 
         if (request.IncludeNullValues)
             parts.Add("INCLUDE_NULL_VALUES");
-            
+
         if (request.WithoutArrayWrapper)
             parts.Add("WITHOUT_ARRAY_WRAPPER");
 

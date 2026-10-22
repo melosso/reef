@@ -169,6 +169,8 @@ public class LocalFileSource : IImportSource
         // SourceFilePath may be an absolute file path or a directory
         if (!string.IsNullOrWhiteSpace(profile.SourceFilePath))
         {
+            if (Directory.Exists(profile.SourceFilePath))
+                return profile.SourceFilePath;
             var fi = new FileInfo(profile.SourceFilePath);
             return fi.DirectoryName ?? profile.SourceFilePath;
         }

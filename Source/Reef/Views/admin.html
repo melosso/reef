@@ -79,9 +79,17 @@
                             <i data-lucide="bell" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Notifications
                         </button>
+                        <button id="tab-sso" onclick="showTab('sso')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="key-round" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Single Sign-On
+                        </button>
                         <button id="tab-email-templates" onclick="showTab('email-templates')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
                             <i data-lucide="mail" class="h-4 w-4 shrink-0 opacity-70"></i>
                             Templates
+                        </button>
+                        <button id="tab-interpreters" onclick="showTab('interpreters')" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-left">
+                            <i data-lucide="terminal-square" class="h-4 w-4 shrink-0 opacity-70"></i>
+                            Interpreters
                         </button>
                     </div>
                 </div>
@@ -104,8 +112,8 @@
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5">
                         <div class="flex items-center justify-between">
                             <div class="flex-1 flex items-center min-w-0">
-                                <span class="flex p-2 rounded-lg bg-blue-50">
-                                    <i data-lucide="gift" class="h-4 w-4 text-blue-600"></i>
+                                <span class="flex p-2 rounded-lg bg-teal-50">
+                                    <i data-lucide="gift" class="h-4 w-4 text-teal-600"></i>
                                 </span>
                                 
                                 <div class="ml-4 flex items-center text-sm">
@@ -113,9 +121,9 @@
                                         A new version of Reef is available
                                     </p>
                                     <span class="mx-2 h-4 w-px bg-slate-200"></span>
-                                    <strong id="new-version-tag" class="font-mono text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded">vX.Y.Z</strong>
+                                    <strong id="new-version-tag" class="text-teal-600 font-bold bg-teal-50 px-1.5 py-0.5 rounded">vX.Y.Z</strong>
                                     
-                                    <a id="new-version-link" href="#" target="_blank" rel="noopener" class="ml-4 text-blue-600 font-semibold hover:text-blue-700 transition-colors flex items-center group">
+                                    <a id="new-version-link" href="#" target="_blank" rel="noopener" class="ml-4 text-teal-600 font-semibold hover:text-teal-700 transition-colors flex items-center group">
                                         View release notes
                                         <svg xmlns="http://www.w3.org/2000/svg" class="ml-1 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -125,7 +133,7 @@
                             </div>
 
                             <div class="flex-shrink-0 ml-4">
-                                <button type="button" onclick="dismissVersionCheck()" class="p-1.5 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Dismiss">
+                                <button type="button" onclick="dismissVersionCheck()" class="p-1.5 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 transition-all focus:outline-none focus:ring-2 focus:ring-teal-500" aria-label="Dismiss">
                                     <i data-lucide="x" class="h-4 w-4"></i>
                                 </button>
                             </div>
@@ -142,7 +150,7 @@
                             <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="text-sm font-medium text-slate-600">Version</div>
-                                    <i data-lucide="package" class="h-4 w-4 text-blue-500"></i>
+                                    <i data-lucide="package" class="h-4 w-4 text-teal-600"></i>
                                 </div>
                                 <div class="text-lg font-semibold text-slate-900" id="system-version">--</div>
                                 <div class="text-xs text-slate-500 mt-1" id="system-environment">--</div>
@@ -187,7 +195,7 @@
                             <div class="bg-white rounded-lg border border-slate-200">
                                 <div class="px-4 py-3 border-b border-slate-200">
                                     <h3 class="text-base font-semibold text-slate-900 flex items-center">
-                                        <i data-lucide="cpu" class="h-4 w-4 mr-2 text-blue-500"></i>
+                                        <i data-lucide="cpu" class="h-4 w-4 mr-2 text-teal-600"></i>
                                         System Information
                                     </h3>
                                 </div>
@@ -206,7 +214,7 @@
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-slate-600">Repository</span>
-                                        <a href="https://github.com/melosso/reef" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                        <a href="https://github.com/melosso/reef" target="_blank" class="text-sm text-teal-600 hover:text-teal-700 flex items-center">
                                             GitHub
                                             <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
                                         </a>
@@ -233,11 +241,11 @@
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-slate-600">Source Code</span>
-                                        <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">Required</span>
+                                        <span class="text-xs font-semibold text-green-700">Required</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-slate-600">Full License</span>
-                                        <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+                                        <a href="https://github.com/melosso/reef/blob/main/LICENSE" target="_blank" class="text-sm text-teal-600 hover:text-teal-700 flex items-center">
                                             View
                                             <i data-lucide="external-link" class="h-3 w-3 ml-1"></i>
                                         </a>
@@ -273,7 +281,7 @@
                         <div id="metrics-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -287,7 +295,7 @@
                             <div class="bg-white rounded-lg border border-slate-200 p-4">
                                 <div class="flex items-center justify-between mb-2">
                                     <div class="text-sm font-medium text-slate-600">Total Profiles</div>
-                                    <i data-lucide="file-code" class="h-4 w-4 text-blue-500"></i>
+                                    <i data-lucide="file-code" class="h-4 w-4 text-teal-600"></i>
                                 </div>
                                 <div class="text-xl font-semibold text-slate-900" id="metric-total-profiles">--</div>
                                 <div class="text-xs text-slate-500 mt-1"><span id="metric-active-profiles">--</span> active</div>
@@ -371,7 +379,7 @@
                         <div id="audit-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -461,7 +469,7 @@
                         <div id="logs-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -485,7 +493,7 @@
                                             <option value="Fatal">Fatal</option>
                                         </select>
                                         <label class="flex items-center space-x-2 px-3 py-2 bg-slate-100 rounded-lg">
-                                            <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                            <input type="checkbox" id="log-auto-refresh" onchange="toggleAutoRefresh()" class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                             <span class="text-sm text-slate-700">Auto-refresh</span>
                                         </label>
                                         <button onclick="loadLogs()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 flex items-center">
@@ -501,7 +509,7 @@
                             </div>
                             <!-- Log Output Area -->
                             <div class="bg-slate-900 text-slate-50 p-4 overflow-y-scroll max-h-[60vh]">
-                                <div id="log-console-output" class="font-mono text-xs">
+                                <div id="log-console-output" class="text-xs">
                                     <div class="text-center text-slate-400 py-4">Loading application logs...</div>
                                 </div>
                             </div>
@@ -545,7 +553,7 @@
                         <div id="users-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -598,7 +606,7 @@
                         <div id="apikeys-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -650,7 +658,7 @@
                         <div id="notifications-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -674,7 +682,7 @@
                                     </div>
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="notify-enabled" onchange="handleNotificationChange()" class="sr-only peer">
-                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                     </label>
                                 </div>
 
@@ -716,7 +724,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -726,7 +734,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -748,7 +756,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -758,7 +766,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-import-profile-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -780,7 +788,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-failure" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -790,7 +798,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-job-success" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -815,14 +823,14 @@
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-email-approval" onchange="handleNotificationChange()" class="sr-only peer">
-                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                     </label>
                                                 </div>
                                                 <p class="text-xs text-slate-500 mb-2">Notify when new emails are pending approval</p>
                                                 <div id="email-approval-settings" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
                                                     <label class="block text-xs font-medium text-slate-700 mb-2">Cooldown Period</label>
                                                     <div class="flex items-center gap-2">
-                                                        <input type="number" id="email-approval-cooldown-hours" min="1" max="168" value="24" class="w-20 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-300 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <input type="number" id="email-approval-cooldown-hours" min="1" max="168" value="24" class="w-20 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-teal-300 focus:border-transparent" onchange="handleNotificationChange()">
                                                         <span class="text-xs text-slate-500">hours (notify at most once every N hours)</span>
                                                     </div>
                                                     <p class="text-xs text-slate-400 mt-2">Default: 24 hours. Prevents notification spam when multiple emails are pending approval.</p>
@@ -850,14 +858,14 @@
                                                     </div>
                                                     <label class="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" id="notify-db-size" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                     </label>
                                                 </div>
                                                 <p class="text-xs text-slate-500 mb-2">Notify when database exceeds limit</p>
                                                 <div id="database-size-settings" class="hidden mt-3 p-3 bg-slate-50 border border-slate-200 rounded-md">
                                                     <label class="block text-xs font-medium text-slate-700 mb-2">Threshold Size</label>
                                                     <div class="flex items-center gap-2">
-                                                        <input type="number" id="db-threshold-mb" min="100" max="10240" value="1024" class="w-24 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-blue-300 focus:border-transparent" onchange="handleNotificationChange()">
+                                                        <input type="number" id="db-threshold-mb" min="100" max="10240" value="1024" class="w-24 px-2 py-1 border border-slate-200 rounded text-sm focus:ring-2 focus:ring-teal-300 focus:border-transparent" onchange="handleNotificationChange()">
                                                         <span class="text-xs text-slate-500">MB</span>
                                                     </div>
                                                     <p class="text-xs text-slate-400 mt-2">Default: 1024 MB (1 GB). Notify when database size exceeds this threshold.</p>
@@ -870,7 +878,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-api-key" onchange="handleNotificationChange()" class="sr-only peer" checked>
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -880,7 +888,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-user" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                             <div class="flex items-center justify-between px-4 py-3">
@@ -890,7 +898,7 @@
                                                 </div>
                                                 <label class="relative inline-flex items-center cursor-pointer">
                                                     <input type="checkbox" id="notify-webhook" onchange="handleNotificationChange()" class="sr-only peer">
-                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                                 </label>
                                             </div>
                                         </div>
@@ -919,7 +927,7 @@
                                             </div>
                                             <label class="relative inline-flex items-center cursor-pointer">
                                                 <input type="checkbox" id="enable-cta" onchange="handleNotificationChange(); toggleCTASettings();" class="sr-only peer">
-                                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                                             </label>
                                         </div>
 
@@ -928,16 +936,16 @@
                                             <!-- Instance URL -->
                                             <div>
                                                 <label for="cta-url" class="block text-sm font-semibold text-slate-900 mb-2">Instance URL</label>
-                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono" onchange="handleNotificationChange()">
+                                                <input type="url" id="cta-url" placeholder="https://reef.yourdomain.com" class="w-full h-9 px-3 py-1 border border-slate-200 rounded-md text-sm bg-white outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" onchange="handleNotificationChange()">
                                                 <p class="text-xs text-slate-500 mt-1">
                                                     External URL where Reef is accessible. Available as <code class="bg-slate-100 px-1 rounded text-xs">{CTAUrl}</code> in all templates.
                                                 </p>
                                             </div>
 
                                             <!-- Info Box -->
-                                            <div class="bg-blue-50 border border-blue-200 rounded p-3">
-                                                <p class="text-xs text-blue-800">
-                                                    <strong>How it works:</strong> When enabled, email templates can include action buttons and footer links using the <code class="bg-blue-100 px-1 rounded">{CTAUrl}</code> placeholder. Configure button text per template in the Email Templates tab.
+                                            <div class="bg-teal-50 border border-teal-200 rounded p-3">
+                                                <p class="text-xs text-teal-800">
+                                                    <strong>How it works:</strong> When enabled, email templates can include action buttons and footer links using the <code class="bg-slate-100 px-1 rounded">{CTAUrl}</code> placeholder. Configure button text per template in the Email Templates tab.
                                                 </p>
                                             </div>
                                         </div>
@@ -961,13 +969,118 @@
                         </div>
                     </div>
 
+                    <!-- Single Sign-On Tab -->
+                    <div id="content-sso" class="tab-content hidden relative"
+                         x-data="{
+                            loading: true, saving: false, message: '',
+                            form: { isEnabled: false, name: 'Single Sign-On', authority: '', clientId: '', clientSecret: '', scopes: 'openid profile email', usernameClaim: 'preferred_username', emailClaim: 'email', createAccounts: false },
+                            hasClientSecret: false,
+                            redirectUri: window.location.origin + '/api/auth/oidc/callback',
+                            async load() {
+                                this.loading = true;
+                                const res = await fetch(`${API_BASE}/api/admin/oidc-settings`, { headers: getAuthHeaders() });
+                                if (res.ok) {
+                                    const d = await res.json();
+                                    this.hasClientSecret = !!d.hasClientSecret;
+                                    Object.assign(this.form, d, { clientSecret: '' });
+                                }
+                                this.loading = false;
+                            },
+                            async save() {
+                                this.saving = true; this.message = '';
+                                const body = { ...this.form };
+                                if (!body.clientSecret) delete body.clientSecret; else body.clientSecret = this.form.clientSecret;
+                                const res = await fetch(`${API_BASE}/api/admin/oidc-settings`, {
+                                    method: 'PUT', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(body)
+                                });
+                                const d = await res.json();
+                                this.message = res.ok ? 'Saved.' : (d.error || 'Failed to save.');
+                                this.saving = false;
+                                if (res.ok) this.load();
+                            }
+                         }" x-init="load()">
+                        <div class="max-w-2xl">
+                            <h2 class="text-lg font-semibold text-slate-900 mb-1">Single Sign-On</h2>
+                            <p class="text-sm text-slate-500 mb-6">Connect one OpenID Connect provider &mdash; Pocket ID, Azure Entra ID, or any standard discovery-compliant provider. Accounts are matched by username or verified email on first sign-in.</p>
+
+                            <div class="space-y-4" x-show="!loading">
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="checkbox" x-model="form.isEnabled" class="h-4 w-4 rounded border-slate-300">
+                                    <span class="text-sm font-medium text-slate-700">Enabled</span>
+                                </label>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Button label</label>
+                                    <input type="text" x-model="form.name" placeholder="Pocket ID"
+                                           class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Authority (issuer URL)</label>
+                                    <input type="text" x-model="form.authority" placeholder="https://idp.example.com"
+                                           class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    <p class="text-xs text-slate-400">Discovery document is read from this address on save; a wrong URL is refused here instead of at sign-in.</p>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-sm font-medium text-slate-700">Redirect URL</label>
+                                    <input type="text" readonly :value="redirectUri" onclick="this.select()"
+                                           class="w-full h-9 px-3 border border-slate-200 bg-slate-50 text-sm rounded-md text-slate-500">
+                                    <p class="text-xs text-slate-400">Paste this into the provider's app registration.</p>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Client ID</label>
+                                        <input type="text" x-model="form.clientId" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Client secret</label>
+                                        <input type="password" x-model="form.clientSecret"
+                                               :placeholder="hasClientSecret ? 'Set. Type to replace it.' : 'Leave empty for a public client.'"
+                                               class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Scopes</label>
+                                        <input type="text" x-model="form.scopes" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Username claim</label>
+                                        <input type="text" x-model="form.usernameClaim" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <label class="block text-sm font-medium text-slate-700">Email claim</label>
+                                        <input type="text" x-model="form.emailClaim" class="w-full h-9 px-3 border border-slate-200 text-sm rounded-md">
+                                    </div>
+                                </div>
+
+                                <label class="flex items-center gap-2.5 cursor-pointer">
+                                    <input type="checkbox" x-model="form.createAccounts" class="h-4 w-4 rounded border-slate-300">
+                                    <span class="text-sm font-medium text-slate-700">Create accounts on first sign-in</span>
+                                </label>
+
+                                <div class="flex items-center gap-3 pt-2">
+                                    <button @click="save()" :disabled="saving"
+                                            class="h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 disabled:opacity-60">
+                                        <span x-text="saving ? 'Saving…' : 'Save Settings'"></span>
+                                    </button>
+                                    <span class="text-sm text-slate-500" x-text="message"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Email Templates Tab -->
                     <div id="content-email-templates" class="tab-content hidden relative">
                         <!-- Permission Blur Overlay -->
                         <div id="email-templates-permission-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-10 flex items-center justify-center rounded-lg min-h-[400px]">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -1008,7 +1121,7 @@
                                             <!-- Subject Editor -->
                                             <div class="mb-6">
                                                 <label class="block text-sm font-semibold text-slate-900 mb-2">Email Subject</label>
-                                                <input type="text" id="template-subject" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] font-mono text-sm" placeholder="Email subject with optional placeholders">
+                                                <input type="text" id="template-subject" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md shadow-xs outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] text-sm" placeholder="Email subject with optional placeholders">
                                             </div>
 
                                             <!-- CTA Configuration -->
@@ -1024,7 +1137,7 @@
                                                     <!-- URL Override (Optional) -->
                                                     <div>
                                                         <label class="block text-xs font-medium text-slate-700 mb-1">URL Override (Optional)</label>
-                                                        <input type="text" id="template-cta-url-override" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave empty to use global Instance URL">
+                                                        <input type="text" id="template-cta-url-override" class="w-full h-9 px-3 py-1 bg-white border border-slate-200 text-slate-900 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow]" placeholder="Leave empty to use global Instance URL">
                                                         <p class="text-xs text-slate-500 mt-1">Override the global Instance URL for this template only. Supports placeholders.</p>
                                                     </div>
                                                 </div>
@@ -1038,7 +1151,7 @@
                                                         <i data-lucide="external-link" class="h-3 w-3"></i>Preview
                                                     </button>
                                                 </div>
-                                                <textarea id="template-body" class="w-full px-3 py-2 bg-white border border-slate-200 text-sm font-mono rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] h-80" placeholder="HTML body of the email template"></textarea>
+                                                <textarea id="template-body" class="w-full px-3 py-2 bg-white border border-slate-200 text-sm rounded-md outline-none focus:border-slate-400 focus:ring-3 focus:ring-slate-900/10 transition-[color,box-shadow] h-80" placeholder="HTML body of the email template"></textarea>
                                             </div>
 
                                             <!-- Action Buttons -->
@@ -1064,13 +1177,13 @@
                         </div>
 
                         <!-- Scriban Template Reference -->
-                        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 class="font-semibold text-blue-900 mb-2">Scriban Template Syntax</h4>
-                            <p class="text-sm text-blue-800 mb-3">Email templates use <a href="https://github.com/scriban/scriban" target="_blank" class="underline">Scriban syntax</a> for variables and logic:</p>
+                        <div class="mt-6 bg-teal-50 border border-teal-200 rounded-lg p-4">
+                            <h4 class="font-semibold text-teal-900 mb-2">Scriban Template Syntax</h4>
+                            <p class="text-sm text-teal-800 mb-3">Email templates use <a href="https://github.com/scriban/scriban" target="_blank" class="underline">Scriban syntax</a> for variables and logic:</p>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="text-sm text-blue-800">
+                                <div class="text-sm text-teal-800">
                                     <p><strong>Variables (use double braces):</strong></p>
-                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
                                         <li>{{ "{{ ProfileName }}" }} - Profile name</li>
                                         <li>{{ "{{ ExecutionId }}" }} - Execution ID</li>
                                         <li>{{ "{{ StartedAt }}" }} - Execution start time</li>
@@ -1080,21 +1193,21 @@
                                         <li>{{ "{{ ErrorMessage }}" }} - Error details</li>
                                     </ul>
                                     <p class="mt-3"><strong>CTA Variables:</strong></p>
-                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
                                         <li>{{ "{{ EnableCTA }}" }} - true/false</li>
                                         <li>{{ "{{ CTAUrl }}" }} - Instance URL</li>
                                         <li>{{ "{{ CTAButtonText }}" }} - Button text</li>
                                     </ul>
                                 </div>
-                                <div class="text-sm text-blue-800">
+                                <div class="text-sm text-teal-800">
                                     <p><strong>Conditionals:</strong></p>
-                                    <pre class="text-xs bg-blue-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ if EnableCTA }}" }}
+                                    <pre class="text-xs bg-slate-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ if EnableCTA }}" }}
   &lt;a href="{{ "{{ CTAUrl }}" }}"&gt;{{ "{{ CTAButtonText }}" }}&lt;/a&gt;
 {{ "{{ end }}" }}</pre>
                                     <p class="mt-3"><strong>Date Formatting:</strong></p>
-                                    <pre class="text-xs bg-blue-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ NotificationTime | date.to_string '%Y-%m-%d %H:%M:%S' }}" }}</pre>
+                                    <pre class="text-xs bg-slate-100 p-2 rounded mt-1 overflow-x-auto">{{ "{{ NotificationTime | date.to_string '%Y-%m-%d %H:%M:%S' }}" }}</pre>
                                     <p class="mt-3"><strong>More Variables:</strong></p>
-                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1 font-mono">
+                                    <ul class="list-disc list-inside text-xs mt-1 space-y-1">
                                         <li>{{ "{{ JobName }}" }} - Job name</li>
                                         <li>{{ "{{ Username }}" }} - User name</li>
                                         <li>{{ "{{ KeyName }}" }} - API key name</li>
@@ -1106,13 +1219,42 @@
                         </div>
                     </div>
 
+                    <!-- Interpreters Tab -->
+                    <div id="content-interpreters" class="tab-content hidden relative">
+                        <div class="bg-white rounded-lg shadow">
+                            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900">Script Interpreters</h3>
+                                    <p class="text-sm text-slate-600 mt-1">
+                                        Profile pre/post-process Script steps run via one of these interpreters.
+                                        Verify which are actually runnable on this host before relying on them.
+                                    </p>
+                                </div>
+                                <button onclick="loadInterpreters()" class="h-9 px-4 border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center">
+                                    <svg id="interpreters-refresh-spinner" class="animate-spin h-4 w-4 mr-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+                                    Verify All
+                                </button>
+                            </div>
+
+                            <div class="p-6">
+                                <div id="interpretersList" class="space-y-2">
+                                    <p class="text-gray-500 text-center py-4">Loading...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Danger Zone Tab -->
                     <div id="content-danger" class="tab-content hidden relative">
                         <!-- Admin Only Permission Blur Overlay -->
                         <div id="danger-zone-admin-blur" class="hidden absolute inset-0 backdrop-blur-md bg-white/50 z-20 flex items-center justify-center rounded-lg">
                             <div class="text-center max-w-md mx-auto p-8">
                                 <div class="mb-6">
-                                    <i data-lucide="shield-off" class="h-16 w-16 text-blue-600 mx-auto mb-4"></i>
+                                    <i data-lucide="shield-off" class="h-16 w-16 text-slate-300 mx-auto mb-4"></i>
                                 </div>
                                 <h2 class="text-2xl font-bold text-slate-900 mb-3 disable-select">Admin Only</h2>
                                 <p class="text-slate-600 mb-6">
@@ -1151,7 +1293,7 @@
                                     <div class="flex items-center justify-between disable-select">
                                         <div>
                                             <h3 class="text-lg font-semibold text-slate-900 flex items-center">
-                                                <i data-lucide="file-clock" class="h-5 w-5 mr-2 text-blue-600"></i>
+                                                <i data-lucide="file-clock" class="h-5 w-5 mr-2 text-teal-600"></i>
                                                 Audit Log Cleanup
                                             </h3>
                                             <p class="text-sm text-slate-500 mt-1">Remove old audit logs to free up space</p>
@@ -1159,8 +1301,8 @@
                                     </div>
                                 </div>
                                 <div class="p-6">
-                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                                        <p class="text-sm text-blue-800">
+                                    <div class="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
+                                        <p class="text-sm text-teal-800">
                                             Clear audit logs older than a specified number of days. Minimum retention period is 90 days for compliance.
                                         </p>
                                     </div>
@@ -1299,7 +1441,7 @@
     </div>
 
     <!-- Database Reset Confirmation Modal -->
-    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="resetConfirmModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeResetModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="resetConfirmModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="resetConfirmModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1311,7 +1453,7 @@
                 <p class="text-sm text-slate-600 mb-4">
                     You're about to reset Reef. This action cannot be undone. To proceed, please type the following text:
                 </p>
-                <div class="bg-slate-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="reset-confirmation-string">
+                <div class="bg-slate-100 p-3 rounded-lg mb-4 text-center text-lg font-bold disable-select" id="reset-confirmation-string">
                     --
                 </div>
                 <input 
@@ -1329,7 +1471,7 @@
     </div>
 
     <!-- Clear All Executions Confirmation Modal -->
-    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="clearAllExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeClearAllModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearAllExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearAllExecutionsModal-title" class="text-lg font-semibold text-red-900 flex items-center">
@@ -1341,7 +1483,7 @@
                 <p class="text-sm text-slate-600 mb-4">
                     This will delete ALL execution logs. To proceed, please type the following text:
                 </p>
-                <div class="bg-slate-100 p-3 rounded-lg mb-4 font-mono text-center text-lg font-bold disable-select" id="clear-all-confirmation-string">
+                <div class="bg-slate-100 p-3 rounded-lg mb-4 text-center text-lg font-bold disable-select" id="clear-all-confirmation-string">
                     --
                 </div>
                 <input 
@@ -1359,11 +1501,11 @@
     </div>
 
     <!-- Clear Old Audits Confirmation Modal -->
-    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldAuditsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldAuditsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldAuditsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldAuditsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
-                    <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-blue-600"></i>
+                    <i data-lucide="alert-circle" class="h-5 w-5 mr-2 text-teal-600"></i>
                     Clear Old Audit Logs
                 </h3>
             </div>
@@ -1372,8 +1514,8 @@
                     You are about to delete audit logs older than <strong id="audit-confirm-days">--</strong> days. 
                     This action cannot be undone.
                 </p>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p class="text-sm text-blue-800">
+                <div class="bg-teal-50 border border-teal-200 rounded-lg p-3">
+                    <p class="text-sm text-teal-800">
                         <strong>Note:</strong> Minimum retention period is 90 days for compliance purposes.
                     </p>
                 </div>
@@ -1386,7 +1528,7 @@
     </div>
 
     <!-- Clear Old Executions Confirmation Modal -->
-    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select">
+    <div id="clearOldExecutionsModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center disable-select" onclick="if (event.target === this) closeClearOldExecutionsModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="clearOldExecutionsModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="clearOldExecutionsModal-title" class="text-lg font-semibold text-slate-900 flex items-center">
@@ -1413,7 +1555,7 @@
     </div>
 
     <!-- Add User Modal -->
-    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addUserModal-title" class="text-lg font-semibold text-slate-900">Add New User</h3>
@@ -1445,7 +1587,7 @@
     </div>
 
     <!-- Edit User Modal -->
-    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="editUserModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeEditUserModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="editUserModal-title">
             <div class="p-6 border-b border-slate-200">
                 <div class="flex items-center justify-between">
@@ -1513,7 +1655,7 @@
     </div>
 
     <!-- Change Username Modal -->
-    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="changeUsernameModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeChangeUsernameModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="changeUsernameModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="changeUsernameModal-title" class="text-lg font-semibold text-slate-900">Change Username</h3>
@@ -1539,7 +1681,7 @@
     </div>
 
     <!-- Add API Key Modal -->
-    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="addApiKeyModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeAddApiKeyModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="addApiKeyModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="addApiKeyModal-title" class="text-lg font-semibold text-slate-900">Add API Key</h3>
@@ -1572,7 +1714,7 @@
     </div>
 
     <!-- API Key Display Modal -->
-    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyDisplayModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyDisplayModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="apiKeyDisplayModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyDisplayModal-title" class="text-lg font-semibold text-slate-900">API Key Generated</h3>
@@ -1580,7 +1722,7 @@
             <div class="p-6">
                 <p class="text-sm text-slate-600 mb-4">Save this API key securely. You won't be able to see it again!</p>
                 <div class="bg-slate-50 p-4 rounded-lg mb-4">
-                    <code class="text-sm font-mono break-all" id="generated-api-key"></code>
+                    <code class="text-sm break-all" id="generated-api-key"></code>
                 </div>
                 <button onclick="copyApiKey()" class="w-full h-9 px-4 bg-slate-900 text-white text-sm font-medium rounded-md hover:bg-slate-800 active:scale-95 transition-colors flex items-center justify-center">
                     <i data-lucide="copy" class="h-4 w-4 mr-2"></i>
@@ -1594,7 +1736,7 @@
     </div>
 
     <!-- User Roles Help Modal -->
-    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="userHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeUserHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="userHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="userHelpModal-title" class="text-lg font-semibold text-slate-900">About Users</h3>
@@ -1602,9 +1744,9 @@
             <div class="p-6">
                 <div class="space-y-6">
                     <!-- Admin Section -->
-                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                    <div class="border border-teal-200 rounded-lg p-4 bg-teal-50">
                         <div class="flex items-start gap-3 mb-3">
-                            <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <div class="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center flex-shrink-0">
                                 <i data-lucide="shield" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
@@ -1679,7 +1821,7 @@
     </div>
 
     <!-- API Key Help Modal -->
-    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center">
+    <div id="apiKeyHelpModal" class="hidden fixed inset-0 bg-black/20 backdrop-blur-[2px] z-50 flex items-center justify-center" onclick="if (event.target === this) closeApiKeyHelpModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" role="dialog" aria-modal="true" aria-labelledby="apiKeyHelpModal-title">
             <div class="p-6 border-b border-slate-200">
                 <h3 id="apiKeyHelpModal-title" class="text-lg font-semibold text-slate-900">About API Keys</h3>
@@ -1687,9 +1829,9 @@
             <div class="p-6">
                 <div class="space-y-6">
                     <!-- API Keys Overview -->
-                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                    <div class="border border-teal-200 rounded-lg p-4 bg-teal-50">
                         <div class="flex items-start gap-3 mb-3">
-                            <div class="h-8 w-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <div class="h-8 w-8 rounded-lg bg-teal-600 flex items-center justify-center flex-shrink-0">
                                 <i data-lucide="key" class="h-5 w-5 text-white"></i>
                             </div>
                             <div>
@@ -1811,7 +1953,15 @@
             window.addEventListener('DOMContentLoaded', initAdmin);
         } else if (window._pendingAdminInit) {
             window._pendingAdminInit = false;
-            initAdmin();
+            // Defer: on SPA navigation router.js rewrites top-level `function`
+            // declarations (e.g. showTab, further down this same script) into
+            // plain `window.x = function` assignments, which - unlike real
+            // function declarations - only exist once that line actually runs.
+            // Calling initAdmin() synchronously here, before the script has
+            // finished executing top to bottom, throws "showTab is not
+            // defined". setTimeout pushes the call to a macrotask, after the
+            // whole script (and all those assignments) has finished.
+            setTimeout(initAdmin, 0);
         }
 
         function getLogLevelColor(level) {
@@ -1820,7 +1970,7 @@
                 case 'ERROR': return 'text-red-500';
                 case 'WARNING': return 'text-yellow-500';
                 case 'INFORMATION': return 'text-green-500';
-                case 'DEBUG': return 'text-blue-400';
+                case 'DEBUG': return 'text-teal-500';
                 case 'VERBOSE': return 'text-slate-400';
                 default: return 'text-slate-300';
             }
@@ -1857,7 +2007,7 @@
             }
 
             // Check permissions for admin-only tabs
-            const adminOnlyTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates'];
+            const adminOnlyTabs = ['metrics', 'logs', 'audit', 'users', 'apikeys', 'notifications', 'email-templates', 'sso'];
             if (adminOnlyTabs.includes(tab)) {
                 checkTabPermissions(tab);
             }
@@ -1875,6 +2025,70 @@
             else if (tab === 'apikeys') loadApiKeys();
             else if (tab === 'system') loadSystemInfo();
             else if (tab === 'notifications' && typeof window.loadNotificationSettings === 'function') loadNotificationSettings();
+            else if (tab === 'interpreters') loadInterpreters();
+        }
+
+        async function loadInterpreters() {
+            const list = document.getElementById('interpretersList');
+            const spinner = document.getElementById('interpreters-refresh-spinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters`, { headers: getAuthHeaders() });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const interpreters = await resp.json();
+                renderInterpretersList(interpreters);
+            } catch (e) {
+                list.innerHTML = `<p class="text-red-500 text-center py-4">Failed to load interpreters: ${e.message}</p>`;
+            } finally {
+                spinner.classList.add('hidden');
+                queueLucideRender();
+            }
+        }
+
+        function interpreterRowHtml(i) {
+            return `
+                <div id="interpreter-row-${i.name}" class="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="${i.available ? 'check-circle' : 'x-circle'}" class="h-5 w-5 ${i.available ? 'text-green-500' : 'text-red-500'} shrink-0"></i>
+                        <div>
+                            <p class="text-sm font-medium text-slate-900">${escapeHtml(i.displayName)} <span class="text-xs text-slate-400">${escapeHtml(i.name)}</span></p>
+                            <p class="text-xs ${i.available ? 'text-slate-500' : 'text-red-600'}">
+                                ${i.available ? (i.output ? escapeHtml(i.output) : 'Available') : (i.error || 'Not available on this host')}
+                            </p>
+                        </div>
+                    </div>
+                    <button onclick="testInterpreter('${i.name}')" class="px-3 py-1.5 text-xs font-medium text-teal-700 bg-teal-50 border border-teal-200 rounded hover:bg-teal-100 flex items-center">
+                        <i data-lucide="play" class="w-3.5 h-3.5 mr-1.5"></i>Test
+                    </button>
+                </div>`;
+        }
+
+        function renderInterpretersList(interpreters) {
+            document.getElementById('interpretersList').innerHTML = interpreters.map(interpreterRowHtml).join('');
+            queueLucideRender();
+        }
+
+        async function testInterpreter(name) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/profiles/interpreters/${name}/test`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const status = await resp.json();
+
+                const existingRow = document.getElementById(`interpreter-row-${name}`);
+                if (existingRow) {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = interpreterRowHtml(status).trim();
+                    existingRow.replaceWith(wrapper.firstElementChild);
+                    queueLucideRender();
+                }
+                showToast(`${status.displayName}: ${status.available ? 'available' : 'not available'}`, status.available ? 'success' : 'error');
+            } catch (e) {
+                showToast(`Test failed: ${e.message}`, 'error');
+            }
         }
 
         /**
@@ -1971,11 +2185,11 @@
                         <td class="px-6 py-4 text-sm text-slate-900">
                             ${log.EntityType}
                             ${log.EntityCode
-                                ? `<span class="ml-1 px-1.5 py-0.5 text-xs bg-slate-100 text-slate-500 rounded font-mono">${log.EntityCode}</span>`
+                                ? `<span class="ml-1 text-xs text-slate-400">${log.EntityCode}</span>`
                                 : `<span class="text-slate-400">#${log.EntityId}</span>`}
                             ${log.EntityName ? `<div class="text-xs text-slate-400 truncate max-w-xs">${log.EntityName}</div>` : ''}
                         </td>
-                        <td class="px-6 py-4 text-sm"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">${log.Action}</span></td>
+                        <td class="px-6 py-4 text-sm"><span class="text-xs font-semibold text-teal-700">${log.Action}</span></td>
                         <td class="px-6 py-4 text-sm text-slate-900">${log.PerformedBy}</td>
                         <td class="px-6 py-4 text-sm text-slate-500">${log.Changes || '-'}</td>
                     </tr>
@@ -2028,7 +2242,7 @@
                     <button onclick="goToAuditPage(${i})" 
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active 
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                                ? 'z-10 bg-teal-50 border-teal-600 text-teal-600' 
                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
@@ -2187,7 +2401,7 @@
                     <button onclick="goToLogPage(${i})" 
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active 
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
+                                ? 'z-10 bg-teal-50 border-teal-600 text-teal-600' 
                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
@@ -2553,9 +2767,13 @@
                     document.getElementById('system-uptime').textContent = data.uptime.days + ' days';
                 }
 
-                // Start real-time clock
+                // Start real-time clock. Clear any previous interval first -
+                // loadSystemInfo() runs every time the System Info tab is
+                // reselected, and without this, switching tabs back and forth
+                // stacked one interval per visit.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
                 updateServerTime();
-                setInterval(updateServerTime, 1000);
+                window.systemTimeInterval = setInterval(updateServerTime, 1000);
 
             } catch (error) {
                 console.error('Error loading system info:', error);
@@ -2563,19 +2781,25 @@
         }
 
         function updateServerTime() {
+            const timeEl = document.getElementById('system-time');
+            const dateEl = document.getElementById('system-date');
+            if (!timeEl || !dateEl) {
+                // Tab content no longer in the DOM (navigated away) - stop polling.
+                if (window.systemTimeInterval) clearInterval(window.systemTimeInterval);
+                return;
+            }
+
             const now = new Date();
-            
+
             // Format time as HH:MM:SS
-            const timeStr = now.toUTCString().split(' ')[4];
-            document.getElementById('system-time').textContent = timeStr;
-            
+            timeEl.textContent = now.toUTCString().split(' ')[4];
+
             // Format date more compactly
-            const dateStr = now.toLocaleDateString('nl-NL', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            dateEl.textContent = now.toLocaleDateString('nl-NL', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
             });
-            document.getElementById('system-date').textContent = dateStr;
         }
         window.onload = async function() {
 

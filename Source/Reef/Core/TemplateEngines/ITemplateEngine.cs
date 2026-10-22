@@ -13,7 +13,7 @@ public interface ITemplateEngine
     /// <param name="context">Additional context variables (optional)</param>
     /// <returns>Transformed output string</returns>
     Task<string> TransformAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string template,
         Dictionary<string, object>? context = null);
 

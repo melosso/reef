@@ -14,8 +14,15 @@ public class ValidationService
     /// <summary>
     /// Validate SQL query before execution
     /// </summary>
-    public async Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateQueryAsync(
-        string query, string connectionType)
+    public Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateQueryAsync(
+        string query, string connectionType) => ValidateAsync(query, connectionType, allowWrites: false);
+
+    // Processing steps may change data. Schema and permission statements are blocked.
+    public Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateCommandAsync(
+        string command, string connectionType) => ValidateAsync(command, connectionType, allowWrites: true);
+
+    private async Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateAsync(
+        string query, string connectionType, bool allowWrites)
     {
         return await Task.Run(() =>
         {
@@ -33,7 +40,7 @@ public class ValidationService
                 var normalizedQuery = query.Trim().ToUpperInvariant();
 
                 // Check for allowed statement types
-                if (!StartsWithAllowedStatement(normalizedQuery))
+                if (!allowWrites && !StartsWithAllowedStatement(normalizedQuery))
                 {
                     return (false, "Query must start with SELECT, WITH, or EXEC/EXECUTE", warnings);
                 }
@@ -54,7 +61,7 @@ public class ValidationService
                 CheckCommonSyntaxErrors(query, warnings);
 
                 // If we have critical errors, return as invalid
-                var criticalWarnings = warnings.Where(w => w.StartsWith("CRITICAL:")).ToList();
+                var criticalWarnings = warnings.Where(w => w.StartsWith("CRITICAL:") && (!allowWrites || !(w.Contains("TRUNCATE") || w.Contains("INSERT")))).ToList();
                 if (criticalWarnings.Any())
                 {
                     return (false, criticalWarnings.First().Replace("CRITICAL: ", ""), warnings);

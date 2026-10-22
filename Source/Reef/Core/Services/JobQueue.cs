@@ -17,16 +17,16 @@ public class JobQueue
     private int _totalEnqueued;
     private int _totalDequeued;
     private int _totalDropped;
-    
+
     public JobQueue(int maxConcurrentJobs = 10)
     {
         if (maxConcurrentJobs < 1)
             throw new ArgumentException("Max concurrent jobs must be at least 1", nameof(maxConcurrentJobs));
-            
+
         _concurrencyLimit = new SemaphoreSlim(maxConcurrentJobs, maxConcurrentJobs);
         Log.Debug("JobQueue initialized with max {MaxConcurrent} concurrent jobs", maxConcurrentJobs);
     }
-    
+
     /// <summary>
     /// Enqueue a job for execution with priority-based ordering
     /// </summary>
@@ -40,7 +40,7 @@ public class JobQueue
             Log.Debug("Job {JobId} is already in queue, skipping duplicate", job.Id);
             return false;
         }
-        
+
         await _queueLock.WaitAsync();
         try
         {
@@ -51,13 +51,13 @@ public class JobQueue
             // Priority 2 (Normal) → priority value 2
             // Priority 3 (Low) → priority value 3
             var priorityValue = job.Priority;
-            
+
             _queue.Enqueue(job, priorityValue);
             _totalEnqueued++;
-            
-            Log.Debug("Enqueued job {JobId} ({JobName}) with priority {Priority} - Queue depth: {QueueDepth}", 
+
+            Log.Debug("Enqueued job {JobId} ({JobName}) with priority {Priority} - Queue depth: {QueueDepth}",
                 job.Id, job.Name, job.Priority, _queue.Count);
-            
+
             return true;
         }
         finally
@@ -65,7 +65,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Dequeue the highest priority job when a slot is available
     /// This blocks until both a slot is available AND a job is in the queue
@@ -83,7 +83,7 @@ public class JobQueue
         {
             return null;
         }
-        
+
         // Now get a job from the queue
         await _queueLock.WaitAsync(ct);
         try
@@ -92,13 +92,13 @@ public class JobQueue
             {
                 _enqueuedJobs.TryRemove(job.Id, out _);
                 _totalDequeued++;
-                
-                Log.Debug("Dequeued job {JobId} ({JobName}) with priority {Priority} - Queue depth: {QueueDepth}, Available slots: {Available}", 
+
+                Log.Debug("Dequeued job {JobId} ({JobName}) with priority {Priority} - Queue depth: {QueueDepth}, Available slots: {Available}",
                     job.Id, job.Name, priority, _queue.Count, _concurrencyLimit.CurrentCount);
-                
+
                 return job;
             }
-            
+
             // No job available, release the concurrency slot
             _concurrencyLimit.Release();
             return null;
@@ -115,7 +115,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Try to dequeue a job without waiting for a slot (non-blocking check)
     /// Used for polling scenarios
@@ -127,7 +127,7 @@ public class JobQueue
         {
             return (false, null); // No slots available
         }
-        
+
         await _queueLock.WaitAsync();
         try
         {
@@ -137,7 +137,7 @@ public class JobQueue
                 _totalDequeued++;
                 return (true, job);
             }
-            
+
             // No job in queue, release the slot
             _concurrencyLimit.Release();
             return (true, null); // Slot available but no jobs
@@ -147,7 +147,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Release an execution slot after job completes
     /// CRITICAL: Must be called after every successful dequeue
@@ -156,10 +156,10 @@ public class JobQueue
     {
         var availableBefore = _concurrencyLimit.CurrentCount;
         _concurrencyLimit.Release();
-        Log.Debug("Released execution slot - Available slots: {Before} → {After}", 
+        Log.Debug("Released execution slot - Available slots: {Before} → {After}",
             availableBefore, _concurrencyLimit.CurrentCount);
     }
-    
+
     /// <summary>
     /// Remove a specific job from the queue (e.g., if job was disabled)
     /// </summary>
@@ -183,7 +183,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Clear all jobs from the queue
     /// </summary>
@@ -201,7 +201,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     /// <summary>
     /// Get queue metrics for monitoring
     /// </summary>
@@ -226,7 +226,7 @@ public class JobQueue
             _queueLock.Release();
         }
     }
-    
+
     private int GetActiveJobsCount()
     {
         // Active jobs = Max concurrency - Available slots
@@ -236,17 +236,17 @@ public class JobQueue
         // This is a simplification - in production you'd store the initial max
         return _enqueuedJobs.Count(kvp => kvp.Value);
     }
-    
+
     /// <summary>
     /// Queue depth (number of jobs waiting)
     /// </summary>
     public int QueueDepth => _queue.Count;
-    
+
     /// <summary>
     /// Available execution slots
     /// </summary>
     public int AvailableSlots => _concurrencyLimit.CurrentCount;
-    
+
     /// <summary>
     /// Is queue empty
     /// </summary>

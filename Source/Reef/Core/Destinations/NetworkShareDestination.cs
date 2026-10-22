@@ -16,7 +16,7 @@ public class NetworkShareDestination : IDestination
     /// Save file to network share destination
     /// </summary>
     public async Task<(bool Success, string? FinalPath, string? ErrorMessage)> SaveAsync(
-        string sourcePath, 
+        string sourcePath,
         string destinationConfig)
     {
         try
@@ -132,27 +132,27 @@ public class NetworkShareDestination : IDestination
                         throw new IOException($"File size mismatch: source={sourceFileInfo.Length}, destination={destFileInfo.Length}");
                     }
 
-                    Log.Information("Successfully copied {Bytes} bytes to network share: {Destination}", 
+                    Log.Information("Successfully copied {Bytes} bytes to network share: {Destination}",
                         destFileInfo.Length, destinationPath);
 
                     return (true, destinationPath, null);
                 }
                 catch (IOException ex) when (attempt < maxRetries - 1)
                 {
-                    Log.Warning(ex, "Network share copy failed, attempt {Attempt} of {MaxRetries}", 
+                    Log.Warning(ex, "Network share copy failed, attempt {Attempt} of {MaxRetries}",
                         attempt + 1, maxRetries);
                     lastException = ex;
                 }
                 catch (UnauthorizedAccessException ex) when (attempt < maxRetries - 1)
                 {
-                    Log.Warning(ex, "Access denied to network share, attempt {Attempt} of {MaxRetries}", 
+                    Log.Warning(ex, "Access denied to network share, attempt {Attempt} of {MaxRetries}",
                         attempt + 1, maxRetries);
                     lastException = ex;
                 }
             }
 
             // All retries exhausted
-            var errorMessage = lastException != null 
+            var errorMessage = lastException != null
                 ? $"Network share copy failed after {maxRetries} attempts: {lastException.Message}"
                 : "Network share copy failed";
 

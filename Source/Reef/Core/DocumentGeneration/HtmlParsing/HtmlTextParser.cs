@@ -11,15 +11,15 @@ public class HtmlTextParser
     public static List<TextSegment> ParseFormattedText(string html)
     {
         var segments = new List<TextSegment>();
-        
+
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
-        
+
         ProcessNode(doc.DocumentNode, segments, new TextStyle());
-        
+
         return segments;
     }
-    
+
     private static void ProcessNode(HtmlNode node, List<TextSegment> segments, TextStyle currentStyle)
     {
         if (node.NodeType == HtmlNodeType.Text)
@@ -35,10 +35,10 @@ public class HtmlTextParser
             }
             return;
         }
-        
+
         // Update style based on element
         var newStyle = currentStyle.Clone();
-        
+
         switch (node.Name.ToLower())
         {
             case "strong":
@@ -92,13 +92,13 @@ public class HtmlTextParser
                 }
                 break;
         }
-        
+
         // Process child nodes
         foreach (var child in node.ChildNodes)
         {
             ProcessNode(child, segments, newStyle);
         }
-        
+
         // Add paragraph break after
         if (node.Name.ToLower() == "p" && segments.Any() && !segments.Last().Content.EndsWith("\n"))
         {
@@ -127,7 +127,7 @@ public class TextStyle
     public bool IsHeading { get; set; }
     public int HeadingLevel { get; set; }
     public int FontSize { get; set; } = 10;
-    
+
     public TextStyle Clone()
     {
         return new TextStyle

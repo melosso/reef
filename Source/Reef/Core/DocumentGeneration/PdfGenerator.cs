@@ -89,7 +89,7 @@ public class PdfGenerator : IDocumentGenerator
                                         {
                                             // Custom footer content
                                             column.Item().Element(c => RenderSectionContent(c, footerSection, data));
-                                            
+
                                             // Page numbers
                                             column.Item().AlignCenter().Text(text =>
                                             {
@@ -140,7 +140,7 @@ public class PdfGenerator : IDocumentGenerator
                     fileStream.Write(pdfBytes, 0, pdfBytes.Length);
                     fileStream.Flush(true); // Flush to disk
                 }
-                
+
                 var fileSize = pdfBytes.Length;
                 Log.Debug("PDF generated successfully: {OutputPath}, Size: {FileSize} bytes", outputPath, fileSize);
                 return (true, fileSize, null);
@@ -205,7 +205,7 @@ public class PdfGenerator : IDocumentGenerator
     private void RenderSectionContent(IContainer container, DocumentSection section, List<Dictionary<string, object>> data)
     {
         var content = section.RenderedContent.Trim();
-        
+
         // Check if content contains HTML tables
         if (content.Contains("<table"))
         {
@@ -224,21 +224,21 @@ public class PdfGenerator : IDocumentGenerator
                             .Replace("&lt;", "<")
                             .Replace("&gt;", ">")
                             .Replace("&amp;", "&");
-            
+
             container.Padding(5).Text(content).FontSize(10);
         }
     }
-    
+
     private void RenderHtmlContent(IContainer container, string html)
     {
         container.Column(column =>
         {
             // Parse and render tables
             var tables = HtmlTableParser.ParseTables(html);
-            
+
             // Get text content before/between/after tables
             var parts = SplitHtmlByTables(html);
-            
+
             for (int i = 0; i < parts.Count; i++)
             {
                 // Render text content
@@ -246,14 +246,14 @@ public class PdfGenerator : IDocumentGenerator
                 {
                     column.Item().Element(c => RenderFormattedText(c, parts[i].Text));
                 }
-                
+
                 // Render table if exists at this position
                 if (i < tables.Count)
                 {
                     column.Item().PaddingVertical(5).Table(table =>
                     {
                         var tableData = tables[i];
-                        
+
                         // Define columns
                         table.ColumnsDefinition(columns =>
                         {
@@ -262,7 +262,7 @@ public class PdfGenerator : IDocumentGenerator
                                 columns.RelativeColumn();
                             }
                         });
-                        
+
                         // Render headers if present
                         if (tableData.Headers.Any())
                         {
@@ -281,7 +281,7 @@ public class PdfGenerator : IDocumentGenerator
                                 }
                             });
                         }
-                        
+
                         // Render data rows
                         foreach (var row in tableData.Rows)
                         {
@@ -300,23 +300,23 @@ public class PdfGenerator : IDocumentGenerator
             }
         });
     }
-    
+
     private void RenderFormattedText(IContainer container, string html)
     {
         var segments = HtmlTextParser.ParseFormattedText(html);
-        
+
         container.Padding(5).Text(text =>
         {
             foreach (var segment in segments)
             {
                 var span = text.Span(segment.Content);
-                
+
                 if (segment.Style.IsBold)
                     span.Bold();
-                    
+
                 if (segment.Style.IsItalic)
                     span.Italic();
-                    
+
                 if (segment.Style.IsHeading)
                     span.FontSize(segment.Style.FontSize).Bold();
                 else
@@ -324,39 +324,39 @@ public class PdfGenerator : IDocumentGenerator
             }
         });
     }
-    
+
     private List<HtmlPart> SplitHtmlByTables(string html)
     {
         var parts = new List<HtmlPart>();
         var remainingHtml = html;
-        
+
         while (remainingHtml.Contains("<table"))
         {
             var tableStart = remainingHtml.IndexOf("<table");
-            
+
             // Add text before table
             if (tableStart > 0)
             {
                 parts.Add(new HtmlPart { Text = remainingHtml.Substring(0, tableStart) });
             }
-            
+
             // Find table end
             var tableEnd = remainingHtml.IndexOf("</table>", tableStart);
             if (tableEnd == -1) break;
-            
+
             tableEnd += "</table>".Length;
             remainingHtml = remainingHtml.Substring(tableEnd);
         }
-        
+
         // Add remaining text
         if (!string.IsNullOrWhiteSpace(remainingHtml))
         {
             parts.Add(new HtmlPart { Text = remainingHtml });
         }
-        
+
         return parts;
     }
-    
+
     private class HtmlPart
     {
         public string Text { get; set; } = string.Empty;

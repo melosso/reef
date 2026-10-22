@@ -45,7 +45,7 @@ public class DestinationConfiguration
     public string? RemotePath { get; set; }
     public bool UseSsl { get; set; }
     public bool UsePassiveMode { get; set; } = true;
-    
+
     // S3
     public string? BucketName { get; set; }
     public string? Region { get; set; }
@@ -56,12 +56,12 @@ public class DestinationConfiguration
     public string? ServiceUrl { get; set; }  // Custom endpoint for MinIO/S3-compatible storage
     public string? Acl { get; set; }
     public bool ServerSideEncryption { get; set; } = true;
-    
+
     // Azure Blob
     public string? ConnectionString { get; set; }
     public string? ContainerName { get; set; }
     public string? BlobPrefix { get; set; }
-    
+
     // Email
     public string? SmtpServer { get; set; }
     public int? SmtpPort { get; set; }
@@ -74,19 +74,19 @@ public class DestinationConfiguration
     public string? SmtpAuthType { get; set; } = "Basic"; // Basic, OAuth2, None
     public string? OauthToken { get; set; }
     public string? OauthUsername { get; set; }
-    
+
     // HTTP
     public string? Url { get; set; }
     public string? Method { get; set; }
     public Dictionary<string, string>? Headers { get; set; }
     public string? AuthType { get; set; }
     public string? AuthToken { get; set; }
-    
+
     // Network Share
     public string? UncPath { get; set; }
     public string? Domain { get; set; }
     public string? SubFolder { get; set; }
-    
+
     // Common
     public int TimeoutSeconds { get; set; } = 300;
     public int RetryCount { get; set; } = 3;

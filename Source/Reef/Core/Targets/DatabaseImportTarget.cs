@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text;
 using Dapper;
+using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 using MySqlConnector;
 using Npgsql;
@@ -12,7 +13,7 @@ using Serilog;
 namespace Reef.Core.Targets;
 
 /// <summary>
-/// Writes imported rows to a SQL Server, MySQL, or PostgreSQL database.
+/// Writes imported rows to a SQL Server, MySQL, PostgreSQL, or SQLite database.
 /// Supports Insert, Upsert, FullReplace, and Append load strategies.
 /// </summary>
 public class DatabaseImportTarget : IImportTarget
@@ -152,6 +153,7 @@ public class DatabaseImportTarget : IImportTarget
             "SQLSERVER" or "MSSQL" => SqlServerSchemaQuery(schema, table),
             "MYSQL" or "MARIADB" => MySqlSchemaQuery(table),
             "POSTGRESQL" or "POSTGRES" => PostgresSchemaQuery(schema, table),
+            "SQLITE" => SqliteSchemaQuery(table),
             _ => SqlServerSchemaQuery(schema, table)
         };
 
@@ -163,7 +165,7 @@ public class DatabaseImportTarget : IImportTarget
                 ColumnName = (string)r.ColumnName,
                 DataType = (string)r.DataType,
                 IsNullable = ((string?)r.IsNullable)?.Equals("YES", StringComparison.OrdinalIgnoreCase) ?? true,
-                IsPrimaryKey = (long?)r.IsPrimaryKey > 0 || ((bool?)r.IsPrimaryKey == true),
+                IsPrimaryKey = IsTruthy((object?)r.IsPrimaryKey),
                 MaxLength = r.MaxLength is DBNull ? null : (int?)r.MaxLength,
                 Precision = r.Precision is DBNull ? null : (int?)r.Precision,
                 Scale = r.Scale is DBNull ? null : (int?)r.Scale
@@ -267,7 +269,7 @@ public class DatabaseImportTarget : IImportTarget
             ct.ThrowIfCancellationRequested();
             rowNum++;
 
-            var mappedRow = ApplyMappings(row, context.ColumnMappings);
+            var mappedRow = row;
             if (!mappedRow.Any()) { result.RowsSkipped++; continue; }
 
             try
@@ -342,7 +344,7 @@ public class DatabaseImportTarget : IImportTarget
                 foreach (var row in batch)
                 {
                     rowNum++;
-                    var mappedRow = ApplyMappings(row, context.ColumnMappings);
+                    var mappedRow = row;
                     if (!mappedRow.Any()) { result.RowsSkipped++; continue; }
 
                     try
@@ -401,6 +403,7 @@ public class DatabaseImportTarget : IImportTarget
             "SQLSERVER" or "MSSQL" => await SqlServerUpsertAsync(db, tx, table, row, keyColumns, context, ct),
             "MYSQL" or "MARIADB" => await MySqlUpsertAsync(db, tx, table, row, keyColumns, context, ct),
             "POSTGRESQL" or "POSTGRES" => await PostgresUpsertAsync(db, tx, table, row, keyColumns, context, ct),
+            "SQLITE" => await SqliteUpsertAsync(db, tx, table, row, keyColumns, context, ct),
             _ => await SqlServerUpsertAsync(db, tx, table, row, keyColumns, context, ct)
         };
     }
@@ -501,6 +504,49 @@ RETURNING xmax";
         return xmax == 0 ? (1, 0) : (0, 1);
     }
 
+    private async Task<(int, int)> SqliteUpsertAsync(
+        IDbConnection db, IDbTransaction tx, string table,
+        Dictionary<string, object?> row, List<string> keys,
+        ImportWriteContext context, CancellationToken ct)
+    {
+        var allCols = row.Keys.ToList();
+        var valueCols = allCols.Except(keys).ToList();
+
+        var colList = string.Join(", ", allCols.Select(c => $"\"{c}\""));
+        var parmList = string.Join(", ", allCols.Select(c => $"@{c}"));
+        var keyList = string.Join(", ", keys.Select(k => $"\"{k}\""));
+
+        string conflictAction;
+        if (valueCols.Any())
+        {
+            conflictAction = "DO UPDATE SET " + string.Join(", ", valueCols.Select(c => $"\"{c}\" = excluded.\"{c}\""));
+        }
+        else
+        {
+            conflictAction = "DO NOTHING";
+        }
+
+        var dp = new DynamicParameters();
+        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+
+        // SQLite has no built-in way to distinguish insert vs update from an
+        // INSERT...ON CONFLICT statement, so check existence first under the same transaction.
+        var whereClause = string.Join(" AND ", keys.Select(k => $"\"{k}\" = @{k}"));
+        var existsSql = $@"SELECT COUNT(*) FROM ""{table}"" WHERE {whereClause}";
+        var existedBefore = await db.ExecuteScalarAsync<long>(new CommandDefinition(existsSql, dp, tx,
+            commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct)) > 0;
+
+        // SQLite (3.24+, bundled with Microsoft.Data.Sqlite) supports upsert via
+        // INSERT ... ON CONFLICT ... DO UPDATE.
+        var sql = $@"INSERT INTO ""{table}"" ({colList}) VALUES ({parmList})
+ON CONFLICT ({keyList}) {conflictAction}";
+
+        await db.ExecuteAsync(new CommandDefinition(sql, dp, tx,
+            commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
+
+        return existedBefore ? (0, 1) : (1, 0);
+    }
+
     // Schema Queries
 
     private static string SqlServerSchemaQuery(string? schema, string table) => $@"
@@ -563,6 +609,25 @@ RETURNING xmax";
           AND NOT a.attisdropped
         ORDER BY a.attnum";
 
+    private static bool IsTruthy(object? value) => value switch
+    {
+        null or DBNull => false,
+        bool b => b,
+        _ => Convert.ToInt64(value) > 0
+    };
+
+    private static string SqliteSchemaQuery(string table) => $@"
+        SELECT
+            ti.name AS ColumnName,
+            ti.type AS DataType,
+            CASE WHEN ti.""notnull"" = 0 THEN 'YES' ELSE 'NO' END AS IsNullable,
+            ti.pk AS IsPrimaryKey,
+            NULL AS MaxLength,
+            NULL AS Precision,
+            NULL AS Scale
+        FROM pragma_table_info('{EscapeString(table)}') ti
+        ORDER BY ti.cid";
+
     // Helpers
 
     private DbConnection OpenConnection(Connection connection)
@@ -576,6 +641,9 @@ RETURNING xmax";
             "SQLSERVER" or "MSSQL" => new SqlConnection(cs),
             "MYSQL" or "MARIADB" => new MySqlConnection(cs),
             "POSTGRESQL" or "POSTGRES" => new NpgsqlConnection(cs),
+            // Sqlite target points at a dedicated staging file chosen by the caller -
+            // never Reef's own app database.
+            "SQLITE" => new SqliteConnection(cs),
             _ => new SqlConnection(cs)
         };
     }
@@ -583,66 +651,6 @@ RETURNING xmax";
     // Placeholder: the actual connection object must be loaded via ConnectionService by the caller
     private Task<Connection> GetTargetConnectionAsync(ImportProfile profile)
         => throw new InvalidOperationException("Use the overload that accepts a Connection object");
-
-    private static Dictionary<string, object?> ApplyMappings(
-        Dictionary<string, object?> sourceRow,
-        List<ImportColumnMapping> mappings)
-    {
-        if (!mappings.Any())
-        {
-            // No mappings defined, pass row through as-is
-            return new Dictionary<string, object?>(sourceRow, StringComparer.OrdinalIgnoreCase);
-        }
-
-        var result = new Dictionary<string, object?>();
-        foreach (var mapping in mappings)
-        {
-            object? value = null;
-
-            if (sourceRow.TryGetValue(mapping.SourceColumn, out var raw))
-            {
-                value = raw;
-            }
-            else if (mapping.DefaultValue != null)
-            {
-                value = mapping.DefaultValue;
-            }
-
-            if (value == null && mapping.SkipOnNull) continue;
-
-            // Type cast
-            if (!string.IsNullOrWhiteSpace(mapping.DataType) && value != null)
-            {
-                value = CastValue(value, mapping.DataType);
-            }
-
-            result[mapping.TargetColumn] = value;
-        }
-
-        return result;
-    }
-
-    private static object? CastValue(object? value, string dataType)
-    {
-        if (value == null) return null;
-        var str = value.ToString()!;
-
-        return dataType.ToLowerInvariant() switch
-        {
-            "int" or "integer" => int.TryParse(str, out var i) ? i : (object?)value,
-            "long" or "bigint" => long.TryParse(str, out var l) ? l : (object?)value,
-            "decimal" or "numeric" or "float" or "double" => decimal.TryParse(str,
-                System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (object?)value,
-            "bool" or "boolean" or "bit" => bool.TryParse(str, out var b) ? b
-                : str is "1" or "yes" or "true" or "y" ? true
-                : str is "0" or "no" or "false" or "n" ? false
-                : (object?)value,
-            "datetime" or "date" => DateTime.TryParse(str, out var dt) ? dt : (object?)value,
-            "string" or "varchar" or "nvarchar" or "text" => str,
-            _ => value
-        };
-    }
 
     private static async Task<bool> TryUpdateAsync(
         IDbConnection db, IDbTransaction tx, string table, string connType,
@@ -674,6 +682,8 @@ RETURNING xmax";
             "MYSQL" or "MARIADB" => $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{EscapeString(table)}'",
             "POSTGRESQL" or "POSTGRES" =>
                 $"SELECT COUNT(*) FROM pg_tables WHERE tablename = '{EscapeString(table)}' AND schemaname = '{EscapeString(schema ?? "public")}'",
+            "SQLITE" =>
+                $"SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name = '{EscapeString(table)}'",
             _ => $"SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{EscapeString(table)}'" +
                  (!string.IsNullOrWhiteSpace(schema) ? $" AND TABLE_SCHEMA = '{EscapeString(schema)}'" : "")
         };
@@ -703,6 +713,7 @@ RETURNING xmax";
         SqlException se => se.Number is 2601 or 2627,
         MySqlException me => me.Number is 1062,
         PostgresException pe => pe.SqlState == "23505",
+        SqliteException sqe => sqe.SqliteErrorCode is 19 or 1555, // SQLITE_CONSTRAINT, SQLITE_CONSTRAINT_PRIMARYKEY
         _ => ex.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase)
              || ex.Message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase)
              || ex.Message.Contains("PRIMARY KEY", StringComparison.OrdinalIgnoreCase)
@@ -713,8 +724,10 @@ RETURNING xmax";
         SqlException se when se.Number is 2601 or 2627 => "Constraint",
         MySqlException me when me.Number == 1062 => "Constraint",
         PostgresException pe when pe.SqlState == "23505" => "Constraint",
+        SqliteException sqe when sqe.SqliteErrorCode is 19 or 1555 => "Constraint",
         SqlException se when se.Number == -2 => "Timeout",
         MySqlException me when me.IsTransient => "Timeout",
+        SqliteException sqe when sqe.SqliteErrorCode == 5 => "Timeout", // SQLITE_BUSY
         _ when ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase) => "Timeout",
         _ when ex.Message.Contains("type", StringComparison.OrdinalIgnoreCase) => "Type",
         _ => "Unknown"
@@ -724,6 +737,7 @@ RETURNING xmax";
     {
         "MYSQL" or "MARIADB" => $"`{name}`",
         "POSTGRESQL" or "POSTGRES" => $"\"{name}\"",
+        "SQLITE" => $"\"{name}\"",
         _ => $"[{name}]"
     };
 

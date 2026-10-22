@@ -30,9 +30,9 @@ public class LocalFileImportTarget : IImportTarget
 
         int written = format switch
         {
-            "JSON"  => await AppendJsonAsync(path, rows, append, ct),
+            "JSON" => await AppendJsonAsync(path, rows, append, ct),
             "JSONL" => await AppendJsonLinesAsync(path, rows, append, ct),
-            _       => await AppendCsvAsync(path, rows, append, ct)
+            _ => await AppendCsvAsync(path, rows, append, ct)
         };
 
         Log.Debug("LocalFileImportTarget: wrote {Count} rows to {Path} ({Format})", written, path, format);
@@ -190,9 +190,9 @@ public class LocalFileImportTarget : IImportTarget
 
         return Path.GetExtension(filePath ?? "").ToLowerInvariant() switch
         {
-            ".json"  => "JSON",
+            ".json" => "JSON",
             ".jsonl" => "JSONL",
-            _        => "CSV"
+            _ => "CSV"
         };
     }
 

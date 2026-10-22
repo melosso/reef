@@ -18,16 +18,16 @@ public static class ExecutionsEndpoints
     {
         var group = app.MapGroup("/api/executions").RequireAuthorization();
 
-    group.MapGet("/", GetAllExecutions);
-    group.MapGet("/{id:int}", GetExecutionById);
-    group.MapGet("/{id:int}/test", GetExecutionById);
-    group.MapGet("/{id:int}/errors", GetExecutionErrors);
-    group.MapPost("/execute/{profileId:int}", ExecuteProfile);
-    group.MapGet("/by-profile/{profileId:int}", GetExecutionsByProfile);
-    group.MapGet("/recent", GetRecentExecutions);
-    group.MapGet("/download/{token}", DownloadExecutionFile);
+        group.MapGet("/", GetAllExecutions);
+        group.MapGet("/{id:int}", GetExecutionById);
+        group.MapGet("/{id:int}/test", GetExecutionById);
+        group.MapGet("/{id:int}/errors", GetExecutionErrors);
+        group.MapPost("/execute/{profileId:int}", ExecuteProfile);
+        group.MapGet("/by-profile/{profileId:int}", GetExecutionsByProfile);
+        group.MapGet("/recent", GetRecentExecutions);
+        group.MapGet("/download/{token}", DownloadExecutionFile);
     }
-    
+
     /// <summary>
     /// GET /api/executions/download/{token} - Securely download execution output by token
     /// </summary>
@@ -118,7 +118,7 @@ public static class ExecutionsEndpoints
     /// GET /api/executions/{id} - Get execution by ID
     /// </summary>
     private static async Task<IResult> GetExecutionById(
-        int id, 
+        int id,
         [FromServices] ExecutionService service)
     {
         try
@@ -175,14 +175,16 @@ public static class ExecutionsEndpoints
                     connection.Id, connection.Name);
 
                 await auditService.LogAsync("Profile", profileId, "ExecutionBlocked", username,
-                    System.Text.Json.JsonSerializer.Serialize(new {
+                    System.Text.Json.JsonSerializer.Serialize(new
+                    {
                         reason = "Connection is disabled",
                         connectionId = connection.Id,
                         connectionName = connection.Name
                     }),
                     context);
 
-                return Results.BadRequest(new {
+                return Results.BadRequest(new
+                {
                     message = $"Cannot execute profile: Connection '{connection.Name}' is currently disabled"
                 });
             }
@@ -205,28 +207,28 @@ public static class ExecutionsEndpoints
             if (!success)
             {
                 Log.Warning("Profile execution failed: {ErrorMessage}", errorMessage);
-                
+
                 await auditService.LogAsync("Profile", profileId, "ExecutionFailed", username,
-                    System.Text.Json.JsonSerializer.Serialize(new { executionId, errorMessage }), 
+                    System.Text.Json.JsonSerializer.Serialize(new { executionId, errorMessage }),
                     context);
 
-                return Results.Ok(new 
-                { 
-                    executionId, 
-                    status = "Failed", 
-                    error = errorMessage 
+                return Results.Ok(new
+                {
+                    executionId,
+                    status = "Failed",
+                    error = errorMessage
                 });
             }
 
             await auditService.LogAsync("Profile", profileId, "Executed", username,
-                System.Text.Json.JsonSerializer.Serialize(new { executionId, outputPath }), 
+                System.Text.Json.JsonSerializer.Serialize(new { executionId, outputPath }),
                 context);
 
-            return Results.Ok(new 
-            { 
-                executionId, 
-                status = "Success", 
-                outputPath 
+            return Results.Ok(new
+            {
+                executionId,
+                status = "Success",
+                outputPath
             });
         }
         catch (Exception ex)

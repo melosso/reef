@@ -34,6 +34,8 @@ public static class AdminEndpoints
         group.MapDelete("/api-keys/{id:int}", RevokeApiKey);
         group.MapGet("/notifications", GetNotificationSettings);
         group.MapPost("/notifications", UpdateNotificationSettings);
+        group.MapGet("/oidc-settings", GetOidcSettings);
+        group.MapPut("/oidc-settings", UpdateOidcSettings);
         group.MapPost("/notifications/test", TestNotificationSettings);
         group.MapGet("/notification-templates", GetAllNotificationTemplates);
         group.MapGet("/notification-templates/{templateType}", GetNotificationTemplate);
@@ -56,7 +58,7 @@ public static class AdminEndpoints
     /// Query parameters: page, pageSize, minimumLevel
     /// </summary>
     private static async Task<IResult> GetLogs(
-        HttpContext context, 
+        HttpContext context,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 100,
         [FromQuery] string? minimumLevel = null)
@@ -76,11 +78,11 @@ public static class AdminEndpoints
 
             // Get the path to the log directory configured in Program.cs
             string logDirectory;
-            
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
-                ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") 
+
+            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                 ?? "Production";
-            
+
             if (environment == "Development")
             {
                 var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
@@ -104,7 +106,7 @@ public static class AdminEndpoints
             // Find the most recently modified file matching the Serilog rolling log pattern
             var logFiles = Directory.GetFiles(logDirectory, "reef-*.log");
             Log.Debug("GetLogs: Found {Count} log files", logFiles.Length);
-            
+
             var latestLogFile = logFiles
                 .OrderByDescending(f => new FileInfo(f).LastWriteTime)
                 .FirstOrDefault();
@@ -151,7 +153,8 @@ public static class AdminEndpoints
                     // Fallback: treat whole line as message
                     message = line;
                 }
-                return new {
+                return new
+                {
                     Timestamp = timestamp,
                     Level = level,
                     Message = message
@@ -161,7 +164,7 @@ public static class AdminEndpoints
             // Filter by minimum level if specified
             if (!string.IsNullOrWhiteSpace(minimumLevel))
             {
-                parsedLogs = parsedLogs.Where(log => 
+                parsedLogs = parsedLogs.Where(log =>
                     log.Level != null && log.Level.Equals(minimumLevel, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
@@ -170,16 +173,17 @@ public static class AdminEndpoints
             var totalCount = parsedLogs.Count;
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
             var skip = (page - 1) * pageSize;
-            
+
             var pagedLogs = parsedLogs
                 .Skip(skip)
                 .Take(pageSize)
                 .ToArray();
 
-            Log.Debug("GetLogs: Found {Count} log lines, returning page {Page} with {PageSize} items", 
+            Log.Debug("GetLogs: Found {Count} log lines, returning page {Page} with {PageSize} items",
                 totalCount, page, pagedLogs.Length);
 
-            return Results.Ok(new { 
+            return Results.Ok(new
+            {
                 data = pagedLogs,
                 page,
                 pageSize,
@@ -272,6 +276,99 @@ public static class AdminEndpoints
     }
 
     /// <summary>
+    /// GET /api/admin/oidc-settings - Get the single-provider OIDC SSO configuration.
+    /// Never returns the client secret, only whether one is set.
+    /// </summary>
+    private static async Task<IResult> GetOidcSettings(
+        HttpContext context,
+        [FromServices] AdminService service)
+    {
+        if (!IsAdmin(context)) return Results.Forbid();
+
+        var settings = await service.GetOidcSettingsAsync();
+        if (settings == null) return Results.Ok(new { hasClientSecret = false });
+
+        return Results.Ok(new
+        {
+            settings.IsEnabled,
+            settings.Name,
+            settings.Authority,
+            settings.ClientId,
+            settings.Scopes,
+            settings.UsernameClaim,
+            settings.EmailClaim,
+            settings.CreateAccounts,
+            hasClientSecret = !string.IsNullOrEmpty(settings.ClientSecretEncrypted)
+        });
+    }
+
+    /// <summary>
+    /// PUT /api/admin/oidc-settings - Save the single-provider OIDC SSO configuration.
+    /// Validates the authority against its live discovery document before saving, same as
+    /// baseport's provider save path, so a bad issuer URL is rejected here, not at sign-in time.
+    /// </summary>
+    private static async Task<IResult> UpdateOidcSettings(
+        HttpContext context,
+        [FromBody] OidcSettingsRequest request,
+        [FromServices] AdminService service,
+        [FromServices] AuditService auditService)
+    {
+        if (!IsAdmin(context)) return Results.Forbid();
+
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 64)
+            return Results.BadRequest(new { error = "Name must be 1-64 characters." });
+
+        if (!Uri.TryCreate(request.Authority, UriKind.Absolute, out var authorityUri) ||
+            (authorityUri.Scheme != Uri.UriSchemeHttp && authorityUri.Scheme != Uri.UriSchemeHttps))
+            return Results.BadRequest(new { error = "Authority must be an absolute http(s) URL." });
+
+        if (authorityUri.Scheme == Uri.UriSchemeHttp && !Reef.Core.Security.OidcFlow.AllowsPlainHttp(request.Authority))
+            return Results.BadRequest(new { error = "Plain HTTP is only allowed for a loopback authority." });
+
+        if (string.IsNullOrWhiteSpace(request.ClientId) || request.ClientId.Length > 256)
+            return Results.BadRequest(new { error = "Client ID is required (max 256 characters)." });
+
+        var scopes = string.IsNullOrWhiteSpace(request.Scopes) ? "openid profile email" : request.Scopes.Trim();
+        if (!scopes.Split(' ', StringSplitOptions.RemoveEmptyEntries).Contains("openid"))
+            return Results.BadRequest(new { error = "Scopes must include openid." });
+
+        try
+        {
+            Reef.Core.Security.OidcFlow.Forget();
+            var document = await Reef.Core.Security.OidcFlow.DocumentAsync(request.Authority, context.RequestAborted);
+            if (string.IsNullOrEmpty(document.AuthorizationEndpoint) || string.IsNullOrEmpty(document.TokenEndpoint))
+                return Results.BadRequest(new { error = "The authority's discovery document is missing an authorization or token endpoint." });
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Failed to read OIDC discovery document for {Authority}", request.Authority);
+            return Results.BadRequest(new { error = "Could not read the discovery document at this authority. Check the URL." });
+        }
+
+        var settings = new OidcSettings
+        {
+            IsEnabled = request.IsEnabled,
+            Name = request.Name.Trim(),
+            Authority = request.Authority.TrimEnd('/'),
+            ClientId = request.ClientId.Trim(),
+            Scopes = scopes,
+            UsernameClaim = string.IsNullOrWhiteSpace(request.UsernameClaim) ? "preferred_username" : request.UsernameClaim.Trim(),
+            EmailClaim = string.IsNullOrWhiteSpace(request.EmailClaim) ? "email" : request.EmailClaim.Trim(),
+            CreateAccounts = request.CreateAccounts
+        };
+
+        var success = await service.UpdateOidcSettingsAsync(settings, request.ClientSecret);
+        Reef.Core.Security.OidcFlow.Forget();
+
+        if (!success) return Results.Problem("Failed to update OIDC SSO settings");
+
+        var username = context.User.Identity?.Name ?? "Unknown";
+        await auditService.LogAsync("OidcSettings", 0, "Updated", username, null, context);
+
+        return Results.Ok(new { message = "OIDC SSO settings updated successfully" });
+    }
+
+    /// <summary>
     /// POST /api/admin/notifications/test - Send a test notification
     /// Body: { "destinationId": 1, "recipientEmails": "test@example.com" }
     /// </summary>
@@ -330,7 +427,7 @@ public static class AdminEndpoints
                 try
                 {
                     var subject = "[Reef] Test Notification";
-var body = $@"
+                    var body = $@"
 <!doctype html>
 <html lang=""en"">
 <head>
@@ -725,7 +822,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to access metrics", 
+                Log.Warning("Non-admin user {User} attempted to access metrics",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -759,7 +856,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to access audit logs", 
+                Log.Warning("Non-admin user {User} attempted to access audit logs",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -773,9 +870,9 @@ var body = $@"
 
             var (logs, totalCount) = await service.GetAuditLogsAsync(
                 page, pageSize, entityType, action, username, startDate, endDate);
-            
+
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-            
+
             return Results.Ok(new
             {
                 data = logs,
@@ -803,13 +900,13 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to access users", 
+                Log.Warning("Non-admin user {User} attempted to access users",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
 
             var users = await service.GetUsersAsync();
-            
+
             // Don't return password hashes
             var sanitizedUsers = users.Select(u => new
             {
@@ -845,7 +942,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to create user", 
+                Log.Warning("Non-admin user {User} attempted to create user",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -905,7 +1002,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to update user", 
+                Log.Warning("Non-admin user {User} attempted to update user",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -950,13 +1047,14 @@ var body = $@"
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
-                var changes = System.Text.Json.JsonSerializer.Serialize(new { 
-                    request.Role, 
-                    request.IsActive, 
-                    PasswordChanged = !string.IsNullOrWhiteSpace(request.Password) 
+                var changes = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    request.Role,
+                    request.IsActive,
+                    PasswordChanged = !string.IsNullOrWhiteSpace(request.Password)
                 });
                 await auditService.LogAsync("User", id, "Updated", username, changes, context);
-                
+
                 return Results.Ok(new { message = "User updated successfully" });
             }
 
@@ -1035,7 +1133,8 @@ var body = $@"
             if (success)
             {
                 var performedBy = currentUsername ?? "Unknown";
-                var changes = System.Text.Json.JsonSerializer.Serialize(new {
+                var changes = System.Text.Json.JsonSerializer.Serialize(new
+                {
                     OldUsername = oldUsername,
                     NewUsername = request.NewUsername
                 });
@@ -1165,13 +1264,13 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to access API keys", 
+                Log.Warning("Non-admin user {User} attempted to access API keys",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
 
             var keys = await service.GetApiKeysAsync();
-            
+
             // Don't return key hashes
             var sanitizedKeys = keys.Select(k => new
             {
@@ -1207,7 +1306,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to create API key", 
+                Log.Warning("Non-admin user {User} attempted to create API key",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1260,7 +1359,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to revoke API key", 
+                Log.Warning("Non-admin user {User} attempted to revoke API key",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1271,7 +1370,7 @@ var body = $@"
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("ApiKey", id, "Revoked", username, null, context);
-                
+
                 return Results.Ok(new { message = "API key revoked successfully" });
             }
 
@@ -1293,14 +1392,14 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to access version info", 
+                Log.Warning("Non-admin user {User} attempted to access version info",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
 
             var assembly = System.Reflection.Assembly.GetExecutingAssembly();
             var version = assembly.GetName().Version?.ToString() ?? "Unknown";
-            
+
             // Extract the informational version if available (this includes the semantic version from .csproj)
             var informationalVersion = assembly
                 .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
@@ -1312,8 +1411,8 @@ var body = $@"
             {
                 version = semanticVersion,
                 timestamp = DateTime.UtcNow,
-                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") 
-                    ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") 
+                environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                    ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
                     ?? "Production"
             });
         }
@@ -1335,7 +1434,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to get confirmation string", 
+                Log.Warning("Non-admin user {User} attempted to get confirmation string",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1364,7 +1463,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to reset database", 
+                Log.Warning("Non-admin user {User} attempted to reset database",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1382,9 +1481,9 @@ var body = $@"
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
-                await auditService.LogAsync("Database", 0, "Reset", username, 
+                await auditService.LogAsync("Database", 0, "Reset", username,
                     "Complete database reset performed", context);
-                
+
                 Log.Warning("DANGER: Database reset performed by {Username}", username);
                 return Results.Ok(new { message = "Database reset successfully" });
             }
@@ -1412,7 +1511,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to clear audit logs", 
+                Log.Warning("Non-admin user {User} attempted to clear audit logs",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1425,12 +1524,13 @@ var body = $@"
             var deletedCount = await service.ClearOldAuditLogsAsync(request.RetentionDays);
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            await auditService.LogAsync("AuditLog", 0, "Cleared", username, 
+            await auditService.LogAsync("AuditLog", 0, "Cleared", username,
                 $"Deleted {deletedCount} audit logs older than {request.RetentionDays} days", context);
 
-            return Results.Ok(new { 
-                message = $"Deleted {deletedCount} audit log entries", 
-                deletedCount 
+            return Results.Ok(new
+            {
+                message = $"Deleted {deletedCount} audit log entries",
+                deletedCount
             });
         }
         catch (InvalidOperationException ex)
@@ -1458,7 +1558,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to clear execution logs", 
+                Log.Warning("Non-admin user {User} attempted to clear execution logs",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1471,12 +1571,13 @@ var body = $@"
             var deletedCount = await service.ClearOldExecutionLogsAsync(request.RetentionDays);
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            await auditService.LogAsync("ProfileExecutions", 0, "Cleared", username, 
+            await auditService.LogAsync("ProfileExecutions", 0, "Cleared", username,
                 $"Deleted {deletedCount} execution logs older than {request.RetentionDays} days", context);
 
-            return Results.Ok(new { 
-                message = $"Deleted {deletedCount} execution log entries", 
-                deletedCount 
+            return Results.Ok(new
+            {
+                message = $"Deleted {deletedCount} execution log entries",
+                deletedCount
             });
         }
         catch (Exception ex)
@@ -1500,7 +1601,7 @@ var body = $@"
         {
             if (!IsAdmin(context))
             {
-                Log.Warning("Non-admin user {User} attempted to clear all execution logs", 
+                Log.Warning("Non-admin user {User} attempted to clear all execution logs",
                     context.User.Identity?.Name ?? "Unknown");
                 return Results.Forbid();
             }
@@ -1513,13 +1614,14 @@ var body = $@"
             var deletedCount = await service.ClearAllExecutionLogsAsync();
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            await auditService.LogAsync("ProfileExecutions", 0, "ClearedAll", username, 
+            await auditService.LogAsync("ProfileExecutions", 0, "ClearedAll", username,
                 $"Deleted ALL execution logs ({deletedCount} entries)", context);
 
             Log.Warning("DANGER: All execution logs cleared by {Username}", username);
-            return Results.Ok(new { 
-                message = $"Deleted all execution log entries", 
-                deletedCount 
+            return Results.Ok(new
+            {
+                message = $"Deleted all execution log entries",
+                deletedCount
             });
         }
         catch (Exception ex)

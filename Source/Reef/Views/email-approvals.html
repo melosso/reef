@@ -7,27 +7,27 @@
             </header>
 
             <div class="flex-1 overflow-y-auto p-6">
-                <!-- Statistics Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
-                        <p class="text-gray-500 text-sm mb-2">Pending</p>
-                        <p class="text-3xl font-bold text-gray-900" id="stat-pending">0</p>
+                <!-- Statistics -->
+                <div class="flex items-stretch bg-white rounded-lg border border-slate-200 mb-8 divide-x divide-slate-100">
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Pending</p>
+                        <p class="text-2xl font-bold text-amber-600" id="stat-pending">0</p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                        <p class="text-gray-500 text-sm mb-2">Approved in Queue</p>
-                        <p class="text-3xl font-bold text-gray-900" id="stat-approved">0</p>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Approved in queue</p>
+                        <p class="text-2xl font-bold text-teal-600" id="stat-approved">0</p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-                        <p class="text-gray-500 text-sm mb-2">Sent This Week</p>
-                        <p class="text-3xl font-bold text-gray-900" id="stat-sent-week">0</p>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Sent this week</p>
+                        <p class="text-2xl font-bold text-green-600" id="stat-sent-week">0</p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                        <p class="text-gray-500 text-sm mb-2">Skipped</p>
-                        <p class="text-3xl font-bold text-gray-900" id="stat-skipped">0</p>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Skipped</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="stat-skipped">0</p>
                     </div>
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-                        <p class="text-gray-500 text-sm mb-2">Rejected</p>
-                        <p class="text-3xl font-bold text-gray-900" id="stat-rejected">0</p>
+                    <div class="flex-1 px-5 py-4">
+                        <p class="text-gray-500 text-xs mb-1">Rejected</p>
+                        <p class="text-2xl font-bold text-red-600" id="stat-rejected">0</p>
                     </div>
                 </div>
 
@@ -35,7 +35,7 @@
                 <div class="bg-white rounded-lg shadow mb-6">
                     <div class="border-b border-gray-200">
                         <div class="flex">
-                            <button onclick="switchTab('pending')" id="tab-pending" class="px-6 py-3 text-gray-900 border-b-2 border-blue-500 font-medium text-sm hover:text-gray-700">
+                            <button onclick="switchTab('pending')" id="tab-pending" class="px-6 py-3 text-gray-900 border-b-2 border-teal-600 font-medium text-sm hover:text-gray-700">
                                 Pending
                             </button>
                             <button onclick="switchTab('approved')" id="tab-approved" class="px-6 py-3 text-gray-500 border-b-2 border-transparent hover:text-gray-700 font-medium text-sm">
@@ -50,12 +50,12 @@
                     <!-- Pending Tab -->
                     <div id="content-pending" class="block">
                         <!-- Bulk Actions Toolbar -->
-                        <div id="bulk-actions-toolbar" class="hidden bg-blue-50 border-b border-blue-200 px-6 py-3 flex items-center justify-between">
+                        <div id="bulk-actions-toolbar" class="hidden bg-teal-50 border-b border-teal-200 px-6 py-3 flex items-center justify-between">
                             <div class="flex items-center space-x-3">
-                                <span class="text-sm font-medium text-blue-900">
+                                <span class="text-sm font-medium text-teal-900">
                                     <span id="selected-count">0</span> selected
                                 </span>
-                                <button onclick="clearSelection()" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                <button onclick="clearSelection()" class="text-sm text-teal-600 hover:text-teal-800 font-medium">
                                     Clear selection
                                 </button>
                             </div>
@@ -76,7 +76,7 @@
                                 <thead class="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th class="px-6 py-3 text-left">
-                                            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAll()" class="h-4 w-4 text-blue-600 border-slate-300 rounded">
+                                            <input type="checkbox" id="select-all-pending" onchange="toggleSelectAll()" class="h-4 w-4 text-teal-600 border-slate-300 rounded">
                                         </th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
                                         <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Recipients</th>
@@ -251,11 +251,11 @@
     </div>
 
     <!-- Email Preview Modal -->
-    <div id="previewModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-50 flex items-center justify-center">
+    <div id="previewModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden z-50 flex items-center justify-center" onclick="if (event.target === this) closePreviewModal()">
         <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="sticky top-0 bg-gray-50 px-6 py-4 flex items-center justify-between border-b border-gray-200">
                 <h2 class="text-xl font-bold text-gray-900">Email Preview</h2>
-                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600">
+                <button onclick="closePreviewModal()" class="text-gray-400 hover:text-gray-600" aria-label="Close">
                     <i data-lucide="x" class="h-6 w-6"></i>
                 </button>
             </div>
@@ -280,7 +280,7 @@
                 <div id="preview-attachments-section" class="hidden">
                     <div class="flex items-center justify-between">
                         <label class="text-sm font-semibold text-gray-700">Attachments</label>
-                        <button onclick="toggleAttachmentsList()" id="attachments-toggle-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors">
+                        <button onclick="toggleAttachmentsList()" id="attachments-toggle-btn" class="flex items-center space-x-2 px-3 py-1.5 text-sm text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded transition-colors">
                             <i data-lucide="paperclip" class="h-4 w-4"></i>
                             <span id="attachment-count-badge">0 files</span>
                             <i data-lucide="chevron-down" id="attachments-chevron" class="h-4 w-4"></i>
@@ -326,7 +326,7 @@
     </div>
 
     <!-- Approval Notes Modal -->
-    <div id="approvalNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="approvalNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeApprovalNotesModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
@@ -368,7 +368,7 @@
     </div>
 
     <!-- Rejection Reason Modal -->
-    <div id="rejectionReasonModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="rejectionReasonModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeRejectionReasonModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
@@ -410,7 +410,7 @@
     </div>
 
     <!-- Skip Notes Modal -->
-    <div id="skipNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50">
+    <div id="skipNotesModal" class="fixed inset-0 bg-black/20 backdrop-blur-[2px] hidden overflow-y-auto h-full w-full z-50" onclick="if (event.target === this) closeSkipNotesModal()">
         <div class="relative w-full max-w-md mx-auto my-20">
             <div class="bg-white rounded-lg shadow-xl">
                 <!-- Header -->
@@ -609,7 +609,7 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4">
                         <input type="checkbox"
-                               class="approval-checkbox h-4 w-4 text-blue-600 border-slate-300 rounded"
+                               class="approval-checkbox h-4 w-4 text-teal-600 border-slate-300 rounded"
                                data-approval-id="${approval.guid}"
                                onchange="toggleApprovalSelection('${approval.guid}')"
                                ${selectedApprovals.has(approval.guid) ? 'checked' : ''}>
@@ -623,7 +623,7 @@
                     </td>
                     <td class="px-6 py-4 text-center">
                         ${hasAttachments ? `
-                            <button onclick="previewApproval('${approval.guid}')" class="inline-flex items-center text-blue-600 hover:text-blue-800 transition-colors" data-tooltip="Click to preview" data-tooltip-position="bottom">
+                            <button onclick="previewApproval('${approval.guid}')" class="inline-flex items-center text-teal-600 hover:text-teal-800 transition-colors" data-tooltip="Click to preview" data-tooltip-position="bottom">
                                 <i data-lucide="paperclip" class="h-4 w-4"></i>
                             </button>
                         ` : '<span class="text-gray-300">—</span>'}
@@ -633,7 +633,7 @@
                     </td>
                     <td class="px-6 py-4 text-sm">
                         <div class="flex items-center space-x-2">
-                            <button onclick="previewApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-blue-600 transition-colors" data-tooltip="Preview Email" data-tooltip-position="bottom">
+                            <button onclick="previewApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-teal-600 transition-colors" data-tooltip="Preview Email" data-tooltip-position="bottom">
                                 <i data-lucide="eye" class="h-4 w-4"></i>
                             </button>
                             <button onclick="approveApproval('${approval.guid}')" class="p-2 text-gray-400 hover:text-green-600 transition-colors" data-tooltip="Approve" data-tooltip-position="bottom">
@@ -920,7 +920,7 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 text-sm text-gray-900">${getProfileName(approval.profileId)}</td>
                     <td class="px-6 py-4 text-sm">
-                        <span class="px-2 py-1 rounded text-xs font-medium ${getStatusBadge(approval.status)}">
+                        <span class="text-xs font-semibold ${getStatusBadge(approval.status)}">
                             ${approval.status}
                         </span>
                     </td>
@@ -975,7 +975,7 @@
                     <button onclick="goToPage('${tab}', ${i})"
                         class="relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             active
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                                ? 'z-10 bg-teal-50 border-teal-600 text-teal-600'
                                 : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                         }">
                         ${i}
@@ -1037,21 +1037,21 @@
         function formatRedacted(text) {
             if (!text) return '';
             if (text === '[REDACTED]') {
-                return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                return '<span class="text-xs font-medium text-gray-500">Redacted</span>';
             }
             return text;
         }
 
         function displayRecipients(recipients) {
             if (recipients === '[REDACTED]') {
-                return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                return '<span class="text-xs font-medium text-gray-500">Redacted</span>';
             }
             return truncate(recipients, 30);
         }
 
         function displaySubject(subject) {
             if (subject === '[REDACTED]') {
-                return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                return '<span class="text-xs font-medium text-gray-500">Redacted</span>';
             }
             return truncate(subject, 30);
         }
@@ -1088,13 +1088,13 @@
 
         function getStatusBadge(status) {
             switch (status) {
-                case 'Sent': return 'bg-green-50 text-green-700 border border-green-200';
-                case 'Failed': return 'bg-red-50 text-red-700 border border-red-200';
-                case 'Rejected': return 'bg-red-50 text-red-700 border border-red-200';
-                case 'Skipped': return 'bg-yellow-50 text-yellow-700 border border-yellow-200';
-                case 'Approved': return 'bg-blue-50 text-blue-700 border border-blue-200';
-                case 'Pending': return 'bg-amber-50 text-amber-700 border border-amber-200';
-                default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+                case 'Sent': return 'text-green-700';
+                case 'Failed': return 'text-red-700';
+                case 'Rejected': return 'text-red-700';
+                case 'Skipped': return 'text-yellow-700';
+                case 'Approved': return 'text-teal-700';
+                case 'Pending': return 'text-amber-700';
+                default: return 'text-gray-600';
             }
         }
 
@@ -1118,13 +1118,13 @@
             // Show status-specific message for non-sent items
             switch (approval.status) {
                 case 'Rejected':
-                    return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Not sent</span>';
+                    return '<span class="text-xs font-medium text-gray-500">Not sent</span>';
                 case 'Skipped':
-                    return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Not sent</span>';
+                    return '<span class="text-xs font-medium text-gray-500">Not sent</span>';
                 case 'Failed':
-                    return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Failed</span>';
+                    return '<span class="text-xs font-medium text-gray-500">Failed</span>';
                 default:
-                    return '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Pending</span>';
+                    return '<span class="text-xs font-medium text-gray-500">Pending</span>';
             }
         }
 
@@ -1145,19 +1145,19 @@
                 const ccEl = document.getElementById('preview-cc');
 
                 if (approval.subject === '[REDACTED]') {
-                    subjectEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                    subjectEl.innerHTML = '<span class="text-xs font-medium text-gray-500">Redacted</span>';
                 } else {
                     subjectEl.textContent = approval.subject;
                 }
 
                 if (approval.recipients === '[REDACTED]') {
-                    recipientsEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                    recipientsEl.innerHTML = '<span class="text-xs font-medium text-gray-500">Redacted</span>';
                 } else {
                     recipientsEl.textContent = approval.recipients;
                 }
 
                 if (approval.ccAddresses === '[REDACTED]') {
-                    ccEl.innerHTML = '<span class="text-xs font-mono bg-gray-100 px-2 py-1 rounded text-gray-600">Redacted</span>';
+                    ccEl.innerHTML = '<span class="text-xs font-medium text-gray-500">Redacted</span>';
                 } else {
                     ccEl.textContent = approval.ccAddresses || '(none)';
                 }
@@ -1463,16 +1463,16 @@
             document.getElementById('content-history').classList.add('hidden');
 
             // Remove active border from all tabs
-            document.getElementById('tab-pending').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-pending').classList.remove('border-teal-600', 'text-gray-900');
             document.getElementById('tab-pending').classList.add('border-transparent', 'text-gray-500');
-            document.getElementById('tab-approved').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-approved').classList.remove('border-teal-600', 'text-gray-900');
             document.getElementById('tab-approved').classList.add('border-transparent', 'text-gray-500');
-            document.getElementById('tab-history').classList.remove('border-blue-500', 'text-gray-900');
+            document.getElementById('tab-history').classList.remove('border-teal-600', 'text-gray-900');
             document.getElementById('tab-history').classList.add('border-transparent', 'text-gray-500');
 
             // Show selected content and tab
             document.getElementById(`content-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('border-blue-500', 'text-gray-900');
+            document.getElementById(`tab-${tab}`).classList.add('border-teal-600', 'text-gray-900');
             document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
         }
 

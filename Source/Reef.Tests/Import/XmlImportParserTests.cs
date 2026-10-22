@@ -32,7 +32,7 @@ public class XmlImportParserTests
             </Orders>
             """;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
         rows[0].Columns["Id"].Should().Be("1");
@@ -55,7 +55,7 @@ public class XmlImportParserTests
         var config = DefaultConfig();
         config.RecordElement = "//Item";
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(2);
         rows[0].Columns["Code"].Should().Be("A");
@@ -71,7 +71,7 @@ public class XmlImportParserTests
             </Orders>
             """;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].Columns["@id"].Should().Be("1");
@@ -84,7 +84,7 @@ public class XmlImportParserTests
     {
         var xml = "<Orders><Order><Id>1</Id></Orders>"; // unclosed Order tag
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].ParseError.Should().NotBeNull();
@@ -98,7 +98,7 @@ public class XmlImportParserTests
         var config = DefaultConfig();
         config.RecordElement = "//[invalid";
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config, TestContext.Current.CancellationToken));
 
         rows.Should().HaveCount(1);
         rows[0].ParseError.Should().NotBeNull();
@@ -112,7 +112,7 @@ public class XmlImportParserTests
         var config = DefaultConfig();
         config.RecordElement = "//NonExistent";
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), config, TestContext.Current.CancellationToken));
 
         rows.Should().BeEmpty();
     }
@@ -128,7 +128,7 @@ public class XmlImportParserTests
             </Items>
             """;
 
-        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig()));
+        var rows = await CollectAsync(_parser.ParseAsync(ToStream(xml), DefaultConfig(), TestContext.Current.CancellationToken));
 
         rows[0].LineNumber.Should().Be(1);
         rows[1].LineNumber.Should().Be(2);

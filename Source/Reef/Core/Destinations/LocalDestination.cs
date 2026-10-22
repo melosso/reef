@@ -16,7 +16,7 @@ public class LocalDestination : IDestination
     /// <param name="destinationConfig">JSON configuration with 'path' property</param>
     /// <returns>Success status, final file path, and error message</returns>
     public async Task<(bool Success, string? FinalPath, string? ErrorMessage)> SaveAsync(
-        string sourcePath, 
+        string sourcePath,
         string destinationConfig)
     {
         return await Task.Run<(bool, string?, string?)>(() =>
@@ -172,7 +172,7 @@ public class LocalDestination : IDestination
         path = path.Replace("{time}", now.ToString("HHmmss"), StringComparison.OrdinalIgnoreCase);
         path = path.Replace("{timestamp}", now.ToString("HHmmss"), StringComparison.OrdinalIgnoreCase);
         path = path.Replace("{datetime}", now.ToString("yyyyMMdd_HHmmss"), StringComparison.OrdinalIgnoreCase);
-        
+
         // Replace individual date/time components
         path = path.Replace("{year}", now.ToString("yyyy"), StringComparison.OrdinalIgnoreCase);
         path = path.Replace("{month}", now.ToString("MM"), StringComparison.OrdinalIgnoreCase);

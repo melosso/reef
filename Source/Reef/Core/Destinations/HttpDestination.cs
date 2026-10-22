@@ -79,19 +79,19 @@ public class HttpDestination : IDestination
     /// Post file to HTTP endpoint
     /// </summary>
     private async Task<(bool Success, string? ErrorMessage)> PostFileAsync(
-        HttpConfig config, 
-        string fileName, 
+        HttpConfig config,
+        string fileName,
         byte[] fileBytes)
     {
         try
         {
             var httpMethod = config.Method?.ToUpperInvariant() switch
             {
-                "GET"    => HttpMethod.Get,
-                "PUT"    => HttpMethod.Put,
-                "PATCH"  => HttpMethod.Patch,
+                "GET" => HttpMethod.Get,
+                "PUT" => HttpMethod.Put,
+                "PATCH" => HttpMethod.Patch,
                 "DELETE" => HttpMethod.Delete,
-                _        => HttpMethod.Post
+                _ => HttpMethod.Post
             };
             using var request = new HttpRequestMessage(httpMethod, config.Url);
 
@@ -119,7 +119,7 @@ public class HttpDestination : IDestination
                     var multipartContent = new MultipartFormDataContent();
                     var fileContent = new ByteArrayContent(fileBytes);
                     fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
-                    
+
                     var fieldName = config.FileFieldName ?? "file";
                     multipartContent.Add(fileContent, fieldName, fileName);
 
@@ -138,7 +138,7 @@ public class HttpDestination : IDestination
                 case "json":
                     // JSON payload - intelligent content handling
                     string jsonContent;
-                    
+
                     // Try to detect and send as JSON directly
                     if (TryConvertToJson(fileName, fileBytes, contentType, config, out jsonContent!))
                     {
@@ -177,7 +177,7 @@ public class HttpDestination : IDestination
                     // Raw binary upload
                     request.Content = new ByteArrayContent(fileBytes);
                     request.Content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
-                    
+
                     // Add filename header if specified
                     if (!string.IsNullOrWhiteSpace(config.FileNameHeader))
                     {
@@ -197,9 +197,9 @@ public class HttpDestination : IDestination
             if (response.IsSuccessStatusCode)
             {
                 var responseBody = await response.Content.ReadAsStringAsync();
-                Log.Debug("HTTP POST response: {StatusCode} - {Body}", 
+                Log.Debug("HTTP POST response: {StatusCode} - {Body}",
                     response.StatusCode, responseBody);
-                
+
                 // Return success with response body as the message
                 var successMessage = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}\n\n{responseBody}";
                 return (true, successMessage);
@@ -250,18 +250,18 @@ public class HttpDestination : IDestination
                 break;
 
             case "basic":
-                if (!string.IsNullOrWhiteSpace(config.Username) && 
+                if (!string.IsNullOrWhiteSpace(config.Username) &&
                     !string.IsNullOrWhiteSpace(config.Password))
                 {
                     var credentials = Convert.ToBase64String(
                         Encoding.UTF8.GetBytes($"{config.Username}:{config.Password}"));
-                    request.Headers.Authorization = 
+                    request.Headers.Authorization =
                         new AuthenticationHeaderValue("Basic", credentials);
                 }
                 break;
 
             case "apikey":
-                if (!string.IsNullOrWhiteSpace(config.ApiKeyHeader) && 
+                if (!string.IsNullOrWhiteSpace(config.ApiKeyHeader) &&
                     !string.IsNullOrWhiteSpace(config.AuthToken))
                 {
                     request.Headers.TryAddWithoutValidation(config.ApiKeyHeader, config.AuthToken);
@@ -271,7 +271,7 @@ public class HttpDestination : IDestination
             case "token":
                 if (!string.IsNullOrWhiteSpace(config.AuthToken))
                 {
-                    request.Headers.Authorization = 
+                    request.Headers.Authorization =
                         new AuthenticationHeaderValue("Token", config.AuthToken);
                 }
                 break;
@@ -311,7 +311,7 @@ public class HttpDestination : IDestination
     /// Intelligently convert file content to JSON format
     /// Handles JSON, XML, CSV, HTML, and other text formats
     /// </summary>
-    private bool TryConvertToJson(string fileName, byte[] fileBytes, string contentType, 
+    private bool TryConvertToJson(string fileName, byte[] fileBytes, string contentType,
         HttpConfig config, out string jsonString)
     {
         jsonString = string.Empty;
@@ -320,7 +320,7 @@ public class HttpDestination : IDestination
         {
             // Try to decode as UTF-8 text
             var textContent = Encoding.UTF8.GetString(fileBytes);
-            
+
             // Check if content is valid UTF-8 (no replacement characters)
             if (textContent.Contains('\uFFFD') && fileBytes.Length > 100)
             {
@@ -331,7 +331,7 @@ public class HttpDestination : IDestination
 
             // Trim whitespace for parsing
             var trimmedContent = textContent.Trim();
-            
+
             if (string.IsNullOrEmpty(trimmedContent))
             {
                 // Empty file - return empty JSON array
@@ -370,7 +370,7 @@ public class HttpDestination : IDestination
     private bool TryParseAsJson(string content, out string jsonString)
     {
         jsonString = content;
-        
+
         try
         {
             // Validate it's valid JSON by parsing
@@ -387,7 +387,7 @@ public class HttpDestination : IDestination
     /// <summary>
     /// Try to convert text-based formats (CSV, XML, HTML, etc.) to JSON
     /// </summary>
-    private bool TryConvertTextToJson(string fileName, string content, string contentType, 
+    private bool TryConvertTextToJson(string fileName, string content, string contentType,
         HttpConfig config, out string jsonString)
     {
         jsonString = string.Empty;
@@ -395,7 +395,7 @@ public class HttpDestination : IDestination
         // For simplicity, wrap text content in a JSON object
         // This handles CSV, XML, HTML, and other text formats
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        
+
         // Create a JSON wrapper with metadata and content
         var wrapper = new Dictionary<string, object>
         {
@@ -415,11 +415,11 @@ public class HttpDestination : IDestination
             }
         }
 
-        jsonString = JsonSerializer.Serialize(wrapper, new JsonSerializerOptions 
-        { 
-            WriteIndented = false 
+        jsonString = JsonSerializer.Serialize(wrapper, new JsonSerializerOptions
+        {
+            WriteIndented = false
         });
-        
+
         return true;
     }
 
@@ -484,7 +484,7 @@ public class HttpDestination : IDestination
             // Create a test request
             var testData = Encoding.UTF8.GetBytes("test");
             var result = await PostFileAsync(config, "test.txt", testData);
-            
+
             return result.Success;
         }
         catch (Exception ex)

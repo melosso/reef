@@ -28,7 +28,7 @@ public class GroupService
             const string sql = @"
                 SELECT * FROM ProfileGroups 
                 ORDER BY ParentId NULLS FIRST, SortOrder, Name";
-            
+
             var groups = await connection.QueryAsync<ProfileGroup>(sql);
             return groups.ToList();
         }
@@ -48,7 +48,7 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             const string sql = "SELECT * FROM ProfileGroups WHERE Id = @Id";
-            
+
             var group = await connection.QueryFirstOrDefaultAsync<ProfileGroup>(sql, new { Id = id });
             return group;
         }
@@ -68,7 +68,7 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             const string sql = "SELECT * FROM ProfileGroups WHERE Name = @Name";
-            
+
             var group = await connection.QueryFirstOrDefaultAsync<ProfileGroup>(sql, new { Name = name });
             return group;
         }
@@ -88,7 +88,7 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             string sql;
-            
+
             if (parentId == null)
             {
                 sql = "SELECT * FROM ProfileGroups WHERE ParentId IS NULL ORDER BY SortOrder, Name";
@@ -132,7 +132,7 @@ public class GroupService
     private List<GroupTreeNode> BuildTree(List<ProfileGroup> allGroups, int? parentId)
     {
         var result = new List<GroupTreeNode>();
-        
+
         var children = allGroups
             .Where(g => g.ParentId == parentId)
             .OrderBy(g => g.SortOrder)
@@ -165,7 +165,7 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             const string sql = "SELECT COUNT(*) FROM Profiles WHERE GroupId = @GroupId";
-            
+
             var count = await connection.ExecuteScalarAsync<int>(sql, new { GroupId = groupId });
             return count;
         }
@@ -211,7 +211,7 @@ public class GroupService
                 INSERT INTO ProfileGroups (Name, ParentId, Description, SortOrder, CreatedAt, UpdatedAt)
                 VALUES (@Name, @ParentId, @Description, @SortOrder, datetime('now'), datetime('now'));
                 SELECT last_insert_rowid();";
-            
+
             var id = await connection.ExecuteScalarAsync<int>(sql, new
             {
                 group.Name,
@@ -274,7 +274,7 @@ public class GroupService
                     SortOrder = @SortOrder,
                     UpdatedAt = datetime('now')
                 WHERE Id = @Id";
-            
+
             var rows = await connection.ExecuteAsync(sql, new
             {
                 group.Id,
@@ -308,15 +308,15 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             await connection.OpenAsync();
-            
+
             using var transaction = connection.BeginTransaction();
-            
+
             try
             {
                 // Check if group has children
                 const string checkChildrenSql = "SELECT COUNT(*) FROM ProfileGroups WHERE ParentId = @Id";
                 var childCount = await connection.ExecuteScalarAsync<int>(checkChildrenSql, new { Id = id }, transaction);
-                
+
                 if (childCount > 0)
                 {
                     throw new InvalidOperationException($"Cannot delete group: it has {childCount} child group(s). Delete or move children first.");
@@ -325,13 +325,13 @@ public class GroupService
                 // Set profiles' GroupId to NULL (don't cascade delete profiles)
                 const string updateProfilesSql = "UPDATE Profiles SET GroupId = NULL WHERE GroupId = @Id";
                 await connection.ExecuteAsync(updateProfilesSql, new { Id = id }, transaction);
-                
+
                 // Delete the group
                 const string deleteGroupSql = "DELETE FROM ProfileGroups WHERE Id = @Id";
                 var rows = await connection.ExecuteAsync(deleteGroupSql, new { Id = id }, transaction);
-                
+
                 transaction.Commit();
-                
+
                 if (rows > 0)
                 {
                     Log.Information("Deleted profile group {GroupId}", id);
@@ -392,7 +392,7 @@ public class GroupService
                 SET ParentId = @NewParentId,
                     UpdatedAt = datetime('now')
                 WHERE Id = @GroupId";
-            
+
             var rows = await connection.ExecuteAsync(sql, new
             {
                 GroupId = groupId,
@@ -465,7 +465,7 @@ public class GroupService
         {
             await using var connection = new SqliteConnection(_connectionString);
             const string sql = "SELECT * FROM Profiles WHERE GroupId = @GroupId ORDER BY Name";
-            
+
             var profiles = await connection.QueryAsync<Profile>(sql, new { GroupId = groupId });
             return profiles.ToList();
         }

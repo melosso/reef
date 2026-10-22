@@ -53,21 +53,21 @@ public class JobService
     private static DateTime? EnsureUtc(DateTime? dateTime)
     {
         if (!dateTime.HasValue) return null;
-        
+
         if (dateTime.Value.Kind == DateTimeKind.Unspecified)
         {
             return DateTime.SpecifyKind(dateTime.Value, DateTimeKind.Utc);
         }
-        
-        return dateTime.Value.Kind == DateTimeKind.Utc 
-            ? dateTime.Value 
+
+        return dateTime.Value.Kind == DateTimeKind.Utc
+            ? dateTime.Value
             : dateTime.Value.ToUniversalTime();
     }
 
     private static void NormalizeJobDateTimes(Job job)
     {
         if (job == null) return;
-        
+
         job.NextRunTime = EnsureUtc(job.NextRunTime);
         job.LastRunTime = EnsureUtc(job.LastRunTime);
         job.LastSuccessTime = EnsureUtc(job.LastSuccessTime);
@@ -83,12 +83,12 @@ public class JobService
         using var conn = new SqliteConnection(_connectionString);
         var job = await conn.QuerySingleOrDefaultAsync<Job>(
             "SELECT * FROM Jobs WHERE Id = @Id", new { Id = id });
-        
+
         if (job != null)
         {
             NormalizeJobDateTimes(job);
         }
-        
+
         return job;
     }
 
@@ -96,19 +96,19 @@ public class JobService
     {
         using var conn = new SqliteConnection(_connectionString);
         var jobs = (await conn.QueryAsync<Job>("SELECT * FROM Jobs ORDER BY Name")).ToList();
-        
+
         foreach (var job in jobs)
         {
             NormalizeJobDateTimes(job);
         }
-        
+
         return jobs;
     }
 
     public async Task<IEnumerable<Job>> GetAllAsync(bool enabledOnly)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         IEnumerable<Job> jobs;
         if (enabledOnly)
         {
@@ -119,12 +119,12 @@ public class JobService
         {
             return await GetAllAsync();
         }
-        
+
         foreach (var job in jobs)
         {
             NormalizeJobDateTimes(job);
         }
-        
+
         return jobs;
     }
 
@@ -194,18 +194,18 @@ public class JobService
 
         job.CreatedAt = DateTime.UtcNow;
         job.Status = JobStatus.Idle;
-        
+
         // Calculate initial NextRunTime before inserting
         job.NextRunTime = CalculateNextRunTime(job, DateTime.UtcNow);
-        
+
         // Validate NextRunTime is not in the past
         if (job.NextRunTime.HasValue && job.NextRunTime.Value < DateTime.UtcNow)
         {
-            Log.Warning("Job {JobName} initial NextRunTime {NextRun} is in the past, recalculating", 
+            Log.Warning("Job {JobName} initial NextRunTime {NextRun} is in the past, recalculating",
                 job.Name, job.NextRunTime);
             job.NextRunTime = CalculateNextRunTime(job, DateTime.UtcNow);
         }
-        
+
         var sql = @"
             INSERT INTO Jobs (
                 Name, Description, Type, ProfileId, ImportProfileId, DestinationId, CustomActionJson,
@@ -220,12 +220,12 @@ public class JobService
                 @IsEnabled, @Status, @NextRunTime, @Tags, @CreatedAt, @CreatedBy, @Hash
             );
             SELECT last_insert_rowid();";
-        
+
         job.Id = await conn.ExecuteScalarAsync<int>(sql, job);
-        
-        Log.Information("Created job {JobId} ({JobName}) with NextRunTime: {NextRun}", 
+
+        Log.Information("Created job {JobId} ({JobName}) with NextRunTime: {NextRun}",
             job.Id, job.Name, job.NextRunTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null");
-        
+
         return job;
     }
 
@@ -246,19 +246,19 @@ public class JobService
                 job.ScheduleType.ToString());
 
             job.ModifiedAt = DateTime.UtcNow;
-            
+
             // Recalculate next run time with current UTC time
             var now = DateTime.UtcNow;
             job.NextRunTime = CalculateNextRunTime(job, now);
-            
+
             // Validate NextRunTime is not in the past
             if (job.NextRunTime.HasValue && job.NextRunTime.Value < now)
             {
-                Log.Warning("Job {JobId} ({JobName}) NextRunTime {NextRun} is in the past after update, forcing recalculation", 
+                Log.Warning("Job {JobId} ({JobName}) NextRunTime {NextRun} is in the past after update, forcing recalculation",
                     job.Id, job.Name, job.NextRunTime);
                 job.NextRunTime = CalculateNextRunTime(job, now);
             }
-            
+
             var sql = @"
                 UPDATE Jobs
                 SET Name = @Name, Description = @Description, Type = @Type,
@@ -271,12 +271,12 @@ public class JobService
                     IsEnabled = @IsEnabled, NextRunTime = @NextRunTime, Tags = @Tags,
                     ModifiedAt = @ModifiedAt, Hash = @Hash
                 WHERE Id = @Id";
-            
+
             var rows = await conn.ExecuteAsync(sql, job);
-            
-            Log.Information("Updated job {JobId} ({JobName}) - NextRunTime: {NextRun}", 
+
+            Log.Information("Updated job {JobId} ({JobName}) - NextRunTime: {NextRun}",
                 job.Id, job.Name, job.NextRunTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null");
-            
+
             return rows > 0;
         }
         finally
@@ -288,17 +288,17 @@ public class JobService
     public async Task<bool> DeleteAsync(int id)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         // Delete related executions
         await conn.ExecuteAsync("DELETE FROM JobExecutions WHERE JobId = @Id", new { Id = id });
-        
+
         // Delete job
         var sql = "DELETE FROM Jobs WHERE Id = @Id";
         var rows = await conn.ExecuteAsync(sql, new { Id = id });
-        
+
         // Cleanup lock
         _jobLocks.TryRemove(id, out _);
-        
+
         return rows > 0;
     }
 
@@ -309,21 +309,21 @@ public class JobService
     public async Task<bool> UpdateStatusAsync(int jobId, JobStatus status)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var sql = @"
             UPDATE Jobs 
             SET Status = @Status, ModifiedAt = @ModifiedAt
             WHERE Id = @JobId";
-        
-        var rows = await conn.ExecuteAsync(sql, new 
-        { 
-            JobId = jobId, 
-            Status = status, 
-            ModifiedAt = DateTime.UtcNow 
+
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            JobId = jobId,
+            Status = status,
+            ModifiedAt = DateTime.UtcNow
         });
-        
+
         Log.Debug("Updated job {JobId} status to {Status}", jobId, status);
-        
+
         return rows > 0;
     }
 
@@ -332,9 +332,9 @@ public class JobService
         // Validate nextRunTime is not in the past
         if (nextRunTime.HasValue && nextRunTime.Value < DateTime.UtcNow)
         {
-            Log.Warning("Attempted to set NextRunTime to past value {NextRun} for job {JobId}, rejecting", 
+            Log.Warning("Attempted to set NextRunTime to past value {NextRun} for job {JobId}, rejecting",
                 nextRunTime, jobId);
-            
+
             // Get the job and recalculate properly
             var job = await GetByIdAsync(jobId);
             if (job != null)
@@ -342,24 +342,24 @@ public class JobService
                 nextRunTime = CalculateNextRunTime(job, DateTime.UtcNow);
             }
         }
-        
+
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var sql = @"
             UPDATE Jobs 
             SET NextRunTime = @NextRunTime, ModifiedAt = @ModifiedAt
             WHERE Id = @JobId";
-        
-        var rows = await conn.ExecuteAsync(sql, new 
-        { 
-            JobId = jobId, 
-            NextRunTime = nextRunTime, 
-            ModifiedAt = DateTime.UtcNow 
+
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            JobId = jobId,
+            NextRunTime = nextRunTime,
+            ModifiedAt = DateTime.UtcNow
         });
-        
-        Log.Debug("Updated job {JobId} NextRunTime to {NextRun}", 
+
+        Log.Debug("Updated job {JobId} NextRunTime to {NextRun}",
             jobId, nextRunTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null");
-        
+
         return rows > 0;
     }
 
@@ -370,9 +370,9 @@ public class JobService
     public async Task<IEnumerable<Job>> GetDueJobsAsync()
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var now = DateTime.UtcNow;
-        
+
         var sql = @"
             SELECT * FROM Jobs 
             WHERE IsEnabled = 1 
@@ -381,73 +381,73 @@ public class JobService
             AND NextRunTime <= @Now
             AND (EndDate IS NULL OR EndDate >= @Now)
             ORDER BY Priority DESC, NextRunTime";
-        
-        var jobs = (await conn.QueryAsync<Job>(sql, new 
-        { 
+
+        var jobs = (await conn.QueryAsync<Job>(sql, new
+        {
             Idle = JobStatus.Idle,
             Scheduled = JobStatus.Scheduled,
             Failed = JobStatus.Failed,
             Now = now
         })).ToList();
-        
+
         foreach (var job in jobs)
         {
             NormalizeJobDateTimes(job);
         }
-        
-        var validJobs = jobs.Where(j => 
-            j.NextRunTime.HasValue && 
+
+        var validJobs = jobs.Where(j =>
+            j.NextRunTime.HasValue &&
             j.NextRunTime.Value > now.AddDays(-7)).ToList();
-        
+
         if (validJobs.Count < jobs.Count)
         {
             var invalidCount = jobs.Count - validJobs.Count;
             Log.Warning("Filtered out {Count} jobs with NextRunTime >7 days in the past", invalidCount);
-            
+
             foreach (var invalidJob in jobs.Except(validJobs))
             {
                 await RecalculateAndUpdateNextRunTimeAsync(invalidJob.Id);
             }
         }
-        
+
         var stuckJobsSql = @"
             SELECT * FROM Jobs 
             WHERE IsEnabled = 1 
             AND NextRunTime IS NULL 
             AND ScheduleType != @Manual";
-        
-        var stuckJobs = (await conn.QueryAsync<Job>(stuckJobsSql, new 
-        { 
-            Manual = ScheduleType.Manual 
+
+        var stuckJobs = (await conn.QueryAsync<Job>(stuckJobsSql, new
+        {
+            Manual = ScheduleType.Manual
         })).ToList();
-        
+
         if (stuckJobs.Any())
         {
             Log.Warning("Found {Count} enabled jobs with NULL NextRunTime, auto-fixing", stuckJobs.Count);
-            
+
             foreach (var stuckJob in stuckJobs)
             {
                 NormalizeJobDateTimes(stuckJob);
                 await RecalculateAndUpdateNextRunTimeAsync(stuckJob.Id);
-                
+
                 if (stuckJob.Status == JobStatus.Failed)
                 {
                     await UpdateStatusAsync(stuckJob.Id, JobStatus.Idle);
                     await conn.ExecuteAsync(
-                        "UPDATE Jobs SET ConsecutiveFailures = 0 WHERE Id = @Id", 
+                        "UPDATE Jobs SET ConsecutiveFailures = 0 WHERE Id = @Id",
                         new { Id = stuckJob.Id });
                 }
             }
         }
-        
+
         return validJobs;
     }
     public async Task<long> CreateExecutionAsync(JobExecution execution)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         execution.StartedAt = DateTime.UtcNow;
-        
+
         var sql = @"
             INSERT INTO JobExecutions (
                 JobId, StartedAt, Status, AttemptNumber, TriggeredBy, ServerNode, ExecutionContext
@@ -456,11 +456,11 @@ public class JobService
                 @JobId, @StartedAt, @Status, @AttemptNumber, @TriggeredBy, @ServerNode, @ExecutionContext
             );
             SELECT last_insert_rowid();";
-        
+
         var executionId = await conn.ExecuteScalarAsync<long>(sql, execution);
-        
+
         Log.Debug("Created execution {ExecutionId} for job {JobId}", executionId, execution.JobId);
-        
+
         return executionId;
     }
 
@@ -471,9 +471,9 @@ public class JobService
         try
         {
             using var conn = new SqliteConnection(_connectionString);
-            
+
             execution.CompletedAt = DateTime.UtcNow;
-            
+
             var sql = @"
                 UPDATE JobExecutions 
                 SET CompletedAt = @CompletedAt, Status = @Status,
@@ -481,9 +481,9 @@ public class JobService
                     StackTrace = @StackTrace, BytesProcessed = @BytesProcessed,
                     RowsProcessed = @RowsProcessed
                 WHERE Id = @Id";
-            
+
             var rows = await conn.ExecuteAsync(sql, execution);
-            
+
             // Update job statistics AND recalculate NextRunTime
             if (execution.Status == JobStatus.Completed)
             {
@@ -493,10 +493,10 @@ public class JobService
             {
                 await UpdateJobFailureAsync(execution.JobId);
             }
-            
-            Log.Debug("Updated execution {ExecutionId} for job {JobId} - Status: {Status}", 
+
+            Log.Debug("Updated execution {ExecutionId} for job {JobId} - Status: {Status}",
                 execution.Id, execution.JobId, execution.Status);
-            
+
             return rows > 0;
         }
         finally
@@ -876,46 +876,46 @@ public class JobService
     public async Task<IEnumerable<JobExecution>> GetExecutionHistoryAsync(int jobId, int limit = 50)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var sql = @"
             SELECT * FROM JobExecutions 
             WHERE JobId = @JobId 
             ORDER BY StartedAt DESC 
             LIMIT @Limit";
-        
+
         return await conn.QueryAsync<JobExecution>(sql, new { JobId = jobId, Limit = limit });
     }
 
     public async Task<JobExecution?> GetLatestExecutionAsync(int jobId)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var sql = @"
             SELECT * FROM JobExecutions 
             WHERE JobId = @JobId 
             ORDER BY StartedAt DESC 
             LIMIT 1";
-        
+
         return await conn.QuerySingleOrDefaultAsync<JobExecution>(sql, new { JobId = jobId });
     }
 
     public async Task<bool> CancelExecutionAsync(long executionId)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         var sql = @"
             UPDATE JobExecutions 
             SET Status = @Cancelled, CompletedAt = @Now
             WHERE Id = @ExecutionId AND Status = @Running";
-        
-        var rows = await conn.ExecuteAsync(sql, new 
-        { 
-            ExecutionId = executionId, 
+
+        var rows = await conn.ExecuteAsync(sql, new
+        {
+            ExecutionId = executionId,
             Cancelled = JobStatus.Cancelled,
             Running = JobStatus.Running,
-            Now = DateTime.UtcNow 
+            Now = DateTime.UtcNow
         });
-        
+
         return rows > 0;
     }
 
@@ -944,33 +944,33 @@ public class JobService
         {
             return null;
         }
-        
+
         // Ensure referenceTime is UTC
         if (referenceTime.Kind != DateTimeKind.Utc)
         {
             Log.Warning("Reference time for job {JobId} is not UTC, converting", job.Id);
             referenceTime = referenceTime.ToUniversalTime();
         }
-        
+
         var now = DateTime.UtcNow;
-        
+
         // Edge case 2: Job is outside its date range (ended)
         if (job.EndDate.HasValue && job.EndDate.Value < now)
         {
             Log.Debug("Job {JobId} has ended (EndDate: {EndDate})", job.Id, job.EndDate);
             return null;
         }
-        
+
         // Use current time as base, NOT LastRunTime. This prevents the "next run in the past" bug.
         var baseTime = now;
-        
+
         // Edge case 3: Job has a future start date
         if (job.StartDate.HasValue && baseTime < job.StartDate.Value)
         {
             baseTime = job.StartDate.Value;
             Log.Debug("Job {JobId} starts in the future at {StartDate}", job.Id, job.StartDate);
         }
-        
+
         // Calculate based on schedule type
         DateTime? nextRun = job.ScheduleType switch
         {
@@ -981,13 +981,13 @@ public class JobService
             ScheduleType.Monthly => CalculateMonthlyNextRun(baseTime, job.StartTime, job),
             _ => null
         };
-        
+
         // CRITICAL VALIDATION: Ensure nextRun is in the future
         if (nextRun.HasValue && nextRun.Value <= now)
         {
-            Log.Warning("Calculated NextRun {NextRun} is not in future for job {JobId} ({JobName}), recalculating with buffer", 
+            Log.Warning("Calculated NextRun {NextRun} is not in future for job {JobId} ({JobName}), recalculating with buffer",
                 nextRun, job.Id, job.Name);
-            
+
             // Force recalculation from current time + 1 minute
             var safeBaseTime = now.AddMinutes(1);
             nextRun = job.ScheduleType switch
@@ -1000,7 +1000,7 @@ public class JobService
                 _ => null
             };
         }
-        
+
         // Edge case 4: Respect job time window (StartTime/EndTime)
         if (nextRun.HasValue && job.StartTime.HasValue && job.EndTime.HasValue)
         {
@@ -1014,20 +1014,20 @@ public class JobService
                     nextValidTime = nextValidTime.AddDays(1);
                 }
                 nextRun = nextValidTime;
-                
-                Log.Debug("Adjusted job {JobId} next run to respect time window: {NextRun}", 
+
+                Log.Debug("Adjusted job {JobId} next run to respect time window: {NextRun}",
                     job.Id, nextRun);
             }
         }
-        
+
         // Final validation
         if (nextRun.HasValue && nextRun.Value <= now)
         {
-            Log.Error("CRITICAL: NextRun {NextRun} is STILL in past for job {JobId} after all fixes! Forcing +1 hour", 
+            Log.Error("CRITICAL: NextRun {NextRun} is STILL in past for job {JobId} after all fixes! Forcing +1 hour",
                 nextRun, job.Id);
             nextRun = now.AddHours(1);
         }
-        
+
         return nextRun;
     }
 
@@ -1036,22 +1036,22 @@ public class JobService
         // Edge case: Zero or negative interval
         if (intervalMinutes <= 0)
         {
-            Log.Warning("Job {JobId} has invalid interval {Interval}, defaulting to 60 minutes", 
+            Log.Warning("Job {JobId} has invalid interval {Interval}, defaulting to 60 minutes",
                 job.Id, intervalMinutes);
             intervalMinutes = 60;
         }
-        
+
         // Always calculate from current time, not from last run
         // This prevents missed executions from piling up
         var now = DateTime.UtcNow;
         var nextRun = baseTime.AddMinutes(intervalMinutes);
-        
+
         // If calculated time is in the past, keep adding intervals until it's in the future
         while (nextRun <= now)
         {
             nextRun = nextRun.AddMinutes(intervalMinutes);
         }
-        
+
         return nextRun;
     }
 
@@ -1065,24 +1065,24 @@ public class JobService
                 Log.Error("Job {JobId} has empty cron expression", job.Id);
                 return null;
             }
-            
+
             // Parse with NCrontab (5-field cron: minute hour day month dayOfWeek)
             var schedule = CrontabSchedule.Parse(cronExpression);
             var nextOccurrence = schedule.GetNextOccurrence(baseTime);
-            
+
             // Validate the next occurrence is in the future
             var now = DateTime.UtcNow;
             if (nextOccurrence <= now)
             {
                 nextOccurrence = schedule.GetNextOccurrence(now);
             }
-            
+
             return nextOccurrence;
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Job {JobId} has invalid cron expression: {Cron}", job.Id, cronExpression);
-            
+
             // Fallback: return 1 hour from now
             return baseTime.AddHours(1);
         }
@@ -1092,14 +1092,14 @@ public class JobService
     {
         var time = startTime ?? TimeSpan.Zero;
         var nextRun = baseTime.Date.Add(time);
-        
+
         // If that time has passed today, move to tomorrow
         var now = DateTime.UtcNow;
         if (nextRun <= now)
         {
             nextRun = nextRun.AddDays(1);
         }
-        
+
         return nextRun;
     }
 
@@ -1219,13 +1219,13 @@ public class JobService
     {
         var job = await GetByIdAsync(jobId);
         if (job == null) return;
-        
+
         var now = DateTime.UtcNow;
         var newNextRunTime = CalculateNextRunTime(job, now);
-        
+
         await UpdateNextRunTimeAsync(jobId, newNextRunTime);
-        
-        Log.Information("Recalculated NextRunTime for job {JobId}: {NextRun}", 
+
+        Log.Information("Recalculated NextRunTime for job {JobId}: {NextRun}",
             jobId, newNextRunTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "null");
     }
 
@@ -1238,12 +1238,12 @@ public class JobService
         using var conn = new SqliteConnection(_connectionString);
         var sql = "SELECT * FROM Jobs WHERE Status = @Status ORDER BY Priority DESC";
         var jobs = (await conn.QueryAsync<Job>(sql, new { Status = status })).ToList();
-        
+
         foreach (var job in jobs)
         {
             NormalizeJobDateTimes(job);
         }
-        
+
         return jobs;
     }
 
@@ -1252,9 +1252,9 @@ public class JobService
         using var conn = new SqliteConnection(_connectionString);
         var sql = "SELECT Status, COUNT(*) as Count FROM Jobs GROUP BY Status";
         var results = await conn.QueryAsync<dynamic>(sql);
-        
+
         return results.ToDictionary(
-            r => (JobStatus)r.Status, 
+            r => (JobStatus)r.Status,
             r => (int)r.Count
         );
     }
@@ -1312,6 +1312,6 @@ public class JobService
             Log.Information("Fixed {Count} jobs with corrupted/null NextRunTime", corruptedJobs.Count());
         }
     }
-    
+
     #endregion
 }

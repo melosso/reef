@@ -47,19 +47,19 @@ public static class AuthEndpoints
         var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var userAgent = context.Request.Headers.UserAgent.FirstOrDefault() ?? "unknown";
         var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        
+
         if (!string.IsNullOrEmpty(forwarded))
         {
             clientIp = forwarded.Split(',')[0].Trim();
         }
-        
+
         return $"{clientIp}:{userAgent.GetHashCode()}";
     }
 
     private static (bool IsValid, string EvaluatedOrigin) ValidateOrigin(HttpContext context)
     {
         var origin = context.Request.Headers.Origin.FirstOrDefault();
-        
+
         if (string.IsNullOrEmpty(origin))
         {
             var referer = context.Request.Headers.Referer.FirstOrDefault();
@@ -79,7 +79,7 @@ public static class AuthEndpoints
                     return (true, "invalid-referer-allowed");
                 }
             }
-            else 
+            else
             {
                 return (true, "no-origin-or-referer-allowed");
             }
@@ -94,9 +94,9 @@ public static class AuthEndpoints
         {
             return (true, origin);
         }
-        
+
         var isValid = allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase);
-        
+
         // Also check if allowedOrigins have trailing slashes and the origin matches if we add one (common mistake)
         if (!isValid)
         {
@@ -115,16 +115,16 @@ public static class AuthEndpoints
             var (isValid, evaluatedOrigin) = ValidateOrigin(context.HttpContext);
             if (!isValid)
             {
-                var clientIp = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
-                    ?? context.HttpContext.Connection.RemoteIpAddress?.ToString() 
+                var clientIp = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                    ?? context.HttpContext.Connection.RemoteIpAddress?.ToString()
                     ?? "unknown";
-                
+
                 var config = context.HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
                 var allowedOriginsArray = config?.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
                 var allowedOriginsString = config?.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
                 var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-                
-                Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}", 
+
+                Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}",
                     clientIp, evaluatedOrigin, string.Join(", ", allowedOrigins));
                 return Results.Json(new { message = "Invalid request origin" }, statusCode: 403);
             }
@@ -184,31 +184,31 @@ public static class AuthEndpoints
 
         // Only one thread runs cleanup per interval, if CAS fails, another thread won
         if (Interlocked.CompareExchange(ref _lastCleanupTicks, now.Ticks, lastTicks) != lastTicks) return;
-        
+
         var expiredSessions = _mfaSessions
             .Where(kvp => kvp.Value.Expires < now)
             .Select(kvp => kvp.Key)
             .ToList();
-        
+
         foreach (var key in expiredSessions)
         {
             _mfaSessions.TryRemove(key, out _);
             _mfaAttempts.TryRemove(key, out _);
         }
-        
+
         var expiredAttempts = _mfaAttempts
             .Where(kvp => kvp.Value.FirstAttempt.AddMinutes(MfaLockoutMinutes) < now)
             .Select(kvp => kvp.Key)
             .ToList();
-        
+
         foreach (var key in expiredAttempts)
         {
             _mfaAttempts.TryRemove(key, out _);
         }
-        
+
         if (expiredSessions.Count > 0 || expiredAttempts.Count > 0)
         {
-            Log.Debug("MFA cleanup: removed {SessionCount} sessions and {AttemptCount} attempt trackers", 
+            Log.Debug("MFA cleanup: removed {SessionCount} sessions and {AttemptCount} attempt trackers",
                 expiredSessions.Count, expiredAttempts.Count);
         }
     }
@@ -246,10 +246,10 @@ public static class AuthEndpoints
     private static bool TimingSafeEquals(ReadOnlySpan<char> a, ReadOnlySpan<char> b)
     {
         if (a.Length != b.Length) return false;
-        
+
         var bytesA = Encoding.UTF8.GetBytes(a.ToArray());
         var bytesB = Encoding.UTF8.GetBytes(b.ToArray());
-        
+
         return CryptographicOperations.FixedTimeEquals(bytesA, bytesB);
     }
 
@@ -325,7 +325,7 @@ public static class AuthEndpoints
                     _mfaSessions.TryRemove(kvp.Key, out _);
 
                 var sessionId = Guid.NewGuid().ToString("N");
-                var expiry    = DateTime.UtcNow.AddMinutes(5);
+                var expiry = DateTime.UtcNow.AddMinutes(5);
                 var fingerprint = GetClientFingerprint(httpContext);
 
                 string? emailOtp = null;
@@ -349,7 +349,7 @@ public static class AuthEndpoints
                 return Results.Ok(new
                 {
                     mfaRequired = true,
-                    mfaMethod   = user.MfaMethod,
+                    mfaMethod = user.MfaMethod,
                     mfaSessionId = sessionId
                 });
             }
@@ -470,8 +470,8 @@ public static class AuthEndpoints
             var hashes = JsonSerializer.Deserialize<List<string>>(backupCodesJson);
             if (hashes == null || hashes.Count == 0) return false;
 
-            var formatted = normalizedCode.Length == BackupCodeLength 
-                ? $"{normalizedCode[..4]}-{normalizedCode[4..]}" 
+            var formatted = normalizedCode.Length == BackupCodeLength
+                ? $"{normalizedCode[..4]}-{normalizedCode[4..]}"
                 : normalizedCode;
             var inputHash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(formatted)));
 
@@ -499,14 +499,14 @@ public static class AuthEndpoints
     }
 
     /// <summary>Shared helper: generate JWT, set cookie, update last-login, return LoginResponse.</summary>
-    private static async Task<IResult> IssueToken(
+    internal static async Task<IResult> IssueToken(
         User user,
         SqliteConnection connection,
         JwtTokenService jwtService,
         AuditService auditService,
         HttpContext httpContext)
     {
-        var token     = jwtService.GenerateToken(user.Username, user.Role, user.Id);
+        var token = jwtService.GenerateToken(user.Username, user.Role, user.Id);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
         await connection.ExecuteAsync(
@@ -522,19 +522,19 @@ public static class AuthEndpoints
         httpContext.Response.Cookies.Append("reef_token", token, new CookieOptions
         {
             HttpOnly = true,
-            Secure   = isHttps,
+            Secure = isHttps,
             SameSite = SameSiteMode.Lax,
-            Expires  = expiresAt,
-            Path     = "/"
+            Expires = expiresAt,
+            Path = "/"
         });
 
         return Results.Ok(new LoginResponse
         {
-            Token       = token,
-            Username    = user.Username,
-            Role        = user.Role,
+            Token = token,
+            Username = user.Username,
+            Role = user.Role,
             DisplayName = user.DisplayName,
-            ExpiresAt   = expiresAt
+            ExpiresAt = expiresAt
         });
     }
 
@@ -822,9 +822,9 @@ public static class AuthEndpoints
         var newExpiry = DateTime.UtcNow.AddMinutes(5);
         var newFingerprint = GetClientFingerprint(httpContext);
 
-        _mfaSessions[request.MfaSessionId] = session with 
-        { 
-            EmailOtp = newOtp, 
+        _mfaSessions[request.MfaSessionId] = session with
+        {
+            EmailOtp = newOtp,
             Expires = newExpiry,
             ClientFingerprint = newFingerprint
         };

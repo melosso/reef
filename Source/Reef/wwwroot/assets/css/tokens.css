@@ -1,0 +1,21 @@
+:root {
+    --reef-surface: #ffffff;
+    --reef-sunken: #f8fafc;
+    --reef-hover: #f1f5f9;
+    --reef-line: #e2e8f0;
+    --reef-line-strong: #cbd5e1;
+    --reef-ink: #0f172a;
+    --reef-ink-strong: #334155;
+    --reef-ink-soft: #475569;
+    --reef-ink-faint: #64748b;
+    --reef-ink-muted: #94a3b8;
+    --reef-accent: #0f766e;
+    --reef-accent-bright: #0d9488;
+    --reef-accent-soft: rgb(13 148 136 / 0.14);
+    --reef-success: #15803d;
+    --reef-warning: #b45309;
+    --reef-danger: #dc2626;
+    --reef-radius: 4px;
+    --reef-text: 13px;
+    --reef-text-small: 12px;
+}

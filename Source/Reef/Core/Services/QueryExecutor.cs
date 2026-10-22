@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Data.Sqlite;
 using Microsoft.Data.SqlClient;
 using MySqlConnector;
 using Npgsql;
@@ -11,7 +12,7 @@ namespace Reef.Core.Services;
 
 /// <summary>
 /// Service for executing SQL queries against different database types
-/// Supports SQL Server, MySQL, and PostgreSQL with native parameterization
+/// Supports SQL Server, MySQL, PostgreSQL, and SQLite with native parameterization
 /// </summary>
 public class QueryExecutor
 {
@@ -187,6 +188,10 @@ public class QueryExecutor
                     rows = await ExecutePostgreSqlQueryAsync(connectionString, query, parameters, commandTimeout);
                     break;
 
+                case "sqlite":
+                    rows = await ExecuteSqliteQueryAsync(connectionString, query, parameters, commandTimeout);
+                    break;
+
                 default:
                     return (false, new List<Dictionary<string, object>>(),
                         $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
@@ -258,11 +263,11 @@ public class QueryExecutor
     /// <param name="parameters">Optional parameter values for substitution</param>
     /// <param name="commandTimeout">Command timeout in seconds (default: 30)</param>
     /// <returns>Tuple containing success status, rows affected, error message, and execution time</returns>
-    public async Task<(bool Success, int RowsAffected, string? ErrorMessage, long ExecutionTimeMs)> 
+    public async Task<(bool Success, int RowsAffected, string? ErrorMessage, long ExecutionTimeMs)>
         ExecuteCommandAsync(Connection connection, string command, Dictionary<string, string>? parameters = null, int commandTimeout = DefaultCommandTimeout)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             // Decrypt connection string
@@ -278,7 +283,7 @@ public class QueryExecutor
             }
 
             // Validate command before execution
-            var validationResult = await _validationService.ValidateQueryAsync(command, connection.Type);
+            var validationResult = await _validationService.ValidateCommandAsync(command, connection.Type);
             if (!validationResult.IsValid)
             {
                 Log.Warning("Command validation failed for connection {ConnectionName}: {ErrorMessage}", connection.Name, validationResult.ErrorMessage);
@@ -300,22 +305,26 @@ public class QueryExecutor
                 case "sqlserver":
                     rowsAffected = await ExecuteSqlServerCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
-                
+
                 case "mysql":
                     rowsAffected = await ExecuteMySqlCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
-                
+
                 case "postgresql":
                 case "postgres":
                     rowsAffected = await ExecutePostgreSqlCommandAsync(connectionString, command, parameters, commandTimeout);
                     break;
-                
+
+                case "sqlite":
+                    rowsAffected = await ExecuteSqliteCommandAsync(connectionString, command, parameters, commandTimeout);
+                    break;
+
                 default:
                     return (false, 0, $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
             }
 
             stopwatch.Stop();
-            Log.Information("Command executed successfully. Rows affected: {RowsAffected}, Time: {ExecutionTimeMs}ms", 
+            Log.Information("Command executed successfully. Rows affected: {RowsAffected}, Time: {ExecutionTimeMs}ms",
                 rowsAffected, stopwatch.ElapsedMilliseconds);
 
             return (true, rowsAffected, null, stopwatch.ElapsedMilliseconds);
@@ -340,7 +349,7 @@ public class QueryExecutor
         };
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
         object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
@@ -357,7 +366,7 @@ public class QueryExecutor
         };
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
         object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
@@ -374,7 +383,20 @@ public class QueryExecutor
         };
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
+        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
+    }
+
+    /// <summary>
+    /// Execute command against SQLite using ExecuteAsync with native parameters
+    /// </summary>
+    private async Task<int> ExecuteSqliteCommandAsync(
+        string connectionString, string command, Dictionary<string, string>? parameters, int commandTimeout)
+    {
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
         object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
@@ -391,7 +413,7 @@ public class QueryExecutor
         };
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
         return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
@@ -407,7 +429,7 @@ public class QueryExecutor
         };
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
         return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
@@ -423,7 +445,19 @@ public class QueryExecutor
         };
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
-        
+
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+    }
+
+    /// <summary>
+    /// Execute query against SQLite
+    /// </summary>
+    private async Task<List<Dictionary<string, object>>> ExecuteSqliteQueryAsync(
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+    {
+        await using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
         return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
     }
 
@@ -440,14 +474,14 @@ public class QueryExecutor
         }
 
         var result = await connection.QueryAsync(query, paramObject, commandTimeout: commandTimeout);
-        
+
         var rows = new List<Dictionary<string, object>>();
-        
+
         foreach (var row in result)
         {
             var dict = new Dictionary<string, object>();
             var dapperRow = row as IDictionary<string, object>;
-            
+
             if (dapperRow != null)
             {
                 foreach (var kvp in dapperRow)
@@ -455,10 +489,10 @@ public class QueryExecutor
                     dict[kvp.Key] = kvp.Value == DBNull.Value ? null! : kvp.Value;
                 }
             }
-            
+
             rows.Add(dict);
         }
-        
+
         return rows;
     }
 
@@ -468,7 +502,7 @@ public class QueryExecutor
     public async Task<(bool Success, string? Message, long ResponseTimeMs)> TestConnectionAsync(Connection connection)
     {
         var stopwatch = Stopwatch.StartNew();
-        
+
         try
         {
             // Decrypt connection string
@@ -503,7 +537,7 @@ public class QueryExecutor
                         await conn.ExecuteAsync("SELECT 1");
                     }
                     break;
-                
+
                 case "mysql":
                     {
                         var builder = new MySqlConnectionStringBuilder(connectionString)
@@ -515,7 +549,7 @@ public class QueryExecutor
                         await conn.ExecuteAsync("SELECT 1");
                     }
                     break;
-                
+
                 case "postgresql":
                 case "postgres":
                     {
@@ -528,13 +562,23 @@ public class QueryExecutor
                         await conn.ExecuteAsync("SELECT 1");
                     }
                     break;
-                
+
+                case "sqlite":
+                    {
+                        // Opening a SqliteConnection creates the file automatically if it doesn't
+                        // exist yet - this is SQLite's normal behavior, not an error case.
+                        await using var conn = new SqliteConnection(connectionString);
+                        await conn.OpenAsync();
+                        await conn.ExecuteAsync("SELECT 1");
+                    }
+                    break;
+
                 default:
                     return (false, $"Unsupported database type: {connection.Type}", stopwatch.ElapsedMilliseconds);
             }
 
             stopwatch.Stop();
-            Log.Information("Connection test successful for {ConnectionName} ({Type}). Response time: {ResponseTimeMs}ms", 
+            Log.Information("Connection test successful for {ConnectionName} ({Type}). Response time: {ResponseTimeMs}ms",
                 connection.Name, connection.Type, stopwatch.ElapsedMilliseconds);
 
             return (true, "Connection successful", stopwatch.ElapsedMilliseconds);

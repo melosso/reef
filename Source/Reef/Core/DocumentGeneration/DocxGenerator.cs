@@ -95,8 +95,8 @@ public class DocxGenerator : IDocumentGenerator
         {
             Width = (UInt32Value)(uint)width,
             Height = (UInt32Value)(uint)height,
-            Orient = setup.Orientation.Equals("Landscape", StringComparison.OrdinalIgnoreCase) 
-                ? PageOrientationValues.Landscape 
+            Orient = setup.Orientation.Equals("Landscape", StringComparison.OrdinalIgnoreCase)
+                ? PageOrientationValues.Landscape
                 : PageOrientationValues.Portrait
         };
         sectionProperties.Append(pageSize);
@@ -184,7 +184,7 @@ public class DocxGenerator : IDocumentGenerator
     private void RenderSectionAsWordContent(Body body, DocumentSection section, List<Dictionary<string, object>> data)
     {
         var content = section.RenderedContent;
-        
+
         // Check if content contains HTML tables
         if (content.Contains("<table"))
         {
@@ -210,13 +210,13 @@ public class DocxGenerator : IDocumentGenerator
             }
         }
     }
-    
+
     private void RenderHtmlContent(Body body, string html)
     {
         // Parse and render tables
         var tables = HtmlTableParser.ParseTables(html);
         var parts = SplitHtmlByTables(html);
-        
+
         for (int i = 0; i < parts.Count; i++)
         {
             // Render text content
@@ -224,13 +224,13 @@ public class DocxGenerator : IDocumentGenerator
             {
                 RenderFormattedText(body, parts[i]);
             }
-            
+
             // Render table if exists at this position
             if (i < tables.Count)
             {
                 var tableData = tables[i];
                 var table = new Table();
-                
+
                 // Table properties
                 var tableProperties = new TableProperties(
                     new TableBorders(
@@ -243,7 +243,7 @@ public class DocxGenerator : IDocumentGenerator
                     )
                 );
                 table.AppendChild(tableProperties);
-                
+
                 // Header row
                 if (tableData.Headers.Any())
                 {
@@ -255,7 +255,7 @@ public class DocxGenerator : IDocumentGenerator
                             new Shading { Val = ShadingPatternValues.Clear, Fill = "D3D3D3" }
                         );
                         cell.Append(cellProperties);
-                        
+
                         var paragraph = new Paragraph();
                         var run = new Run(new RunProperties(new Bold()), new Text(header));
                         paragraph.Append(run);
@@ -264,7 +264,7 @@ public class DocxGenerator : IDocumentGenerator
                     }
                     table.Append(headerRow);
                 }
-                
+
                 // Data rows
                 foreach (var row in tableData.Rows)
                 {
@@ -280,18 +280,18 @@ public class DocxGenerator : IDocumentGenerator
                     }
                     table.Append(tableRow);
                 }
-                
+
                 body.Append(table);
             }
         }
     }
-    
+
     private void RenderFormattedText(Body body, string html)
     {
         var segments = HtmlTextParser.ParseFormattedText(html);
-        
+
         Paragraph? currentParagraph = null;
-        
+
         foreach (var segment in segments)
         {
             // Start new paragraph if needed
@@ -303,61 +303,61 @@ public class DocxGenerator : IDocumentGenerator
                 }
                 currentParagraph = new Paragraph();
             }
-            
+
             // Create run with formatting
             var runProperties = new RunProperties();
-            
+
             if (segment.Style.IsBold)
                 runProperties.Append(new Bold());
-                
+
             if (segment.Style.IsItalic)
                 runProperties.Append(new Italic());
-                
+
             if (segment.Style.IsUnderline)
                 runProperties.Append(new Underline { Val = UnderlineValues.Single });
-                
+
             if (segment.Style.IsHeading)
                 runProperties.Append(new FontSize { Val = (segment.Style.FontSize * 2).ToString() }); // Half-points
-            
+
             var run = new Run(runProperties, new Text(segment.Content.Replace("\n", "")));
             currentParagraph.Append(run);
         }
-        
+
         if (currentParagraph != null)
         {
             body.Append(currentParagraph);
         }
     }
-    
+
     private List<string> SplitHtmlByTables(string html)
     {
         var parts = new List<string>();
         var remainingHtml = html;
-        
+
         while (remainingHtml.Contains("<table"))
         {
             var tableStart = remainingHtml.IndexOf("<table");
-            
+
             // Add text before table
             if (tableStart > 0)
             {
                 parts.Add(remainingHtml.Substring(0, tableStart));
             }
-            
+
             // Find table end
             var tableEnd = remainingHtml.IndexOf("</table>", tableStart);
             if (tableEnd == -1) break;
-            
+
             tableEnd += "</table>".Length;
             remainingHtml = remainingHtml.Substring(tableEnd);
         }
-        
+
         // Add remaining text
         if (!string.IsNullOrWhiteSpace(remainingHtml))
         {
             parts.Add(remainingHtml);
         }
-        
+
         return parts;
     }
 
@@ -375,7 +375,7 @@ public class DocxGenerator : IDocumentGenerator
     private static SectionProperties GetOrCreateSectionProperties(MainDocumentPart mainPart)
     {
         var body = mainPart.Document?.Body;
-        
+
         if (body == null)
         {
             throw new InvalidOperationException("The main document or its body has not been initialized.");

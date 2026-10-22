@@ -12,7 +12,7 @@ namespace Reef.Core.Database;
 public class TransformationOptionsMigration
 {
     private readonly string _connectionString;
-    
+
     /// <summary>
     /// Initializes a new instance of the TransformationOptionsMigration class
     /// </summary>
@@ -21,21 +21,21 @@ public class TransformationOptionsMigration
     {
         _connectionString = connectionString;
     }
-    
+
     /// <summary>
     /// Apply transformation options migration
     /// </summary>
     public async Task ApplyAsync()
     {
         Log.Debug("Applying TransformationOptions database migration...");
-        
+
         try
         {
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
-            
+
             await AddTransformationOptionsColumnAsync(conn);
-            
+
             Log.Debug("✓ TransformationOptions migration completed");
         }
         catch (Exception ex)
@@ -44,7 +44,7 @@ public class TransformationOptionsMigration
             throw;
         }
     }
-    
+
     /// <summary>
     /// Add TransformationOptionsJson column to Profiles table
     /// Column is nullable to ensure backward compatibility
@@ -52,11 +52,11 @@ public class TransformationOptionsMigration
     private async Task AddTransformationOptionsColumnAsync(SqliteConnection conn)
     {
         Log.Debug("Adding TransformationOptionsJson column to Profiles table...");
-        
+
         // Check if column already exists
         var existingColumn = await conn.QueryFirstOrDefaultAsync<string>(
             "SELECT name FROM pragma_table_info('Profiles') WHERE name = 'TransformationOptionsJson'");
-        
+
         if (existingColumn == null)
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN TransformationOptionsJson TEXT NULL");
@@ -67,7 +67,7 @@ public class TransformationOptionsMigration
             Log.Debug("✓ TransformationOptionsJson column already exists, skipping");
         }
     }
-    
+
     /// <summary>
     /// Get migration statistics
     /// </summary>
@@ -75,17 +75,17 @@ public class TransformationOptionsMigration
     {
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
-        
+
         var columnExists = await conn.QueryFirstOrDefaultAsync<string>(
             "SELECT name FROM pragma_table_info('Profiles') WHERE name = 'TransformationOptionsJson'");
-        
+
         var profilesWithOptions = 0;
         if (columnExists != null)
         {
             profilesWithOptions = await conn.ExecuteScalarAsync<int>(
                 "SELECT COUNT(*) FROM Profiles WHERE TransformationOptionsJson IS NOT NULL AND TransformationOptionsJson != ''");
         }
-        
+
         return new
         {
             ColumnExists = columnExists != null,

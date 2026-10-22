@@ -11,31 +11,31 @@ namespace Reef.Core.Database;
 public class JobsMigration
 {
     private readonly string _connectionString;
-    
+
     public JobsMigration(string connectionString)
     {
         _connectionString = connectionString;
     }
-    
+
     /// <summary>
     /// Apply all migrations
     /// </summary>
     public async Task ApplyAsync()
     {
         Log.Debug("Applying Jobs database migrations...");
-        
+
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
-        
+
         await EnsureJobsTableExistsAsync(conn);
         await EnsureJobExecutionsTableExistsAsync(conn);
         await AddAutoPauseEnabledColumnAsync(conn);
         await FixExistingJobsAsync(conn);
         await AddMissingIndexesAsync(conn);
-        
+
         Log.Debug("✓ Jobs migrations completed");
     }
-    
+
     /// <summary>
     /// Ensure Jobs table exists with correct schema
     /// </summary>
@@ -89,10 +89,10 @@ public class JobsMigration
                 FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE SET NULL,
                 FOREIGN KEY (DestinationId) REFERENCES Destinations(Id) ON DELETE SET NULL
             );";
-        
+
         await conn.ExecuteAsync(sql);
     }
-    
+
     /// <summary>
     /// Ensure JobExecutions table exists
     /// </summary>
@@ -117,10 +117,10 @@ public class JobsMigration
                 
                 FOREIGN KEY (JobId) REFERENCES Jobs(Id) ON DELETE CASCADE
             );";
-        
+
         await conn.ExecuteAsync(sql);
     }
-    
+
     /// <summary>
     /// Add AutoPauseEnabled column to existing tables (migration)
     /// </summary>
@@ -152,7 +152,7 @@ public class JobsMigration
     {
         // Check for jobs with NextRunTime in the past
         var now = DateTime.UtcNow.ToString("O"); // ISO 8601 format
-        
+
         var corruptedJobs = await conn.QueryAsync<dynamic>(@"
             SELECT Id, Name, NextRunTime, LastRunTime, IsEnabled, ScheduleType 
             FROM Jobs 
@@ -161,24 +161,24 @@ public class JobsMigration
             AND NextRunTime IS NOT NULL 
             AND NextRunTime < @Now",
             new { Now = now });
-        
+
         foreach (var job in corruptedJobs)
         {
-            Log.Warning("Fixing corrupted job {JobId} ({JobName}) - NextRunTime: {NextRun}, LastRunTime: {LastRun}", 
+            Log.Warning("Fixing corrupted job {JobId} ({JobName}) - NextRunTime: {NextRun}, LastRunTime: {LastRun}",
                 job.Id, job.Name, job.NextRunTime, job.LastRunTime);
-            
+
             // Set NextRunTime to NULL so it will be recalculated by the JobService
             await conn.ExecuteAsync(
                 "UPDATE Jobs SET NextRunTime = NULL, ModifiedAt = @Now WHERE Id = @Id",
                 new { Id = (int)job.Id, Now = now });
         }
-        
+
         if (corruptedJobs.Any())
         {
             Log.Information("Fixed {Count} jobs with NextRunTime in the past", corruptedJobs.Count());
         }
     }
-    
+
     /// <summary>
     /// Add missing indexes for performance
     /// </summary>
@@ -193,13 +193,13 @@ public class JobsMigration
             "CREATE INDEX IF NOT EXISTS IX_JobExecutions_JobId ON JobExecutions(JobId)",
             "CREATE INDEX IF NOT EXISTS IX_JobExecutions_StartedAt ON JobExecutions(StartedAt DESC)"
         };
-        
+
         foreach (var indexSql in indexes)
         {
             await conn.ExecuteAsync(indexSql);
         }
     }
-    
+
     /// <summary>
     /// Get database statistics
     /// </summary>
@@ -207,14 +207,14 @@ public class JobsMigration
     {
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
-        
+
         var jobCount = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs");
         var enabledJobs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Jobs WHERE IsEnabled = 1");
         var executionCount = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM JobExecutions");
         var corruptedJobs = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM Jobs WHERE IsEnabled = 1 AND NextRunTime < @Now", 
+            "SELECT COUNT(*) FROM Jobs WHERE IsEnabled = 1 AND NextRunTime < @Now",
             new { Now = DateTime.UtcNow.ToString("O") });
-        
+
         return new
         {
             TotalJobs = jobCount,

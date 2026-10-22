@@ -6,6 +6,7 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Models;
 using Reef.Core.Parsers;
+using Reef.Core.Scripting;
 using Reef.Core.Sources;
 using Reef.Core.Targets;
 using Serilog.Context;
@@ -35,7 +36,8 @@ public class ImportExecutionService(
     LocalFileImportTarget localFileImportTarget,
     NotificationService notificationService,
     DestinationSourceAdapter sourceAdapter,
-    ImportFileOutputService fileOutputService)
+    ImportFileOutputService fileOutputService,
+    IScriptRunner scriptRunner)
 {
     private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
 
@@ -159,7 +161,7 @@ public class ImportExecutionService(
             {
                 await RunSqlProcessAsync(
                     connection!.Type, decryptedConnStr!,
-                    profile.PreProcessConfig, exec.Id, ct);
+                    profile.PreProcessConfig, exec, "Pre", ct);
             }, ct);
         }
 
@@ -373,14 +375,14 @@ public class ImportExecutionService(
         {
             await profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
-                ExecutionId  = exec.Id,
-                ErrorType    = "Configuration",
-                Phase        = "DeltaSync",
+                ExecutionId = exec.Id,
+                ErrorType = "Configuration",
+                Phase = "DeltaSync",
                 ErrorMessage =
                     $"Smart Sync is enabled but the unique ID field '{profile.DeltaSyncReefIdColumn}' " +
                     $"was not found in any of the {exec.TotalRowsRead} record(s) processed. " +
                     "Check the 'Unique ID Field' setting on the Smart Sync tab. For CSV this must match a column header; for JSON a top-level key; for XML an element name.",
-                OccurredAt   = DateTime.UtcNow
+                OccurredAt = DateTime.UtcNow
             });
         }
 
@@ -440,11 +442,11 @@ public class ImportExecutionService(
                         {
                             await profileService.AddExecutionErrorAsync(new ImportExecutionError
                             {
-                                ExecutionId  = exec.Id,
-                                ErrorType    = "Archive",
-                                Phase        = "Archive",
+                                ExecutionId = exec.Id,
+                                ErrorType = "Archive",
+                                Phase = "Archive",
                                 ErrorMessage = $"Archive failed for '{file.Identifier}': {ex.Message}",
-                                OccurredAt   = DateTime.UtcNow
+                                OccurredAt = DateTime.UtcNow
                             });
                         }
                         catch { /* never let error-recording abort execution */ }
@@ -482,7 +484,7 @@ public class ImportExecutionService(
                 {
                     await RunSqlProcessAsync(
                         connection!.Type, decryptedConnStr!,
-                        profile.PostProcessConfig, exec.Id, ct);
+                        profile.PostProcessConfig, exec, "Post", ct);
                 }
                 catch (Exception ex)
                 {
@@ -830,11 +832,27 @@ public class ImportExecutionService(
 
     // Pre/Post SQL Processing─
 
-    private static async Task RunSqlProcessAsync(
+    private async Task RunSqlProcessAsync(
         string dbType, string connectionString,
-        string? processConfig, int execId, CancellationToken ct)
+        string? processConfig, ImportProfileExecution exec, string phase, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(processConfig)) return;
+
+        // Try the rich ProcessingConfig shape first (shared with Profile pre/post-processing).
+        // A Script type runs as a child process instead of against the target database.
+        try
+        {
+            var config = JsonSerializer.Deserialize<ProcessingConfig>(processConfig);
+            if (config != null && config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                await RunImportProcessingScriptAsync(config, exec, phase, ct);
+                return;
+            }
+        }
+        catch (JsonException)
+        {
+            // Not the ProcessingConfig shape - fall through to legacy raw-SQL handling below.
+        }
 
         string? sql = null;
         try
@@ -852,11 +870,48 @@ public class ImportExecutionService(
         if (string.IsNullOrWhiteSpace(sql)) return;
 
         // Replace placeholder tokens
-        sql = sql.Replace("{ExecutionId}", execId.ToString());
+        sql = sql.Replace("{ExecutionId}", exec.Id.ToString());
 
         await using var dbConn = CreateDbConnection(dbType, connectionString);
         await dbConn.OpenAsync(ct);
         await dbConn.ExecuteAsync(new CommandDefinition(sql, cancellationToken: ct));
+    }
+
+    private async Task RunImportProcessingScriptAsync(ProcessingConfig config, ImportProfileExecution exec, string phase, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(config.Interpreter) || string.IsNullOrWhiteSpace(config.ScriptPathOrInline))
+            throw new InvalidOperationException("Script processing requires Interpreter and ScriptPathOrInline to be set");
+
+        var stdinPayload = JsonSerializer.Serialize(new { ExecutionId = exec.Id });
+
+        var result = await scriptRunner.RunAsync(new ScriptExecutionRequest
+        {
+            Interpreter = config.Interpreter,
+            ScriptPathOrInline = config.ScriptPathOrInline,
+            IsInline = config.ScriptIsInline,
+            StdinJson = stdinPayload,
+            TimeoutSeconds = config.Timeout,
+            EnvAllowlist = config.EnvAllowlist
+        }, ct);
+
+        Log.Debug("Import processing script for execution {ExecutionId} exited {ExitCode}. Stdout: {Stdout} Stderr: {Stderr}",
+            exec.Id, result.ExitCode, result.Stdout, result.Stderr);
+
+        if (phase == "Pre")
+        {
+            exec.PreProcessStdout = result.Stdout;
+            exec.PreProcessStderr = result.Stderr;
+            exec.PreProcessExitCode = result.ExitCode;
+        }
+        else
+        {
+            exec.PostProcessStdout = result.Stdout;
+            exec.PostProcessStderr = result.Stderr;
+            exec.PostProcessExitCode = result.ExitCode;
+        }
+
+        if (!result.Success && !config.ContinueOnError)
+            throw new InvalidOperationException($"Import processing script failed: {result.ErrorMessage ?? result.Stderr}");
     }
 
     // Utility
@@ -940,14 +995,17 @@ public class ImportExecutionService(
     private static ImportFormatConfig ParseFormatConfig(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return new ImportFormatConfig();
-        try { return JsonSerializer.Deserialize<ImportFormatConfig>(json) ?? new ImportFormatConfig(); }
+        try { return JsonSerializer.Deserialize<ImportFormatConfig>(json, CaseInsensitive) ?? new ImportFormatConfig(); }
         catch { return new ImportFormatConfig(); }
     }
+
+    // The editor stores these columns with camelCase keys.
+    private static readonly JsonSerializerOptions CaseInsensitive = new() { PropertyNameCaseInsensitive = true };
 
     private static List<ImportColumnMapping> ParseColumnMappings(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return [];
-        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json) ?? []; }
+        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json, CaseInsensitive) ?? []; }
         catch { return []; }
     }
 

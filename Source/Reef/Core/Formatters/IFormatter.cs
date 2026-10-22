@@ -13,6 +13,6 @@ public interface IFormatter
     /// <param name="outputPath">File path to write formatted output</param>
     /// <returns>Tuple containing success status, file size in bytes, and error message if failed</returns>
     Task<(bool Success, long FileSizeBytes, string? ErrorMessage)> FormatAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string outputPath);
 }
