@@ -3,7 +3,7 @@ using Reef.Core.ProfileDocuments.Models;
 
 namespace Reef.Core.ProfileDocuments.Catalogs;
 
-// shared fields for pre and post processing nodes, prefix is PreProcess or PostProcess
+// Fields shared by pre and post processing nodes. Prefix is PreProcess or PostProcess.
 public static class ProcessingNodeFields
 {
     private static readonly string[] SqlTypes = ["Query", "StoredProcedure"];

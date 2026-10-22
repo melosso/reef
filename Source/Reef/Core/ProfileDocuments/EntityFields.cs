@@ -3,7 +3,7 @@ using Reef.Core.ProfileDocuments.Models;
 
 namespace Reef.Core.ProfileDocuments;
 
-// reads and writes catalog field keys on a serialized profile, where a dotted key reaches into a column that stores a json string
+// Dotted keys address json stored in a string column.
 public static class EntityFields
 {
     public static string Column(string key) => key.Split('.', 2)[0];

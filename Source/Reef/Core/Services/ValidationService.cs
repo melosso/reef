@@ -17,7 +17,7 @@ public class ValidationService
     public Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateQueryAsync(
         string query, string connectionType) => ValidateAsync(query, connectionType, allowWrites: false);
 
-    // pre and post processing steps exist to change data, so they may insert, update, delete and truncate but never change schema or permissions
+    // Processing steps may change data. Schema and permission statements are blocked.
     public Task<(bool IsValid, string? ErrorMessage, List<string> Warnings)> ValidateCommandAsync(
         string command, string connectionType) => ValidateAsync(command, connectionType, allowWrites: true);
 

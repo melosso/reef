@@ -999,7 +999,7 @@ public class ImportExecutionService(
         catch { return new ImportFormatConfig(); }
     }
 
-    // the editor stores these columns with camelCase keys
+    // The editor stores these columns with camelCase keys.
     private static readonly JsonSerializerOptions CaseInsensitive = new() { PropertyNameCaseInsensitive = true };
 
     private static List<ImportColumnMapping> ParseColumnMappings(string? json)

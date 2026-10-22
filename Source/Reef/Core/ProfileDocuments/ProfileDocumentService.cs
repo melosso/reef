@@ -11,7 +11,7 @@ namespace Reef.Core.ProfileDocuments;
 
 public class ProfileDocumentService(ProfileService profiles, ImportProfileService imports)
 {
-    // output targets live in their own table, the document carries them as a pseudo column on the import profile
+    // ImportOutputTargets rows, exposed to the document as a pseudo column.
     public const string OutputTargetsKey = "OutputTargets";
 
     public ProfileDocument New(ProfileCatalog catalog) =>
@@ -33,7 +33,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
         return profile is null ? null : ProfileDocumentMapper.ToDocument(catalog, Serialize<Profile>(profile), ReadLayout(profile.CanvasLayoutJson), profile.Id, profile.Code);
     }
 
-    // the profile columns a document resolves to, used by test and preview endpoints that take flat profile fields
+    // Resolves a document to profile columns for test and preview endpoints.
     public async Task<JsonObject> FlattenAsync(ProfileCatalog catalog, int? id, ProfileDocument document, CancellationToken ct = default)
     {
         var defaults = ProfileCatalogs.Defaults(catalog.Kind);

@@ -116,7 +116,7 @@
         select(type);
     }
 
-    // steps always run in catalog order, so a new step reflows the chain top to bottom
+    // Steps run in catalog order. Added steps reflow the chain top to bottom.
     function tidy() {
         const surface = root.querySelector('[data-role=surface]');
         const x = Math.max(40, Math.round((surface.clientWidth - NODE_WIDTH) / 2 / 8) * 8);

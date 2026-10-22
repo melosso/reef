@@ -4,7 +4,7 @@ using Serilog;
 
 namespace Reef.Core.Database;
 
-// adds the CanvasLayoutJson column to the Profiles and ImportProfiles tables for existing databases
+// Adds CanvasLayoutJson to Profiles and ImportProfiles in existing databases.
 public class ProfileCanvasMigration(string connectionString)
 {
     public async Task ApplyAsync()

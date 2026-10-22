@@ -1,4 +1,4 @@
 namespace Reef.Core.ProfileDocuments.Models;
 
-// matches when the value at Key is one of Values, or has any value when Values is null
+// Matches a value at Key that is in Values. A null Values matches any non-empty value.
 public record NodeFieldCondition(string Key, string[]? Values = null);

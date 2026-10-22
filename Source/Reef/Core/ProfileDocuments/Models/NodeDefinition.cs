@@ -17,7 +17,7 @@ public class NodeDefinition
     public Dictionary<string, JsonNode?> Sets { get; init; } = new();
     public List<NodeField> Fields { get; init; } = new();
 
-    // derives config values that follow from other fields, applied before the config is mapped onto the profile
+    // Derives dependent config values before mapping.
     [JsonIgnore]
     public Action<JsonObject>? Normalize { get; init; }
 }
