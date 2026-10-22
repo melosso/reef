@@ -222,6 +222,16 @@
                 '_tailwind', '_lucide', 'auth.js', 'main.js', 'router.js'
             ].some(skip => src.includes(skip)));
 
+        for (const link of newDoc.querySelectorAll('head link[rel="stylesheet"]')) {
+            const href = new URL(link.getAttribute('href'), location.origin).href;
+            if (![...document.querySelectorAll('link[rel="stylesheet"]')].some(l => l.href === href)) {
+                const sheet = document.createElement('link');
+                sheet.rel = 'stylesheet';
+                sheet.href = href;
+                document.head.appendChild(sheet);
+            }
+        }
+
         for (const src of headScripts) {
             await loadScript(src);
         }
