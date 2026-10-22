@@ -50,6 +50,10 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
         if (errors.Count > 0)
             throw new ProfileDocumentValidationException(errors);
 
+        var name = ConfigPath.ToText(document.Settings["Name"]).Trim();
+        if (catalog.Kind == ProfileKinds.Import && (await imports.GetAllAsync()).Any(p => p.Id != id && string.Equals(p.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)))
+            throw DuplicateName(name);
+
         var defaults = ProfileCatalogs.Defaults(catalog.Kind);
         int savedId;
         try
@@ -58,7 +62,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == 19 && ex.Message.Contains(".Name"))
         {
-            throw new ProfileDocumentValidationException([new($"A profile named '{ConfigPath.ToText(document.Settings["Name"])}' already exists", null, "Name")]);
+            throw DuplicateName(name);
         }
 
         return await GetAsync(catalog, savedId, ct) ?? throw new InvalidOperationException("Profile was saved but could not be read back");
@@ -141,6 +145,9 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
         foreach (var stale in existing.Keys.Where(k => !kept.Contains(k)))
             await imports.DeleteOutputTargetAsync(stale);
     }
+
+    private static ProfileDocumentValidationException DuplicateName(string name) =>
+        new([new($"A profile named '{name}' already exists", null, "Name")]);
 
     private static async Task<JsonObject> LoadAsync<T>(Func<Task<T?>> load) where T : class =>
         Serialize<T>(await load() ?? throw new KeyNotFoundException("Profile not found"));
