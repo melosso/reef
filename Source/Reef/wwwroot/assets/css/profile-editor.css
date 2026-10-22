@@ -1,12 +1,12 @@
 .reef-ed {
-    --ed-line: var(--color-slate-200, #e2e8f0);
-    --ed-line-strong: var(--color-slate-300, #cbd5e1);
-    --ed-ink: var(--color-slate-900, #0f172a);
-    --ed-ink-soft: var(--color-slate-600, #475569);
-    --ed-ink-faint: var(--color-slate-500, #64748b);
-    --ed-accent: var(--color-teal-700, #0f766e);
-    --ed-accent-soft: color-mix(in srgb, var(--color-teal-600, #0d9488) 14%, transparent);
-    --ed-danger: var(--color-red-600, #dc2626);
+    --ed-line: var(--reef-line);
+    --ed-line-strong: var(--reef-line-strong);
+    --ed-ink: var(--reef-ink);
+    --ed-ink-soft: var(--reef-ink-soft);
+    --ed-ink-faint: var(--reef-ink-faint);
+    --ed-accent: var(--reef-accent);
+    --ed-accent-soft: var(--reef-accent-soft);
+    --ed-danger: var(--reef-danger);
     position: fixed;
     inset: 0;
     z-index: 50;
@@ -88,19 +88,19 @@ html.reef-ed-open {
     cursor: pointer;
 }
 .reef-ed-button:hover {
-    background: var(--color-slate-50, #f8fafc);
+    background: var(--reef-sunken);
 }
 .reef-ed-primary {
-    background: var(--color-slate-900, #0f172a);
-    border-color: var(--color-slate-900, #0f172a);
+    background: var(--reef-ink);
+    border-color: var(--reef-ink);
     color: white;
 }
 .reef-ed-primary:hover {
-    background: var(--color-slate-700, #334155);
+    background: var(--reef-ink-strong);
 }
 .reef-ed-primary[aria-disabled="true"] {
-    background: var(--color-slate-300, #cbd5e1);
-    border-color: var(--color-slate-300, #cbd5e1);
+    background: var(--reef-line-strong);
+    border-color: var(--reef-line-strong);
     cursor: default;
 }
 .reef-ed-primary[aria-busy="true"] {
@@ -118,11 +118,11 @@ html.reef-ed-open {
     cursor: pointer;
 }
 .reef-ed-icon-button:hover {
-    background: var(--color-slate-100, #f1f5f9);
+    background: var(--reef-hover);
     color: var(--ed-ink);
 }
 .reef-ed :focus-visible {
-    outline: 2px solid var(--color-teal-600, #0d9488);
+    outline: 2px solid var(--reef-accent-bright);
     outline-offset: 1px;
 }
 
@@ -134,7 +134,7 @@ html.reef-ed-open {
 
 .reef-ed-palette {
     border-right: 1px solid var(--ed-line);
-    background: var(--color-slate-50, #f8fafc);
+    background: var(--reef-sunken);
     padding: 12px 8px;
     overflow-y: auto;
 }
@@ -180,8 +180,8 @@ html.reef-ed-open {
 .reef-ed-canvas {
     position: relative;
     overflow: auto;
-    background-color: var(--color-slate-50, #f8fafc);
-    background-image: radial-gradient(var(--color-slate-300, #cbd5e1) 1px, transparent 1px);
+    background-color: var(--reef-sunken);
+    background-image: radial-gradient(var(--reef-line-strong) 1px, transparent 1px);
     background-size: 16px 16px;
 }
 .reef-ed-surface {
@@ -196,12 +196,12 @@ html.reef-ed-open {
 }
 .reef-ed-edge {
     fill: none;
-    stroke: var(--color-slate-400, #94a3b8);
+    stroke: var(--reef-ink-muted);
     stroke-width: 1.5;
 }
 .reef-ed-port {
     fill: white;
-    stroke: var(--color-slate-400, #94a3b8);
+    stroke: var(--reef-ink-muted);
     stroke-width: 1.5;
 }
 .reef-ed-node {
@@ -226,7 +226,7 @@ html.reef-ed-open {
     color: var(--ed-accent);
 }
 .reef-ed-node:hover {
-    border-color: var(--color-slate-400, #94a3b8);
+    border-color: var(--reef-ink-muted);
 }
 .reef-ed-node[aria-pressed="true"] {
     border-color: var(--ed-accent);
@@ -346,7 +346,7 @@ html.reef-ed-open {
     font-variant-numeric: tabular-nums;
 }
 .reef-ed-field ::placeholder {
-    color: var(--color-slate-400, #94a3b8);
+    color: var(--reef-ink-muted);
 }
 .reef-ed-check {
     display: flex;
@@ -358,7 +358,7 @@ html.reef-ed-open {
 .reef-ed-check input {
     width: 15px;
     height: 15px;
-    accent-color: var(--color-teal-700, #0f766e);
+    accent-color: var(--reef-accent);
 }
 .reef-ed-table {
     display: flex;
@@ -402,7 +402,7 @@ html.reef-ed-open {
 .reef-ed-table td input[type="checkbox"] {
     width: 15px;
     height: 15px;
-    accent-color: var(--color-teal-700, #0f766e);
+    accent-color: var(--reef-accent);
 }
 .reef-ed-link {
     display: inline-flex;
@@ -461,7 +461,7 @@ html.reef-ed-open #toast-container {
 .reef-ed-preview th {
     position: sticky;
     top: 0;
-    background: var(--color-slate-50, #f8fafc);
+    background: var(--reef-sunken);
     font-weight: 500;
     color: var(--ed-ink-soft);
 }
@@ -480,7 +480,7 @@ html.reef-ed-open #toast-container {
     padding: 8px;
     border: 1px solid var(--ed-line);
     border-radius: 4px;
-    background: var(--color-slate-50, #f8fafc);
+    background: var(--reef-sunken);
     font-size: 12px;
     white-space: pre-wrap;
     word-break: break-word;
@@ -514,7 +514,7 @@ html.reef-ed-open #toast-container {
     padding: 0 8px;
     border: 1px solid var(--ed-line-strong);
     border-radius: 4px;
-    background: var(--color-slate-50, #f8fafc);
+    background: var(--reef-sunken);
 }
 .reef-ed-danger {
     color: var(--ed-danger);
