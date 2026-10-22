@@ -542,7 +542,13 @@ public partial class Program
         });
 
         app.UseCors();
-        app.UseStaticFiles(); // Serve wwwroot static files
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+                ? "public, max-age=31536000, immutable"
+                : "no-cache"
+        });
+        var assetVersioner = new AssetVersioner(app.Environment.WebRootFileProvider);
 
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
@@ -612,7 +618,7 @@ public partial class Program
                         {
                             Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
                             context.Response.ContentType = "text/html";
-                            await context.Response.SendFileAsync(filePath);
+                            await context.Response.WriteAsync(assetVersioner.Apply(await File.ReadAllTextAsync(filePath)));
                         });
                     }
                 }
@@ -678,7 +684,7 @@ public partial class Program
                         }
 
                         context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(html);
+                        await context.Response.WriteAsync(assetVersioner.Apply(html));
                     });
                 }
             }
