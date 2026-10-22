@@ -123,7 +123,7 @@ public class ImportProfileService
                     MaxFailedRowsBeforeAbort, MaxFailedRowsPercent, RollbackOnAbort, RetryCount,
                     PreProcessType, PreProcessConfig, PreProcessRollbackOnFailure,
                     PostProcessType, PostProcessConfig, PostProcessSkipOnFailure,
-                    NotificationConfig, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
+                    NotificationConfig, CanvasLayoutJson, IsEnabled, Hash, CreatedAt, UpdatedAt, CreatedBy, Code
                 ) VALUES (
                     @Name, @GroupId,
                     @SourceType, @SourceDestinationId, @SourceConfig,
@@ -142,7 +142,7 @@ public class ImportProfileService
                     @MaxFailedRowsBeforeAbort, @MaxFailedRowsPercent, @RollbackOnAbort, @RetryCount,
                     @PreProcessType, @PreProcessConfig, @PreProcessRollbackOnFailure,
                     @PostProcessType, @PostProcessConfig, @PostProcessSkipOnFailure,
-                    @NotificationConfig, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
+                    @NotificationConfig, @CanvasLayoutJson, @IsEnabled, @Hash, @CreatedAt, @UpdatedAt, @CreatedBy, @Code
                 );
                 SELECT last_insert_rowid();";
 
@@ -205,6 +205,7 @@ public class ImportProfileService
                     PostProcessType = @PostProcessType, PostProcessConfig = @PostProcessConfig,
                     PostProcessSkipOnFailure = @PostProcessSkipOnFailure,
                     NotificationConfig = @NotificationConfig,
+                    CanvasLayoutJson = @CanvasLayoutJson,
                     IsEnabled = @IsEnabled, Hash = @Hash, UpdatedAt = @UpdatedAt
                 WHERE Id = @Id";
 

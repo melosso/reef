@@ -26,7 +26,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
                 return null;
             var entity = Serialize<ImportProfile>(import);
             entity[OutputTargetsKey] = await ReadOutputTargetsAsync(id);
-            return ProfileDocumentMapper.ToDocument(catalog, entity, null, import.Id, import.Code);
+            return ProfileDocumentMapper.ToDocument(catalog, entity, ReadLayout(import.CanvasLayoutJson), import.Id, import.Code);
         }
 
         var profile = await profiles.GetByIdAsync(id, ct);
@@ -72,6 +72,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
             var applied = ProfileDocumentMapper.Apply(catalog, document, existing, defaults);
             var import = Deserialize<ImportProfile>(applied);
             import.Hash = "";
+            import.CanvasLayoutJson = JsonSerializer.Serialize(ProfileDocumentMapper.ToLayout(document));
             if (id is null)
                 import.Id = await imports.CreateAsync(import, userId);
             else

@@ -155,6 +155,7 @@ public class ImportProfile
 
     // NOTIFICATIONS
     public string? NotificationConfig { get; set; }
+    public string? CanvasLayoutJson { get; set; }
 
     // METADATA
     public bool IsEnabled { get; set; } = true;
