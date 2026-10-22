@@ -24,8 +24,7 @@ WORKDIR /src/Reef
 # (MinVer requires .git to determine version from tags)
 RUN git init && \
     git remote add origin $(git -C /src remote get-url origin 2>/dev/null || echo "https://github.com/melosso/reef.git") && \
-    git fetch --tags origin main && \
-    git reset --soft FETCH_HEAD
+    { { git fetch --tags origin main && git reset --soft FETCH_HEAD; } || echo "Tags unavailable, MinVer falls back to its default version"; }
 
 RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false
