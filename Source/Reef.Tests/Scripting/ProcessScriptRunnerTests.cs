@@ -16,7 +16,7 @@ public class ProcessScriptRunnerTests
             ScriptPathOrInline = "echo hello-from-script",
             IsInline = true,
             StdinJson = "{}"
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeTrue();
         result.ExitCode.Should().Be(0);
@@ -32,7 +32,7 @@ public class ProcessScriptRunnerTests
             ScriptPathOrInline = "exit 7",
             IsInline = true,
             StdinJson = "{}"
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeFalse();
         result.ExitCode.Should().Be(7);
@@ -47,7 +47,7 @@ public class ProcessScriptRunnerTests
             ScriptPathOrInline = "cat",
             IsInline = true,
             StdinJson = "{\"executionId\":42}"
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeTrue();
         result.Stdout.Should().Contain("\"executionId\":42");
@@ -62,7 +62,7 @@ public class ProcessScriptRunnerTests
             ScriptPathOrInline = "echo done",
             IsInline = true,
             StdinJson = new string('x', 1024 * 1024) // large payload the script never reads
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeTrue();
         result.Stdout.Should().Contain("done");
@@ -78,7 +78,7 @@ public class ProcessScriptRunnerTests
             IsInline = true,
             StdinJson = "{}",
             TimeoutSeconds = 1
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("timed out");
@@ -93,7 +93,7 @@ public class ProcessScriptRunnerTests
             ScriptPathOrInline = "/no/such/script.sh",
             IsInline = false,
             StdinJson = "{}"
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("not found");
@@ -114,7 +114,7 @@ public class ProcessScriptRunnerTests
                 IsInline = true,
                 StdinJson = "{}",
                 EnvAllowlist = new List<string> { "REEF_TEST_ALLOWED" }
-            });
+            }, TestContext.Current.CancellationToken);
 
             result.Stdout.Should().Contain("A=visible");
             result.Stdout.Should().Contain("B=");

@@ -11,7 +11,7 @@ public class InterpreterServiceTests
     [Fact]
     public async Task CheckOneAsync_RunnableInterpreter_ReportsAvailableWithOutput()
     {
-        var status = await _service.CheckOneAsync("sh");
+        var status = await _service.CheckOneAsync("sh", TestContext.Current.CancellationToken);
 
         status.Available.Should().BeTrue();
         status.Output.Should().Be("ok");
@@ -21,7 +21,7 @@ public class InterpreterServiceTests
     [Fact]
     public async Task CheckOneAsync_UnknownInterpreter_ReportsUnavailableWithError()
     {
-        var status = await _service.CheckOneAsync("not-a-real-interpreter");
+        var status = await _service.CheckOneAsync("not-a-real-interpreter", TestContext.Current.CancellationToken);
 
         status.Available.Should().BeFalse();
         status.Error.Should().Contain("Unknown interpreter");
@@ -30,7 +30,7 @@ public class InterpreterServiceTests
     [Fact]
     public async Task CheckAllAsync_ReturnsOneStatusPerKnownInterpreter()
     {
-        var statuses = await _service.CheckAllAsync();
+        var statuses = await _service.CheckAllAsync(TestContext.Current.CancellationToken);
 
         statuses.Should().HaveCount(InterpreterService.KnownInterpreters.Count);
         statuses.Select(s => s.Name).Should().BeEquivalentTo(
@@ -43,7 +43,7 @@ public class InterpreterServiceTests
         // sh/bash are present on every Linux/macOS CI runner and dev box this
         // project targets - a sane baseline so a regression in the probe
         // logic itself doesn't silently report everything as unavailable.
-        var statuses = await _service.CheckAllAsync();
+        var statuses = await _service.CheckAllAsync(TestContext.Current.CancellationToken);
 
         statuses.First(s => s.Name == "sh").Available.Should().BeTrue();
         statuses.First(s => s.Name == "bash").Available.Should().BeTrue();

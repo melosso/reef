@@ -304,7 +304,7 @@ public class ScriptTemplateExamplesTests
             StdinJson = JsonSerializer.Serialize(new { ExecutionId = 1 }),
             TimeoutSeconds = 10,
             EnvAllowlist = new List<string> { "STAGING_DB_CONNSTRING", "EXACTXML_EXE_PATH" }
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.Success.Should().BeFalse();
         result.ExitCode.Should().NotBe(0);
@@ -328,7 +328,7 @@ public class ScriptTemplateExamplesTests
                 StdinJson = JsonSerializer.Serialize(new { ExecutionId = 1 }),
                 TimeoutSeconds = 10,
                 EnvAllowlist = new List<string> { "STAGING_DB_CONNSTRING", "EXACTXML_EXE_PATH" }
-            });
+            }, TestContext.Current.CancellationToken);
 
             result.Success.Should().BeTrue();
             result.ExitCode.Should().Be(0);
@@ -359,7 +359,7 @@ public class ScriptTemplateExamplesTests
                 StdinJson = JsonSerializer.Serialize(new { ExecutionId = 1 }),
                 TimeoutSeconds = 10,
                 EnvAllowlist = new List<string> { "STAGING_DB_CONNSTRING", "EXACTXML_EXE_PATH" }
-            });
+            }, TestContext.Current.CancellationToken);
 
             result.Success.Should().BeFalse();
             result.ExitCode.Should().Be(7);
@@ -384,7 +384,8 @@ public class ScriptTemplateExamplesTests
             exit {exitCode}
             """;
         File.WriteAllText(path, script);
-        File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         return path;
     }
 

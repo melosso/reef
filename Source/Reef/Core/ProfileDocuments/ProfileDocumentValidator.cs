@@ -100,7 +100,7 @@ public static partial class ProfileDocumentValidator
                 return "must be a list";
             case NodeFieldKinds.Table when value is not JsonArray:
                 return "must be a list of rows";
-            case NodeFieldKinds.Json when value.GetValueKind() == JsonValueKind.String && ConfigPath.ParseAny(value) == value:
+            case NodeFieldKinds.Json when value?.GetValueKind() == JsonValueKind.String && ConfigPath.ParseAny(value) == value:
                 return "must be valid JSON";
             case NodeFieldKinds.Select when field.Options is { Count: > 0 } && !field.Options.Any(o => o.Value == ConfigPath.ToText(value)):
                 return "has an unknown value";
