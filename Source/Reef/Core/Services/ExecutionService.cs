@@ -77,10 +77,10 @@ public class ExecutionService
     /// <param name="jobId">Optional job ID that triggered this execution</param>
     /// <param name="destinationOverrideId">Optional destination override ID</param>
     /// <returns>Execution ID, success status, output path, and error message</returns>
-    public async Task<(int ExecutionId, bool Success, string? OutputPath, string? ErrorMessage)> 
+    public async Task<(int ExecutionId, bool Success, string? OutputPath, string? ErrorMessage)>
         ExecuteProfileAsync(
-            int profileId, 
-            Dictionary<string, string>? parameters = null, 
+            int profileId,
+            Dictionary<string, string>? parameters = null,
             string triggeredBy = "Manual",
             int? jobId = null,
             int? destinationOverrideId = null)
@@ -149,14 +149,6 @@ public class ExecutionService
                 Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
 
-            var (graphNodeTypes, graphError) = ParseGraphNodeTypes(profile);
-            if (graphError != null)
-            {
-                Log.Error("Profile {ProfileCode} has an invalid execution graph: {Error}", profile.Code, graphError);
-                await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds,
-                    $"Invalid execution graph: {graphError}");
-                return (executionId, false, null, $"Invalid execution graph: {graphError}");
-            }
 
             // ===== PHASE 1: PRE-PROCESSING =====
             // Execute pre-processing if configured
@@ -185,7 +177,7 @@ public class ExecutionService
             if (!preProcessSuccess)
             {
                 Log.Error("Pre-processing failed: {Error}", preProcessError);
-                await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, 
+                await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds,
                     $"Pre-processing failed: {preProcessError}");
                 return (executionId, false, null, $"Pre-processing failed: {preProcessError}");
             }
@@ -205,45 +197,45 @@ public class ExecutionService
             // ===== PHASE 2.5: DELTA SYNC (IF ENABLED) =====
             int originalRowCount = rows.Count;
             DeltaSyncResult? deltaSyncResult = null;
-            
-            if (graphNodeTypes.Contains("deltasync"))
+
+            if (profile.DeltaSyncEnabled)
             {
                 try
                 {
                     Log.Debug("Delta sync enabled for profile {ProfileId}, processing deltas...", profileId);
-                    
+
                     // Validate ReefId column exists (only if we have rows to check)
                     if (rows.Any() && !rows[0].ContainsKey(profile.DeltaSyncReefIdColumn!))
                     {
                         var error = $"Delta sync failed: ReefId column '{profile.DeltaSyncReefIdColumn}' not found in query results";
                         Log.Error(error);
-                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, 
+                        await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
                             stopwatch.ElapsedMilliseconds, error);
                         return (executionId, false, null, error);
                     }
-                    
+
                     // If no rows returned, log and continue with empty delta sync
                     if (!rows.Any())
                     {
                         Log.Debug("Query returned 0 rows. Delta sync will process empty result set.");
                     }
-                    
+
                     // Process deltas
                     deltaSyncResult = await _deltaSyncService.ProcessDeltaAsync(
                         profileId,
                         rows,
                         DeltaSyncConfig.FromProfile(profile));
-                    
+
                     // Build rows to export (new + changed + optionally deleted)
                     var rowsToExport = new List<Dictionary<string, object>>();
                     rowsToExport.AddRange(deltaSyncResult.NewRows);
                     rowsToExport.AddRange(deltaSyncResult.ChangedRows);
-                    
+
                     // Optionally include deleted rows with marker
                     if (profile.DeltaSyncTrackDeletes && deltaSyncResult.DeletedReefIds.Any())
                     {
                         Log.Debug("Including {Count} deleted rows in export", deltaSyncResult.DeletedReefIds.Count);
-                        
+
                         foreach (var reefId in deltaSyncResult.DeletedReefIds)
                         {
                             var deletedRow = new Dictionary<string, object>
@@ -255,10 +247,10 @@ public class ExecutionService
                             rowsToExport.Add(deletedRow);
                         }
                     }
-                    
+
                     // Update rows to export only deltas
                     rows = rowsToExport;
-                    
+
                     Log.Information(
                         "Delta sync for profile {profileId} completed: {New} new, {Changed} changed, {Deleted} deleted, {Unchanged} unchanged → Exporting {Export} rows",
                         profileId,
@@ -267,7 +259,7 @@ public class ExecutionService
                         deltaSyncResult.DeletedReefIds.Count,
                         deltaSyncResult.UnchangedRows.Count,
                         rows.Count);
-                    
+
                     // Clean up old state if retention policy is set
                     if (profile.DeltaSyncRetentionDays.HasValue)
                     {
@@ -277,7 +269,7 @@ public class ExecutionService
                 catch (Exception ex)
                 {
                     Log.Error("Delta sync processing failed for profile {ProfileCode} ({ProfileName}): {Error}", profile.Code, profile.Name, ex.Message);
-                    await UpdateExecutionRecordAsync(executionId, "Failed", originalRowCount, null, 
+                    await UpdateExecutionRecordAsync(executionId, "Failed", originalRowCount, null,
                         stopwatch.ElapsedMilliseconds, $"Delta sync error: {ex.Message}");
                     return (executionId, false, null, $"Delta sync error: {ex.Message}");
                 }
@@ -362,7 +354,7 @@ public class ExecutionService
 
             // ===== PHASE 2.5.5: EMAIL EXPORT (IF ENABLED) =====
             // Skip email export if there's a destination override (test mode or manual override)
-            if (graphNodeTypes.Contains("emailexport") && rows.Count > 0 && !destinationOverrideId.HasValue)
+            if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
                 Log.Information("Profile {ProfileCode} ({ProfileName}) executing as email export (sending {RowCount} rows)", profile.Code, profile.Name, rows.Count);
 
@@ -507,7 +499,7 @@ public class ExecutionService
                                     rowType);
 
                                 approvalCount++;
-                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}, ReefId: {ReefId}, RowType: {RowType}", 
+                                Log.Debug("Created pending email approval {ApprovalId} for execution {ExecutionId}, ReefId: {ReefId}, RowType: {RowType}",
                                     approvalId, executionId, reefId ?? "(none)", rowType ?? "(none)");
                             }
 
@@ -526,9 +518,9 @@ public class ExecutionService
                                 var errorMessage = renderErrors.Count > 0
                                     ? $"Failed to render any emails for approval: {string.Join("; ", renderErrors)}"
                                     : "No emails were rendered for approval despite having query results";
-                                
+
                                 Log.Error(errorMessage);
-                                await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, 
+                                await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
                                     stopwatch.ElapsedMilliseconds, errorMessage);
                                 return (executionId, false, null, errorMessage);
                             }
@@ -537,7 +529,7 @@ public class ExecutionService
                             string executionMessage = approvalCount > 0
                                 ? $"{approvalCount} emails pending approval"
                                 : $"All {duplicateCount} emails already pending approval (duplicates skipped)";
-                            
+
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
                                 executionMessage);
 
@@ -553,7 +545,7 @@ public class ExecutionService
                                 : approvalCount > 0
                                     ? $"{approvalCount} emails stored for approval"
                                     : $"All {duplicateCount} emails already pending (duplicates skipped)";
-                            
+
                             Log.Information("Profile {ProfileId} execution completed: {LogMessage}", profile.Id, logMessage);
 
                             return (executionId, true, null, null);
@@ -688,7 +680,7 @@ public class ExecutionService
             }
 
             // ===== PHASE 2.6: MULTI-OUTPUT SPLITTING (IF ENABLED) =====
-            if (graphNodeTypes.Contains("splitoutput") && rows.Count > 0)
+            if (profile.SplitEnabled && rows.Count > 0)
             {
                 Log.Debug("Profile {ProfileId} executing with multi-output splitting enabled", profile.Id);
                 var (splitExecId, splitSuccess, splitOutputPath, splitError) = await ExecuteWithSplittingAsync(
@@ -729,7 +721,7 @@ public class ExecutionService
                         if (!splitPostProcessSuccess && profile.PostProcessRollbackOnFailure)
                         {
                             Log.Error("Post-processing failed with rollback enabled: {Error}", splitPostProcessError);
-                            await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, splitOutputPath, 
+                            await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, splitOutputPath,
                                 stopwatch.ElapsedMilliseconds, $"Post-processing failed: {splitPostProcessError}");
                             return (executionId, false, splitOutputPath, $"Post-processing failed: {splitPostProcessError}");
                         }
@@ -747,11 +739,11 @@ public class ExecutionService
             string actualOutputFormat = profile.OutputFormat;
 
             // For email profiles in test mode, use the EmailTemplateId and HTML format; otherwise use TemplateId
-            int? templateIdToUse = (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
+            int? templateIdToUse = (profile.IsEmailExport && destinationOverrideId.HasValue)
                 ? profile.EmailTemplateId
                 : profile.TemplateId;
 
-            if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
+            if (profile.IsEmailExport && destinationOverrideId.HasValue)
             {
                 actualOutputFormat = "HTML"; // Email test mode always outputs HTML
                 Log.Information("Email profile test mode: Using EmailTemplateId and HTML output format");
@@ -778,18 +770,18 @@ public class ExecutionService
                     else
                     {
                         // Determine if this is a SQL Server native type or custom template
-                        bool isNativeType = template.Type >= QueryTemplateType.ForXmlRaw && 
+                        bool isNativeType = template.Type >= QueryTemplateType.ForXmlRaw &&
                                           template.Type <= QueryTemplateType.ForJsonPath;
-                        
+
                         if (isNativeType)
                         {
                             // SQL Server Native Type - Use QueryTemplateService
-                            Log.Information("Applying SQL Server native template '{TemplateName}' ({TemplateType})", 
+                            Log.Information("Applying SQL Server native template '{TemplateName}' ({TemplateType})",
                                 template.Name, template.Type);
-                            
+
                             // Parse transformation options from profile or template
                             Dictionary<string, object>? transformOptions = null;
-                            
+
                             if (!string.IsNullOrWhiteSpace(profile.TransformationOptionsJson))
                             {
                                 try
@@ -803,12 +795,12 @@ public class ExecutionService
                                     Log.Warning(optEx, "Failed to parse TransformationOptionsJson, will use template string fallback");
                                 }
                             }
-                            
+
                             // Execute transformation via QueryTemplateService
                             await using var dbConnection = await _connectionService.CreateDatabaseConnectionAsync(profile.ConnectionId);
                             await dbConnection.OpenAsync();
-                            
-                            var transformResult = await _templateService.ApplyTransformationAsync(dbConnection, 
+
+                            var transformResult = await _templateService.ApplyTransformationAsync(dbConnection,
                                 new TransformationRequest
                                 {
                                     Query = profile.Query,
@@ -816,24 +808,24 @@ public class ExecutionService
                                     Type = template.Type,
                                     Options = transformOptions
                                 });
-                            
+
                             if (!transformResult.Success)
                             {
                                 throw new InvalidOperationException(
                                     $"Native template transformation failed: {transformResult.ErrorMessage}");
                             }
-                            
+
                             transformedContent = transformResult.Output;
                             actualOutputFormat = template.OutputFormat;
-                            Log.Debug("Native template transformation completed. Output length: {Length} chars, Row count: {RowCount}", 
+                            Log.Debug("Native template transformation completed. Output length: {Length} chars, Row count: {RowCount}",
                                 transformedContent?.Length ?? 0, transformResult.RowCount);
                         }
                         else if (template.Type == QueryTemplateType.DocumentTemplate)
                         {
                             // Document Template (PDF, DOCX, ODT) - Use DocumentTemplateEngine
-                            Log.Information("Applying document template '{TemplateName}' ({OutputFormat})", 
+                            Log.Information("Applying document template '{TemplateName}' ({OutputFormat})",
                                 template.Name, template.OutputFormat);
-                            
+
                             // Build context for filename template resolution
                             var documentContext = new Dictionary<string, object>
                             {
@@ -841,26 +833,26 @@ public class ExecutionService
                                 { "profile_id", profile.Id.ToString() },
                                 { "execution_id", executionId.ToString() }
                             };
-                            
+
                             // DocumentTemplateEngine returns file path directly - store in transformedContent as marker
                             var documentPath = await _documentEngine.TransformAsync(
-                                rows, 
-                                template.Template, 
-                                documentContext, 
+                                rows,
+                                template.Template,
+                                documentContext,
                                 profile.FilenameTemplate);
                             transformedContent = $"__DOCUMENT_PATH__:{documentPath}";
                             actualOutputFormat = template.OutputFormat; // PDF, DOCX, or ODT
-                            
+
                             Log.Debug("Document generation completed. File: {FilePath}", documentPath);
                         }
                         else
                         {
                             // Custom Template (Scriban) - Use TemplateEngine
-                            Log.Information("Applying custom template '{TemplateName}' ({TemplateType})", 
+                            Log.Information("Applying custom template '{TemplateName}' ({TemplateType})",
                                 template.Name, template.Type);
                             transformedContent = await _templateEngine.TransformAsync(rows, template.Template);
                             actualOutputFormat = template.OutputFormat;
-                            Log.Debug("Custom template transformation completed. Output length: {Length} chars", 
+                            Log.Debug("Custom template transformation completed. Output length: {Length} chars",
                                 transformedContent?.Length ?? 0);
                         }
                     }
@@ -868,7 +860,7 @@ public class ExecutionService
                 catch (Exception ex)
                 {
                     Log.Error("Template transformation failed: {Error}", ex.Message);
-                    await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds, 
+                    await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, stopwatch.ElapsedMilliseconds,
                         $"Template transformation error: {ex.Message}");
                     return (executionId, false, null, $"Template transformation error: {ex.Message}");
                 }
@@ -896,11 +888,11 @@ public class ExecutionService
                     {
                         // Document already generated - extract path and use it
                         var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
-                        
+
                         // Copy the document to temp to avoid file locking issues with the original
                         // This allows the original file to be locked by viewers/antivirus while we upload the copy
                         var tempCopyPath = Path.Combine(Path.GetTempPath(), Path.GetFileName(documentPath));
-                        
+
                         // Retry copy operation in case of temporary lock
                         int copyRetries = 5;
                         while (copyRetries > 0)
@@ -917,14 +909,14 @@ public class ExecutionService
                                 copyRetries--;
                             }
                         }
-                        
+
                         tempFilePath = tempCopyPath;
                         fileSize = new FileInfo(tempFilePath).Length;
                         finalPath = tempFilePath;
                         Log.Debug("Copied document to temp: {TempPath}, Size: {FileSize} bytes", tempFilePath, fileSize);
                     }
                     // Template was applied - check if this is email test mode with multiple documents
-                    else if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
+                    else if (profile.IsEmailExport && destinationOverrideId.HasValue)
                     {
                         // Split HTML documents and save separately
                         var htmlDocs = SplitHtmlDocuments(transformedContent);
@@ -1029,11 +1021,11 @@ public class ExecutionService
                 }
 
                 // Check if this is email test mode with split HTML files
-                var emailTestHtmlDocs = (!string.IsNullOrEmpty(transformedContent) && graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue)
+                var emailTestHtmlDocs = (!string.IsNullOrEmpty(transformedContent) && profile.IsEmailExport && destinationOverrideId.HasValue)
                     ? SplitHtmlDocuments(transformedContent)
                     : new List<string>();
 
-                bool isEmailTestWithSplit = (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue &&
+                bool isEmailTestWithSplit = (profile.IsEmailExport && destinationOverrideId.HasValue &&
                                            finalPath != null && !string.IsNullOrEmpty(transformedContent) &&
                                            emailTestHtmlDocs.Count > 1);
 
@@ -1211,7 +1203,7 @@ public class ExecutionService
                 Log.Debug("Output saved to: {OutputPath}", finalPath);
 
                 // Create email metadata file if this is test mode for an email profile
-                if (graphNodeTypes.Contains("emailexport") && destinationOverrideId.HasValue && finalPath != null)
+                if (profile.IsEmailExport && destinationOverrideId.HasValue && finalPath != null)
                 {
                     await CreateEmailMetadataFileAsync(profile, rows, finalPath);
                 }
@@ -1392,30 +1384,6 @@ public class ExecutionService
         }
     }
 
-    private static (HashSet<string> NodeTypes, string? Error) ParseGraphNodeTypes(Reef.Core.Models.Profile profile)
-    {
-        Reef.Core.Models.ProfileGraph? graph;
-        try
-        {
-            graph = string.IsNullOrEmpty(profile.CanvasLayoutJson)
-                ? ProfileGraphBackfillMigration.Build(profile)
-                : System.Text.Json.JsonSerializer.Deserialize<Reef.Core.Models.ProfileGraph>(profile.CanvasLayoutJson);
-        }
-        catch (System.Text.Json.JsonException ex)
-        {
-            return (new HashSet<string>(), $"Failed to parse execution graph: {ex.Message}");
-        }
-
-        if (graph == null)
-            return (new HashSet<string>(), "Failed to parse execution graph");
-
-        var (_, sortError) = GraphExecutor.Sort(graph);
-        if (sortError != null)
-            return (new HashSet<string>(), sortError);
-
-        return (graph.Nodes.Select(n => n.Type).ToHashSet(), null);
-    }
-
     /// <summary>
     /// Execute profile with multi-output splitting enabled
     /// Generates multiple output files based on SplitKeyColumn
@@ -1432,32 +1400,32 @@ public class ExecutionService
     {
         try
         {
-            Log.Information("Profile {ProfileId} executing with splitting enabled, split key: {SplitKey}", 
+            Log.Information("Profile {ProfileId} executing with splitting enabled, split key: {SplitKey}",
                 profile.Id, profile.SplitKeyColumn);
-            
+
             // Validate split key column exists in results
             if (!rows[0].ContainsKey(profile.SplitKeyColumn!))
             {
                 var error = $"Split key column '{profile.SplitKeyColumn}' not found in query results. " +
                            $"Available columns: {string.Join(", ", rows[0].Keys)}";
                 Log.Error(error);
-                await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null, 
+                await UpdateExecutionRecordAsync(executionId, "Failed", rows.Count, null,
                     stopwatch.ElapsedMilliseconds, error);
                 return (executionId, false, null, error);
             }
-            
+
             // Group rows by split key value
             var splitGroups = rows
                 .GroupBy(row => NormalizeSplitKey(row[profile.SplitKeyColumn!]))
                 .ToDictionary(g => g.Key, g => g.ToList());
-            
+
             Log.Information("Split {TotalRows} rows into {SplitCount} groups by '{SplitKey}'",
                 rows.Count, splitGroups.Count, profile.SplitKeyColumn);
 
             // Get destination configuration (use ForExecution to get decrypted config)
             var destination = await _destinationService.GetByIdForExecutionAsync(
                 destinationOverrideId ?? profile.OutputDestinationId ?? 0);
-            
+
             if (destination == null)
             {
                 var error = "Destination not found";
@@ -1465,19 +1433,19 @@ public class ExecutionService
                     stopwatch.ElapsedMilliseconds, error);
                 return (executionId, false, null, error);
             }
-            
+
             // Process each split group
             int successCount = 0;
             int failureCount = 0;
             var errors = new List<string>();
-            
+
             foreach (var splitGroup in splitGroups)
             {
                 var splitKey = splitGroup.Key;
                 var splitRows = splitGroup.Value;
-                
+
                 Log.Debug("Processing split '{SplitKey}' with {RowCount} rows", splitKey, splitRows.Count);
-                
+
                 var (success, error) = await ProcessSingleSplitAsync(
                     profile,
                     executionId,
@@ -1485,7 +1453,7 @@ public class ExecutionService
                     splitRows,
                     destination.Type,
                     destination.ConfigurationJson);
-                
+
                 if (success)
                 {
                     successCount++;
@@ -1496,17 +1464,17 @@ public class ExecutionService
                     errors.Add($"{splitKey}: {error}");
                 }
             }
-            
+
             // Update execution record with split summary
             stopwatch.Stop();
             bool overallSuccess = failureCount == 0;
-            string status = failureCount == 0 ? "Success" : 
+            string status = failureCount == 0 ? "Success" :
                            successCount == 0 ? "Failed" : "Partial";
-            
-            string? errorMessage = failureCount > 0 
+
+            string? errorMessage = failureCount > 0
                 ? $"{failureCount} of {splitGroups.Count} splits failed: {string.Join("; ", errors.Take(3))}"
                 : null;
-            
+
             await UpdateExecutionWithSplitSummaryAsync(
                 executionId,
                 splitGroups.Count,
@@ -1514,18 +1482,18 @@ public class ExecutionService
                 failureCount,
                 rows.Count,
                 stopwatch.ElapsedMilliseconds);
-            
+
             Log.Information(
                 "Split execution for profile {ProfileId} completed: {Success}/{Total} splits succeeded",
                 profile.Id, successCount, splitGroups.Count);
-            
+
             // COMMIT DELTA SYNC: Now that all splits have been processed successfully, commit the hash state
             if (profile.DeltaSyncEnabled && deltaSyncResult != null && overallSuccess)
             {
                 try
                 {
                     await _deltaSyncService.CommitDeltaSyncAsync(profile.Id, executionId, deltaSyncResult);
-                    Log.Information("Delta sync committed for profile {ProfileId}, execution {ExecutionId} after split processing", 
+                    Log.Information("Delta sync committed for profile {ProfileId}, execution {ExecutionId} after split processing",
                         profile.Id, executionId);
                 }
                 catch (Exception ex)
@@ -1535,10 +1503,10 @@ public class ExecutionService
                         profile.Id, executionId, ex.Message);
                 }
             }
-            
+
             // Update profile's last executed timestamp
             await UpdateProfileLastExecutedAsync(profile.Id);
-            
+
             // Audit log
             await _auditService.LogAsync("Profile", profile.Id, "ExecutedWithSplitting", triggeredBy,
                 System.Text.Json.JsonSerializer.Serialize(new
@@ -1549,7 +1517,7 @@ public class ExecutionService
                     TotalRows = rows.Count,
                     ExecutionTimeMs = stopwatch.ElapsedMilliseconds
                 }));
-            
+
             return (executionId, overallSuccess, null, errorMessage);
         }
         catch (Exception ex)
@@ -1751,8 +1719,8 @@ public class ExecutionService
             VALUES (@ProfileId, @JobId, @StartedAt, 'Running', @TriggeredBy);
             SELECT last_insert_rowid();";
 
-        var id = await connection.ExecuteScalarAsync<int>(sql, new 
-        { 
+        var id = await connection.ExecuteScalarAsync<int>(sql, new
+        {
             ProfileId = profileId,
             JobId = jobId,
             StartedAt = DateTime.UtcNow,
@@ -1765,7 +1733,7 @@ public class ExecutionService
     /// <summary>
     /// Update execution record with final results
     /// </summary>
-    private async Task UpdateExecutionRecordAsync(int executionId, string status, int rowCount, 
+    private async Task UpdateExecutionRecordAsync(int executionId, string status, int rowCount,
         string? outputPath, long executionTimeMs, string? errorMessage, string? outputMessage = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
@@ -1782,8 +1750,8 @@ public class ExecutionService
                 OutputMessage = @OutputMessage
             WHERE Id = @Id";
 
-        await connection.ExecuteAsync(sql, new 
-        { 
+        await connection.ExecuteAsync(sql, new
+        {
             Id = executionId,
             Status = status,
             CompletedAt = DateTime.UtcNow,
@@ -1812,8 +1780,8 @@ public class ExecutionService
                 DeltaSyncTotalHashedRows = @TotalHashedRows
             WHERE Id = @Id";
 
-        await connection.ExecuteAsync(sql, new 
-        { 
+        await connection.ExecuteAsync(sql, new
+        {
             Id = executionId,
             NewRows = deltaSyncResult.NewRows.Count,
             ChangedRows = deltaSyncResult.ChangedRows.Count,
@@ -1834,7 +1802,7 @@ public class ExecutionService
     /// <param name="context">Context data for variable substitution</param>
     /// <returns>Success status and optional error message</returns>
     private async Task<(bool Success, string? ErrorMessage)> ExecutePreProcessingAsync(
-        int executionId, 
+        int executionId,
         Profile profile,
         Connection connection,
         ProcessingContext context)
@@ -1962,7 +1930,7 @@ public class ExecutionService
         if (mainQueryFailed && profile.PostProcessSkipOnFailure)
         {
             Log.Information("Skipping post-processing because main query failed and PostProcessSkipOnFailure=true");
-            await UpdatePostProcessingStatusAsync(executionId, DateTime.UtcNow, DateTime.UtcNow, "Skipped", 
+            await UpdatePostProcessingStatusAsync(executionId, DateTime.UtcNow, DateTime.UtcNow, "Skipped",
                 "Skipped due to main query failure", 0);
             return (true, null);
         }
@@ -2083,12 +2051,12 @@ public class ExecutionService
         if (config.Type.Equals("StoredProcedure", StringComparison.OrdinalIgnoreCase))
         {
             var procedureName = command.Trim();
-            
+
             // Build parameter list if provided
             string parameterList = "";
             if (config.Parameters != null && config.Parameters.Count > 0)
             {
-                var paramNames = config.Parameters.Select(p => 
+                var paramNames = config.Parameters.Select(p =>
                 {
                     var paramName = p.Name.StartsWith("@") || p.Name.StartsWith("p_") ? p.Name : $"@{p.Name}";
                     return paramName;
@@ -2126,7 +2094,7 @@ public class ExecutionService
         }
 
         var result = input;
-        
+
         // Replace all supported context variables
         result = result.Replace("{executionid}", context.ExecutionId.ToString(), StringComparison.OrdinalIgnoreCase);
         result = result.Replace("{profileid}", context.ProfileId.ToString(), StringComparison.OrdinalIgnoreCase);
@@ -2142,7 +2110,7 @@ public class ExecutionService
         result = result.Replace("{errormessage}", context.ErrorMessage ?? "", StringComparison.OrdinalIgnoreCase);
         result = result.Replace("{deltasyncreefidcolumn}", context.DeltaSyncReefIdColumn ?? "", StringComparison.OrdinalIgnoreCase);
         result = result.Replace("{splitkeycolumn}", context.SplitKeyColumn ?? "", StringComparison.OrdinalIgnoreCase);
-    result = result.Replace("{splitkey}", context.SplitKey ?? "", StringComparison.OrdinalIgnoreCase);
+        result = result.Replace("{splitkey}", context.SplitKey ?? "", StringComparison.OrdinalIgnoreCase);
 
         return result;
     }
@@ -2154,7 +2122,7 @@ public class ExecutionService
     /// <param name="context">Context for variable substitution</param>
     /// <returns>Dictionary of parameter name/value pairs</returns>
     private Dictionary<string, string> BuildParametersDictionary(
-        List<ProcessingParameter>? configParameters, 
+        List<ProcessingParameter>? configParameters,
         ProcessingContext context)
     {
         var parameters = new Dictionary<string, string>();
@@ -2321,8 +2289,8 @@ public class ExecutionService
             SET LastExecutedAt = @LastExecutedAt
             WHERE Id = @Id";
 
-        await connection.ExecuteAsync(sql, new 
-        { 
+        await connection.ExecuteAsync(sql, new
+        {
             Id = profileId,
             LastExecutedAt = DateTime.UtcNow
         });
@@ -2331,7 +2299,7 @@ public class ExecutionService
     /// <summary>
     /// Execute post-processing stored procedure
     /// </summary>
-    private async Task ExecutePostProcessingAsync(Connection connection, string postProcessConfig, 
+    private async Task ExecutePostProcessingAsync(Connection connection, string postProcessConfig,
         int rowCount, string? outputPath)
     {
         try
@@ -2354,7 +2322,7 @@ public class ExecutionService
 
             // Build parameter list
             var parameters = new Dictionary<string, string>();
-            
+
             if (root.TryGetProperty("parameters", out var paramsElement) && paramsElement.ValueKind == System.Text.Json.JsonValueKind.Array)
             {
                 foreach (var param in paramsElement.EnumerateArray())
@@ -2362,11 +2330,11 @@ public class ExecutionService
                     if (param.TryGetProperty("name", out var paramName) && param.TryGetProperty("value", out var paramValue))
                     {
                         var value = paramValue.GetString() ?? "";
-                        
+
                         // Substitute placeholders
                         value = value.Replace("{rowcount}", rowCount.ToString());
                         value = value.Replace("{outputpath}", outputPath ?? "");
-                        
+
                         parameters[paramName.GetString() ?? ""] = value;
                     }
                 }
@@ -2403,30 +2371,30 @@ public class ExecutionService
     {
         int splitRecordId = 0;
         string? tempFilePath = null;
-        
+
         try
         {
             // Record split start
             splitRecordId = await RecordSplitStartAsync(executionId, splitKey, splitRows.Count);
-            
+
             // Apply FilterInternalColumns to remove ReefId/SplitKey if configured
             var filteredRows = FilterInternalColumns(profile, splitRows);
-            
+
             // Apply template transformation if specified
             string? transformedContent = null;
             string actualOutputFormat = profile.OutputFormat;
-            
+
             if (profile.TemplateId.HasValue)
             {
                 transformedContent = await ApplyTemplateToSplitAsync(profile, splitKey, filteredRows);
-                
+
                 var template = await _templateService.GetByIdAsync(profile.TemplateId.Value);
                 if (template != null)
                 {
                     actualOutputFormat = template.OutputFormat;
                 }
             }
-            
+
             // Generate filename for this split
             var extension = GetFileExtension(actualOutputFormat);
             var filename = GenerateSplitFilename(
@@ -2445,10 +2413,10 @@ public class ExecutionService
             {
                 Directory.CreateDirectory(directory);
             }
-            
+
             // Format and write output
             long fileSizeBytes;
-            
+
             if (!string.IsNullOrEmpty(transformedContent))
             {
                 // Check if this is a document template (file path marker)
@@ -2456,11 +2424,11 @@ public class ExecutionService
                 {
                     // Document already generated - extract path and use it
                     var documentPath = transformedContent.Substring("__DOCUMENT_PATH__:".Length);
-                    
+
                     // Copy document to split temp location with correct filename
                     File.Copy(documentPath, tempFilePath, overwrite: true);
                     fileSizeBytes = new FileInfo(tempFilePath).Length;
-                    
+
                     // Clean up the original generated document
                     try
                     {
@@ -2470,7 +2438,7 @@ public class ExecutionService
                     {
                         Log.Warning("Failed to delete original document: {DocumentPath}: {Error}", documentPath, ex.Message);
                     }
-                    
+
                     Log.Debug("Split '{SplitKey}' document copied to {FilePath} ({FileSize} bytes)",
                         splitKey, tempFilePath, fileSizeBytes);
                 }
@@ -2486,31 +2454,31 @@ public class ExecutionService
                 // Use standard formatter
                 var formatter = GetFormatter(actualOutputFormat);
                 var (formatSuccess, fileSize, formatError) = await formatter.FormatAsync(filteredRows, tempFilePath);
-                
+
                 if (!formatSuccess)
                 {
                     throw new Exception($"Formatting failed: {formatError}");
                 }
-                
+
                 fileSizeBytes = fileSize;
             }
-            
+
             Log.Debug("Split '{SplitKey}' formatted to {FilePath} ({FileSize} bytes)",
                 splitKey, tempFilePath, fileSizeBytes);
-            
+
             // Upload to destination
             var (uploadSuccess, finalPath, uploadError) = await _destinationService.SaveToDestinationAsync(
                 tempFilePath,
                 destinationType,
                 destinationConfig);
-            
+
             if (!uploadSuccess)
             {
                 throw new Exception($"Upload failed: {uploadError}");
             }
-            
+
             Log.Information("Split '{SplitKey}' uploaded successfully to {FinalPath}", splitKey, finalPath);
-            
+
             // Record success
             await RecordSplitSuccessAsync(splitRecordId, finalPath, fileSizeBytes);
 
@@ -2558,18 +2526,18 @@ public class ExecutionService
                     // Continue processing other splits
                 }
             }
-            
+
             return (true, null);
         }
         catch (Exception ex)
         {
             Log.Error("Error processing split '{SplitKey}': {Error}", splitKey, ex.Message);
-            
+
             if (splitRecordId > 0)
             {
                 await RecordSplitFailureAsync(splitRecordId, ex.Message);
             }
-            
+
             return (false, ex.Message);
         }
         finally
@@ -2598,27 +2566,27 @@ public class ExecutionService
         List<Dictionary<string, object>> splitRows)
     {
         var template = await _templateService.GetByIdAsync(profile.TemplateId!.Value);
-        
+
         if (template == null)
         {
             throw new InvalidOperationException($"Template {profile.TemplateId} not found");
         }
-        
+
         // Check if this is a DocumentTemplate (PDF, DOCX, ODT)
         if (template.Type == QueryTemplateType.DocumentTemplate)
         {
-            Log.Information("Applying document template '{TemplateName}' to split '{SplitKey}' ({OutputFormat})", 
+            Log.Information("Applying document template '{TemplateName}' to split '{SplitKey}' ({OutputFormat})",
                 template.Name, splitKey, template.OutputFormat);
-            
+
             // DocumentTemplateEngine returns file path directly - use marker format
             var documentPath = await _documentEngine.TransformAsync(splitRows, template.Template);
-            
-            Log.Information("Document generation completed for split '{SplitKey}'. File: {FilePath}", 
+
+            Log.Information("Document generation completed for split '{SplitKey}'. File: {FilePath}",
                 splitKey, documentPath);
-            
+
             return $"__DOCUMENT_PATH__:{documentPath}";
         }
-        
+
         // Use the template engine's TransformAsync method for Scriban templates
         return await _templateEngine.TransformAsync(splitRows, template.Template);
     }
@@ -2637,7 +2605,7 @@ public class ExecutionService
         }
 
         var now = DateTime.UtcNow;
-        
+
         return profile.FilenameTemplate
             .Replace("{profile}", SanitizeFilename(profile.Name), StringComparison.OrdinalIgnoreCase)
             .Replace("{timestamp}", now.ToString("yyyyMMdd_HHmmss"), StringComparison.OrdinalIgnoreCase)
@@ -2657,7 +2625,7 @@ public class ExecutionService
         string extension)
     {
         var now = DateTime.UtcNow;
-        
+
         return template
             .Replace("{profile}", SanitizeFilename(profileName), StringComparison.OrdinalIgnoreCase)
             .Replace("{splitkey}", SanitizeFilename(splitKey), StringComparison.OrdinalIgnoreCase)
@@ -2677,14 +2645,14 @@ public class ExecutionService
         {
             return "_NULL_";
         }
-        
+
         var stringValue = value.ToString()?.Trim();
-        
+
         if (string.IsNullOrEmpty(stringValue))
         {
             return "_EMPTY_";
         }
-        
+
         return stringValue;
     }
 
@@ -2704,14 +2672,14 @@ public class ExecutionService
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         const string sql = @"
             INSERT INTO ProfileExecutionSplits 
                 (ExecutionId, SplitKey, RowCount, Status, StartedAt)
             VALUES 
                 (@ExecutionId, @SplitKey, @RowCount, 'Running', @StartedAt);
             SELECT last_insert_rowid();";
-        
+
         return await connection.ExecuteScalarAsync<int>(sql, new
         {
             ExecutionId = executionId,
@@ -2728,7 +2696,7 @@ public class ExecutionService
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         const string sql = @"
             UPDATE ProfileExecutionSplits
             SET Status = 'Success',
@@ -2736,7 +2704,7 @@ public class ExecutionService
                 FileSizeBytes = @FileSizeBytes,
                 CompletedAt = @CompletedAt
             WHERE Id = @Id";
-        
+
         await connection.ExecuteAsync(sql, new
         {
             Id = splitRecordId,
@@ -2753,14 +2721,14 @@ public class ExecutionService
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         const string sql = @"
             UPDATE ProfileExecutionSplits
             SET Status = 'Failed',
                 ErrorMessage = @ErrorMessage,
                 CompletedAt = @CompletedAt
             WHERE Id = @Id";
-        
+
         await connection.ExecuteAsync(sql, new
         {
             Id = splitRecordId,
@@ -2877,12 +2845,12 @@ public class ExecutionService
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
-        
+
         const string sql = @"
             SELECT * FROM ProfileExecutionSplits
             WHERE ExecutionId = @ExecutionId
             ORDER BY StartedAt";
-        
+
         var splits = await connection.QueryAsync<ProfileExecutionSplit>(sql, new { ExecutionId = executionId });
         return splits.ToList();
     }
@@ -2933,7 +2901,7 @@ public class ExecutionService
 
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
-        
+
         var profileIds = dependsOnProfileIds.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(id => id.Trim())
             .Where(id => int.TryParse(id, out _))
@@ -2942,7 +2910,7 @@ public class ExecutionService
 
         if (profileIds.Count == 0)
         {
-            Log.Warning("Profile {ProfileId} has invalid DependsOnProfileIds: {DependsOnProfileIds}", 
+            Log.Warning("Profile {ProfileId} has invalid DependsOnProfileIds: {DependsOnProfileIds}",
                 profileId, dependsOnProfileIds);
             return true; // Don't block execution for invalid configuration
         }
@@ -2956,26 +2924,26 @@ public class ExecutionService
                 WHERE ProfileId = @ProfileId
                 ORDER BY CompletedAt DESC
                 LIMIT 1";
-            
+
             var lastExecution = await conn.QueryFirstOrDefaultAsync<dynamic>(
                 sql, new { ProfileId = dependencyProfileId });
 
             if (lastExecution == null)
             {
-                Log.Warning("Dependency profile {DependencyProfileId} has never been executed", 
+                Log.Warning("Dependency profile {DependencyProfileId} has never been executed",
                     dependencyProfileId);
                 return false;
             }
 
             if (lastExecution.Status != "Success")
             {
-                Log.Warning("Dependency profile {DependencyProfileId} last execution status: {Status}", 
+                Log.Warning("Dependency profile {DependencyProfileId} last execution status: {Status}",
                     dependencyProfileId, lastExecution.Status);
                 return false;
             }
 
             // Log success for each validated dependency
-            Log.Debug("Dependency profile {DependencyProfileId} validated successfully (last success: {CompletedAt})", 
+            Log.Debug("Dependency profile {DependencyProfileId} validated successfully (last success: {CompletedAt})",
                 dependencyProfileId, lastExecution.CompletedAt);
         }
 
@@ -2986,7 +2954,7 @@ public class ExecutionService
     /// Filter out internal columns (ReefId, SplitKey) from output if configured
     /// </summary>
     private List<Dictionary<string, object>> FilterInternalColumns(
-        Profile profile, 
+        Profile profile,
         List<Dictionary<string, object>> rows)
     {
         if (rows.Count == 0)
@@ -2997,8 +2965,8 @@ public class ExecutionService
         var columnsToRemove = new List<string>();
 
         // Check if ReefId should be excluded
-        if (profile.ExcludeReefIdFromOutput && 
-            profile.DeltaSyncEnabled && 
+        if (profile.ExcludeReefIdFromOutput &&
+            profile.DeltaSyncEnabled &&
             !string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
         {
             columnsToRemove.Add(profile.DeltaSyncReefIdColumn);
@@ -3006,8 +2974,8 @@ public class ExecutionService
         }
 
         // Check if SplitKey should be excluded
-        if (profile.ExcludeSplitKeyFromOutput && 
-            profile.SplitEnabled && 
+        if (profile.ExcludeSplitKeyFromOutput &&
+            profile.SplitEnabled &&
             !string.IsNullOrWhiteSpace(profile.SplitKeyColumn))
         {
             columnsToRemove.Add(profile.SplitKeyColumn);
@@ -3022,23 +2990,23 @@ public class ExecutionService
 
         // Create new list with filtered rows
         var filteredRows = new List<Dictionary<string, object>>(rows.Count);
-        
+
         foreach (var row in rows)
         {
             var filteredRow = new Dictionary<string, object>(row);
-            
+
             foreach (var columnToRemove in columnsToRemove)
             {
                 // Remove case-insensitively
                 var keyToRemove = filteredRow.Keys
                     .FirstOrDefault(k => string.Equals(k, columnToRemove, StringComparison.OrdinalIgnoreCase));
-                
+
                 if (keyToRemove != null)
                 {
                     filteredRow.Remove(keyToRemove);
                 }
             }
-            
+
             filteredRows.Add(filteredRow);
         }
 
@@ -3235,8 +3203,15 @@ public class ExecutionService
                 (ExecutionId, ErrorType, Phase, Detail, ErrorMessage, OccurredAt)
             VALUES
                 (@ExecutionId, @ErrorType, @Phase, @Detail, @ErrorMessage, @OccurredAt)",
-            new { ExecutionId = executionId, ErrorType = errorType, Phase = phase,
-                  Detail = detail, ErrorMessage = message, OccurredAt = DateTime.UtcNow });
+            new
+            {
+                ExecutionId = executionId,
+                ErrorType = errorType,
+                Phase = phase,
+                Detail = detail,
+                ErrorMessage = message,
+                OccurredAt = DateTime.UtcNow
+            });
     }
 
     public async Task<List<ProfileExecutionError>> GetExecutionErrorsAsync(int executionId)

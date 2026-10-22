@@ -202,11 +202,6 @@ public class ProfileService
             profile.CreatedBy = createdByUserId;
             profile.CreatedAt = DateTime.UtcNow;
             profile.UpdatedAt = DateTime.UtcNow;
-            var profileGraph = ProfileGraphBackfillMigration.Build(profile);
-            var graphValidationError = ProfilePipelineValidator.Validate(profileGraph);
-            if (graphValidationError != null)
-                throw new InvalidOperationException($"Invalid profile pipeline: {graphValidationError}");
-            profile.CanvasLayoutJson = System.Text.Json.JsonSerializer.Serialize(profileGraph);
 
             // Generate unique short code (P-XXXX) with collision retry
             if (string.IsNullOrEmpty(profile.Code))
@@ -343,11 +338,6 @@ public class ProfileService
             // Recompute hash
             profile.Hash = _hashValidator.ComputeHash(profile);
             profile.UpdatedAt = DateTime.UtcNow;
-            var profileGraph = ProfileGraphBackfillMigration.Build(profile);
-            var graphValidationError = ProfilePipelineValidator.Validate(profileGraph);
-            if (graphValidationError != null)
-                throw new InvalidOperationException($"Invalid profile pipeline: {graphValidationError}");
-            profile.CanvasLayoutJson = System.Text.Json.JsonSerializer.Serialize(profileGraph);
 
             const string sql = @"
                 UPDATE Profiles SET
@@ -584,7 +574,7 @@ public class ProfileService
         try
         {
             var config = System.Text.Json.JsonSerializer.Deserialize<ProcessingConfig>(configJson);
-            
+
             if (config == null)
             {
                 throw new InvalidOperationException($"{fieldName} could not be deserialized");
@@ -596,13 +586,19 @@ public class ProfileService
                 throw new InvalidOperationException($"{fieldName}: 'type' is required");
             }
 
-            if (!config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase) && 
+            if (config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(config.Interpreter) || string.IsNullOrWhiteSpace(config.ScriptPathOrInline))
+                {
+                    throw new InvalidOperationException($"{fieldName}: 'interpreter' and 'scriptPathOrInline' are required for a script");
+                }
+            }
+            else if (!config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase) &&
                 !config.Type.Equals("StoredProcedure", StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException($"{fieldName}: 'type' must be 'Query' or 'StoredProcedure'");
+                throw new InvalidOperationException($"{fieldName}: 'type' must be 'Query', 'StoredProcedure' or 'Script'");
             }
-
-            if (string.IsNullOrWhiteSpace(config.Command))
+            else if (string.IsNullOrWhiteSpace(config.Command))
             {
                 throw new InvalidOperationException($"{fieldName}: 'command' is required");
             }
@@ -622,7 +618,7 @@ public class ProfileService
                     {
                         throw new InvalidOperationException($"{fieldName}: parameter 'name' cannot be empty");
                     }
-                    
+
                     if (param.Value == null)
                     {
                         throw new InvalidOperationException($"{fieldName}: parameter '{param.Name}' value cannot be null");
@@ -630,8 +626,9 @@ public class ProfileService
                 }
             }
 
-            Log.Debug("{FieldName} validation passed: Type={Type}, Command={Command}", 
-                fieldName, config.Type, config.Command.Substring(0, Math.Min(50, config.Command.Length)));
+            var summary = config.Command ?? config.Interpreter ?? "";
+            Log.Debug("{FieldName} validation passed: Type={Type}, Command={Command}",
+                fieldName, config.Type, summary[..Math.Min(50, summary.Length)]);
         }
         catch (System.Text.Json.JsonException ex)
         {

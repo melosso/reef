@@ -233,10 +233,6 @@ public partial class Program
             var profileCanvasMigration = new ProfileCanvasMigration(connectionString);
             await profileCanvasMigration.ApplyAsync();
 
-            // Backfill CanvasLayoutJson with a synthesized graph for profiles that don't have one yet
-            var profileGraphBackfillMigration = new ProfileGraphBackfillMigration(connectionString);
-            await profileGraphBackfillMigration.ApplyAsync();
-
             // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
             Log.Debug("Running Scripting database migration...");
             var scriptingMigration = new ScriptingMigration(connectionString);
@@ -274,7 +270,7 @@ public partial class Program
 
             // Register shutdown handlers
             var lifetime = app.Lifetime;
-            
+
             lifetime.ApplicationStarted.Register(() =>
             {
                 Log.Information("✓ Application started successfully");
@@ -293,25 +289,25 @@ public partial class Program
             });
 
             await app.RunAsync();
-            
+
             Log.Information("Exit: Application shutdown complete");
         }
         catch (Exception ex)
         {
             Log.Fatal(ex, "Application terminated unexpectedly");
-            
+
             // Show error if Serilog fails
             Console.WriteLine("");
             Console.WriteLine("Fatal error during application startup:");
             Console.WriteLine(ex.ToString());
-            
+
             // If running as console, wait for user input
             if (!OperatingSystem.IsWindows() || Environment.UserInteractive)
             {
                 Console.WriteLine("\nPress any key to exit...");
                 Console.ReadKey();
             }
-            
+
             Environment.Exit(1);
         }
         finally
@@ -336,8 +332,8 @@ public partial class Program
     }
 
     private static void RegisterServices(
-        IServiceCollection services, 
-        IConfiguration configuration, 
+        IServiceCollection services,
+        IConfiguration configuration,
         EncryptionService encryptionService,
         string connectionString)
     {
@@ -351,7 +347,7 @@ public partial class Program
         services.AddSingleton<ApiKeyValidator>();
         services.AddHttpClient();
         services.AddSingleton(new DatabaseConfig { ConnectionString = connectionString });
-        
+
         // Template engines
         services.AddSingleton<ScribanTemplateEngine>();
 
@@ -382,17 +378,9 @@ public partial class Program
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
 
-        // Store guided recipe wizard
-        services.AddScoped<Reef.Core.Recipes.ConnectionVerifier>();
-        services.AddScoped<Reef.Core.Recipes.HttpSourceVerifier>();
-        services.AddScoped<Reef.Core.Recipes.StagingTableVerifier>();
-        services.AddScoped<Reef.Core.Recipes.EmailDestinationVerifier>();
-        services.AddScoped<Reef.Core.Recipes.ScribanTemplateVerifier>();
-        services.AddScoped<Reef.Core.Recipes.ExportQueryVerifier>();
-        services.AddScoped<RecipeService>();
-
         // Import Profile services
         services.AddScoped<ImportProfileService>();
+        services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
@@ -420,14 +408,14 @@ public partial class Program
         // Query template service
         services.AddScoped<QueryTemplateService>(sp =>
             new QueryTemplateService(
-                connectionString, 
+                connectionString,
                 sp.GetRequiredService<HashValidator>(),
                 sp.GetRequiredService<ScribanTemplateEngine>()));
 
         // Jobs services - NEW SYSTEM
         services.AddScoped<JobService>(sp =>
             new JobService(sp.GetRequiredService<DatabaseConfig>(), sp.GetRequiredService<IConfiguration>()));
-        
+
         services.AddScoped<Reef.Api.JobExecutorService>();
 
         // Background services (hosted services)
@@ -595,7 +583,6 @@ public partial class Program
                 "profiles.html",
                 "jobs.html",
                 "groups.html",
-                "store.html",
                 "executions.html",
                 "email-approvals.html",
                 "documentation.html",
@@ -604,7 +591,7 @@ public partial class Program
             };
 
             var navPages = new[] { "dashboard", "connections", "destinations", "templates",
-                                   "profiles", "jobs", "groups", "store", "executions",
+                                   "profiles", "jobs", "groups", "executions",
                                    "email-approvals", "documentation", "admin", "account" };
 
             var layoutPath = Path.Combine(viewsFolder, "_layout.html");
@@ -736,7 +723,7 @@ public partial class Program
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
-        RecipesEndpoints.Map(app);
+        ProfileDocumentsEndpoints.Map(app);
 
         // Fallback handler for unmapped routes (404)
         app.MapFallback(async context =>
