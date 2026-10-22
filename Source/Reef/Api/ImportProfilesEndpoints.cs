@@ -19,40 +19,40 @@ public static class ImportProfilesEndpoints
         var g = app.MapGroup("/api/import-profiles").RequireAuthorization();
 
         // CRUD
-        g.MapGet("/",                        GetAll);
-        g.MapGet("/{id:int}",               GetById);
-        g.MapPost("/",                       Create);
-        g.MapPut("/{id:int}",               Update);
-        g.MapDelete("/{id:int}",            Delete);
-        g.MapPost("/{id:int}/enable",       Enable);
-        g.MapPost("/{id:int}/disable",      Disable);
+        g.MapGet("/", GetAll);
+        g.MapGet("/{id:int}", GetById);
+        g.MapPost("/", Create);
+        g.MapPut("/{id:int}", Update);
+        g.MapDelete("/{id:int}", Delete);
+        g.MapPost("/{id:int}/enable", Enable);
+        g.MapPost("/{id:int}/disable", Disable);
         g.MapGet("/by-group/{groupId:int}", GetByGroup);
 
         // Execution
-        g.MapPost("/{id:int}/execute",      Execute);
-        g.MapGet("/{id:int}/executions",    GetExecutions);
-        g.MapGet("/executions/{execId:int}",          GetExecution);
-        g.MapGet("/executions/{execId:int}/errors",   GetExecutionErrors);
+        g.MapPost("/{id:int}/execute", Execute);
+        g.MapGet("/{id:int}/executions", GetExecutions);
+        g.MapGet("/executions/{execId:int}", GetExecution);
+        g.MapGet("/executions/{execId:int}/errors", GetExecutionErrors);
 
         // Source Operations
-        g.MapPost("/test-source",           TestSource);
-        g.MapPost("/list-source-files",     ListSourceFiles);
-        g.MapPost("/preview",               Preview);
+        g.MapPost("/test-source", TestSource);
+        g.MapPost("/list-source-files", ListSourceFiles);
+        g.MapPost("/preview", Preview);
 
         // Target Operations
-        g.MapPost("/target-schema",         GetTargetSchema);
-        g.MapPost("/test-target",           TestTarget);
+        g.MapPost("/target-schema", GetTargetSchema);
+        g.MapPost("/test-target", TestTarget);
 
         // Delta Sync
-        g.MapGet("/{id:int}/delta-sync/stats",    GetDeltaSyncStats);
+        g.MapGet("/{id:int}/delta-sync/stats", GetDeltaSyncStats);
         g.MapDelete("/{id:int}/delta-sync/reset", ResetDeltaSync);
 
         // Output Targets
-        g.MapGet("/{id:int}/output-targets",              GetOutputTargets);
-        g.MapPost("/{id:int}/output-targets",             AddOutputTarget);
-        g.MapPut("/{id:int}/output-targets/{tid:int}",    UpdateOutputTarget);
+        g.MapGet("/{id:int}/output-targets", GetOutputTargets);
+        g.MapPost("/{id:int}/output-targets", AddOutputTarget);
+        g.MapPut("/{id:int}/output-targets/{tid:int}", UpdateOutputTarget);
         g.MapDelete("/{id:int}/output-targets/{tid:int}", DeleteOutputTarget);
-        g.MapPost("/{id:int}/output-targets/reorder",     ReorderOutputTargets);
+        g.MapPost("/{id:int}/output-targets/reorder", ReorderOutputTargets);
     }
 
     // CRUD Handlers
@@ -331,7 +331,7 @@ public static class ImportProfilesEndpoints
 
             var formatCfg = string.IsNullOrWhiteSpace(profile.FormatConfig)
                 ? new ImportFormatConfig()
-                : System.Text.Json.JsonSerializer.Deserialize<ImportFormatConfig>(profile.FormatConfig)
+                : System.Text.Json.JsonSerializer.Deserialize<ImportFormatConfig>(profile.FormatConfig, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                   ?? new ImportFormatConfig();
 
             var parser = ImportParserFactory.Create(profile.SourceFormat);

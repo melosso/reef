@@ -375,14 +375,14 @@ public class ImportExecutionService(
         {
             await profileService.AddExecutionErrorAsync(new ImportExecutionError
             {
-                ExecutionId  = exec.Id,
-                ErrorType    = "Configuration",
-                Phase        = "DeltaSync",
+                ExecutionId = exec.Id,
+                ErrorType = "Configuration",
+                Phase = "DeltaSync",
                 ErrorMessage =
                     $"Smart Sync is enabled but the unique ID field '{profile.DeltaSyncReefIdColumn}' " +
                     $"was not found in any of the {exec.TotalRowsRead} record(s) processed. " +
                     "Check the 'Unique ID Field' setting on the Smart Sync tab. For CSV this must match a column header; for JSON a top-level key; for XML an element name.",
-                OccurredAt   = DateTime.UtcNow
+                OccurredAt = DateTime.UtcNow
             });
         }
 
@@ -442,11 +442,11 @@ public class ImportExecutionService(
                         {
                             await profileService.AddExecutionErrorAsync(new ImportExecutionError
                             {
-                                ExecutionId  = exec.Id,
-                                ErrorType    = "Archive",
-                                Phase        = "Archive",
+                                ExecutionId = exec.Id,
+                                ErrorType = "Archive",
+                                Phase = "Archive",
                                 ErrorMessage = $"Archive failed for '{file.Identifier}': {ex.Message}",
-                                OccurredAt   = DateTime.UtcNow
+                                OccurredAt = DateTime.UtcNow
                             });
                         }
                         catch { /* never let error-recording abort execution */ }
@@ -995,14 +995,17 @@ public class ImportExecutionService(
     private static ImportFormatConfig ParseFormatConfig(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return new ImportFormatConfig();
-        try { return JsonSerializer.Deserialize<ImportFormatConfig>(json) ?? new ImportFormatConfig(); }
+        try { return JsonSerializer.Deserialize<ImportFormatConfig>(json, CaseInsensitive) ?? new ImportFormatConfig(); }
         catch { return new ImportFormatConfig(); }
     }
+
+    // the editor stores these columns with camelCase keys
+    private static readonly JsonSerializerOptions CaseInsensitive = new() { PropertyNameCaseInsensitive = true };
 
     private static List<ImportColumnMapping> ParseColumnMappings(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return [];
-        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json) ?? []; }
+        try { return JsonSerializer.Deserialize<List<ImportColumnMapping>>(json, CaseInsensitive) ?? []; }
         catch { return []; }
     }
 

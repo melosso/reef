@@ -165,7 +165,7 @@ public class DatabaseImportTarget : IImportTarget
                 ColumnName = (string)r.ColumnName,
                 DataType = (string)r.DataType,
                 IsNullable = ((string?)r.IsNullable)?.Equals("YES", StringComparison.OrdinalIgnoreCase) ?? true,
-                IsPrimaryKey = (long?)r.IsPrimaryKey > 0 || ((bool?)r.IsPrimaryKey == true),
+                IsPrimaryKey = IsTruthy((object?)r.IsPrimaryKey),
                 MaxLength = r.MaxLength is DBNull ? null : (int?)r.MaxLength,
                 Precision = r.Precision is DBNull ? null : (int?)r.Precision,
                 Scale = r.Scale is DBNull ? null : (int?)r.Scale
@@ -269,7 +269,7 @@ public class DatabaseImportTarget : IImportTarget
             ct.ThrowIfCancellationRequested();
             rowNum++;
 
-            var mappedRow = ApplyMappings(row, context.ColumnMappings);
+            var mappedRow = row;
             if (!mappedRow.Any()) { result.RowsSkipped++; continue; }
 
             try
@@ -344,7 +344,7 @@ public class DatabaseImportTarget : IImportTarget
                 foreach (var row in batch)
                 {
                     rowNum++;
-                    var mappedRow = ApplyMappings(row, context.ColumnMappings);
+                    var mappedRow = row;
                     if (!mappedRow.Any()) { result.RowsSkipped++; continue; }
 
                     try
@@ -609,6 +609,13 @@ ON CONFLICT ({keyList}) {conflictAction}";
           AND NOT a.attisdropped
         ORDER BY a.attnum";
 
+    private static bool IsTruthy(object? value) => value switch
+    {
+        null or DBNull => false,
+        bool b => b,
+        _ => Convert.ToInt64(value) > 0
+    };
+
     private static string SqliteSchemaQuery(string table) => $@"
         SELECT
             ti.name AS ColumnName,
@@ -644,66 +651,6 @@ ON CONFLICT ({keyList}) {conflictAction}";
     // Placeholder: the actual connection object must be loaded via ConnectionService by the caller
     private Task<Connection> GetTargetConnectionAsync(ImportProfile profile)
         => throw new InvalidOperationException("Use the overload that accepts a Connection object");
-
-    private static Dictionary<string, object?> ApplyMappings(
-        Dictionary<string, object?> sourceRow,
-        List<ImportColumnMapping> mappings)
-    {
-        if (!mappings.Any())
-        {
-            // No mappings defined, pass row through as-is
-            return new Dictionary<string, object?>(sourceRow, StringComparer.OrdinalIgnoreCase);
-        }
-
-        var result = new Dictionary<string, object?>();
-        foreach (var mapping in mappings)
-        {
-            object? value = null;
-
-            if (sourceRow.TryGetValue(mapping.SourceColumn, out var raw))
-            {
-                value = raw;
-            }
-            else if (mapping.DefaultValue != null)
-            {
-                value = mapping.DefaultValue;
-            }
-
-            if (value == null && mapping.SkipOnNull) continue;
-
-            // Type cast
-            if (!string.IsNullOrWhiteSpace(mapping.DataType) && value != null)
-            {
-                value = CastValue(value, mapping.DataType);
-            }
-
-            result[mapping.TargetColumn] = value;
-        }
-
-        return result;
-    }
-
-    private static object? CastValue(object? value, string dataType)
-    {
-        if (value == null) return null;
-        var str = value.ToString()!;
-
-        return dataType.ToLowerInvariant() switch
-        {
-            "int" or "integer" => int.TryParse(str, out var i) ? i : (object?)value,
-            "long" or "bigint" => long.TryParse(str, out var l) ? l : (object?)value,
-            "decimal" or "numeric" or "float" or "double" => decimal.TryParse(str,
-                System.Globalization.NumberStyles.Any,
-                System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : (object?)value,
-            "bool" or "boolean" or "bit" => bool.TryParse(str, out var b) ? b
-                : str is "1" or "yes" or "true" or "y" ? true
-                : str is "0" or "no" or "false" or "n" ? false
-                : (object?)value,
-            "datetime" or "date" => DateTime.TryParse(str, out var dt) ? dt : (object?)value,
-            "string" or "varchar" or "nvarchar" or "text" => str,
-            _ => value
-        };
-    }
 
     private static async Task<bool> TryUpdateAsync(
         IDbConnection db, IDbTransaction tx, string table, string connType,

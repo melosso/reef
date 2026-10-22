@@ -244,7 +244,8 @@ public class ImportFileOutputService(DestinationService destinationService)
             .Replace("{profile}", SanitizeFilename(profile.Name))
             .Replace("{timestamp}", ts.ToString("yyyyMMddHHmmss"))
             .Replace("{date}", ts.ToString("yyyyMMdd"))
-            .Replace("{guid}", Guid.NewGuid().ToString("N")[..8]);
+            .Replace("{guid}", Guid.NewGuid().ToString("N")[..8])
+            .Replace("{format}", ext);
     }
 
     private static string SanitizeFilename(string name)

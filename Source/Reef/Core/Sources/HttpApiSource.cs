@@ -129,7 +129,7 @@ public class HttpApiSource : IImportSource
         ImportPaginationConfig? pagCfg;
         try
         {
-            pagCfg = JsonSerializer.Deserialize<ImportPaginationConfig>(profile.HttpPaginationConfig!);
+            pagCfg = JsonSerializer.Deserialize<ImportPaginationConfig>(profile.HttpPaginationConfig!, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch
         {
