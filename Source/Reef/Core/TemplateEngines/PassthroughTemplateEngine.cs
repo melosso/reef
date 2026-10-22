@@ -15,7 +15,7 @@ public class PassthroughTemplateEngine : ITemplateEngine
     /// This engine is used when template is not specified
     /// </summary>
     public Task<string> TransformAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string template,
         Dictionary<string, object>? context = null)
     {

@@ -13,6 +13,6 @@ public interface IDestination
     /// <param name="destinationConfig">JSON configuration for the destination</param>
     /// <returns>Tuple containing success status, final path/URL, and error message if failed</returns>
     Task<(bool Success, string? FinalPath, string? ErrorMessage)> SaveAsync(
-        string sourcePath, 
+        string sourcePath,
         string destinationConfig);
 }

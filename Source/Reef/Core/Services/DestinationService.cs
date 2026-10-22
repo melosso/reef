@@ -111,7 +111,7 @@ public class DestinationService
             Log.Debug("DestinationService: Extracted relative path from temp: {RelativePath}", fileRelativePath);
 
             var fileName = Path.GetFileName(sourceFilePath);
-            
+
             // Read file with FileShare.Read to allow other processes to read concurrently
             byte[] fileBytes;
             using (var fs = new FileStream(sourceFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -120,7 +120,7 @@ public class DestinationService
                 await fs.CopyToAsync(ms);
                 fileBytes = ms.ToArray();
             }
-            
+
             string? finalPath = null;
 
             switch (destinationType)
@@ -757,13 +757,13 @@ public class DestinationService
         // Check if destination is in use
         var inUse = await conn.ExecuteScalarAsync<int>(
             new CommandDefinition("SELECT COUNT(*) FROM Profiles WHERE OutputDestinationId = @Id", new { Id = id }, cancellationToken: ct));
-        
+
         if (inUse > 0)
         {
             throw new InvalidOperationException(
                 $"Cannot delete destination. It is used by {inUse} profile(s).");
         }
-        
+
         var sql = "DELETE FROM Destinations WHERE Id = @Id";
         var rows = await conn.ExecuteAsync(new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
         return rows > 0;
@@ -771,33 +771,33 @@ public class DestinationService
 
     public async Task<DestinationTestResult> TestConnectionAsync(int destinationId, string? testFileName = null, string? testContent = null, CancellationToken ct = default)
     {
-        var destination = await GetByIdForExecutionAsync(destinationId, ct); 
+        var destination = await GetByIdForExecutionAsync(destinationId, ct);
         if (destination == null)
         {
-            return new DestinationTestResult 
-            { 
-                Success = false, 
-                Message = "Destination not found" 
+            return new DestinationTestResult
+            {
+                Success = false,
+                Message = "Destination not found"
             };
         }
 
         var startTime = DateTime.UtcNow;
-        
+
         try
         {
             var config = JsonSerializer.Deserialize<DestinationConfiguration>(destination.ConfigurationJson);
             if (config == null)
             {
-                return new DestinationTestResult 
-                { 
-                    Success = false, 
-                    Message = "Invalid configuration" 
+                return new DestinationTestResult
+                {
+                    Success = false,
+                    Message = "Invalid configuration"
                 };
             }
 
             testFileName ??= $"test_{DateTime.UtcNow:yyyyMMddHHmmss}.txt";
             testContent ??= $"Reef test file - {DateTime.UtcNow:O}";
-            
+
             var testBytes = System.Text.Encoding.UTF8.GetBytes(testContent);
             string filePath = "";
 
@@ -806,33 +806,33 @@ public class DestinationService
                 case DestinationType.Local:
                     filePath = await TestLocalDestination(config, testFileName, testBytes);
                     break;
-                    
+
                 case DestinationType.Ftp:
                     filePath = await TestFtpDestination(config, testFileName, testBytes);
                     break;
-                    
+
                 case DestinationType.Sftp:
                     filePath = await TestSftpDestination(config, testFileName, testBytes);
                     break;
-                    
+
                 case DestinationType.S3:
                     filePath = await TestS3Destination(config, testFileName, testBytes);
                     break;
-                    
+
                 case DestinationType.AzureBlob:
                     filePath = await TestAzureBlobDestination(config, testFileName, testBytes);
                     break;
-                    
+
                 case DestinationType.Http:
                     filePath = await TestHttpDestination(config, testFileName, testBytes);
                     break;
-                    
+
                 default:
                     throw new NotImplementedException($"Test not implemented for {destination.Type}");
             }
 
             var duration = DateTime.UtcNow - startTime;
-            
+
             return new DestinationTestResult
             {
                 Success = true,
@@ -870,9 +870,9 @@ public class DestinationService
             var config = JsonSerializer.Deserialize<DestinationConfiguration>(configurationJson);
             if (config == null)
             {
-                return new DestinationTestResult 
-                { 
-                    Success = false, 
+                return new DestinationTestResult
+                {
+                    Success = false,
                     Message = "Invalid configuration JSON",
                     ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
                 };
@@ -890,38 +890,38 @@ public class DestinationService
                 case DestinationType.Local:
                     finalPath = await TestLocalDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.Ftp:
                     finalPath = await TestFtpDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.Sftp:
                     finalPath = await TestSftpDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.S3:
                     finalPath = await TestS3Destination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.AzureBlob:
                     finalPath = await TestAzureBlobDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.Http:
                     finalPath = await TestHttpDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.Email:
                     // Email doesn't write to a path, create temp file for testing
                     var tempPath = Path.Combine(Path.GetTempPath(), testFileName);
                     await File.WriteAllBytesAsync(tempPath, content);
                     finalPath = tempPath;
                     break;
-                    
+
                 case DestinationType.NetworkShare:
                     finalPath = await TestNetworkShareDestination(config, testFileName, content);
                     break;
-                    
+
                 case DestinationType.WebDav:
                     return new DestinationTestResult
                     {
@@ -929,7 +929,7 @@ public class DestinationService
                         Message = $"Destination type '{type}' is not yet implemented",
                         ResponseTimeMs = (int)(DateTime.UtcNow - startTime).TotalMilliseconds
                     };
-                    
+
                 default:
                     return new DestinationTestResult
                     {
@@ -940,7 +940,7 @@ public class DestinationService
             }
 
             var duration = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
-            
+
             return new DestinationTestResult
             {
                 Success = true,
@@ -1482,56 +1482,56 @@ public class DestinationService
         switch (dest.Type)
         {
             case DestinationType.Http:
-            {
-                var cfg = System.Text.Json.JsonSerializer.Deserialize<Reef.Core.Destinations.HttpConfig>(
-                    dest.ConfigurationJson, opts)
-                    ?? throw new InvalidOperationException("Invalid HTTP destination configuration");
+                {
+                    var cfg = System.Text.Json.JsonSerializer.Deserialize<Reef.Core.Destinations.HttpConfig>(
+                        dest.ConfigurationJson, opts)
+                        ?? throw new InvalidOperationException("Invalid HTTP destination configuration");
 
-                if (!string.IsNullOrWhiteSpace(ep.PathSuffix))
-                {
-                    var baseUrl = cfg.Url.TrimEnd('/') + "/";
-                    cfg.Url = new Uri(new Uri(baseUrl), ep.PathSuffix.TrimStart('/')).ToString();
-                }
-                if (!string.IsNullOrWhiteSpace(ep.Method))
-                    cfg.Method = ep.Method;
-                if (!string.IsNullOrWhiteSpace(ep.UploadFormat))
-                    cfg.UploadFormat = ep.UploadFormat;
-                if (!string.IsNullOrWhiteSpace(ep.ExtraHeaders))
-                {
-                    var extra = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
-                        ep.ExtraHeaders, opts);
-                    if (extra != null)
+                    if (!string.IsNullOrWhiteSpace(ep.PathSuffix))
                     {
-                        cfg.Headers = cfg.Headers == null
-                            ? extra
-                            : cfg.Headers.Concat(extra).ToDictionary(k => k.Key, v => v.Value);
+                        var baseUrl = cfg.Url.TrimEnd('/') + "/";
+                        cfg.Url = new Uri(new Uri(baseUrl), ep.PathSuffix.TrimStart('/')).ToString();
                     }
+                    if (!string.IsNullOrWhiteSpace(ep.Method))
+                        cfg.Method = ep.Method;
+                    if (!string.IsNullOrWhiteSpace(ep.UploadFormat))
+                        cfg.UploadFormat = ep.UploadFormat;
+                    if (!string.IsNullOrWhiteSpace(ep.ExtraHeaders))
+                    {
+                        var extra = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(
+                            ep.ExtraHeaders, opts);
+                        if (extra != null)
+                        {
+                            cfg.Headers = cfg.Headers == null
+                                ? extra
+                                : cfg.Headers.Concat(extra).ToDictionary(k => k.Key, v => v.Value);
+                        }
+                    }
+                    return System.Text.Json.JsonSerializer.Serialize(cfg);
                 }
-                return System.Text.Json.JsonSerializer.Serialize(cfg);
-            }
 
             case DestinationType.Sftp:
             case DestinationType.Ftp:
-            {
-                var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
-                    dest.ConfigurationJson, opts)
-                    ?? throw new InvalidOperationException("Invalid SFTP/FTP destination configuration");
+                {
+                    var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
+                        dest.ConfigurationJson, opts)
+                        ?? throw new InvalidOperationException("Invalid SFTP/FTP destination configuration");
 
-                if (!string.IsNullOrWhiteSpace(ep.RemotePath))
-                    cfg.RemotePath = ep.RemotePath;
-                return System.Text.Json.JsonSerializer.Serialize(cfg);
-            }
+                    if (!string.IsNullOrWhiteSpace(ep.RemotePath))
+                        cfg.RemotePath = ep.RemotePath;
+                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                }
 
             case DestinationType.S3:
-            {
-                var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
-                    dest.ConfigurationJson, opts)
-                    ?? throw new InvalidOperationException("Invalid S3 destination configuration");
+                {
+                    var cfg = System.Text.Json.JsonSerializer.Deserialize<DestinationConfiguration>(
+                        dest.ConfigurationJson, opts)
+                        ?? throw new InvalidOperationException("Invalid S3 destination configuration");
 
-                if (!string.IsNullOrWhiteSpace(ep.KeyPrefix))
-                    cfg.Prefix = ep.KeyPrefix;
-                return System.Text.Json.JsonSerializer.Serialize(cfg);
-            }
+                    if (!string.IsNullOrWhiteSpace(ep.KeyPrefix))
+                        cfg.Prefix = ep.KeyPrefix;
+                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                }
 
             default:
                 return dest.ConfigurationJson;

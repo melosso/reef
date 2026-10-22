@@ -382,7 +382,7 @@ public class EmailApprovalService
                             approval.ProfileExecutionId,
                             deltaSyncResult);
 
-                        Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}", 
+                        Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}",
                             approvalId, approval.ReefId);
                     }
                     catch (Exception ex)
@@ -407,10 +407,10 @@ public class EmailApprovalService
                     SET SentAt = @ProcessedAt
                     WHERE Id = @Id
                 ";
-                await connection.ExecuteAsync(markProcessedSql, new 
-                { 
-                    Id = approvalId, 
-                    ProcessedAt = DateTime.UtcNow.ToString("o") 
+                await connection.ExecuteAsync(markProcessedSql, new
+                {
+                    Id = approvalId,
+                    ProcessedAt = DateTime.UtcNow.ToString("o")
                 });
 
                 Log.Information("Skipped email approval {ApprovalId} by user {UserId}", approvalId, userId);
@@ -606,7 +606,7 @@ public class EmailApprovalService
 
                 RejectedCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Rejected'"),
-                
+
                 SkippedCount = await connection.ExecuteScalarAsync<int>(
                     "SELECT COUNT(*) FROM PendingEmailApprovals WHERE Status = 'Skipped'"),
 

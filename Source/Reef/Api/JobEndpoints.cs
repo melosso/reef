@@ -308,8 +308,8 @@ public static class JobsEndpoints
             try
             {
                 var metrics = await scheduler.GetQueueMetricsAsync();
-                return Results.Ok(new 
-                { 
+                return Results.Ok(new
+                {
                     healthy = metrics.QueueDepth < 50,
                     queueDepth = metrics.QueueDepth,
                     availableSlots = metrics.AvailableSlots,
@@ -342,7 +342,8 @@ public static class JobsEndpoints
                 // Reset circuit breaker state
                 await service.ResumeCircuitBreakerJobAsync(id);
 
-                return Results.Ok(new {
+                return Results.Ok(new
+                {
                     success = true,
                     message = "Job resumed successfully"
                 });
@@ -387,7 +388,8 @@ public static class JobsEndpoints
                 // Always persist the job so UI and API are in sync
                 await service.UpdateAsync(job);
 
-                return Results.Ok(new {
+                return Results.Ok(new
+                {
                     success = true,
                     message = "Failure counter reset"
                 });

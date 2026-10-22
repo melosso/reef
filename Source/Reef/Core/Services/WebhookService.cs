@@ -316,7 +316,7 @@ public class WebhookService
             if (rows > 0)
             {
                 Log.Information("Regenerated token for webhook {WebhookId}", id);
-                
+
                 // Clear rate limit for old token
                 _rateLimits.TryRemove($"webhook_{id}", out _);
             }

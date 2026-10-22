@@ -28,13 +28,13 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/disable", DisableProfile);
         group.MapGet("/by-connection/{connectionId:int}", GetProfilesByConnection);
         group.MapGet("/by-group/{groupId:int}", GetProfilesByGroup);
-        
+
         // Delta Sync endpoints
         group.MapPost("/{id:int}/delta-sync/reset", ResetDeltaSyncState);
         group.MapPost("/{id:int}/delta-sync/reset-rows", ResetDeltaSyncRows);
         group.MapPost("/{id:int}/delta-sync/generate-hashes", GenerateDeltaSyncHashes);
         group.MapGet("/{id:int}/delta-sync/stats", GetDeltaSyncStats);
-        
+
         // Multi-Output Splitting endpoints
         group.MapGet("/executions/{executionId:int}/splits", GetExecutionSplits);
 
@@ -71,7 +71,7 @@ public static class ProfilesEndpoints
         try
         {
             bool wantImport = string.Equals(type, "import", StringComparison.OrdinalIgnoreCase);
-            bool wantAll    = string.Equals(type, "all",    StringComparison.OrdinalIgnoreCase);
+            bool wantAll = string.Equals(type, "all", StringComparison.OrdinalIgnoreCase);
 
             if (wantImport)
             {
@@ -250,7 +250,7 @@ public static class ProfilesEndpoints
                 {
                     return Results.BadRequest(new { error = "PreProcessConfig is required when PreProcessType is specified" });
                 }
-                
+
                 try
                 {
                     var config = System.Text.Json.JsonSerializer.Deserialize<ProcessingConfig>(profile.PreProcessConfig);
@@ -312,7 +312,8 @@ public static class ProfilesEndpoints
             {
                 if (string.IsNullOrWhiteSpace(profile.DeltaSyncReefIdColumn))
                 {
-                    return Results.BadRequest(new {
+                    return Results.BadRequest(new
+                    {
                         error = "DeltaSyncReefIdColumn is required when DeltaSyncEnabled is true"
                     });
                 }
@@ -320,7 +321,8 @@ public static class ProfilesEndpoints
                 // Validate ReefId column name format (basic SQL identifier validation)
                 if (!System.Text.RegularExpressions.Regex.IsMatch(profile.DeltaSyncReefIdColumn, @"^[a-zA-Z_][a-zA-Z0-9_]*$"))
                 {
-                    return Results.BadRequest(new {
+                    return Results.BadRequest(new
+                    {
                         error = "DeltaSyncReefIdColumn must be a valid SQL identifier"
                     });
                 }
@@ -346,10 +348,10 @@ public static class ProfilesEndpoints
             var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
 
             var id = await service.CreateAsync(profile, userId);
-            
-            await auditService.LogAsync("Profile", id, "Created", username, 
+
+            await auditService.LogAsync("Profile", id, "Created", username,
                 System.Text.Json.JsonSerializer.Serialize(new { profile.Name, profile.ConnectionId, profile.Query }));
-            
+
             return Results.Created($"/api/profiles/{id}", new { id });
         }
         catch (InvalidOperationException ex)
@@ -801,14 +803,14 @@ public static class ProfilesEndpoints
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            
+
             await deltaSyncService.ResetDeltaSyncStateAsync(id);
-            
+
             await auditService.LogAsync("Profile", id, "DeltaSyncStateReset", username,
                 "Delta sync state has been reset");
-            
+
             Log.Information("Delta sync state reset for profile {ProfileId} by {User}", id, username);
-            
+
             return Results.Ok(new { message = "Delta sync state reset successfully" });
         }
         catch (Exception ex)
@@ -839,31 +841,31 @@ public static class ProfilesEndpoints
             }
 
             var username = context.User.Identity?.Name ?? "Unknown";
-            
+
             if (request.ReefIds != null && request.ReefIds.Count > 0)
             {
                 // Reset specific rows by ReefId
                 var count = await deltaSyncService.ResetDeltaSyncRowsAsync(id, request.ReefIds);
-                
+
                 await auditService.LogAsync("Profile", id, "DeltaSyncRowsReset", username,
                     $"Reset {count} specific rows");
-                
+
                 Log.Information("Reset delta sync for {Count} specific rows in profile {ProfileId} by {User}",
                     count, id, username);
-                
+
                 return Results.Ok(new { message = $"Reset delta sync state for {count} rows" });
             }
             else if (request.Criteria != null)
             {
                 // Reset rows by criteria
                 var count = await deltaSyncService.ResetDeltaSyncByCriteriaAsync(id, request.Criteria);
-                
+
                 await auditService.LogAsync("Profile", id, "DeltaSyncCriteriaReset", username,
                     $"Reset {count} rows matching criteria");
-                
+
                 Log.Information("Reset delta sync for {Count} rows matching criteria in profile {ProfileId} by {User}",
                     count, id, username);
-                
+
                 return Results.Ok(new { message = $"Reset delta sync state for {count} rows" });
             }
             else
@@ -975,17 +977,18 @@ public static class ProfilesEndpoints
 
             if (!profile.DeltaSyncEnabled)
             {
-                return Results.Ok(new { 
+                return Results.Ok(new
+                {
                     enabled = false,
-                    message = "Delta sync is not enabled for this profile" 
+                    message = "Delta sync is not enabled for this profile"
                 });
             }
 
             var stats = await deltaSyncService.GetProfileStatsAsync(id);
-            
+
             // Get last execution metrics
             var lastExecution = await executionService.GetLastExecutionForProfileAsync(id);
-            
+
             return Results.Ok(new
             {
                 enabled = true,
@@ -1358,7 +1361,7 @@ public static class ProfilesEndpoints
 
                 result.Info.Add($"Page size: {config.DocumentTemplate.PageSize ?? "A4"}");
                 result.Info.Add($"Orientation: {config.DocumentTemplate.Orientation ?? "Portrait"}");
-                
+
                 if (!string.IsNullOrEmpty(config.DocumentTemplate.Watermark))
                 {
                     result.Info.Add($"Watermark: {config.DocumentTemplate.Watermark}");

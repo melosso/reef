@@ -42,11 +42,11 @@ public class JobExecutorService
     /// <param name="parameters">Optional parameters for job execution</param>
     /// <returns>Execution ID</returns>
     public async Task<long> TriggerJobAsync(
-        Job job, 
-        bool ignoreDependencies, 
+        Job job,
+        bool ignoreDependencies,
         Dictionary<string, object>? parameters)
     {
-        Log.Debug("Triggering job {JobId} ({JobName}) - Type: {JobType}", 
+        Log.Debug("Triggering job {JobId} ({JobName}) - Type: {JobType}",
             job.Id, job.Name, job.Type);
 
         // Check if job is enabled
@@ -84,8 +84,8 @@ public class JobExecutorService
             AttemptNumber = job.ConsecutiveFailures + 1,
             TriggeredBy = "API",
             ServerNode = Environment.MachineName,
-            ExecutionContext = parameters != null 
-                ? JsonSerializer.Serialize(parameters) 
+            ExecutionContext = parameters != null
+                ? JsonSerializer.Serialize(parameters)
                 : null
         };
 
@@ -236,7 +236,7 @@ public class JobExecutorService
     /// <summary>
     /// Execute job based on its type
     /// </summary>
-    private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)> 
+    private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
         ExecuteJobByTypeAsync(Job job, Dictionary<string, object>? parameters)
     {
         try
@@ -377,7 +377,7 @@ public class JobExecutorService
             }
 
             var backupDir = "backups";
-            
+
             if (!Directory.Exists(backupDir))
             {
                 Directory.CreateDirectory(backupDir);

@@ -90,9 +90,12 @@ public static class AccountEndpoints
 
         await conn.ExecuteAsync(
             "UPDATE Users SET DisplayName = @DisplayName, Email = @Email, ModifiedAt = datetime('now') WHERE Id = @Id",
-            new { DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim(),
-                  Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
-                  user.Id });
+            new
+            {
+                DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? null : request.DisplayName.Trim(),
+                Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
+                user.Id
+            });
 
         await auditService.LogAsync("User", user.Id, "ProfileUpdated", username,
             new { request.DisplayName, request.Email }, httpContext);

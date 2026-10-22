@@ -73,10 +73,10 @@ public class QueryTemplateService
     public async Task<IEnumerable<QueryTemplate>> GetAllAsync(bool activeOnly = false)
     {
         using var conn = new SqliteConnection(_connectionString);
-        var sql = activeOnly 
+        var sql = activeOnly
             ? "SELECT * FROM QueryTemplates WHERE IsActive = 1 ORDER BY Name"
             : "SELECT * FROM QueryTemplates ORDER BY Name";
-        
+
         return await conn.QueryAsync<QueryTemplate>(sql);
     }
 
@@ -90,19 +90,19 @@ public class QueryTemplateService
     public async Task<QueryTemplate> CreateAsync(QueryTemplate template)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
-        template.Hash =  Reef.Helpers.HashHelper.ComputeDestinationHash(
-            template.Name, 
-            template.Type.ToString(), 
+
+        template.Hash = Reef.Helpers.HashHelper.ComputeDestinationHash(
+            template.Name,
+            template.Type.ToString(),
             template.Template);
-        
+
         template.CreatedAt = DateTime.UtcNow;
-        
+
         var sql = @"
             INSERT INTO QueryTemplates (Name, Description, Type, Template, OutputFormat, IsActive, Tags, CreatedAt, Hash)
             VALUES (@Name, @Description, @Type, @Template, @OutputFormat, @IsActive, @Tags, @CreatedAt, @Hash);
             SELECT last_insert_rowid();";
-        
+
         template.Id = await conn.ExecuteScalarAsync<int>(sql, template);
         return template;
     }
@@ -110,21 +110,21 @@ public class QueryTemplateService
     public async Task<bool> UpdateAsync(QueryTemplate template)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
-        template.Hash =  Reef.Helpers.HashHelper.ComputeDestinationHash(
-            template.Name, 
-            template.Type.ToString(), 
+
+        template.Hash = Reef.Helpers.HashHelper.ComputeDestinationHash(
+            template.Name,
+            template.Type.ToString(),
             template.Template);
-        
+
         template.ModifiedAt = DateTime.UtcNow;
-        
+
         var sql = @"
             UPDATE QueryTemplates 
             SET Name = @Name, Description = @Description, Type = @Type,
                 Template = @Template, OutputFormat = @OutputFormat, IsActive = @IsActive,
                 Tags = @Tags, ModifiedAt = @ModifiedAt, Hash = @Hash
             WHERE Id = @Id";
-        
+
         var rows = await conn.ExecuteAsync(sql, template);
         return rows > 0;
     }
@@ -132,33 +132,33 @@ public class QueryTemplateService
     public async Task<bool> DeleteAsync(int id)
     {
         using var conn = new SqliteConnection(_connectionString);
-        
+
         // Check if template is in use
         var inUse = await conn.ExecuteScalarAsync<int>(
             "SELECT COUNT(*) FROM ProfileTransformations WHERE TemplateId = @Id", new { Id = id });
-        
+
         if (inUse > 0)
         {
             throw new InvalidOperationException(
                 $"Cannot delete template. It is used by {inUse} profile transformation(s).");
         }
-        
+
         var sql = "DELETE FROM QueryTemplates WHERE Id = @Id";
         var rows = await conn.ExecuteAsync(sql, new { Id = id });
         return rows > 0;
     }
 
     public async Task<TransformationResult> ApplyTransformationAsync(
-        IDbConnection sourceConnection, 
+        IDbConnection sourceConnection,
         TransformationRequest request)
     {
         var startTime = DateTime.UtcNow;
-        
+
         try
         {
             string? template = request.InlineTemplate;
             QueryTemplateType type = request.Type;
-            
+
             // Load template if using template ID
             if (request.TemplateId.HasValue)
             {
@@ -239,14 +239,14 @@ public class QueryTemplateService
     /// Execute FOR XML query with options or template string fallback support
     /// </summary>
     private async Task<(string output, int rowCount)> ExecuteForXmlQuery(
-        IDbConnection connection, 
-        string baseQuery, 
-        QueryTemplateType type, 
+        IDbConnection connection,
+        string baseQuery,
+        QueryTemplateType type,
         Dictionary<string, object>? options,
         string? templateString = null)
     {
         ForXmlOptions forXmlOptions;
-        
+
         if (options != null)
         {
             // Priority 1: Runtime options provided
@@ -276,11 +276,11 @@ public class QueryTemplateService
         // Wrap query in subquery and cast to NVARCHAR(MAX) to avoid truncation
         // SQL Server FOR XML can return very large strings that exceed default limits
         var fullQuery = $"SELECT CAST(({baseQuery.TrimEnd().TrimEnd(';')} {forXmlClause}) AS NVARCHAR(MAX))";
-        
+
         // Use ExecuteScalarAsync to get the single string result
         // SQL Server's FOR XML returns a single string value, not a result set row
         var xmlResult = await connection.ExecuteScalarAsync<string>(fullQuery);
-        
+
         if (string.IsNullOrEmpty(xmlResult))
         {
             return ("<root></root>", 0);
@@ -307,56 +307,56 @@ public class QueryTemplateService
     private string BuildForXmlRaw(ForXmlOptions? options)
     {
         var parts = new List<string> { "FOR XML RAW" };
-        
+
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
             parts.Add($"('{options.RowElement}')");
         }
-        
+
         if (options?.ElementsMode == true)
         {
             parts.Add("ELEMENTS");
         }
-        
+
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
             parts.Add($"ROOT('{options.RootElement}')");
         }
-        
+
         return string.Join(", ", parts);
     }
 
     private string BuildForXmlAuto(ForXmlOptions? options)
     {
         var parts = new List<string> { "FOR XML AUTO" };
-        
+
         if (options?.ElementsMode == true)
         {
             parts.Add("ELEMENTS");
         }
-        
+
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
             parts.Add($"ROOT('{options.RootElement}')");
         }
-        
+
         return string.Join(", ", parts);
     }
 
     private string BuildForXmlPath(ForXmlOptions? options)
     {
         var parts = new List<string> { "FOR XML PATH" };
-        
+
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
             parts.Add($"('{options.RowElement}')");
         }
-        
+
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
             parts.Add($"ROOT('{options.RootElement}')");
         }
-        
+
         return string.Join(", ", parts);
     }
 
@@ -364,14 +364,14 @@ public class QueryTemplateService
     /// Execute FOR JSON query with options or template string fallback support
     /// </summary>
     private async Task<(string output, int rowCount)> ExecuteForJsonQuery(
-        IDbConnection connection, 
-        string baseQuery, 
-        QueryTemplateType type, 
+        IDbConnection connection,
+        string baseQuery,
+        QueryTemplateType type,
         Dictionary<string, object>? options,
         string? templateString = null)
     {
         ForJsonOptions forJsonOptions;
-        
+
         if (options != null)
         {
             // Priority 1: Runtime options provided
@@ -395,11 +395,11 @@ public class QueryTemplateService
         // Wrap query in subquery and cast to NVARCHAR(MAX) to avoid truncation
         // SQL Server FOR JSON can return very large strings that exceed default limits
         var fullQuery = $"SELECT CAST(({baseQuery.TrimEnd().TrimEnd(';')} {forJsonClause}) AS NVARCHAR(MAX))";
-        
+
         // Use ExecuteScalarAsync to get the single string result
         // SQL Server's FOR JSON returns a single string value, not a result set row
         var jsonResult = await connection.ExecuteScalarAsync<string>(fullQuery);
-        
+
         if (string.IsNullOrEmpty(jsonResult))
         {
             return ("[]", 0);
@@ -410,8 +410,8 @@ public class QueryTemplateService
         try
         {
             var jsonDoc = JsonDocument.Parse(jsonResult);
-            rowCount = jsonDoc.RootElement.ValueKind == JsonValueKind.Array 
-                ? jsonDoc.RootElement.GetArrayLength() 
+            rowCount = jsonDoc.RootElement.ValueKind == JsonValueKind.Array
+                ? jsonDoc.RootElement.GetArrayLength()
                 : 1;
             jsonDoc.Dispose();
         }
@@ -429,39 +429,39 @@ public class QueryTemplateService
     private string BuildForJsonAuto(ForJsonOptions? options)
     {
         var parts = new List<string> { "FOR JSON AUTO" };
-        
+
         if (options?.IncludeNullValues == true)
         {
             parts.Add("INCLUDE_NULL_VALUES");
         }
-        
+
         if (options?.WithoutArrayWrapper == true)
         {
             parts.Add("WITHOUT_ARRAY_WRAPPER");
         }
-        
+
         return string.Join(", ", parts);
     }
 
     private string BuildForJsonPath(ForJsonOptions? options)
     {
         var parts = new List<string> { "FOR JSON PATH" };
-        
+
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
             parts.Add($"ROOT('{options.RootElement}')");
         }
-        
+
         if (options?.IncludeNullValues == true)
         {
             parts.Add("INCLUDE_NULL_VALUES");
         }
-        
+
         if (options?.WithoutArrayWrapper == true)
         {
             parts.Add("WITHOUT_ARRAY_WRAPPER");
         }
-        
+
         return string.Join(", ", parts);
     }
 
@@ -471,26 +471,26 @@ public class QueryTemplateService
     private ForJsonOptions ParseForJsonTemplate(string templateString)
     {
         var options = new ForJsonOptions();
-        
+
         if (string.IsNullOrWhiteSpace(templateString))
             return options;
-        
+
         // Extract ROOT element
-        var rootMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"ROOT\s*\(\s*'([^']+)'\s*\)", 
+        var rootMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"ROOT\s*\(\s*'([^']+)'\s*\)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (rootMatch.Success)
         {
             options.RootElement = rootMatch.Groups[1].Value;
         }
-        
+
         // Check for INCLUDE_NULL_VALUES
-        options.IncludeNullValues = System.Text.RegularExpressions.Regex.IsMatch(templateString, 
+        options.IncludeNullValues = System.Text.RegularExpressions.Regex.IsMatch(templateString,
             @"\bINCLUDE_NULL_VALUES\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         // Check for WITHOUT_ARRAY_WRAPPER
-        options.WithoutArrayWrapper = System.Text.RegularExpressions.Regex.IsMatch(templateString, 
+        options.WithoutArrayWrapper = System.Text.RegularExpressions.Regex.IsMatch(templateString,
             @"\bWITHOUT_ARRAY_WRAPPER\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         return options;
     }
 
@@ -510,54 +510,54 @@ public class QueryTemplateService
                 _ => "RAW"
             }
         };
-        
+
         if (string.IsNullOrWhiteSpace(templateString))
             return options;
-        
+
         // Extract ROOT element
-        var rootMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"ROOT\s*\(\s*'([^']+)'\s*\)", 
+        var rootMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"ROOT\s*\(\s*'([^']+)'\s*\)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (rootMatch.Success)
         {
             options.RootElement = rootMatch.Groups[1].Value;
         }
-        
+
         // Extract ROW element (for RAW and PATH)
-        var rowMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"(?:RAW|PATH)\s*\(\s*'([^']+)'\s*\)", 
+        var rowMatch = System.Text.RegularExpressions.Regex.Match(templateString, @"(?:RAW|PATH)\s*\(\s*'([^']+)'\s*\)",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (rowMatch.Success)
         {
             options.RowElement = rowMatch.Groups[1].Value;
         }
-        
+
         // Check for ELEMENTS mode
-        options.ElementsMode = System.Text.RegularExpressions.Regex.IsMatch(templateString, 
+        options.ElementsMode = System.Text.RegularExpressions.Regex.IsMatch(templateString,
             @"\bELEMENTS\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         // Check for BINARY BASE64
-        options.BinaryBase64 = System.Text.RegularExpressions.Regex.IsMatch(templateString, 
+        options.BinaryBase64 = System.Text.RegularExpressions.Regex.IsMatch(templateString,
             @"\bBINARY\s+BASE64\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        
+
         return options;
     }
 
     private async Task<(string output, int rowCount)> ApplyXmlTemplate(
-        IDbConnection connection, 
-        string query, 
+        IDbConnection connection,
+        string query,
         string template)
     {
         // Execute query and get data
         var results = await connection.QueryAsync(query);
         var resultsList = results.ToList();
-        
+
         // Build XML from template
         var xml = new StringBuilder();
         xml.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        
+
         // Parse template to extract structure
         // This is a simple implementation - could be enhanced with proper templating engine
         xml.AppendLine("<data>");
-        
+
         foreach (var row in resultsList)
         {
             xml.AppendLine("  <row>");
@@ -568,15 +568,15 @@ public class QueryTemplateService
             }
             xml.AppendLine("  </row>");
         }
-        
+
         xml.AppendLine("</data>");
-        
+
         return (xml.ToString(), resultsList.Count);
     }
 
     private async Task<(string output, int rowCount)> ApplyScribanTemplate(
-        IDbConnection connection, 
-        string query, 
+        IDbConnection connection,
+        string query,
         string template)
     {
         // Execute query and get data as List<Dictionary<string, object>>
@@ -585,58 +585,58 @@ public class QueryTemplateService
             .Select(row => (IDictionary<string, object>)row)
             .Select(dict => new Dictionary<string, object>(dict))
             .ToList();
-        
+
         Log.Information("Applying custom template '{TemplateName}' (ScribanTemplate)", "Custom");
-        
+
         // Use Scriban template engine
         var output = await _scribanEngine.TransformAsync(resultsList, template);
-        
+
         return (output, resultsList.Count);
     }
 
     private async Task<(string output, int rowCount)> ApplyJsonTemplate(
-        IDbConnection connection, 
-        string query, 
+        IDbConnection connection,
+        string query,
         string template)
     {
         // Execute query and get data
         var results = await connection.QueryAsync(query);
         var resultsList = results.ToList();
-        
+
         // Convert to JSON
-        var options = new JsonSerializerOptions 
-        { 
-            WriteIndented = true 
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true
         };
-        
+
         var json = JsonSerializer.Serialize(resultsList, options);
-        
+
         return (json, resultsList.Count);
     }
 
     private async Task<(string output, int rowCount)> ApplyXsltTransform(
-        IDbConnection connection, 
-        string query, 
+        IDbConnection connection,
+        string query,
         string xsltTemplate)
     {
         // Execute query as XML
         var (xmlData, rowCount) = await ExecuteForXmlQuery(
-            connection, 
-            query, 
-            QueryTemplateType.ForXmlAuto, 
+            connection,
+            query,
+            QueryTemplateType.ForXmlAuto,
             null);
-        
+
         // Apply XSLT transformation
         var xslt = new XslCompiledTransform();
         using var xsltReader = XmlReader.Create(new StringReader(xsltTemplate));
         xslt.Load(xsltReader);
-        
+
         using var xmlReader = XmlReader.Create(new StringReader(xmlData));
         var output = new StringBuilder();
         using var writer = XmlWriter.Create(output);
-        
+
         xslt.Transform(xmlReader, writer);
-        
+
         return (output.ToString(), rowCount);
     }
 

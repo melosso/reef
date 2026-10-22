@@ -115,14 +115,14 @@ public static class ConnectionsEndpoints
         try
         {
             var success = await service.DeleteAsync(id);
-            
+
             if (success)
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("Connection", id, "Deleted", username, (string?)null, null);
                 return Results.Ok();
             }
-            
+
             return Results.NotFound();
         }
         catch (Exception ex)

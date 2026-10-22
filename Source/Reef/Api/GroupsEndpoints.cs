@@ -68,7 +68,7 @@ public static class GroupsEndpoints
         try
         {
             var group = await service.GetByIdAsync(id);
-            
+
             if (group == null)
             {
                 return Results.NotFound();
@@ -202,7 +202,7 @@ public static class GroupsEndpoints
                 var username = context.User.Identity?.Name ?? "Unknown";
                 var changes = System.Text.Json.JsonSerializer.Serialize(request);
                 await auditService.LogAsync("ProfileGroup", id, "Updated", username, changes, context);
-                
+
                 return Results.Ok(new { message = "Group updated successfully" });
             }
 
@@ -240,7 +240,7 @@ public static class GroupsEndpoints
                 var username = context.User.Identity?.Name ?? "Unknown";
                 var changes = System.Text.Json.JsonSerializer.Serialize(request);
                 await auditService.LogAsync("ProfileGroup", id, "Moved", username, changes, context);
-                
+
                 return Results.Ok(new { message = "Group moved successfully" });
             }
 
@@ -275,7 +275,7 @@ public static class GroupsEndpoints
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("ProfileGroup", id, "Deleted", username, null, context);
-                
+
                 return Results.Ok(new { message = "Group deleted successfully" });
             }
 

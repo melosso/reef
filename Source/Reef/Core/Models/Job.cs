@@ -12,7 +12,7 @@ public class Job
     public string? ProfileType { get; set; }
     public int? DestinationId { get; set; } // Optional destination override
     public string? CustomActionJson { get; set; } // For custom job types
-    
+
     // Scheduling
     public ScheduleType ScheduleType { get; set; }
     public string? CronExpression { get; set; }
@@ -23,7 +23,7 @@ public class Job
     public TimeSpan? EndTime { get; set; }
     public string? WeekDays { get; set; } // Comma-separated day numbers (0=Monday, 6=Sunday) for weekly schedules
     public int? MonthDay { get; set; } // Day of month (1-31) for monthly schedules
-    
+
     // Job Configuration
     public int MaxRetries { get; set; } = 3;
     public int TimeoutMinutes { get; set; } = 60;
@@ -31,7 +31,7 @@ public class Job
     public bool AllowConcurrent { get; set; } = false;
     public string? DependsOnJobIds { get; set; } // Comma-separated job IDs
     public bool AutoPauseEnabled { get; set; } = true; // Enable auto-pause after 10 failures (opt-out)
-    
+
     // Status
     public bool IsEnabled { get; set; } = true;
     public JobStatus Status { get; set; } = JobStatus.Idle;
@@ -40,7 +40,7 @@ public class Job
     public DateTime? LastSuccessTime { get; set; }
     public DateTime? LastFailureTime { get; set; }
     public int ConsecutiveFailures { get; set; }
-    
+
     // Metadata
     public string Tags { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

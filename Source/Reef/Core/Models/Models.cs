@@ -138,14 +138,14 @@ public class Profile
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
     public DateTime? LastExecutedAt { get; set; }
-    
+
     // Delta Sync Configuration - Basic
     public bool DeltaSyncEnabled { get; set; } = false;
     public string? DeltaSyncReefIdColumn { get; set; }
     public string? DeltaSyncHashAlgorithm { get; set; } = "SHA256";
     public bool DeltaSyncTrackDeletes { get; set; } = false;
     public int? DeltaSyncRetentionDays { get; set; }
-    
+
     // Delta Sync Configuration - Edge Case Handling
     public string? DeltaSyncDuplicateStrategy { get; set; } = "Strict"; // Strict, Composite, Skip
     public string? DeltaSyncNullStrategy { get; set; } = "Strict"; // Strict, Skip, Generate
@@ -153,7 +153,7 @@ public class Profile
     public int? DeltaSyncNumericPrecision { get; set; } = 6; // Decimal places for floating point
     public bool DeltaSyncRemoveNonPrintable { get; set; } = false; // Strip non-printable chars
     public string? DeltaSyncReefIdNormalization { get; set; } = "Trim"; // Trim, Lowercase, RemoveWhitespace
-    
+
     // Advanced Output Options
     public bool ExcludeReefIdFromOutput { get; set; } = true; // Don't include ReefId column in exports (internal use only)
     public bool ExcludeSplitKeyFromOutput { get; set; } = false; // Don't include SplitKey column in exports (internal use only)
@@ -192,7 +192,7 @@ public class ProfileExecution
     public string? OutputMessage { get; set; } // Success messages like HTTP responses
     public long? ExecutionTimeMs { get; set; }
     public string? TriggeredBy { get; set; }
-    
+
     // Pre-Processing Phase Tracking
     public DateTime? PreProcessStartedAt { get; set; }
     public DateTime? PreProcessCompletedAt { get; set; }
@@ -224,7 +224,7 @@ public class ProfileExecution
     public int? DeltaSyncDeletedRows { get; set; }
     public int? DeltaSyncUnchangedRows { get; set; }
     public int? DeltaSyncTotalHashedRows { get; set; }
-    
+
     // Multi-Output Splitting Tracking
     public bool WasSplit { get; set; } = false; // Whether this execution used multi-output splitting
     public int? SplitCount { get; set; } // Total number of splits generated
@@ -266,13 +266,13 @@ public class ProfileExecutionSplit
 /// </summary>
 public class ProfileExecutionError
 {
-    public int      Id           { get; set; }
-    public int      ExecutionId  { get; set; }
-    public string   ErrorType    { get; set; } = "Unknown";
-    public string?  Phase        { get; set; }
-    public string?  Detail       { get; set; }  // e.g. recipient address
-    public string   ErrorMessage { get; set; } = "";
-    public DateTime OccurredAt   { get; set; }
+    public int Id { get; set; }
+    public int ExecutionId { get; set; }
+    public string ErrorType { get; set; } = "Unknown";
+    public string? Phase { get; set; }
+    public string? Detail { get; set; }  // e.g. recipient address
+    public string ErrorMessage { get; set; } = "";
+    public DateTime OccurredAt { get; set; }
 }
 
 /// <summary>
@@ -404,12 +404,12 @@ public class ProcessingParameter
     /// Parameter name (e.g., "@userId", "p_userId")
     /// </summary>
     public required string Name { get; set; }
-    
+
     /// <summary>
     /// Parameter value (can be literal or {placeholder} variable)
     /// </summary>
     public required string Value { get; set; }
-    
+
     /// <summary>
     /// SQL data type (e.g., "INT", "VARCHAR(50)", "DATETIME")
     /// Optional - used for explicit type casting
@@ -429,67 +429,67 @@ public class ProcessingContext
     /// Available as: {executionid}
     /// </summary>
     public int ExecutionId { get; set; }
-    
+
     /// <summary>
     /// Profile ID being executed
     /// Available as: {profileid}
     /// </summary>
     public int ProfileId { get; set; }
-    
+
     /// <summary>
     /// Number of rows returned by main query
     /// Available as: {rowcount}
     /// </summary>
     public int RowCount { get; set; }
-    
+
     /// <summary>
     /// Output file path (for Local destinations)
     /// Available as: {outputpath}
     /// </summary>
     public string? OutputPath { get; set; }
-    
+
     /// <summary>
     /// File size in bytes
     /// Available as: {filesizebytes}
     /// </summary>
     public long? FileSizeBytes { get; set; }
-    
+
     /// <summary>
     /// Main query execution time in milliseconds
     /// Available as: {executiontimems}
     /// </summary>
     public long ExecutionTimeMs { get; set; }
-    
+
     /// <summary>
     /// Output format (JSON, CSV, XML, etc.)
     /// Available as: {outputformat}
     /// </summary>
     public string OutputFormat { get; set; } = "JSON";
-    
+
     /// <summary>
     /// Who/what triggered the execution
     /// Available as: {triggeredby}
     /// </summary>
     public string? TriggeredBy { get; set; }
-    
+
     /// <summary>
     /// Execution start timestamp (ISO 8601 UTC)
     /// Available as: {startedat}
     /// </summary>
     public DateTime StartedAt { get; set; }
-    
+
     /// <summary>
     /// Execution completion timestamp (ISO 8601 UTC)
     /// Available as: {completedat}
     /// </summary>
     public DateTime? CompletedAt { get; set; }
-    
+
     /// <summary>
     /// Main query execution status (Success, Failed)
     /// Available as: {status}
     /// </summary>
     public string Status { get; set; } = "Running";
-    
+
     /// <summary>
     /// Error message from main query (if failed)
     /// Available as: {errormessage}

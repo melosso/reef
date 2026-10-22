@@ -25,58 +25,58 @@ public class JobScheduler : BackgroundService
     private readonly int _checkIntervalSeconds;
     private readonly int _maxConcurrentJobs;
     private readonly int _workerCount;
-    
+
     public JobScheduler(IServiceProvider serviceProvider, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
-        
+
         // Read configuration values with sensible defaults
         _checkIntervalSeconds = configuration.GetValue<int>("Reef:Jobs:CheckIntervalSeconds", 10);
         _maxConcurrentJobs = configuration.GetValue<int>("Reef:Jobs:MaxConcurrentJobs", 10);
-        
+
         // Validate configuration
         if (_checkIntervalSeconds < 5 || _checkIntervalSeconds > 300)
         {
             Log.Warning("Reef:Jobs:CheckIntervalSeconds ({Value}) out of recommended range (5-300 seconds), using default: 10", _checkIntervalSeconds);
             _checkIntervalSeconds = 10;
         }
-        
+
         if (_maxConcurrentJobs < 1 || _maxConcurrentJobs > 100)
         {
             Log.Warning("Reef:Jobs:MaxConcurrentJobs ({Value}) out of recommended range (1-100), using default: 10", _maxConcurrentJobs);
             _maxConcurrentJobs = 10;
         }
-        
+
         _queue = new JobQueue(_maxConcurrentJobs);
         _workerCount = Math.Max(2, _maxConcurrentJobs); // At least 2 workers, or match concurrency
-        
-        Log.Debug("JobScheduler initialized with {Workers} workers, {MaxConcurrent} max concurrent jobs, {Interval}s check interval", 
+
+        Log.Debug("JobScheduler initialized with {Workers} workers, {MaxConcurrent} max concurrent jobs, {Interval}s check interval",
             _workerCount, _maxConcurrentJobs, _checkIntervalSeconds);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         Log.Debug("Job Scheduler starting...");
-        
+
         // Startup: Fix any corrupted NextRunTime values
         await FixCorruptedJobsOnStartup();
-        
+
         // Wait a bit for other services to initialize
         await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
-        
+
         Log.Information("Job Scheduler running. " +
-                       "We'll be polling every {Interval} seconds, {Workers} workers, max {MaxConcurrent} concurrent", 
+                       "We'll be polling every {Interval} seconds, {Workers} workers, max {MaxConcurrent} concurrent",
                        _checkIntervalSeconds, _workerCount, _maxConcurrentJobs);
         Log.Information("");
-        
+
         // Start producer task (enqueues due jobs)
         var producerTask = Task.Run(async () => await ProducerLoopAsync(stoppingToken), stoppingToken);
-        
+
         // Start consumer workers (execute jobs from queue)
         var consumerTasks = Enumerable.Range(0, _workerCount)
             .Select(workerId => Task.Run(async () => await ConsumerWorkerAsync(workerId, stoppingToken), stoppingToken))
             .ToArray();
-        
+
         // Wait for cancellation
         try
         {
@@ -90,10 +90,10 @@ public class JobScheduler : BackgroundService
         {
             Log.Error(ex, "Unexpected error in Job Scheduler");
         }
-        
+
         // Graceful shutdown: cancel all running jobs
         await CancelAllRunningJobsAsync();
-        
+
         Log.Information("Job Scheduler stopped");
     }
 
@@ -103,7 +103,7 @@ public class JobScheduler : BackgroundService
     private async Task ProducerLoopAsync(CancellationToken cancellationToken)
     {
         Log.Debug("Producer loop started");
-        
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -118,7 +118,7 @@ public class JobScheduler : BackgroundService
             {
                 Log.Error(ex, "Error in producer loop");
             }
-            
+
             // Wait before next check
             try
             {
@@ -129,7 +129,7 @@ public class JobScheduler : BackgroundService
                 break;
             }
         }
-        
+
         Log.Debug("Producer loop stopped");
     }
 
@@ -139,7 +139,7 @@ public class JobScheduler : BackgroundService
     private async Task ConsumerWorkerAsync(int workerId, CancellationToken cancellationToken)
     {
         Log.Debug("Consumer worker {WorkerId} started", workerId);
-        
+
         while (!cancellationToken.IsCancellationRequested)
         {
             try
@@ -160,10 +160,10 @@ public class JobScheduler : BackgroundService
                     }
                     continue;
                 }
-                
-                Log.Debug("Worker {WorkerId} picked up job {JobId} ({JobName})", 
+
+                Log.Debug("Worker {WorkerId} picked up job {JobId} ({JobName})",
                     workerId, job.Id, job.Name);
-                
+
                 try
                 {
                     await ExecuteJobAsync(job, cancellationToken);
@@ -185,7 +185,7 @@ public class JobScheduler : BackgroundService
             catch (Exception ex)
             {
                 Log.Error(ex, "Unexpected error in consumer worker {WorkerId}", workerId);
-                
+
                 // Small delay to prevent tight error loops
                 try
                 {
@@ -197,7 +197,7 @@ public class JobScheduler : BackgroundService
                 }
             }
         }
-        
+
         Log.Debug("Consumer worker {WorkerId} stopped", workerId);
     }
 
@@ -208,32 +208,32 @@ public class JobScheduler : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
         var jobService = scope.ServiceProvider.GetRequiredService<JobService>();
-        
+
         // Get all due jobs from database
         var dueJobs = await jobService.GetDueJobsAsync();
-        
+
         if (!dueJobs.Any())
         {
             return;
         }
-        
+
         Log.Debug("Found {Count} due jobs to enqueue", dueJobs.Count());
-        
+
         foreach (var job in dueJobs)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
-            
+
             try
             {
                 // Enqueue will check for duplicates
                 var enqueued = await _queue.EnqueueAsync(job);
-                
+
                 if (enqueued)
                 {
-                    Log.Debug("Enqueued job {JobId} ({JobName}) - Priority: {Priority}", 
+                    Log.Debug("Enqueued job {JobId} ({JobName}) - Priority: {Priority}",
                         job.Id, job.Name, job.Priority);
                 }
             }
@@ -251,20 +251,20 @@ public class JobScheduler : BackgroundService
     {
         // Get or create execution lock for this job
         var executionLock = _executionLocks.GetOrAdd(job.Id, _ => new SemaphoreSlim(1, 1));
-        
+
         // Try to acquire lock (non-blocking)
         if (!await executionLock.WaitAsync(0, cancellationToken))
         {
             Log.Debug("Job {JobId} is already being processed by another worker, skipping", job.Id);
             return;
         }
-        
+
         try
         {
             using var scope = _serviceProvider.CreateScope();
             var jobService = scope.ServiceProvider.GetRequiredService<JobService>();
             var jobExecutor = scope.ServiceProvider.GetRequiredService<Reef.Api.JobExecutorService>();
-            
+
             // NOTE: Circuit breaker logic is handled in JobService.UpdateJobAfterFailure()
             // which checks ConsecutiveFailures against CircuitBreakerThreshold (10)
             // MaxRetries is for per-cycle retry attempts, not for disabling jobs
@@ -290,18 +290,18 @@ public class JobScheduler : BackgroundService
                 }
                 // AllowConcurrent jobs proceed even when not tracked (CTS won't be registered for this run)
             }
-            
-            Log.Information("Executing job {JobId} ({JobName}) - Type: {JobType}, Priority: {Priority}", 
+
+            Log.Information("Executing job {JobId} ({JobName}) - Type: {JobType}, Priority: {Priority}",
                 job.Id, job.Name, job.Type, job.Priority);
-            
+
             try
             {
                 // Execute the job (this is the actual work)
                 await jobExecutor.TriggerJobAsync(
-                    job, 
-                    ignoreDependencies: false, 
+                    job,
+                    ignoreDependencies: false,
                     parameters: null);
-                    
+
                 Log.Information("Job {JobId} ({JobName}) execution completed", job.Id, job.Name);
             }
             catch (Exception ex)
@@ -330,9 +330,9 @@ public class JobScheduler : BackgroundService
         {
             using var scope = _serviceProvider.CreateScope();
             var jobService = scope.ServiceProvider.GetRequiredService<JobService>();
-            
+
             await jobService.FixCorruptedNextRunTimesAsync();
-            
+
             Log.Debug("Startup cleanup completed");
         }
         catch (Exception ex)
@@ -347,7 +347,7 @@ public class JobScheduler : BackgroundService
     private async Task CancelAllRunningJobsAsync()
     {
         Log.Information("Cancelling {Count} running jobs...", _runningJobs.Count);
-        
+
         foreach (var (jobId, cts) in _runningJobs)
         {
             try
@@ -360,10 +360,10 @@ public class JobScheduler : BackgroundService
                 Log.Error(ex, "Error cancelling job {JobId}", jobId);
             }
         }
-        
+
         // Wait a bit for graceful shutdown
         await Task.Delay(TimeSpan.FromSeconds(2));
-        
+
         // Cleanup
         _runningJobs.Clear();
         _executionLocks.Clear();
@@ -388,10 +388,10 @@ public class JobScheduler : BackgroundService
             }
             catch { }
         }
-        
+
         _runningJobs.Clear();
         _executionLocks.Clear();
-        
+
         base.Dispose();
     }
 }

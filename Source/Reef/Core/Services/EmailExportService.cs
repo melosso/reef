@@ -299,11 +299,11 @@ public class EmailExportService
                 // Check if using hardcoded recipient or if all rows have same recipient
                 // If yes, send ONE email with ALL rows
                 // If no, send one email per row (different recipients)
-                
+
                 bool useHardcodedRecipient = profile.UseHardcodedRecipients;
                 bool allSameRecipient = true;
                 string? firstRecipient = null;
-                
+
                 if (!useHardcodedRecipient && queryResults.Count > 1)
                 {
                     firstRecipient = SafeGetValue(queryResults[0], profile.EmailRecipientsColumn ?? string.Empty)?.ToString();
@@ -317,20 +317,20 @@ public class EmailExportService
                         }
                     }
                 }
-                
+
                 if (useHardcodedRecipient || allSameRecipient)
                 {
                     // Send ALL rows in ONE email
                     Log.Information("Sending 1 email with {RowCount} rows from profile {ProfileId}",
                         queryResults.Count, profile.Id);
-                    
+
                     var result = await SendEmailBatchAsync(
                         profile,
                         emailConfig,
                         emailTemplate.Template,
                         queryResults,
                         attachmentConfig);
-                    
+
                     var recipient = useHardcodedRecipient
                         ? (profile.EmailRecipientsHardcoded ?? "unknown")
                         : (firstRecipient ?? "unknown");
@@ -385,35 +385,35 @@ public class EmailExportService
                         var recipient = SafeGetValue(row, profile.EmailRecipientsColumn ?? string.Empty)?.ToString() ?? "unknown";
                         var splitKey = MaskEmailForLog(recipient);
 
-                    if (result.Success)
-                    {
-                        successCount++;
-                        splits.Add(new ProfileExecutionSplit
+                        if (result.Success)
                         {
-                            SplitKey = splitKey,
-                            Status = "Success",
-                            RowCount = 1,
-                            CompletedAt = DateTime.UtcNow
-                        });
-                    }
-                    else
-                    {
-                        failureCount++;
-                        if (!string.IsNullOrEmpty(result.Error))
-                        {
-                            errors.Add(result.Error);
+                            successCount++;
+                            splits.Add(new ProfileExecutionSplit
+                            {
+                                SplitKey = splitKey,
+                                Status = "Success",
+                                RowCount = 1,
+                                CompletedAt = DateTime.UtcNow
+                            });
                         }
-                        splits.Add(new ProfileExecutionSplit
+                        else
                         {
-                            SplitKey = splitKey,
-                            Status = "Failed",
-                            RowCount = 1,
-                            ErrorMessage = result.Error,
-                            CompletedAt = DateTime.UtcNow
-                        });
-                        failures.Add((recipient, result.Error ?? "Unknown error"));
+                            failureCount++;
+                            if (!string.IsNullOrEmpty(result.Error))
+                            {
+                                errors.Add(result.Error);
+                            }
+                            splits.Add(new ProfileExecutionSplit
+                            {
+                                SplitKey = splitKey,
+                                Status = "Failed",
+                                RowCount = 1,
+                                ErrorMessage = result.Error,
+                                CompletedAt = DateTime.UtcNow
+                            });
+                            failures.Add((recipient, result.Error ?? "Unknown error"));
+                        }
                     }
-                }
                 }
             }
 
@@ -539,8 +539,8 @@ public class EmailExportService
             // Don't split HTML documents if:
             // 1. Using DocumentTemplate attachments (attachment contains all data, email is just notification)
             // 2. EmailGroupBySplitKey is enabled (want to keep all rows in one email)
-            bool hasDocumentTemplateAttachment = attachmentConfig != null && 
-                                                  attachmentConfig.Enabled && 
+            bool hasDocumentTemplateAttachment = attachmentConfig != null &&
+                                                  attachmentConfig.Enabled &&
                                                   attachmentConfig.Mode == "DocumentTemplate";
 
             bool preventSplit = hasDocumentTemplateAttachment || profile.EmailGroupBySplitKey;
@@ -1655,35 +1655,35 @@ public class EmailExportService
             {
                 // Original behavior: Render each row as an email
                 foreach (var row in queryResults)
-            {
-                try
                 {
-                    // Extract recipients
-                    var recipients = profile.UseHardcodedRecipients
-                        ? profile.EmailRecipientsHardcoded
-                        : (string.IsNullOrEmpty(profile.EmailRecipientsColumn) ? null : SafeGetValue(row, profile.EmailRecipientsColumn)?.ToString());
-
-                    if (string.IsNullOrEmpty(recipients))
+                    try
                     {
-                        Log.Warning("No recipients found for row in profile {ProfileId}", profile.Id);
-                        continue;
-                    }
+                        // Extract recipients
+                        var recipients = profile.UseHardcodedRecipients
+                            ? profile.EmailRecipientsHardcoded
+                            : (string.IsNullOrEmpty(profile.EmailRecipientsColumn) ? null : SafeGetValue(row, profile.EmailRecipientsColumn)?.ToString());
 
-                    // Extract CC addresses
-                    var ccAddresses = profile.UseHardcodedCc
-                        ? profile.EmailCcHardcoded
-                        : (string.IsNullOrEmpty(profile.EmailCcColumn) ? null : SafeGetValue(row, profile.EmailCcColumn)?.ToString());
-
-                    // Extract subject and parse if hardcoded (may contain Scriban variables)
-                    string subject;
-                    if (profile.UseHardcodedSubject && !string.IsNullOrEmpty(profile.EmailSubjectHardcoded))
-                    {
-                        try
+                        if (string.IsNullOrEmpty(recipients))
                         {
-                            // Create system context with profile metadata and current date/time
-                            var now = DateTime.Now;
+                            Log.Warning("No recipients found for row in profile {ProfileId}", profile.Id);
+                            continue;
+                        }
 
-                            var systemContext = new Dictionary<string, object>
+                        // Extract CC addresses
+                        var ccAddresses = profile.UseHardcodedCc
+                            ? profile.EmailCcHardcoded
+                            : (string.IsNullOrEmpty(profile.EmailCcColumn) ? null : SafeGetValue(row, profile.EmailCcColumn)?.ToString());
+
+                        // Extract subject and parse if hardcoded (may contain Scriban variables)
+                        string subject;
+                        if (profile.UseHardcodedSubject && !string.IsNullOrEmpty(profile.EmailSubjectHardcoded))
+                        {
+                            try
+                            {
+                                // Create system context with profile metadata and current date/time
+                                var now = DateTime.Now;
+
+                                var systemContext = new Dictionary<string, object>
                             {
                                 { "system", new Dictionary<string, object>
                                 {
@@ -1698,97 +1698,97 @@ public class EmailExportService
                                 }}
                             };
 
-                            subject = await _templateEngine.TransformAsync(new List<Dictionary<string, object>> { row }, profile.EmailSubjectHardcoded, systemContext);
+                                subject = await _templateEngine.TransformAsync(new List<Dictionary<string, object>> { row }, profile.EmailSubjectHardcoded, systemContext);
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning("Failed to parse hardcoded subject template in approval flow (per-row), using raw value: {Error}", ex.Message);
+                                subject = profile.EmailSubjectHardcoded;
+                            }
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            Log.Warning("Failed to parse hardcoded subject template in approval flow (per-row), using raw value: {Error}", ex.Message);
-                            subject = profile.EmailSubjectHardcoded;
+                            subject = string.IsNullOrEmpty(profile.EmailSubjectColumn)
+                                ? "[No Subject]"
+                                : SafeGetValue(row, profile.EmailSubjectColumn)?.ToString() ?? "[No Subject]";
                         }
-                    }
-                    else
-                    {
-                        subject = string.IsNullOrEmpty(profile.EmailSubjectColumn)
-                            ? "[No Subject]"
-                            : SafeGetValue(row, profile.EmailSubjectColumn)?.ToString() ?? "[No Subject]";
-                    }
 
-                    // Render HTML body using Scriban template
-                    var htmlBody = await _templateEngine.TransformAsync(
-                        new List<Dictionary<string, object>> { row },
-                        emailTemplate.Template);
-
-                    // Generate document template attachments if configured (for approval flow)
-                    AttachmentConfig? rowAttachmentConfig = null;
-                    if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
-                    {
-                        // Clone the attachment config for this row
-                        rowAttachmentConfig = new AttachmentConfig
-                        {
-                            Enabled = attachmentConfig.Enabled,
-                            Mode = attachmentConfig.Mode,
-                            DocumentTemplate = attachmentConfig.DocumentTemplate,
-                            Deduplication = attachmentConfig.Deduplication,
-                            Failsafe = attachmentConfig.Failsafe,
-                            MaxAttachmentsPerEmail = attachmentConfig.MaxAttachmentsPerEmail,
-                            MissingFileStrategy = attachmentConfig.MissingFileStrategy
-                        };
-
-                        var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(
+                        // Render HTML body using Scriban template
+                        var htmlBody = await _templateEngine.TransformAsync(
                             new List<Dictionary<string, object>> { row },
-                            rowAttachmentConfig,
-                            profile);
-                        rowAttachmentConfig.GeneratedAttachments = preGeneratedAttachments;
+                            emailTemplate.Template);
 
-                        // Check failsafe: if enabled and no attachments were generated, skip this row
-                        if (rowAttachmentConfig.Failsafe == "RequireAttachments" && preGeneratedAttachments.Count == 0)
+                        // Generate document template attachments if configured (for approval flow)
+                        AttachmentConfig? rowAttachmentConfig = null;
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
                         {
-                            Log.Warning("Failsafe triggered: No attachments were generated for row, skipping email creation. Profile: {ProfileName} ({ProfileId})",
-                                profile.Name, profile.Id);
-                            continue; // Skip this row's email
+                            // Clone the attachment config for this row
+                            rowAttachmentConfig = new AttachmentConfig
+                            {
+                                Enabled = attachmentConfig.Enabled,
+                                Mode = attachmentConfig.Mode,
+                                DocumentTemplate = attachmentConfig.DocumentTemplate,
+                                Deduplication = attachmentConfig.Deduplication,
+                                Failsafe = attachmentConfig.Failsafe,
+                                MaxAttachmentsPerEmail = attachmentConfig.MaxAttachmentsPerEmail,
+                                MissingFileStrategy = attachmentConfig.MissingFileStrategy
+                            };
+
+                            var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(
+                                new List<Dictionary<string, object>> { row },
+                                rowAttachmentConfig,
+                                profile);
+                            rowAttachmentConfig.GeneratedAttachments = preGeneratedAttachments;
+
+                            // Check failsafe: if enabled and no attachments were generated, skip this row
+                            if (rowAttachmentConfig.Failsafe == "RequireAttachments" && preGeneratedAttachments.Count == 0)
+                            {
+                                Log.Warning("Failsafe triggered: No attachments were generated for row, skipping email creation. Profile: {ProfileName} ({ProfileId})",
+                                    profile.Name, profile.Id);
+                                continue; // Skip this row's email
+                            }
                         }
-                    }
 
-                    // Serialize attachment config (now includes pre-generated attachments if applicable)
-                    var attachmentConfigJson = rowAttachmentConfig != null
-                        ? JsonSerializer.Serialize(rowAttachmentConfig)
-                        : (attachmentConfig != null ? JsonSerializer.Serialize(attachmentConfig) : null);
+                        // Serialize attachment config (now includes pre-generated attachments if applicable)
+                        var attachmentConfigJson = rowAttachmentConfig != null
+                            ? JsonSerializer.Serialize(rowAttachmentConfig)
+                            : (attachmentConfig != null ? JsonSerializer.Serialize(attachmentConfig) : null);
 
-                    // Extract ReefId for delta sync tracking
-                    string? reefId = null;
-                    string? reefIdNormalized = null;
-                    if (!string.IsNullOrEmpty(profile.DeltaSyncReefIdColumn))
-                    {
-                        var rawReefId = SafeGetValue(row, profile.DeltaSyncReefIdColumn);
-                        if (rawReefId != null)
+                        // Extract ReefId for delta sync tracking
+                        string? reefId = null;
+                        string? reefIdNormalized = null;
+                        if (!string.IsNullOrEmpty(profile.DeltaSyncReefIdColumn))
                         {
-                            reefId = rawReefId.ToString();
-                            // Normalize ReefId for hash lookup (must match ProcessDeltaAsync normalization)
-                            reefIdNormalized = NormalizeReefId(rawReefId, profile.DeltaSyncReefIdNormalization ?? "Trim");
+                            var rawReefId = SafeGetValue(row, profile.DeltaSyncReefIdColumn);
+                            if (rawReefId != null)
+                            {
+                                reefId = rawReefId.ToString();
+                                // Normalize ReefId for hash lookup (must match ProcessDeltaAsync normalization)
+                                reefIdNormalized = NormalizeReefId(rawReefId, profile.DeltaSyncReefIdNormalization ?? "Trim");
+                            }
                         }
-                    }
 
-                    // Get delta sync hash for this reef_id if available
-                    // Use normalized ReefId for lookup since NewHashState uses normalized keys
-                    string? deltaSyncHash = null;
-                    if (!string.IsNullOrEmpty(reefIdNormalized) && deltaSyncHashes != null)
+                        // Get delta sync hash for this reef_id if available
+                        // Use normalized ReefId for lookup since NewHashState uses normalized keys
+                        string? deltaSyncHash = null;
+                        if (!string.IsNullOrEmpty(reefIdNormalized) && deltaSyncHashes != null)
+                        {
+                            deltaSyncHashes.TryGetValue(reefIdNormalized, out deltaSyncHash);
+                        }
+
+                        // Store the NORMALIZED ReefId (not raw) for consistency with DeltaSyncState table
+                        renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefIdNormalized, deltaSyncHash));
+
+                        Log.Debug("Rendered email for approval with subject: {Subject}, ReefId: {ReefId}, Hash: {HasHash}",
+                            subject, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
+                    }
+                    catch (Exception ex)
                     {
-                        deltaSyncHashes.TryGetValue(reefIdNormalized, out deltaSyncHash);
+                        var errorMsg = $"Failed to render email: {ex.Message}";
+                        errors.Add(errorMsg);
+                        Log.Error("{Message}", errorMsg);
                     }
-
-                    // Store the NORMALIZED ReefId (not raw) for consistency with DeltaSyncState table
-                    renderedEmails.Add((recipients, subject, htmlBody, ccAddresses, attachmentConfigJson, reefIdNormalized, deltaSyncHash));
-
-                    Log.Debug("Rendered email for approval with subject: {Subject}, ReefId: {ReefId}, Hash: {HasHash}", 
-                        subject, reefId ?? "(none)", deltaSyncHash != null ? "yes" : "no");
                 }
-                catch (Exception ex)
-                {
-                    var errorMsg = $"Failed to render email: {ex.Message}";
-                    errors.Add(errorMsg);
-                    Log.Error("{Message}", errorMsg);
-                }
-            }
             }
 
             return (renderedEmails, errors);

@@ -259,7 +259,7 @@ public static class WebhooksEndpoints
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("WebhookTrigger", id, "Deleted", username, null, context);
-                
+
                 return Results.Ok(new { message = "Webhook deleted successfully" });
             }
 
@@ -319,7 +319,7 @@ public static class WebhooksEndpoints
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("WebhookTrigger", id, "Enabled", username, null, context);
-                
+
                 return Results.Ok(new { message = "Webhook enabled successfully" });
             }
 
@@ -349,7 +349,7 @@ public static class WebhooksEndpoints
             {
                 var username = context.User.Identity?.Name ?? "Unknown";
                 await auditService.LogAsync("WebhookTrigger", id, "Disabled", username, null, context);
-                
+
                 return Results.Ok(new { message = "Webhook disabled successfully" });
             }
 
@@ -457,11 +457,11 @@ public static class WebhooksEndpoints
             var parameters = request?.Parameters ?? new Dictionary<string, string>();
 
             object result;
-            
+
             if (webhook.ProfileId.HasValue)
             {
                 // Execute profile
-                Log.Information("Triggering profile {ProfileId} via webhook {WebhookId} and token {Token}", 
+                Log.Information("Triggering profile {ProfileId} via webhook {WebhookId} and token {Token}",
                     webhook.ProfileId.Value, webhook.Id, token);
 
                 var (executionId, success, outputPath, errorMessage) = await executionService.ExecuteProfileAsync(
@@ -482,8 +482,8 @@ public static class WebhooksEndpoints
                 {
                     executionId,
                     status = success ? "Started" : "Failed",
-                    message = success 
-                        ? $"Profile execution started with ID {executionId}" 
+                    message = success
+                        ? $"Profile execution started with ID {executionId}"
                         : $"Profile execution failed: {errorMessage}",
                     errorMessage = success ? null : errorMessage
                 };

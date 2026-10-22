@@ -169,7 +169,7 @@ public class SftpDestination : IDestination
 
             // Create SFTP client and upload
             using var client = new Renci.SshNet.SftpClient(connectionInfo);
-            
+
             await Task.Run(() =>
             {
                 client.Connect();
@@ -187,7 +187,7 @@ public class SftpDestination : IDestination
                     using var stream = new MemoryStream(data);
                     client.UploadFile(stream, fullPath, true);
 
-                    Log.Information("Successfully uploaded {Filename} to SFTP server {Host}", 
+                    Log.Information("Successfully uploaded {Filename} to SFTP server {Host}",
                         filename, host);
                 }
                 finally

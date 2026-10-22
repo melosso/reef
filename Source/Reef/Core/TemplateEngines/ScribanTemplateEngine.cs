@@ -16,7 +16,7 @@ public class ScribanTemplateEngine : ITemplateEngine
 {
     private static readonly JsonSerializerOptions PrettifyOptions = new() { WriteIndented = true };
     private readonly IConfiguration _configuration;
-    
+
     public string EngineName => "Scriban";
 
     public ScribanTemplateEngine(IConfiguration configuration)
@@ -35,16 +35,16 @@ public class ScribanTemplateEngine : ITemplateEngine
         try
         {
             Log.Debug("Transforming {RowCount} rows using Scriban template", data.Count);
-            
+
             //Log.Debug("Template content (first 200 chars): {Template}", 
             //    template.Length > 200 ? template.Substring(0, 200) + "..." : template);
-            
+
             // Log first row keys if any data exists
             if (data.Any())
             {
                 var firstRowKeys = string.Join(", ", data[0].Keys);
                 Log.Debug("First row has {KeyCount} keys: {Keys}", data[0].Count, firstRowKeys);
-                
+
                 // Log a sample of values
                 // var sampleData = data[0].Take(5).Select(kvp => $"{kvp.Key}={kvp.Value ?? "(null)"}");
                 // Log.Debug("Sample data: {SampleData}", string.Join(", ", sampleData));
@@ -85,7 +85,7 @@ public class ScribanTemplateEngine : ITemplateEngine
                 {
                     rowObject[kvp.Key] = kvp.Value;
                 }
-                
+
                 // DIAGNOSTIC: Verify the ScriptObject actually has the keys
                 // if (scriptData.Count == 0) // Only log first row
                 // {
@@ -96,7 +96,7 @@ public class ScribanTemplateEngine : ITemplateEngine
                 //     Log.Debug("  TryGetValue('ItemCode'): {HasValue}, Value={Value}", hasItemCode, testValue);
                 //     Log.Debug("  Direct indexer rowObject['ItemCode']: {Value}", rowObject["ItemCode"]);
                 // }
-                
+
                 scriptData.Add(rowObject);
             }
 
@@ -136,7 +136,7 @@ public class ScribanTemplateEngine : ITemplateEngine
             // Use a safety multiplier: rows × columns × reasonable nesting factor (100)
             var columnCount = cleanData.Count > 0 ? cleanData[0].Count : 1;
             var dynamicLoopLimit = Math.Max(10000, cleanData.Count * columnCount * 100);
-            Log.Debug("Setting dynamic loop limit to {LoopLimit} for {RowCount} rows with {ColumnCount} columns", 
+            Log.Debug("Setting dynamic loop limit to {LoopLimit} for {RowCount} rows with {ColumnCount} columns",
                 dynamicLoopLimit, cleanData.Count, columnCount);
 
             var templateContext = new TemplateContext
@@ -149,9 +149,9 @@ public class ScribanTemplateEngine : ITemplateEngine
                 RecursiveLimit = 100, // Protect against infinite recursion
                 MemberRenamer = StandardMemberRenamer.Default // Convert CamelCase to snake_case for .NET objects (safe - only affects methods, not ScriptObject keys)
             };
-            
+
             templateContext.PushGlobal(scriptObject);
-            
+
             // Import all Scriban built-in functions
             templateContext.PushGlobal(templateContext.BuiltinObject);
 
@@ -169,9 +169,9 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
 
                     // Log.Debug("Template Test:\n{Output}", testOutput);
                 }
-                
+
                 output = await scribanTemplate.RenderAsync(templateContext);
-                
+
                 // Log.Debug ("Template rendered output (first 500 chars): {Output}", 
                 //    output.Length > 500 ? output.Substring(0, 500) + "..." : output);
             }
@@ -185,10 +185,10 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
                     $"Template rendering failed: {renderEx.Message}. " +
                     $"Check that template references match query columns.", renderEx);
             }
-            
+
             // Apply prettification if enabled in configuration
             output = PrettifyOutput(output);
-            
+
             return output;
         }
         catch (Exception ex)
@@ -206,9 +206,9 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
         try
         {
             var trimmedOutput = output.TrimStart();
-            
+
             // Detect XML
-            if (trimmedOutput.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase) || 
+            if (trimmedOutput.StartsWith("<?xml", StringComparison.OrdinalIgnoreCase) ||
                 trimmedOutput.StartsWith("<"))
             {
                 var prettifyXml = _configuration.GetValue<bool>("Reef:OutputFormatting:PrettifyXml", true);
@@ -228,7 +228,7 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
                     return PrettifyJson(output, indentSize);
                 }
             }
-            
+
             return output;
         }
         catch (Exception ex)
@@ -256,8 +256,8 @@ TEST Loop Type: {% for row in data limit:1 %}{{ row | object.typeof }}{% endfor 
             foreach (var node in whitespaceNodes)
             {
                 node.Remove();
-            }           
-            
+            }
+
             // Configure XML writer settings
             var settings = new XmlWriterSettings
             {
@@ -464,13 +464,13 @@ public class TemplateHelpers : ScriptObject
     {
         if (!HasValue(value)) return string.Empty;
         var str = value?.ToString() ?? string.Empty;
-        
+
         // If contains comma, quote, or newline, wrap in quotes and escape inner quotes
         if (str.Contains(',') || str.Contains('"') || str.Contains('\n') || str.Contains('\r'))
         {
             return $"\"{str.Replace("\"", "\"\"")}\"";
         }
-        
+
         return str;
     }
 

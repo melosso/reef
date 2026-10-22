@@ -26,7 +26,7 @@ public class DeltaSyncService
     /// Calculate hash for a single row
     /// </summary>
     public async Task<string> CalculateRowHashAsync(
-        Dictionary<string, object> row, 
+        Dictionary<string, object> row,
         string reefIdColumn,
         DeltaSyncConfig config)
     {
@@ -90,13 +90,13 @@ public class DeltaSyncService
         {
             var reefId = NormalizeReefId(row[config.ReefIdColumn], config.ReefIdNormalization);
             var hash = await CalculateRowHashAsync(row, config.ReefIdColumn, config);
-            
+
             currentHashes[reefId] = hash;
             result.NewHashState[reefId] = hash;
 
             bool foundInPrevious = previousHashes.ContainsKey(reefId);
             string? previousHash = foundInPrevious ? previousHashes[reefId] : null;
-            
+
             Log.Information("Delta sync row: ReefId='{ReefId}', CurrentHash='{CurrentHash}', FoundInPrevious={Found}, PreviousHash='{PreviousHash}'",
                 reefId, hash?.Substring(0, 8) + "...", foundInPrevious, previousHash?.Substring(0, 8) + "...");
 
@@ -126,10 +126,10 @@ public class DeltaSyncService
         // Hashes should only be committed AFTER successful transformation and destination write
         // This prevents marking rows as exported when processing fails
         // The ExecutionService will call CommitDeltaSyncAsync() after success
-        
+
         Log.Debug(
             "Delta sync for profile {ProfileId} prepared: {New} new, {Changed} changed, {Deleted} deleted, {Unchanged} unchanged (hashes NOT committed yet)",
-            profileId, result.NewRows.Count, result.ChangedRows.Count, 
+            profileId, result.NewRows.Count, result.ChangedRows.Count,
             result.DeletedReefIds.Count, result.UnchangedRows.Count);
 
         return result;
@@ -144,7 +144,7 @@ public class DeltaSyncService
         int executionId,
         DeltaSyncResult deltaSyncResult)
     {
-        Log.Debug("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}, StateCount={StateCount}", 
+        Log.Debug("Delta sync: Committing state for profile {ProfileId}, execution {ExecutionId}, StateCount={StateCount}",
             profileId, executionId, deltaSyncResult.NewHashState.Count);
 
         // Update hash state for all current rows
@@ -165,7 +165,7 @@ public class DeltaSyncService
     public async Task<Dictionary<string, string>> GetPreviousHashStateAsync(int profileId)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var rows = await db.QueryAsync<(string ReefId, string RowHash)>(
             @"SELECT ReefId, RowHash 
               FROM DeltaSyncState 
@@ -185,21 +185,21 @@ public class DeltaSyncService
     {
         using var db = new SqliteConnection(_connectionString);
         await db.OpenAsync();
-        
+
         Log.Debug("UpdateHashStateAsync: Saving {Count} hash entries for profile {ProfileId}, execution {ExecutionId}",
             newHashState.Count, profileId, executionId);
-        
+
         using var transaction = await db.BeginTransactionAsync();
         try
         {
             // Process in batches for large datasets
             const int batchSize = 1000;
             var entries = newHashState.ToList();
-            
+
             for (int i = 0; i < entries.Count; i += batchSize)
             {
                 var batch = entries.Skip(i).Take(batchSize).ToList();
-                
+
                 foreach (var (reefId, hash) in batch)
                 {
                     // Check if row exists
@@ -257,7 +257,7 @@ public class DeltaSyncService
         IEnumerable<string> deletedReefIds)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         foreach (var reefId in deletedReefIds)
         {
             await db.ExecuteAsync(
@@ -276,7 +276,7 @@ public class DeltaSyncService
     public async Task ResetDeltaSyncStateAsync(int profileId)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         await db.ExecuteAsync(
             "DELETE FROM DeltaSyncState WHERE ProfileId = @ProfileId",
             new { ProfileId = profileId });
@@ -290,14 +290,14 @@ public class DeltaSyncService
     public async Task<int> ResetDeltaSyncRowsAsync(int profileId, List<string> reefIds)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var deleted = await db.ExecuteAsync(
             "DELETE FROM DeltaSyncState WHERE ProfileId = @ProfileId AND ReefId IN @ReefIds",
             new { ProfileId = profileId, ReefIds = reefIds });
 
-        Log.Information("Reset delta sync state for {Count} rows in profile {ProfileId}", 
+        Log.Information("Reset delta sync state for {Count} rows in profile {ProfileId}",
             deleted, profileId);
-        
+
         return deleted;
     }
 
@@ -305,11 +305,11 @@ public class DeltaSyncService
     /// Reset delta sync state by criteria
     /// </summary>
     public async Task<int> ResetDeltaSyncByCriteriaAsync(
-        int profileId, 
+        int profileId,
         DeltaSyncResetCriteria criteria)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var sql = "DELETE FROM DeltaSyncState WHERE ProfileId = @ProfileId";
         var parameters = new DynamicParameters();
         parameters.Add("ProfileId", profileId);
@@ -333,7 +333,7 @@ public class DeltaSyncService
         }
 
         var deleted = await db.ExecuteAsync(sql, parameters);
-        
+
         Log.Information("Reset delta sync state for {Count} rows matching criteria in profile {ProfileId}",
             deleted, profileId);
 
@@ -415,9 +415,9 @@ public class DeltaSyncService
     public async Task CleanupOldStateAsync(int profileId, int retentionDays)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
-        
+
         var deleted = await db.ExecuteAsync(
             @"DELETE FROM DeltaSyncState 
               WHERE ProfileId = @ProfileId 
@@ -427,7 +427,7 @@ public class DeltaSyncService
 
         if (deleted > 0)
         {
-            Log.Information("Cleaned up {Count} old delta sync records for profile {ProfileId}", 
+            Log.Information("Cleaned up {Count} old delta sync records for profile {ProfileId}",
                 deleted, profileId);
         }
     }
@@ -438,7 +438,7 @@ public class DeltaSyncService
     public async Task<DeltaSyncStats> GetGlobalStatsAsync()
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var stats = await db.QueryFirstOrDefaultAsync<DeltaSyncStats>(@"
             SELECT 
                 (SELECT COUNT(DISTINCT ProfileId) FROM DeltaSyncState) AS ProfilesWithDeltaSync,
@@ -455,7 +455,7 @@ public class DeltaSyncService
     public async Task<ProfileDeltaSyncStats> GetProfileStatsAsync(int profileId)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         var stats = await db.QueryFirstOrDefaultAsync<ProfileDeltaSyncStats>(@"
             SELECT 
                 COUNT(CASE WHEN IsDeleted = 0 THEN 1 END) AS ActiveRows,
@@ -595,7 +595,7 @@ public class DeltaSyncService
             if (config.DuplicateStrategy == "Strict")
             {
                 var error = $"Delta sync failed: Duplicate ReefId values found: {string.Join(", ", duplicates.Take(5))}";
-                Log.Error("Duplicate ReefId values in profile {ProfileId}: {Duplicates}", 
+                Log.Error("Duplicate ReefId values in profile {ProfileId}: {Duplicates}",
                     profileId, string.Join(", ", duplicates));
                 throw new InvalidOperationException(error);
             }
@@ -604,7 +604,7 @@ public class DeltaSyncService
                 Log.Warning("Skipping duplicate ReefId values in profile {ProfileId}", profileId);
                 // Keep only first occurrence
                 var seen = new HashSet<string>();
-                rows = rows.Where(r => 
+                rows = rows.Where(r =>
                 {
                     var reefId = NormalizeReefId(r[config.ReefIdColumn], config.ReefIdNormalization);
                     return seen.Add(reefId);
@@ -622,20 +622,20 @@ public class DeltaSyncService
             if (config.NullStrategy == "Strict")
             {
                 var error = $"Delta sync failed: {rowsWithNullReefId.Count} rows have NULL ReefId values";
-                Log.Error("NULL ReefId values found in profile {ProfileId}, count: {Count}", 
+                Log.Error("NULL ReefId values found in profile {ProfileId}, count: {Count}",
                     profileId, rowsWithNullReefId.Count);
                 throw new InvalidOperationException(error);
             }
             else if (config.NullStrategy == "Skip")
             {
-                Log.Warning("Skipping {Count} rows with NULL ReefId in profile {ProfileId}", 
+                Log.Warning("Skipping {Count} rows with NULL ReefId in profile {ProfileId}",
                     rowsWithNullReefId.Count, profileId);
-                rows = rows.Where(r => r[config.ReefIdColumn] != null && 
+                rows = rows.Where(r => r[config.ReefIdColumn] != null &&
                                        r[config.ReefIdColumn] != DBNull.Value).ToList();
             }
             else if (config.NullStrategy == "Generate")
             {
-                Log.Warning("Generating synthetic ReefIds for {Count} NULL values in profile {ProfileId}", 
+                Log.Warning("Generating synthetic ReefIds for {Count} NULL values in profile {ProfileId}",
                     rowsWithNullReefId.Count, profileId);
                 foreach (var row in rowsWithNullReefId)
                 {
@@ -650,7 +650,7 @@ public class DeltaSyncService
     private async Task DetectSchemaChangeAsync(int profileId, List<string> currentSchema, bool resetOnChange)
     {
         using var db = new SqliteConnection(_connectionString);
-        
+
         // Get previous schema if exists
         var previousSchemaJson = await db.ExecuteScalarAsync<string>(
             "SELECT LastSeenAt FROM DeltaSyncState WHERE ProfileId = @ProfileId LIMIT 1",

@@ -604,8 +604,9 @@ public class AdminService
                       DeletedBy = @DeletedBy,
                       IsActive = 0
                   WHERE Id = @Id AND IsDeleted = 0",
-                new { 
-                    Id = userId, 
+                new
+                {
+                    Id = userId,
                     DeletedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
                     DeletedBy = deletedBy
                 });
@@ -636,7 +637,7 @@ public class AdminService
 
             var keys = await conn.QueryAsync<ApiKey>(
                 "SELECT * FROM ApiKeys ORDER BY CreatedAt DESC");
-            
+
             return keys;
         }
         catch (Exception ex)
@@ -730,7 +731,7 @@ public class AdminService
         var random = new Random();
         var randomPart = new string(Enumerable.Repeat(chars, 32)
             .Select(s => s[random.Next(s.Length)]).ToArray());
-        
+
         return $"reef_live_{randomPart}";
     }
 
@@ -756,7 +757,7 @@ public class AdminService
         var word1 = words[random.Next(words.Length)];
         var word2 = words[random.Next(words.Length)];
         var word3 = words[random.Next(words.Length)];
-        
+
         return $"{word1}_{word2}_{word3}";
     }
 
@@ -769,7 +770,7 @@ public class AdminService
         try
         {
             var dbPath = new SqliteConnectionStringBuilder(_connectionString).DataSource;
-            
+
             if (string.IsNullOrEmpty(dbPath) || !File.Exists(dbPath))
             {
                 Log.Warning("Database file not found at {DbPath}", dbPath);
@@ -777,19 +778,19 @@ public class AdminService
             }
 
             Log.Warning("DANGER: Resetting database at {DbPath}", dbPath);
-            
+
             // Close any existing connections
             SqliteConnection.ClearAllPools();
-            
+
             // Delete the database file
             File.Delete(dbPath);
             Log.Information("Database file deleted successfully");
-            
+
             // Recreate the database
             var dbInitializer = new DatabaseInitializer(_connectionString, _encryptionService);
             await dbInitializer.InitializeAsync();
             await dbInitializer.SeedSampleDataAsync();
-            
+
             Log.Information("Database reset and reseeded successfully");
             return true;
         }

@@ -10,21 +10,21 @@ public class HtmlTableParser
     public static List<TableData> ParseTables(string html)
     {
         var tables = new List<TableData>();
-        
+
         var doc = new HtmlDocument();
         doc.LoadHtml(html);
-        
+
         var tableNodes = doc.DocumentNode.SelectNodes("//table");
         if (tableNodes == null) return tables;
-        
+
         foreach (var tableNode in tableNodes)
         {
             var tableData = new TableData();
-            
+
             // Parse header row (thead > tr > th or first tr with th)
-            var headerRow = tableNode.SelectSingleNode(".//thead/tr") ?? 
+            var headerRow = tableNode.SelectSingleNode(".//thead/tr") ??
                            tableNode.SelectSingleNode(".//tr[th]");
-            
+
             if (headerRow != null)
             {
                 var headerCells = headerRow.SelectNodes(".//th");
@@ -34,11 +34,11 @@ public class HtmlTableParser
                     tableData.ColumnCount = tableData.Headers.Count;
                 }
             }
-            
+
             // Parse data rows (tbody > tr or all tr elements without th)
-            var bodyRows = tableNode.SelectNodes(".//tbody/tr") ?? 
+            var bodyRows = tableNode.SelectNodes(".//tbody/tr") ??
                           tableNode.SelectNodes(".//tr[td]");
-            
+
             if (bodyRows != null)
             {
                 foreach (var row in bodyRows)
@@ -48,21 +48,21 @@ public class HtmlTableParser
                     {
                         var rowData = cells.Select(cell => cell.InnerText.Trim()).ToList();
                         tableData.Rows.Add(rowData);
-                        
+
                         // Update column count if no headers
                         if (tableData.ColumnCount == 0)
                             tableData.ColumnCount = Math.Max(tableData.ColumnCount, rowData.Count);
                     }
                 }
             }
-            
+
             // Only add if table has data
             if (tableData.Headers.Any() || tableData.Rows.Any())
             {
                 tables.Add(tableData);
             }
         }
-        
+
         return tables;
     }
 }

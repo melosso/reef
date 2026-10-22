@@ -674,7 +674,7 @@ public class ApprovedEmailSenderService : BackgroundService
             }
             else
             {
-                Log.Debug("Unknown row type '{RowType}' for execution {ExecutionId}, skipping metrics update", 
+                Log.Debug("Unknown row type '{RowType}' for execution {ExecutionId}, skipping metrics update",
                     rowType, executionId);
                 return;
             }

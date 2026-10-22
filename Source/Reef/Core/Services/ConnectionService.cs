@@ -242,13 +242,13 @@ public class ConnectionService
                 {
                     ApplicationName = "Reef"
                 }.ConnectionString),
-            
+
             "MySQL" => new MySqlConnector.MySqlConnection(
                 new MySqlConnector.MySqlConnectionStringBuilder(connectionString)
                 {
                     ApplicationName = "Reef"
                 }.ConnectionString),
-            
+
             "PostgreSQL" => new Npgsql.NpgsqlConnection(
                 new Npgsql.NpgsqlConnectionStringBuilder(connectionString)
                 {

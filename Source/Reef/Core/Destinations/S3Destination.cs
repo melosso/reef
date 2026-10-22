@@ -159,7 +159,7 @@ public class S3Destination : IDestination
 
         // Ensure key doesn't start with /
         key = key.TrimStart('/');
-        
+
         return string.IsNullOrWhiteSpace(key) ? fileName : $"{key}/{fileName}";
     }
 }

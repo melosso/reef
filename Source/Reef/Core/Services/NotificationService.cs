@@ -115,7 +115,7 @@ public class NotificationService
                 Timestamp = DateTime.UtcNow.ToString("o"),
                 UpdatedAt = DateTime.UtcNow.ToString("o")
             }, cancellationToken: ct));
-            
+
             Log.Debug("Updated email approval cooldown timestamp for settings {SettingsId}", settingsId);
         }
         catch (Exception ex)
@@ -1568,7 +1568,7 @@ public class NotificationService
         // 2. Template has its own URL override (template-level opt-in)
         var ctaUrl = templateUrlOverride ?? settings.CTAUrl ?? "";
         var enableCta = settings.EnableCTA || !string.IsNullOrWhiteSpace(templateUrlOverride);
-        
+
         context["EnableCTA"] = enableCta && !string.IsNullOrWhiteSpace(ctaUrl);
         context["CTAButtonText"] = templateButtonText ?? "Open Dashboard";
         context["CTAUrl"] = ctaUrl;

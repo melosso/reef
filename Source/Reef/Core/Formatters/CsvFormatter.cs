@@ -13,7 +13,7 @@ public class CsvFormatter : IFormatter
     /// Format data as CSV and write to file
     /// </summary>
     public async Task<(bool Success, long FileSizeBytes, string? ErrorMessage)> FormatAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string outputPath)
     {
         try
@@ -116,9 +116,9 @@ public class CsvFormatter : IFormatter
         }
 
         // Check if value needs escaping
-        var needsEscaping = value.Contains(',') || 
-                           value.Contains('"') || 
-                           value.Contains('\n') || 
+        var needsEscaping = value.Contains(',') ||
+                           value.Contains('"') ||
+                           value.Contains('\n') ||
                            value.Contains('\r');
 
         if (!needsEscaping)

@@ -14,7 +14,7 @@ public class XmlFormatter : IFormatter
     /// Format: <rows><row><columnName>value</columnName></row></rows>
     /// </summary>
     public async Task<(bool Success, long FileSizeBytes, string? ErrorMessage)> FormatAsync(
-        List<Dictionary<string, object>> data, 
+        List<Dictionary<string, object>> data,
         string outputPath)
     {
         try
@@ -152,7 +152,7 @@ public class XmlFormatter : IFormatter
         }
 
         var result = sanitized.ToString();
-        
+
         // Ensure we have a valid name
         if (string.IsNullOrEmpty(result) || result == "_")
         {
