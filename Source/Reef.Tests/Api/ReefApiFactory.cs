@@ -14,6 +14,15 @@ public class ReefApiFactory : WebApplicationFactory<Reef.Program>
     {
         Environment.SetEnvironmentVariable("Reef__DatabasePath", Path.Combine(DataFolder, "Reef.db"));
         Environment.SetEnvironmentVariable("REEF_ENCRYPTION_KEY", "ReefApiTestsEncryptionKey0123456789");
+        Environment.SetEnvironmentVariable("Reef__ListenPort", FreePort().ToString());
+    }
+
+    // Main refuses to start when its configured port is taken.
+    private static int FreePort()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
     }
 
     public async Task<HttpClient> CreateAdminClientAsync()
