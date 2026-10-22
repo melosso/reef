@@ -9,7 +9,7 @@ on:
         type: string
 
 env:
-  DOTNET_VERSION: '10.0.x'
+  DOTNET_VERSION: '11.0.x'
   SOLUTION_PATH: 'Source/Reef.slnx'
   PROJECT_PATH: 'Source/Reef/Reef.csproj'
   SOURCE_DIR: 'Source/Reef'
@@ -39,6 +39,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+          dotnet-quality: 'preview'
 
       - name: Install dependencies
         run: |
@@ -73,7 +74,7 @@ jobs:
             -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
-            --framework net10.0 \
+            --framework net11.0 \
             -o ${{ env.PUBLISH_WIN }}
 
       - name: Publish Linux (linux-x64)
@@ -85,7 +86,7 @@ jobs:
             -p:PublishSingleFile=true \
             -p:DebugType=None \
             -p:DebugSymbols=false \
-            --framework net10.0 \
+            --framework net11.0 \
             -o ${{ env.PUBLISH_LIN }}
 
       - name: Create deployment structure
@@ -267,9 +268,9 @@ jobs:
           PREREQUISITES
           =============
 
-          ** REQUIRED: .NET 10.0 Runtime **
-          Download from: https://dotnet.microsoft.com/download/dotnet/10.0
-          Install "ASP.NET Core Runtime 10.0.x" for Windows x64
+          ** REQUIRED: .NET 11.0 Runtime **
+          Download from: https://dotnet.microsoft.com/download/dotnet/11.0
+          Install "ASP.NET Core Runtime 11.0.x" for Windows x64
 
           QUICK START
           ===========
@@ -376,12 +377,12 @@ jobs:
           PREREQUISITES
           =============
 
-          ** REQUIRED: .NET 10.0 Runtime **
-          Download from: https://dotnet.microsoft.com/download/dotnet/10.0
-          Install "ASP.NET Core Runtime 10.0.x" for Linux x64
+          ** REQUIRED: .NET 11.0 Runtime **
+          Download from: https://dotnet.microsoft.com/download/dotnet/11.0
+          Install "ASP.NET Core Runtime 11.0.x" for Linux x64
 
           Or via package manager (Debian/Ubuntu):
-            sudo apt-get install -y dotnet-runtime-10.0
+            sudo apt-get install -y dotnet-runtime-11.0
 
           QUICK START
           ===========
