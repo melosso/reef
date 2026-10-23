@@ -781,8 +781,6 @@ public static class ProfilesEndpoints
         return Results.BadRequest(new { error = "type=import query parameter is required for this endpoint" });
     }
 
-    // ===== Delta Sync Endpoints =====
-
     /// <summary>
     /// POST /api/profiles/{id}/delta-sync/reset - Reset entire delta sync state for a profile
     /// </summary>

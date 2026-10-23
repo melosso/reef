@@ -148,9 +148,6 @@ public class ExecutionService
                 }
                 Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
-
-
-            // ===== PHASE 1: PRE-PROCESSING =====
             // Execute pre-processing if configured
             var preProcessContext = new ProcessingContext
             {
@@ -181,8 +178,6 @@ public class ExecutionService
                     $"Pre-processing failed: {preProcessError}");
                 return (executionId, false, null, $"Pre-processing failed: {preProcessError}");
             }
-
-            // ===== PHASE 2: MAIN QUERY =====
             // Execute query
             Log.Debug("Executing query for profile {ProfileId}", profileId);
             var (querySuccess, rows, queryError, queryTime) = await _queryExecutor.ExecuteQueryAsync(
@@ -193,8 +188,6 @@ public class ExecutionService
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, queryError);
                 return (executionId, false, null, queryError);
             }
-
-            // ===== PHASE 2.5: DELTA SYNC (IF ENABLED) =====
             int originalRowCount = rows.Count;
             DeltaSyncResult? deltaSyncResult = null;
 
@@ -351,8 +344,6 @@ public class ExecutionService
 
                 return (executionId, true, null, null);
             }
-
-            // ===== PHASE 2.5.5: EMAIL EXPORT (IF ENABLED) =====
             // Skip email export if there's a destination override (test mode or manual override)
             if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
@@ -678,8 +669,6 @@ public class ExecutionService
                     return (executionId, false, null, $"Email export error: {ex.Message}");
                 }
             }
-
-            // ===== PHASE 2.6: MULTI-OUTPUT SPLITTING (IF ENABLED) =====
             if (profile.SplitEnabled && rows.Count > 0)
             {
                 Log.Debug("Profile {ProfileId} executing with multi-output splitting enabled", profile.Id);
@@ -729,8 +718,6 @@ public class ExecutionService
                 }
                 return (splitExecId, splitSuccess, splitOutputPath, splitError);
             }
-
-            // ===== PHASE 2.7: FILTER INTERNAL COLUMNS FROM OUTPUT (IF CONFIGURED) =====
             // Remove ReefId and/or SplitKey columns if they should not be included in output
             rows = FilterInternalColumns(profile, rows);
 
@@ -1256,8 +1243,6 @@ public class ExecutionService
                         ? Path.GetRelativePath(outputRoot, finalPath).Replace("\\", "/")
                         : null;
                 }
-
-                // ===== PHASE 3: POST-PROCESSING =====
                 // Build context for post-processing
                 var postProcessContext = new ProcessingContext
                 {

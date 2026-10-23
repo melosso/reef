@@ -54,4 +54,20 @@ public class PasswordPepperTests(ReefApiFactory factory)
         BCrypt.Net.BCrypt.Verify(Password, await StoredHashAsync(name)).Should().BeFalse();
         (await LoginAsync(name)).Should().Be(HttpStatusCode.OK);
     }
+
+    [Fact]
+    public async Task FirstSignInWithALegacyHashReturnsAWorkingToken()
+    {
+        var name = await CreateUserAsync();
+        await using (var conn = Open())
+            await conn.ExecuteAsync("UPDATE Users SET PasswordHash = @hash WHERE Username = @name",
+                new { hash = BCrypt.Net.BCrypt.HashPassword(Password, workFactor: 4), name });
+
+        var client = factory.CreateClient();
+        var login = await client.PostAsJsonAsync("/api/auth/login", new { username = name, password = Password }, _ct);
+        var token = (await login.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(_ct))!["token"]!.GetValue<string>();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+        (await client.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }

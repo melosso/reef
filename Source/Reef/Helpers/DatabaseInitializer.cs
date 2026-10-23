@@ -531,10 +531,7 @@ public class DatabaseInitializer
         ";
         await connection.ExecuteAsync(sql);
     }
-
-    // ============================================
     // REEF TABLES
-    // ============================================
 
     private async Task CreateDestinationsTableAsync(SqliteConnection connection)
     {
@@ -1140,7 +1137,6 @@ public class DatabaseInitializer
         //    - Template field contains actual Scriban syntax
         var templates = new[]
         {
-            // ========== SQL SERVER NATIVE TEMPLATES ==========
             // These use QueryTemplateService.ApplyTransformationAsync with Options
             // The Template field is for reference/documentation only
             
@@ -1180,8 +1176,6 @@ public class DatabaseInitializer
                 OutputFormat = "XML",
                 Tags = "xml,sql-server,native,auto,example"
             },
-            
-            // ========== CUSTOM SCRIBAN TEMPLATES ==========
             // These use ScribanTemplateEngine - Template field contains actual transformation logic
             
             new

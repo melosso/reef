@@ -335,8 +335,6 @@ public class ScheduledTask
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
-// ===== Pre/Post-Processing Configuration Models =====
-
 /// <summary>
 /// Configuration for pre-processing or post-processing execution
 /// Stored as JSON in Profile.PreProcessConfig or Profile.PostProcessConfig
@@ -522,8 +520,6 @@ public class ProcessingContext
     public Dictionary<string, string>? WebhookParameters { get; set; }
 }
 
-// ===== Email Approval Workflow Models =====
-
 /// <summary>
 /// Pending email approval entity for manual approval workflow
 /// Emails requiring approval are stored here before sending
@@ -554,8 +550,6 @@ public class PendingEmailApproval
     public DateTime? SentAt { get; set; } // When email was actually sent
     public required string Hash { get; set; } // SHA256 for integrity checking
 }
-
-// ===== API Request/Response Models =====
 
 /// <summary>
 /// Login request
@@ -616,8 +610,6 @@ public class ExecuteProfileResponse
     public string Status { get; set; } = "Running";
     public string? OutputPath { get; set; }
 }
-
-// ===== Delta Sync Models =====
 
 /// <summary>
 /// Delta sync configuration
@@ -715,8 +707,6 @@ public class DatabaseConfig
 {
     public required string ConnectionString { get; init; }
 }
-
-// ===== Email Attachment Configuration Models =====
 
 /// <summary>
 /// Attachment configuration for email export profiles (JSON)

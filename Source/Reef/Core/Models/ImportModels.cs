@@ -1,7 +1,5 @@
 namespace Reef.Core.Models;
 
-// ===== Import Profile Core Model =====
-
 /// <summary>
 /// Import Profile - reads data from a source (Local/SFTP/HTTP) and writes into a database Connection.
 /// The inverse of an Export Profile.
@@ -180,8 +178,6 @@ public class ImportProfileWithNames : ImportProfile
     public string? SourceDestinationName { get; set; }
 }
 
-// ===== Import Execution Models =====
-
 /// <summary>
 /// Execution record for an import profile run, mirrors ImportProfileExecutions table schema.
 /// </summary>
@@ -232,8 +228,6 @@ public class ImportProfileExecution
     /// <summary>JSON array of ImportOutputTargetResult, results from fan-out output targets</summary>
     public string? OutputTargetsJson { get; set; }
 }
-
-// ===== Import Output Target Models =====
 
 /// <summary>
 /// A destination to which parsed import rows are fanned out after the primary DB write.
@@ -295,8 +289,6 @@ public class ImportExecutionError
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 }
 
-// ===== Delta Sync Stats =====
-
 public record ImportDeltaSyncStats
 {
     public int ActiveRows { get; init; }
@@ -308,8 +300,6 @@ public record ImportDeltaSyncStats
     public int DeletedRowsLastRun { get; init; }
     public int UnchangedRowsLastRun { get; init; }
 }
-
-// ===== Configuration Models =====
 
 /// <summary>
 /// Mapping of a source column to a target database column
@@ -395,8 +385,6 @@ public class ImportPaginationConfig
     public bool StopOnEmptyPage { get; set; } = true;
 }
 
-// ===== Write Context Models =====
-
 /// <summary>
 /// Context passed to IImportTarget.WriteBatchAsync
 /// </summary>
@@ -460,8 +448,6 @@ public class TargetColumnInfo
     public int? Scale { get; set; }
 }
 
-// ===== Source File Model =====
-
 /// <summary>
 /// A file or data stream fetched from an import source
 /// </summary>
@@ -474,8 +460,6 @@ public class ImportSourceFile
     public string? ContentType { get; set; }
 }
 
-// ===== Parsed Row Model =====
-
 /// <summary>
 /// A single row produced by an import parser
 /// </summary>
@@ -486,8 +470,6 @@ public class ParsedRow
     public string? ParseError { get; set; }
     public bool IsSkipped { get; set; }
 }
-
-// ===== API Request/Response Models =====
 
 /// <summary>
 /// Request body for testing import source connectivity

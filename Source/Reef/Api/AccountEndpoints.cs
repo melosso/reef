@@ -30,8 +30,6 @@ public static class AccountEndpoints
         group.MapDelete("/mfa", DisableMfa);
     }
 
-    // ── GET /api/account/profile ──────────────────────────────────────────────
-
     private static async Task<IResult> GetProfile(
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig)
@@ -61,8 +59,6 @@ public static class AccountEndpoints
             emailMfaAvailable = notificationsEnabled
         });
     }
-
-    // ── PUT /api/account/profile ─────────────────────────────────────────────
 
     private static async Task<IResult> UpdateProfile(
         [FromBody] UpdateProfileRequest request,
@@ -179,8 +175,6 @@ public static class AccountEndpoints
         });
     }
 
-    // ── POST /api/account/mfa/totp/confirm ───────────────────────────────────
-
     private static async Task<IResult> ConfirmTotp(
         [FromBody] ConfirmTotpRequest request,
         HttpContext httpContext,
@@ -233,8 +227,6 @@ public static class AccountEndpoints
         return Results.Ok(new { success = true, backupCodes = plainCodes });
     }
 
-    // ── POST /api/account/mfa/email/enable ───────────────────────────────────
-
     private static async Task<IResult> EnableEmailMfa(
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig,
@@ -269,8 +261,6 @@ public static class AccountEndpoints
         Log.Information("User {Username} enabled Email MFA", username);
         return Results.Ok(new { success = true });
     }
-
-    // ── DELETE /api/account/mfa ───────────────────────────────────────────────
 
     private static async Task<IResult> DisableMfa(
         HttpContext httpContext,

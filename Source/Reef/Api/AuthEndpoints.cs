@@ -274,10 +274,11 @@ public static class AuthEndpoints
             loginThrottle.RecordSuccess(clientIp, request.Username);
 
             if (needsRehash)
-                await connection.ExecuteAsync("UPDATE Users SET PasswordHash = @Hash WHERE Id = @Id",
-                    new { Hash = passwordHasher.HashPassword(request.Password), user.Id });
-
-            // ── MFA gate ──────────────────────────────────────────────────────────
+            {
+                // The token password stamp is read from user.PasswordHash, so it must match the stored hash.
+                user.PasswordHash = passwordHasher.HashPassword(request.Password);
+                await connection.ExecuteAsync("UPDATE Users SET PasswordHash = @Hash WHERE Id = @Id", new { Hash = user.PasswordHash, user.Id });
+            }
             if (user.MfaEnabled && !string.IsNullOrEmpty(user.MfaMethod))
             {
                 // Clean up any expired sessions for this user
@@ -313,7 +314,6 @@ public static class AuthEndpoints
                     mfaSessionId = sessionId
                 });
             }
-            // ─────────────────────────────────────────────────────────────────────
 
             return await IssueToken(user, connection, jwtService, auditService, httpContext);
         }
