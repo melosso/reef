@@ -20,12 +20,11 @@ jobs:
           global-json-file: global.json
 
       - name: Restore and build
-        run: dotnet build Reef.slnx --configuration Release
+        run: dotnet build Source/Reef.slnx --configuration Release
 
       # Unit tests plus the SQL provider parity suite; the runner's Docker hosts SQL Server 2025, PostgreSQL 18 and MySQL 8.0 via Testcontainers
       - name: Test
-        working-directory: Source
-        run: dotnet test --solution ../Reef.slnx --configuration Release --no-build --report-trx --results-directory ../TestResults
+        run: dotnet test Source/Reef.slnx --configuration Release --no-build --logger trx --results-directory TestResults
 
       - name: Publish test results
         if: always()
