@@ -12,7 +12,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class SendGridEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<SendGridEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<SendGridEmailProvider>();
     private const string SendGridApiUrl = "https://api.sendgrid.com/v3/mail/send";
 
     /// <summary>

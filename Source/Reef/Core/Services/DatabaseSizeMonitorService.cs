@@ -15,7 +15,7 @@ public class DatabaseSizeMonitorService : BackgroundService
 {
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly string _databasePath;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<DatabaseSizeMonitorService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<DatabaseSizeMonitorService>();
 
     public DatabaseSizeMonitorService(
         IServiceScopeFactory serviceScopeFactory,

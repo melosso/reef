@@ -9,7 +9,8 @@
   import { queryString } from '../lib/query';
   import { formatDateTime, formatDuration, formatNumber, formatRelative, parseDate } from '../lib/format';
   import { notify } from '../lib/notify';
-  import { route, setQuery } from '../lib/router.svelte';
+  import { match, navigate, route } from '../lib/router.svelte';
+  import { urlPaging } from '../lib/paging.svelte';
   import type { ExecuteResult } from '../models/ExecuteResult';
   import type { ExportExecution } from '../models/ExportExecution';
   import type { ExportProfile } from '../models/ExportProfile';
@@ -41,8 +42,7 @@
   }
 
   let filters = $state<Filters>(storedFilters());
-  let page = $state(1);
-  let pageSize = $state(25);
+  const paging = urlPaging(25);
   let total = $state(0);
   let pages = $state(1);
   let exportsList = $state<ExportExecution[]>([]);
@@ -57,9 +57,9 @@
   let running = $state(false);
 
   $effect(() => {
-    const id = route.query.get('profileId');
-    const job = route.query.get('jobId');
-    if (id) filters.profileId = id;
+    const profile = route.query.get('profile');
+    const job = route.query.get('job');
+    if (profile) filters.profileId = profile.startsWith('export:') ? profile.slice('export:'.length) : profile;
     if (job) filters.jobId = job;
   });
 
@@ -97,8 +97,8 @@
       return;
     }
     const q = queryString({
-      page,
-      pageSize,
+      page: paging.page,
+      pageSize: paging.size,
       profileId: filters.profileId,
       jobId: filters.jobId,
       status: filters.status,
@@ -137,7 +137,7 @@
 
   function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
     filters[key] = value;
-    page = 1;
+    paging.page = 1;
   }
 
   const rows = $derived.by(() => {
@@ -179,27 +179,17 @@
   });
 
   const filtered = $derived(Object.values(filters).some(Boolean));
-  const detail = $derived(
-    route.query.get('id')
-      ? { kind: 'export', id: Number(route.query.get('id')) }
-      : route.query.get('importId')
-        ? { kind: 'import', id: Number(route.query.get('importId')) }
-        : null,
-  );
+  const detail = $derived.by(() => {
+    const params = match('/executions/:kind/:id', route.path);
+    return params && (params.kind === 'export' || params.kind === 'import') ? { kind: params.kind, id: Number(params.id) } : null;
+  });
 
   function open(row: { kind: string; id: number }) {
-    if (row.kind === 'import') {
-      setQuery('id', null);
-      setQuery('importId', String(row.id));
-    } else {
-      setQuery('importId', null);
-      setQuery('id', String(row.id));
-    }
+    navigate(`/executions/${row.kind}/${row.id}${location.search}`);
   }
 
   function closeDetail() {
-    setQuery('id', null);
-    setQuery('importId', null);
+    navigate(`/executions${location.search}`);
   }
 
   function openRun(mode: 'profile' | 'job') {
@@ -293,7 +283,7 @@
           class="link"
           onclick={() => {
             filters = { profileId: '', jobId: '', status: '', fromDate: '', toDate: '', searchTerm: '' };
-            page = 1;
+            paging.page = 1;
           }}>Clear filters</button
         >{/if}
     </div>
@@ -342,19 +332,16 @@
       <select
         id="page-size"
         class="size"
-        value={String(pageSize)}
-        onchange={(e) => {
-          pageSize = Number(e.currentTarget.value);
-          page = 1;
-        }}
+        value={String(paging.size)}
+        onchange={(e) => (paging.size = Number(e.currentTarget.value))}
       >
         {#each [10, 25, 50, 100] as n (n)}<option value={String(n)}>{n}</option>{/each}
       </select>
-      <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}
+      <button type="button" class="btn icon" aria-label="Previous page" disabled={paging.page <= 1} onclick={() => paging.page--}
         ><ChevronLeft size={15} /></button
       >
-      <span class="num">{page} / {pages}</span>
-      <button type="button" class="btn icon" aria-label="Next page" disabled={page >= pages} onclick={() => page++}
+      <span class="num">{paging.page} / {pages}</span>
+      <button type="button" class="btn icon" aria-label="Next page" disabled={paging.page >= pages} onclick={() => paging.page++}
         ><ChevronRight size={15} /></button
       >
     </div>

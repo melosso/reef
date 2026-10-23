@@ -13,7 +13,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class NotificationThrottler
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<NotificationThrottler>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<NotificationThrottler>();
 
     // Cooldown periods (in seconds) - adjust based on your needs
     public static class CooldownPeriods

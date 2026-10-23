@@ -59,22 +59,22 @@
       <div class="header">
         <div class="header-title">Daily System Health Report</div>
         <div class="header-meta">
-          Report ID: {{~ row.report_id ~}}<br>
-          Generated: {{~ row.generated_at ~}}
+          Report ID: {{~ row.report_id | html.escape ~}}<br>
+          Generated: {{~ row.generated_at | html.escape ~}}
         </div>
       </div>
 
       <div class="summary-grid">
         <div class="card">
-          <span class="card-num">{{~ row.total_count ~}}</span>
+          <span class="card-num">{{~ row.total_count | html.escape ~}}</span>
           <span class="card-label">Total Events</span>
         </div>
         <div class="card">
-          <span class="card-num text-red">{{~ row.critical_count ~}}</span>
+          <span class="card-num text-red">{{~ row.critical_count | html.escape ~}}</span>
           <span class="card-label">Critical</span>
         </div>
         <div class="card">
-          <span class="card-num text-orange">{{~ row.warn_count ~}}</span>
+          <span class="card-num text-orange">{{~ row.warn_count | html.escape ~}}</span>
           <span class="card-label">Warnings</span>
         </div>
       </div>
@@ -97,7 +97,7 @@
             <tbody>
               {{~ for err in errors ~}}
               <tr>
-                <td class="mono" style="white-space:nowrap;">{{ err.time }}</td>
+                <td class="mono" style="white-space:nowrap;">{{ err.time | html.escape }}</td>
                 <td>
                   {{~ if err.level == "CRITICAL" ~}}
                     <span class="badge badge-critical">CRIT</span>
@@ -107,10 +107,10 @@
                     <span class="badge badge-info">INFO</span>
                   {{~ end ~}}
                 </td>
-                <td style="font-weight:500;">{{ err.source }}</td>
+                <td style="font-weight:500;">{{ err.source | html.escape }}</td>
                 <td>
                   <div>{{ err.message | html.escape }}</div>
-                  <div class="mono" style="color:#70757a; font-size:11px; margin-top:4px;">ID: {{ err.id }}</div>
+                  <div class="mono" style="color:#70757a; font-size:11px; margin-top:4px;">ID: {{ err.id | html.escape }}</div>
                 </td>
               </tr>
               {{~ end ~}}
@@ -122,16 +122,16 @@
         {{~ end ~}}
 
         <div style="margin-top:20px; text-align:center;">
-            <a href="{{~ row.dashboard_url ~}}" style="background:#202124; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px; font-weight:500; margin-top: 10px; margin-bottom:10px;">Open Full Dashboard</a>
+            <a href="{{~ row.dashboard_url | html.escape ~}}" style="background:#202124; color:#fff; padding:10px 20px; text-decoration:none; border-radius:4px; font-weight:500; margin-top: 10px; margin-bottom:10px;">Open Full Dashboard</a>
         </div>
       </div>
 
 	<div class="footer">
         <span>&copy;</span>
-		<span>{{~ row.year ~}}</span>
-		<span>{{~ row.company ~}}</span>
+		<span>{{~ row.year | html.escape ~}}</span>
+		<span>{{~ row.company | html.escape ~}}</span>
         <br>
-        <a href="{{~ row.unsubscribe_url ~}}">Unsubscribe from daily digests</a>
+        <a href="{{~ row.unsubscribe_url | html.escape ~}}">Unsubscribe from daily digests</a>
       </div>
 
     </div>

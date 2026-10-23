@@ -25,7 +25,10 @@
 
   const next = () => {
     const target = route.query.get('next');
-    return target && target.startsWith('/') && !target.startsWith('//') ? target : '/dashboard';
+    const page = target?.split('?')[0].toLowerCase();
+    return target && target.startsWith('/') && !target.startsWith('//') && !['/', '/index', '/login', '/logout', '/logoff'].includes(page!)
+      ? target
+      : '/dashboard';
   };
 
   onMount(() => {

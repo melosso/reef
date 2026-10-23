@@ -94,7 +94,7 @@ export async function request<T = unknown>(method: Method, url: string, body?: u
 
   if (response.status === 401 && !url.startsWith('/api/auth/')) {
     clearSession();
-    navigate('/logoff');
+    navigate('/logout');
   }
   if (!response.ok) throw new ApiError(messageOf(parsed, response.status), response.status, errorsOf(parsed), parsed);
   return parsed as T;

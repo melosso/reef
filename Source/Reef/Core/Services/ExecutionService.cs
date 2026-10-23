@@ -874,7 +874,7 @@ public class ExecutionService
             // Normalize path separators for cross-platform compatibility
             filename = filename.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
-            var tempFilePath = Path.Combine(Path.GetTempPath(), filename);
+            var tempFilePath = Reef.Helpers.SafePath.Combine(Path.GetTempPath(), filename);
             string? finalPath = null;
 
             try
@@ -2407,7 +2407,7 @@ public class ExecutionService
             filename = filename.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
             // Create temporary file
-            tempFilePath = Path.Combine(Path.GetTempPath(), "reef_splits", filename);
+            tempFilePath = Reef.Helpers.SafePath.Combine(Path.Combine(Path.GetTempPath(), "reef_splits"), filename);
             var directory = Path.GetDirectoryName(tempFilePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {

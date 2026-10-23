@@ -13,7 +13,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class ResendEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ResendEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ResendEmailProvider>();
     private const string ResendApiUrl = "https://api.resend.com/emails";
 
     // Rate limiter: 2 requests per second (Resend API limit)

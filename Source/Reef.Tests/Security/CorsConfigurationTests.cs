@@ -7,7 +7,7 @@ namespace Reef.Tests.Security;
 public class CorsConfigurationTests
 {
     [Fact]
-    public void GetCorsPolicy_WhenAllowedOriginsIsEmpty_AllowsAnyOrigin()
+    public void GetCorsPolicyWhenAllowedOriginsIsEmptyAllowsAnyOrigin()
     {
         var config = BuildConfiguration(new[] { "AllowedOrigins", "" });
         var policy = CreateCorsPolicy(config);
@@ -16,7 +16,7 @@ public class CorsConfigurationTests
     }
 
     [Fact]
-    public void GetCorsPolicy_WhenAllowedOriginsHasValues_RestrictsToConfiguredOrigins()
+    public void GetCorsPolicyWhenAllowedOriginsHasValuesRestrictsToConfiguredOrigins()
     {
         var config = BuildConfiguration(new[] { "AllowedOrigins:0", "http://localhost:8085", "AllowedOrigins:1", "http://localhost:3000" });
         var policy = CreateCorsPolicy(config);
@@ -27,7 +27,7 @@ public class CorsConfigurationTests
     }
 
     [Fact]
-    public void GetCorsPolicy_WhenAllowedOriginsIsNull_AllowsAnyOrigin()
+    public void GetCorsPolicyWhenAllowedOriginsIsNullAllowsAnyOrigin()
     {
         var config = BuildConfiguration(Array.Empty<string>());
         var policy = CreateCorsPolicy(config);
@@ -36,7 +36,7 @@ public class CorsConfigurationTests
     }
 
     [Fact]
-    public void GetCorsPolicy_WhenAllowedOriginsIsCommaSeparatedString_RestrictsToConfiguredOrigins()
+    public void GetCorsPolicyWhenAllowedOriginsIsCommaSeparatedStringRestrictsToConfiguredOrigins()
     {
         var config = BuildConfiguration(new[] { "AllowedOrigins", "http://localhost:8085,http://localhost:3000" });
         var policy = CreateCorsPolicy(config);
@@ -50,7 +50,7 @@ public class CorsConfigurationTests
     [InlineData("http://localhost:8085")]
     [InlineData("https://reef.mysite.com")]
     [InlineData("http://192.168.1.100:8085")]
-    public void GetCorsPolicy_AcceptsVariousOriginFormats(string origin)
+    public void GetCorsPolicyAcceptsVariousOriginFormats(string origin)
     {
         var config = BuildConfiguration(new[] { "AllowedOrigins:0", origin });
         var policy = CreateCorsPolicy(config);

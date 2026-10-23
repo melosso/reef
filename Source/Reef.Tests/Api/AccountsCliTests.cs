@@ -23,7 +23,7 @@ public class AccountsCliTests(ReefApiFactory factory)
         (await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username, password }, _ct)).StatusCode;
 
     [Fact]
-    public async Task Created_account_signs_in_with_the_password_set_from_the_shell()
+    public async Task CreatedAccountSignsInWithThePasswordSetFromTheShell()
     {
         factory.CreateClient();
         var name = $"cli{Guid.NewGuid():N}"[..16];
@@ -41,7 +41,7 @@ public class AccountsCliTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Rejects_short_passwords_unknown_accounts_and_removing_the_last_admin()
+    public async Task RejectsShortPasswordsUnknownAccountsAndRemovingTheLastAdmin()
     {
         var (admin, _) = await factory.SeededAdminAsync();
 
@@ -53,7 +53,7 @@ public class AccountsCliTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Refuses_to_create_a_database_that_does_not_exist()
+    public async Task RefusesToCreateADatabaseThatDoesNotExist()
     {
         var path = Path.Combine(factory.DataFolder, "missing.db");
 

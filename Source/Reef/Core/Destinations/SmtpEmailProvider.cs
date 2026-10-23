@@ -10,7 +10,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class SmtpEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<SmtpEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<SmtpEmailProvider>();
 
     /// <summary>
     /// Convert security mode string to SecureSocketOptions

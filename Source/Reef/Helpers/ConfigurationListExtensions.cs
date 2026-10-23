@@ -3,7 +3,7 @@ namespace Reef.Helpers;
 public static class ConfigurationListExtensions
 {
     /// <summary>
-    /// Reads a list setting from its indexed entries and from a comma separated value, without blanks or duplicates
+    /// Reads a list setting from indexed entries and comma separated values, without blanks or duplicates.
     /// </summary>
     public static string[] GetList(this IConfiguration configuration, string key)
     {

@@ -14,13 +14,13 @@ public class OidcFlowTests
     };
 
     [Fact]
-    public void Claim_ReturnsNullForUnknownState()
+    public void ClaimReturnsNullForUnknownState()
     {
         OidcFlow.Claim("nonexistent-state").Should().BeNull();
     }
 
     [Fact]
-    public void Claim_IsSingleUse()
+    public void ClaimIsSingleUse()
     {
         var document = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration
         {
@@ -37,7 +37,7 @@ public class OidcFlowTests
     }
 
     [Fact]
-    public void Begin_GeneratesDistinctStateNoncePkceVerifierPerCall()
+    public void BeginGeneratesDistinctStateNoncePkceVerifierPerCall()
     {
         var document = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration
         {
@@ -56,7 +56,7 @@ public class OidcFlowTests
     }
 
     [Fact]
-    public void Begin_ThrowsWhenDiscoveryDocumentHasNoAuthorizationEndpoint()
+    public void BeginThrowsWhenDiscoveryDocumentHasNoAuthorizationEndpoint()
     {
         var document = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration();
 
@@ -70,13 +70,13 @@ public class OidcFlowTests
     [InlineData("http://127.0.0.1:8080", true)]
     [InlineData("http://idp.example.com", false)]
     [InlineData("https://idp.example.com", false)]
-    public void AllowsPlainHttp_OnlyAllowsLoopbackAddresses(string authority, bool expected)
+    public void AllowsPlainHttpOnlyAllowsLoopbackAddresses(string authority, bool expected)
     {
         OidcFlow.AllowsPlainHttp(authority).Should().Be(expected);
     }
 
     [Fact]
-    public void Prune_RemovesOnlyExpiredFlows()
+    public void PruneRemovesOnlyExpiredFlows()
     {
         var document = new Microsoft.IdentityModel.Protocols.OpenIdConnect.OpenIdConnectConfiguration
         {

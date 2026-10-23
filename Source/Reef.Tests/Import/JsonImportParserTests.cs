@@ -23,7 +23,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_SimpleJsonArray_ReturnsCorrectRows()
+    public async Task ParseAsyncSimpleJsonArrayReturnsCorrectRows()
     {
         var json = """[{"name":"Alice","age":30},{"name":"Bob","age":25}]""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -35,7 +35,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_JsonWithDataRootPath_ExtractsNestedArray()
+    public async Task ParseAsyncJsonWithDataRootPathExtractsNestedArray()
     {
         var json = """{"meta":{"total":2},"data":[{"id":1,"name":"Alice"},{"id":2,"name":"Bob"}]}""";
         var config = DefaultConfig();
@@ -50,7 +50,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_SingleJsonObject_ReturnsOneRow()
+    public async Task ParseAsyncSingleJsonObjectReturnsOneRow()
     {
         var json = """{"name":"Alice","age":30}""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -60,7 +60,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_JsonWithNullValues_ReturnsNullForNullFields()
+    public async Task ParseAsyncJsonWithNullValuesReturnsNullForNullFields()
     {
         var json = """[{"name":"Alice","email":null}]""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -70,7 +70,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_JsonWithBoolValues_ParsesCorrectly()
+    public async Task ParseAsyncJsonWithBoolValuesParsesCorrectly()
     {
         var json = """[{"name":"Alice","active":true,"deleted":false}]""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -81,7 +81,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_JsonLines_ParsesEachLineAsRow()
+    public async Task ParseAsyncJsonLinesParsesEachLineAsRow()
     {
         var jsonl = """
             {"id":1,"name":"Alice"}
@@ -99,7 +99,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_JsonLines_SkipsBlankLines()
+    public async Task ParseAsyncJsonLinesSkipsBlankLines()
     {
         var jsonl = "{\"id\":1}\n\n{\"id\":2}\n";
         var config = DefaultConfig();
@@ -111,7 +111,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_InvalidJson_ReturnsParseErrorRow()
+    public async Task ParseAsyncInvalidJsonReturnsParseErrorRow()
     {
         var json = "this is not json";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -122,7 +122,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_InvalidJsonLine_ReturnsParseErrorRowForThatLine()
+    public async Task ParseAsyncInvalidJsonLineReturnsParseErrorRowForThatLine()
     {
         var jsonl = "{\"id\":1}\nbad line\n{\"id\":3}\n";
         var config = DefaultConfig();
@@ -137,7 +137,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_DataRootPathWithDotPrefix_NavigatesCorrectly()
+    public async Task ParseAsyncDataRootPathWithDotPrefixNavigatesCorrectly()
     {
         var json = """{"results":{"items":[{"x":1},{"x":2}]}}""";
         var config = DefaultConfig();
@@ -150,14 +150,14 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_EmptyJsonArray_ReturnsNoRows()
+    public async Task ParseAsyncEmptyJsonArrayReturnsNoRows()
     {
         var rows = await CollectAsync(_parser.ParseAsync(ToStream("[]"), DefaultConfig(), TestContext.Current.CancellationToken));
         rows.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ParseAsync_LineNumbersAssigned_AreSequential()
+    public async Task ParseAsyncLineNumbersAssignedAreSequential()
     {
         var json = """[{"a":1},{"a":2},{"a":3}]""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -168,7 +168,7 @@ public class JsonImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_DecimalNumber_ParsesAsDouble()
+    public async Task ParseAsyncDecimalNumberParsesAsDouble()
     {
         var json = """[{"price":19.99}]""";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(json), DefaultConfig(), TestContext.Current.CancellationToken));

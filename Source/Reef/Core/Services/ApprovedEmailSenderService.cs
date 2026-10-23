@@ -16,7 +16,7 @@ public class ApprovedEmailSenderService : BackgroundService
 {
     private readonly string _connectionString;
     private readonly IServiceScopeFactory _serviceScopeFactory;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ApprovedEmailSenderService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ApprovedEmailSenderService>();
 
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(30); // Poll every 30 seconds
     private readonly int _maxRetries = 3; // Retry failed sends 3 times

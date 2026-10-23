@@ -16,7 +16,7 @@ public class LoginThrottleTests
     private LoginThrottle Throttle() => new(_clock);
 
     [Fact]
-    public void Five_failures_lock_the_account_on_that_address_only()
+    public void FiveFailuresLockTheAccountOnThatAddressOnly()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAccountFailures; i++) throttle.RecordFailure("10.0.0.1", "alice");
@@ -27,7 +27,7 @@ public class LoginThrottleTests
     }
 
     [Fact]
-    public void Usernames_match_without_case()
+    public void UsernamesMatchWithoutCase()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAccountFailures; i++) throttle.RecordFailure("10.0.0.1", i % 2 == 0 ? "Alice" : "alice");
@@ -36,7 +36,7 @@ public class LoginThrottleTests
     }
 
     [Fact]
-    public void Spraying_many_accounts_locks_the_address()
+    public void SprayingManyAccountsLocksTheAddress()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAddressFailures; i++) throttle.RecordFailure("10.0.0.1", $"user{i}");
@@ -46,7 +46,7 @@ public class LoginThrottleTests
     }
 
     [Fact]
-    public void Failures_expire_after_the_window()
+    public void FailuresExpireAfterTheWindow()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAccountFailures - 1; i++) throttle.RecordFailure("10.0.0.1", "alice");
@@ -58,7 +58,7 @@ public class LoginThrottleTests
     }
 
     [Fact]
-    public void Lockout_ends_after_the_lockout_period()
+    public void LockoutEndsAfterTheLockoutPeriod()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAccountFailures; i++) throttle.RecordFailure("10.0.0.1", "alice");
@@ -69,7 +69,7 @@ public class LoginThrottleTests
     }
 
     [Fact]
-    public void Success_clears_the_account_but_not_the_address()
+    public void SuccessClearsTheAccountButNotTheAddress()
     {
         var throttle = Throttle();
         for (var i = 0; i < LoginThrottle.MaxAccountFailures - 1; i++) throttle.RecordFailure("10.0.0.1", "alice");

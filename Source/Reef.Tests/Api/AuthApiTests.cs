@@ -17,7 +17,7 @@ public class AuthApiTests(ReefApiFactory factory)
         await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username, password }, _ct);
 
     [Fact]
-    public async Task Sign_in_accepts_the_account_email_address()
+    public async Task SignInAcceptsTheAccountEmailAddress()
     {
         var admin = await factory.CreateAdminClientAsync();
         var name = $"user{Guid.NewGuid():N}"[..16];
@@ -35,7 +35,7 @@ public class AuthApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task First_admin_gets_a_random_account_from_the_log_and_must_change_the_password()
+    public async Task FirstAdminGetsARandomAccountFromTheLogAndMustChangeThePassword()
     {
         var (username, changeRequired) = await factory.SeededAdminAsync();
 
@@ -45,7 +45,7 @@ public class AuthApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Email_already_used_by_another_account_is_rejected()
+    public async Task EmailAlreadyUsedByAnotherAccountIsRejected()
     {
         var admin = await factory.CreateAdminClientAsync();
         var (adminName, _) = await factory.SeededAdminAsync();
@@ -66,7 +66,7 @@ public class AuthApiTests(ReefApiFactory factory)
     [Theory]
     [InlineData("http://localhost", HttpStatusCode.Unauthorized)]
     [InlineData("https://elsewhere.example", HttpStatusCode.Forbidden)]
-    public async Task Sign_in_accepts_its_own_origin_without_configuration(string origin, HttpStatusCode expected)
+    public async Task SignInAcceptsItsOwnOriginWithoutConfiguration(string origin, HttpStatusCode expected)
     {
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Add("Origin", origin);
@@ -77,7 +77,7 @@ public class AuthApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Failed_sign_ins_lock_only_that_account()
+    public async Task FailedSignInsLockOnlyThatAccount()
     {
         var admin = await factory.CreateAdminClientAsync();
         var locked = $"user{Guid.NewGuid():N}"[..16];
@@ -93,7 +93,7 @@ public class AuthApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Spoofed_forwarded_addresses_do_not_bypass_the_lockout()
+    public async Task SpoofedForwardedAddressesDoNotBypassTheLockout()
     {
         var name = $"user{Guid.NewGuid():N}"[..16];
         for (var i = 0; i < 5; i++)

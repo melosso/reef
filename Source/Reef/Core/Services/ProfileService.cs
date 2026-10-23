@@ -16,15 +16,18 @@ public class ProfileService
     private readonly string _connectionString;
     private readonly EncryptionService _encryptionService;
     private readonly HashValidator _hashValidator;
+    private readonly PrivilegedSettingsGuard _guard;
 
     public ProfileService(
         DatabaseConfig config,
         EncryptionService encryptionService,
-        HashValidator hashValidator)
+        HashValidator hashValidator,
+        PrivilegedSettingsGuard guard)
     {
         _connectionString = config.ConnectionString;
         _encryptionService = encryptionService;
         _hashValidator = hashValidator;
+        _guard = guard;
     }
 
     /// <summary>
@@ -123,6 +126,8 @@ public class ProfileService
     /// </summary>
     public async Task<int> CreateAsync(Profile profile, int? createdByUserId, CancellationToken ct = default)
     {
+        EnsureContainedFileNames(profile);
+        _guard.Check(profile, null);
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct);
 
@@ -268,8 +273,11 @@ public class ProfileService
     /// </summary>
     public async Task<bool> UpdateAsync(Profile profile, CancellationToken ct = default)
     {
+        EnsureContainedFileNames(profile);
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct);
+        _guard.Check(profile, await connection.QuerySingleOrDefaultAsync<Profile>(
+            new CommandDefinition("SELECT * FROM Profiles WHERE Id = @Id", new { profile.Id }, cancellationToken: ct)));
 
         try
         {
@@ -714,6 +722,12 @@ public class ProfileService
 
         // Default: 1 hour from now
         return now.AddHours(1);
+    }
+
+    private static void EnsureContainedFileNames(Profile profile)
+    {
+        Reef.Helpers.SafePath.EnsureContainedRelative(profile.FilenameTemplate, "File name");
+        Reef.Helpers.SafePath.EnsureContainedRelative(profile.SplitFilenameTemplate, "Split file name");
     }
 }
 

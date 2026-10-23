@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Reef.Tests.Api;
 
-// Boots Reef against a throwaway data folder through the short environment variable names
+// Boots Reef with a temporary data folder and the short environment variable names.
 public class ReefApiFactory : WebApplicationFactory<Reef.Program>
 {
     public string DataFolder { get; } = Directory.CreateTempSubdirectory("reef-api").FullName;
@@ -38,7 +38,16 @@ public class ReefApiFactory : WebApplicationFactory<Reef.Program>
         CreateClient();
         var log = Directory.GetFiles(Path.Combine(AppContext.BaseDirectory, "log"), "reef-*.log")
             .Select(f => { using var r = new StreamReader(new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)); return r.ReadToEnd(); });
-        var seeded = Regex.Matches(string.Concat(log), @"Created the first admin account (\S+) with one-time password (\S+)").Last();
+        string seededName;
+        using (var db = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={Path.Combine(DataFolder, "Reef.db")};Pooling=False"))
+        {
+            db.Open();
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = "SELECT Username FROM Users ORDER BY Id LIMIT 1";
+            seededName = (string)cmd.ExecuteScalar()!;
+        }
+        // The shared log file also contains admins seeded by other test databases.
+        var seeded = Regex.Matches(string.Concat(log), @"Created the first admin account (\S+) with one-time password (\S+)").Last(m => m.Groups[1].Value == seededName);
         var (username, password) = (seeded.Groups[1].Value, seeded.Groups[2].Value);
 
         var client = await SignInAsync(username, password);

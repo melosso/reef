@@ -32,7 +32,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory)
     private static JsonObject Node(string type, JsonObject config) => new() { ["id"] = type, ["type"] = type, ["x"] = 40, ["y"] = 40, ["config"] = config };
 
     [Fact]
-    public async Task Export_document_saves_and_reads_back_with_positions()
+    public async Task ExportDocumentSavesAndReadsBackWithPositions()
     {
         var (client, connectionId, _) = await SetupAsync();
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
@@ -58,7 +58,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Invalid_document_returns_errors_per_node_and_field()
+    public async Task InvalidDocumentReturnsErrorsPerNodeAndField()
     {
         var (client, _, _) = await SetupAsync();
         var document = new JsonObject
@@ -78,7 +78,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Import_document_runs_with_column_mapping_and_export_copies()
+    public async Task ImportDocumentRunsWithColumnMappingAndExportCopies()
     {
         var (client, connectionId, shopDb) = await SetupAsync();
         var inbox = Directory.CreateDirectory(Path.Combine(factory.DataFolder, $"in-{Guid.NewGuid():N}")).FullName;
@@ -123,7 +123,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Legacy_import_update_keeps_canvas_positions()
+    public async Task LegacyImportUpdateKeepsCanvasPositions()
     {
         var (client, connectionId, _) = await SetupAsync();
         var document = new JsonObject

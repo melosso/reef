@@ -19,7 +19,7 @@ public class ScriptTemplateExamplesTests
     private readonly ProcessScriptRunner _runner = new();
     private static readonly string TemplatesDir = FindTemplatesDir();
 
-    private static string FindTemplatesDir()
+    internal static string FindTemplatesDir()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null)
@@ -55,7 +55,7 @@ public class ScriptTemplateExamplesTests
     // Webhook / n8n (sh + curl)
 
     [Fact]
-    public async Task WebhookTemplate_SuccessResponse_ExitsZeroAndForwardsContext()
+    public async Task WebhookTemplateSuccessResponseExitsZeroAndForwardsContext()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200, "{\"received\":true}");
@@ -80,7 +80,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task WebhookTemplate_ServerErrorResponse_FailsInsteadOfReportingSuccess()
+    public async Task WebhookTemplateServerErrorResponseFailsInsteadOfReportingSuccess()
     {
         // Regression test for the curl -f fix: without -f, curl exits 0 even on a 5xx,
         // which would make Reef report "Success" while the webhook delivery silently failed.
@@ -104,7 +104,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task WebhookTemplate_MissingEnvVar_FailsFastWithoutCallingServer()
+    public async Task WebhookTemplateMissingEnvVarFailsFastWithoutCallingServer()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200);
@@ -121,7 +121,7 @@ public class ScriptTemplateExamplesTests
     // Slack / Teams notify (python)
 
     [Fact]
-    public async Task SlackTemplate_SuccessResponse_ExitsZeroAndPostsSummaryText()
+    public async Task SlackTemplateSuccessResponseExitsZeroAndPostsSummaryText()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200, "ok");
@@ -145,7 +145,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task SlackTemplate_ServerErrorResponse_Fails()
+    public async Task SlackTemplateServerErrorResponseFails()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(503, "unavailable");
@@ -166,7 +166,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task SlackTemplate_MissingEnvVars_FailsFastWithoutCallingServer()
+    public async Task SlackTemplateMissingEnvVarsFailsFastWithoutCallingServer()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200);
@@ -184,7 +184,7 @@ public class ScriptTemplateExamplesTests
     // REST ERP call (node)
 
     [Fact]
-    public async Task ErpTemplate_SuccessResponse_PostsExecutionSummaryWithAuth()
+    public async Task ErpTemplateSuccessResponsePostsExecutionSummaryWithAuth()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200, "{\"accepted\":true}");
@@ -211,7 +211,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task ErpTemplate_ServerErrorResponse_Fails()
+    public async Task ErpTemplateServerErrorResponseFails()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(422, "validation failed");
@@ -234,7 +234,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task ErpTemplate_MissingEnvVars_FailsFastWithoutCallingServer()
+    public async Task ErpTemplateMissingEnvVarsFailsFastWithoutCallingServer()
     {
         using var mock = new MockHttpServer();
         mock.SetResponse(200);
@@ -255,7 +255,7 @@ public class ScriptTemplateExamplesTests
     // verify the fast-fail-on-missing-config path, which needs no external deps.
 
     [Fact]
-    public async Task ExactXmlTemplate_MissingEnvVars_FailsFast()
+    public async Task ExactXmlTemplateMissingEnvVarsFailsFast()
     {
         if (!IsPwshAvailable())
         {
@@ -291,7 +291,7 @@ public class ScriptTemplateExamplesTests
         """;
 
     [Fact]
-    public async Task BashExactXmlHarness_MissingEnvVars_FailsFast()
+    public async Task BashExactXmlHarnessMissingEnvVarsFailsFast()
     {
         Environment.SetEnvironmentVariable("STAGING_DB_CONNSTRING", null);
         Environment.SetEnvironmentVariable("EXACTXML_EXE_PATH", null);
@@ -312,7 +312,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task BashExactXmlHarness_FakeExeSucceeds_PropagatesExitZero()
+    public async Task BashExactXmlHarnessFakeExeSucceedsPropagatesExitZero()
     {
         var fakeExe = WriteFakeExactXmlExe(exitCode: 0, stdout: "Imported 3 row(s)");
         Environment.SetEnvironmentVariable("STAGING_DB_CONNSTRING", "Server=fake;Database=fake;");
@@ -343,7 +343,7 @@ public class ScriptTemplateExamplesTests
     }
 
     [Fact]
-    public async Task BashExactXmlHarness_FakeExeFails_PropagatesExitCode()
+    public async Task BashExactXmlHarnessFakeExeFailsPropagatesExitCode()
     {
         var fakeExe = WriteFakeExactXmlExe(exitCode: 7, stdout: "", stderr: "import definition mismatch");
         Environment.SetEnvironmentVariable("STAGING_DB_CONNSTRING", "Server=fake;Database=fake;");

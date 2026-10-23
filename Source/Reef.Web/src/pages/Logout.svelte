@@ -7,7 +7,7 @@
   onMount(() => {
     fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     clearSession();
-    const timer = setTimeout(() => navigate('/index', true), 1200);
+    const timer = setTimeout(() => navigate('/login', true), 1200);
     return () => clearTimeout(timer);
   });
 </script>
@@ -17,7 +17,7 @@
 <div class="wrap">
   <Logo size={28} />
   <h1>Signed out</h1>
-  <a href="/index">Sign in again</a>
+  <a href="/login">Sign in again</a>
 </div>
 
 <style>

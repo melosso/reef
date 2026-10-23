@@ -59,7 +59,7 @@ public class DashboardApiTests(ReefApiFactory factory)
         attention[section]!.AsArray().Select(i => i!["profileId"]!.GetValue<int>());
 
     [Fact]
-    public async Task Attention_lists_failed_profiles_and_row_count_drops_for_any_signed_in_user()
+    public async Task AttentionListsFailedProfilesAndRowCountDropsForAnySignedInUser()
     {
         var admin = await factory.CreateAdminClientAsync();
         var shopDb = Path.Combine(factory.DataFolder, $"dash-{Guid.NewGuid():N}.db");
@@ -93,7 +93,7 @@ public class DashboardApiTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Failed_profile_leaves_attention_after_a_successful_run()
+    public async Task FailedProfileLeavesAttentionAfterASuccessfulRun()
     {
         var admin = await factory.CreateAdminClientAsync();
         var shopDb = Path.Combine(factory.DataFolder, $"dash-{Guid.NewGuid():N}.db");

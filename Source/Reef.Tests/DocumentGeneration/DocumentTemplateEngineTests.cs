@@ -33,7 +33,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public async Task TransformAsync_WithValidPdfTemplate_ShouldGeneratePdf()
+    public async Task TransformAsyncWithValidPdfTemplateShouldGeneratePdf()
     {
         // Arrange
         var template = @"
@@ -84,7 +84,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public async Task TransformAsync_WithDocxFormat_ShouldGenerateDocx()
+    public async Task TransformAsyncWithDocxFormatShouldGenerateDocx()
     {
         // Arrange
         var template = @"
@@ -123,7 +123,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public void ValidateTemplate_WithValidTemplate_ShouldReturnTrue()
+    public void ValidateTemplateWithValidTemplateShouldReturnTrue()
     {
         // Arrange
         var template = @"
@@ -150,7 +150,7 @@ public class DocumentTemplateEngineTests : IDisposable
     [Theory]
     [InlineData("XYZ")] // Invalid format
     [InlineData("xml")] // Wrong case, should be uppercase
-    public void ValidateTemplate_WithInvalidFormat_ShouldReturnFalse(string format)
+    public void ValidateTemplateWithInvalidFormatShouldReturnFalse(string format)
     {
         // Arrange
         var template = $@"
@@ -172,7 +172,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public void ValidateTemplate_WithInvalidPageSize_ShouldReturnFalse()
+    public void ValidateTemplateWithInvalidPageSizeShouldReturnFalse()
     {
         // Arrange
         var template = @"
@@ -195,7 +195,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public void ValidateTemplate_WithInvalidOrientation_ShouldReturnFalse()
+    public void ValidateTemplateWithInvalidOrientationShouldReturnFalse()
     {
         // Arrange
         var template = @"
@@ -218,7 +218,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public void ValidateTemplate_WithNoSections_ShouldReturnFalse()
+    public void ValidateTemplateWithNoSectionsShouldReturnFalse()
     {
         // Arrange
         var template = @"
@@ -234,7 +234,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public void ValidateTemplate_WithInvalidScribanSyntax_ShouldReturnFalse()
+    public void ValidateTemplateWithInvalidScribanSyntaxShouldReturnFalse()
     {
         // Arrange
         var template = @"
@@ -256,7 +256,7 @@ public class DocumentTemplateEngineTests : IDisposable
     }
 
     [Fact]
-    public async Task TransformAsync_WithHeaderFooterAndContent_ShouldRenderAllSections()
+    public async Task TransformAsyncWithHeaderFooterAndContentShouldRenderAllSections()
     {
         // Arrange
         var template = @"
@@ -310,7 +310,7 @@ Footer text
     }
 
     [Fact]
-    public void ValidateTemplate_WithAllValidDirectives_ShouldParseCorrectly()
+    public void ValidateTemplateWithAllValidDirectivesShouldParseCorrectly()
     {
         // Arrange
         var template = @"
@@ -339,7 +339,7 @@ Footer text
     }
 
     [Fact]
-    public async Task TransformAsync_WhenGenerationFails_ShouldThrowException()
+    public async Task TransformAsyncWhenGenerationFailsShouldThrowException()
     {
         // Arrange
         var template = @"

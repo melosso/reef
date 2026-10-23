@@ -1,3 +1,4 @@
+using Reef.Core.Security;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
@@ -15,8 +16,10 @@ public static class DestinationsEndpoints
         // POST: Test destination configuration without creating
         group.MapPost("/test", async (
             [FromBody] DestinationTestConfigRequest request,
-            [FromServices] DestinationService service) =>
+            [FromServices] DestinationService service,
+            [FromServices] PrivilegedSettingsGuard guard) =>
         {
+            guard.Check(request.Type.ToString(), request.ConfigurationJson, null, null);
             try
             {
                 // Validate request

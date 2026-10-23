@@ -8,6 +8,6 @@ export const navItems = [
   { href: '/templates', label: 'Templates', icon: FileCode },
   { href: '/jobs', label: 'Jobs', icon: CalendarClock },
   { href: '/executions', label: 'Executions', icon: Activity },
-  { href: '/email-approvals', label: 'Approvals', icon: MailCheck },
+  { href: '/approvals', label: 'Approvals', icon: MailCheck },
   { href: '/groups', label: 'Groups', icon: FolderTree },
 ];

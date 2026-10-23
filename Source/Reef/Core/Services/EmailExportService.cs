@@ -22,7 +22,7 @@ public class EmailExportService
     private readonly AttachmentVariableResolver _variableResolver;
     private readonly BinaryAttachmentResolver _binaryResolver;
     private readonly HashSet<string> _deduplicationCache;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailExportService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailExportService>();
 
     public EmailExportService(
         ScribanTemplateEngine templateEngine,

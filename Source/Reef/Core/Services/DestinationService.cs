@@ -325,12 +325,14 @@ public class DestinationService
     }
     private readonly string _connectionString;
     private readonly EncryptionService _encryption;
+    private readonly Reef.Core.Security.PrivilegedSettingsGuard _guard;
     private readonly DestinationConfigEncryption _configEncryption;
 
-    public DestinationService(string connectionString, EncryptionService encryption)
+    public DestinationService(string connectionString, EncryptionService encryption, Reef.Core.Security.PrivilegedSettingsGuard guard)
     {
         _connectionString = connectionString;
         _encryption = encryption;
+        _guard = guard;
         _configEncryption = new DestinationConfigEncryption(encryption);
     }
 
@@ -626,6 +628,7 @@ public class DestinationService
 
     public async Task<Destination> CreateAsync(Destination destination, CancellationToken ct = default)
     {
+        _guard.Check(destination.Type.ToString(), destination.ConfigurationJson, null, null);
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
 
@@ -708,6 +711,7 @@ public class DestinationService
                 existingDecrypted,
                 destination.Type);
         }
+        _guard.Check(destination.Type.ToString(), mergedConfig, existing.Type.ToString(), existingDecrypted);
 
         // Encrypt entire merged configuration
         var encryptedConfig = mergedConfig;

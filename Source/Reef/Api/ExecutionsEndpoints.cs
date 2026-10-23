@@ -1,3 +1,4 @@
+using Reef.Helpers;
 // Source/Reef/Api/ExecutionsEndpoints.cs
 // API endpoints for execution management and monitoring
 
@@ -52,7 +53,7 @@ public static class ExecutionsEndpoints
 
         // Find the execution by token (search OutputPath for the token)
         var executions = await service.GetRecentExecutionsAsync(1000); // Or implement a direct lookup by token
-        var execution = executions.FirstOrDefault(e => e.OutputPath != null && e.OutputPath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        var execution = executions.FirstOrDefault(e => DownloadToken.Matches(e.OutputPath, token));
         if (execution == null || string.IsNullOrWhiteSpace(execution.OutputPath))
             return Results.NotFound();
 
@@ -64,9 +65,15 @@ public static class ExecutionsEndpoints
             return Results.Forbid();
 
         // Prevent path traversal
-        var filePath = Path.GetFullPath(Path.Combine(outputRoot, Path.GetRelativePath("exports", execution.OutputPath)));
-        if (!filePath.StartsWith(outputRoot))
+        string filePath;
+        try
+        {
+            filePath = SafePath.Combine(outputRoot, Path.GetRelativePath("exports", execution.OutputPath));
+        }
+        catch (InvalidOperationException)
+        {
             return Results.Forbid();
+        }
 
         if (!System.IO.File.Exists(filePath))
             return Results.NotFound();

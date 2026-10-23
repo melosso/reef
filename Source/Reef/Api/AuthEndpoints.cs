@@ -466,7 +466,7 @@ public static class AuthEndpoints
         AuditService auditService,
         HttpContext httpContext)
     {
-        var token = jwtService.GenerateToken(user.Username, user.Role, user.Id);
+        var token = jwtService.GenerateToken(user.Username, user.Role, user.Id, user.PasswordHash);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
         await connection.ExecuteAsync(
@@ -509,26 +509,25 @@ public static class AuthEndpoints
     {
         try
         {
-            var username = httpContext.User.Identity?.Name;
-            var role = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "userId" || c.Type == "sub")?.Value;
-
-            if (username == null || role == null || !int.TryParse(userIdClaim, out var userId))
+            if (!int.TryParse(userIdClaim, out var userId))
             {
                 return Results.Unauthorized();
             }
 
-            // Get user to fetch displayName
-            string? displayName = null;
-            try
+            // The bearer pipeline rejects stale tokens. The new token uses claims from the stored account.
+            await using var connection = new SqliteConnection(dbConfig.ConnectionString);
+            var user = await connection.QuerySingleOrDefaultAsync<User>(
+                "SELECT * FROM Users WHERE Id = @UserId AND IsActive = 1 AND IsDeleted = 0", new { UserId = userId });
+            if (user == null)
             {
-                using var connection = new SqliteConnection(dbConfig.ConnectionString);
-                const string sql = "SELECT DisplayName FROM Users WHERE Id = @UserId";
-                displayName = await connection.QueryFirstOrDefaultAsync<string>(sql, new { UserId = userId });
+                return Results.Unauthorized();
             }
-            catch { /* Ignore - displayName is optional */ }
 
-            var newToken = jwtService.GenerateToken(username, role, userId);
+            var username = user.Username;
+            var role = user.Role;
+            var displayName = user.DisplayName;
+            var newToken = jwtService.GenerateToken(username, role, userId, user.PasswordHash);
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
             var isHttps = httpContext.Request.IsHttps;

@@ -176,7 +176,7 @@
               <td class="email-footer">
                 <div class="footer-main">
                   <div class="footer-address muted">{{~ row.company | html.escape ~}} &nbsp;&middot;&nbsp; {{~ row.company_address | default "Your Company Address" | html.escape ~}}</div>
-                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 ~}}</div>
+                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 | html.escape ~}}</div>
                 </div>
 
                 <div class="footer-secondary">

@@ -11,7 +11,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class EmailDestination : IDestination
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailDestination>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailDestination>();
 
     /// <summary>
     /// Partially mask email address for logging (e.g., "user@example.com" -> "u*@example.com")

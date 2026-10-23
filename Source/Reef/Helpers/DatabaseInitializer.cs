@@ -12,7 +12,7 @@ public class DatabaseInitializer
 {
     private readonly string _connectionString;
     private readonly EncryptionService? _encryptionService;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<DatabaseInitializer>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<DatabaseInitializer>();
 
     public DatabaseInitializer(string connectionString, EncryptionService? encryptionService = null)
     {

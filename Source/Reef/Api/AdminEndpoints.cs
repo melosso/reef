@@ -19,7 +19,7 @@ public static class AdminEndpoints
 {
     public static void Map(WebApplication app)
     {
-        var group = app.MapGroup("/api/admin").RequireAuthorization();
+        var group = app.MapGroup("/api/admin").RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         group.MapGet("/metrics", GetMetrics);
         group.MapGet("/audit-logs", GetAuditLogs);
@@ -1144,7 +1144,7 @@ public static class AdminEndpoints
                 var isCurrentUser = existingUser.Id == currentUser?.Id;
                 if (isCurrentUser)
                 {
-                    var newToken = jwtService.GenerateToken(request.NewUsername, existingUser.Role, existingUser.Id);
+                    var newToken = jwtService.GenerateToken(request.NewUsername, existingUser.Role, existingUser.Id, existingUser.PasswordHash);
 
                     Log.Debug("User {OldUsername} changed their own username to {NewUsername}, new token generated",
                         oldUsername, request.NewUsername);

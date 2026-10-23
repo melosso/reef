@@ -11,15 +11,15 @@ public class TrustedProxySettingsValidatorTests
         new TrustedProxySettingsValidator().Validate(null, new TrustedProxySettings { KnownProxies = proxies, KnownNetworks = networks }).Failures?.ToArray() ?? [];
 
     [Fact]
-    public void Valid_addresses_and_networks_pass() =>
+    public void ValidAddressesAndNetworksPass() =>
         Failures(["10.0.0.1", "::1"], ["172.16.0.0/12", "fd00::/8"]).Should().BeEmpty();
 
     [Fact]
-    public void Nothing_configured_passes() =>
+    public void NothingConfiguredPasses() =>
         Failures([], []).Should().BeEmpty();
 
     [Fact]
-    public void Malformed_entries_name_the_variable_and_value()
+    public void MalformedEntriesNameTheVariableAndValue()
     {
         var failures = Failures(["10.0.0.300"], ["172.16.0.0"]);
 

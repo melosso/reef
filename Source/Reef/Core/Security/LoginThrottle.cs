@@ -5,7 +5,7 @@ using Serilog;
 namespace Reef.Core.Security;
 
 /// <summary>
-/// Limits failed sign-ins per address and account, and per address across accounts against password spraying
+/// Limits failed sign-ins per address and account, and per address across accounts.
 /// </summary>
 public sealed class LoginThrottle(TimeProvider time)
 {
@@ -31,7 +31,7 @@ public sealed class LoginThrottle(TimeProvider time)
         Count(AccountKey(address, username), MaxAccountFailures, now);
     }
 
-    // the address counter stays so a known password cannot reset spraying attempts on other accounts
+    // Keeps the address counter. A known password must not reset spraying attempts on other accounts.
     public void RecordSuccess(string address, string username) => _failures.TryRemove(AccountKey(address, username), out _);
 
     private bool Locked(string key, DateTimeOffset now) =>

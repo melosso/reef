@@ -18,7 +18,7 @@ public class EnvAliasesTests
         ["Reef:AllowedOrigins:1"] = "http://localhost:3000",
     };
 
-    // mirrors AddEnvironmentVariables followed by ApplyConfigAliases
+    // Mirrors AddEnvironmentVariables followed by ApplyConfigAliases.
     private static IConfiguration Configure(params (string Name, string Value)[] env)
     {
         var vars = env.ToDictionary(e => e.Name, e => e.Value);
@@ -36,19 +36,19 @@ public class EnvAliasesTests
     [InlineData("DATABASEPATH")]
     [InlineData("REEF_DATABASE_PATH")]
     [InlineData("Reef__DatabasePath")]
-    public void Every_name_form_sets_the_setting(string name) =>
+    public void EveryNameFormSetsTheSetting(string name) =>
         Configure((name, "/data/Reef.db"))["Reef:DatabasePath"].Should().Be("/data/Reef.db");
 
     [Fact]
-    public void Prefixed_short_name_wins_over_bare_and_bare_wins_over_legacy() =>
+    public void PrefixedShortNameWinsOverBareAndBareWinsOverLegacy() =>
         Configure(("Reef__DatabasePath", "legacy"), ("DATABASE_PATH", "bare"), ("REEF_DATABASE_PATH", "prefixed"))["Reef:DatabasePath"].Should().Be("prefixed");
 
     [Fact]
-    public void Short_name_wins_over_legacy() =>
+    public void ShortNameWinsOverLegacy() =>
         Configure(("Reef__DatabasePath", "legacy"), ("DATABASE_PATH", "bare"))["Reef:DatabasePath"].Should().Be("bare");
 
     [Fact]
-    public void Nested_settings_take_their_section_as_prefix()
+    public void NestedSettingsTakeTheirSectionAsPrefix()
     {
         var config = Configure(("JWT_SECRET_KEY", "s3cret"), ("JOBS_CHECK_INTERVAL_SECONDS", "5"), ("CHECK_INTERVAL_SECONDS", "1"));
 
@@ -60,18 +60,18 @@ public class EnvAliasesTests
     [Theory]
     [InlineData("ALLOWED_ORIGINS")]
     [InlineData("Reef__AllowedOrigins")]
-    public void Lists_split_on_commas_and_replace_the_defaults(string name) =>
+    public void ListsSplitOnCommasAndReplaceTheDefaults(string name) =>
         Configure((name, "https://a.example, https://b.example;https://c.example"))
             .GetList("Reef:AllowedOrigins")
             .Should().Equal("https://a.example", "https://b.example", "https://c.example");
 
     [Fact]
-    public void Shorter_list_drops_the_remaining_defaults() =>
+    public void ShorterListDropsTheRemainingDefaults() =>
         Configure(("ALLOWED_ORIGINS", "https://a.example")).GetList("Reef:AllowedOrigins")
             .Should().Equal("https://a.example");
 
     [Fact]
-    public void Unrelated_variables_are_ignored() =>
+    public void UnrelatedVariablesAreIgnored() =>
         EnvAliases.Resolve(new ConfigurationBuilder().AddInMemoryCollection(Defaults).Build(),
             new Dictionary<string, string> { ["PATH"] = "/usr/bin", ["HOME"] = "/root", ["ASPNETCORE_URLS"] = "http://+:80" })
             .Should().BeEmpty();
@@ -81,27 +81,27 @@ public class EnvAliasesTests
     [InlineData("Reef__Jwt__SecretKey", "JWT_SECRET_KEY")]
     [InlineData("Reef__AllowedOrigins__0", "ALLOWED_ORIGINS")]
     [InlineData("REEF__LISTENPORT", "LISTENPORT")]
-    public void Legacy_names_suggest_their_short_name(string legacy, string expected) =>
+    public void LegacyNamesSuggestTheirShortName(string legacy, string expected) =>
         EnvAliases.ShortNameFor(legacy).Should().Be(expected);
 
     [Fact]
-    public void Direct_variables_prefer_the_prefixed_name()
+    public void DirectVariablesPreferThePrefixedName()
     {
         EnvAliases.GetDirect("ENCRYPTION_KEY", n => n switch { "REEF_ENCRYPTION_KEY" => "prefixed", "ENCRYPTION_KEY" => "bare", _ => null }).Should().Be("prefixed");
         EnvAliases.GetDirect("ENCRYPTION_KEY", n => n == "ENCRYPTION_KEY" ? "bare" : null).Should().Be("bare");
         EnvAliases.GetDirect("ENCRYPTION_KEY", _ => null).Should().BeNull();
     }
 
-    // the Dockerfile declares REEF_ENCRYPTION_KEY with an empty value
+    // The Dockerfile declares REEF_ENCRYPTION_KEY with an empty value.
     [Fact]
-    public void Empty_values_count_as_unset()
+    public void EmptyValuesCountAsUnset()
     {
         EnvAliases.GetDirect("ENCRYPTION_KEY", n => n == "REEF_ENCRYPTION_KEY" ? "" : "bare").Should().Be("bare");
         Configure(("REEF_DATABASE_PATH", ""), ("DATABASE_PATH", "/data/Reef.db"))["Reef:DatabasePath"].Should().Be("/data/Reef.db");
     }
 
     [Fact]
-    public void Empty_list_defaults_still_take_a_short_name()
+    public void EmptyListDefaultsStillTakeAShortName()
     {
         var json = new ConfigurationBuilder()
             .AddJsonStream(new MemoryStream("""{ "Reef": { "KnownProxies": [], "Jwt": { "Issuer": "reef" } } }"""u8.ToArray()))

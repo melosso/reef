@@ -37,7 +37,7 @@
     <span class="muted">{session.username} · {session.role}</span>
   </div>
   <button type="button" onclick={() => go('/account')}><User size={15} />Account settings</button>
-  <button type="button" onclick={() => go('/logoff')}><LogOut size={15} />Sign out</button>
+  <button type="button" onclick={() => go('/logout')}><LogOut size={15} />Sign out</button>
 </div>
 
 <style>

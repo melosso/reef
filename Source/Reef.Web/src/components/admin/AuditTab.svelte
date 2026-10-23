@@ -4,19 +4,19 @@
   import type { AuditEntry } from '../../models/AuditEntry';
   import type { PagedResult } from '../../models/PagedResult';
   import { queryString } from '../../lib/query';
+  import { urlPaging } from '../../lib/paging.svelte';
   import { formatDateTime } from '../../lib/format';
   import { notify } from '../../lib/notify';
 
   let entityType = $state('');
   let action = $state('');
-  let page = $state(1);
-  let pageSize = $state(50);
+  const paging = urlPaging(50);
   let total = $state(0);
   let pages = $state(1);
   let logs = $state<AuditEntry[]>([]);
 
   $effect(() => {
-    const q = queryString({ page, pageSize, entityType, action });
+    const q = queryString({ page: paging.page, pageSize: paging.size, entityType, action });
     api
       .get<PagedResult<AuditEntry>>(`/api/admin/audit-logs?${q}`)
       .then((r) => {
@@ -36,7 +36,7 @@
     value={entityType}
     onchange={(e) => {
       entityType = e.currentTarget.value;
-      page = 1;
+      paging.page = 1;
     }}
   >
     <option value="">All entity types</option><option value="Connection">Connection</option><option value="Profile">Profile</option><option
@@ -48,7 +48,7 @@
     value={action}
     onchange={(e) => {
       action = e.currentTarget.value;
-      page = 1;
+      paging.page = 1;
     }}
   >
     <option value="">All actions</option>{#each ['Created', 'Updated', 'Deleted', 'Executed'] as a (a)}<option value={a}>{a}</option>{/each}
@@ -84,7 +84,7 @@
     </tbody>
   </table>
 </div>
-<Pager bind:page bind:pageSize {total} {pages} />
+<Pager bind:page={paging.page} bind:pageSize={paging.size} {total} {pages} />
 
 <style>
   .nowrap {

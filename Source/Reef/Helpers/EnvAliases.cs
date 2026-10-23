@@ -5,7 +5,7 @@ using Serilog;
 namespace Reef.Helpers;
 
 /// <summary>
-/// Short environment variable names for every Reef setting, DATABASE_PATH and REEF_DATABASE_PATH set Reef:DatabasePath and Reef__ names still work
+/// Maps short environment variable names to Reef settings. DATABASE_PATH and REEF_DATABASE_PATH set Reef:DatabasePath.
 /// </summary>
 public static partial class EnvAliases
 {
@@ -16,7 +16,7 @@ public static partial class EnvAliases
     private enum Rank { Legacy, Bare, Prefixed }
 
     /// <summary>
-    /// Adds short name values on top of the current configuration, call right after the builder is created
+    /// Adds short name values to the configuration. Call before builder.Build().
     /// </summary>
     public static void ApplyConfigAliases(ConfigurationManager config)
     {
@@ -33,7 +33,7 @@ public static partial class EnvAliases
         foreach (var (name, value) in env.Where(e => !string.IsNullOrWhiteSpace(e.Value)).OrderBy(e => e.Key, StringComparer.Ordinal))
         {
             if (Classify(name) is not var (normalized, rank) || !settings.TryGetValue(normalized, out var setting)) continue;
-            // the environment provider already applies legacy scalars, only legacy lists still need splitting
+            // The environment provider applies legacy scalars. Legacy lists require splitting.
             if (rank == Rank.Legacy && setting.Count == 0) continue;
             if (chosen.TryGetValue(setting.Key, out var existing) && existing.Rank >= rank) continue;
             chosen[setting.Key] = (rank, value);
@@ -57,7 +57,7 @@ public static partial class EnvAliases
     }
 
     /// <summary>
-    /// Reads a setting that lives outside the configuration, preferring REEF_NAME over NAME
+    /// Reads a setting outside the configuration. REEF_NAME takes precedence over NAME.
     /// </summary>
     public static string? GetDirect(string name) => GetDirect(name, Environment.GetEnvironmentVariable);
 
@@ -65,7 +65,7 @@ public static partial class EnvAliases
         new[] { Prefix + name, name }.Select(readEnv).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     /// <summary>
-    /// The short name that replaces a Reef__ name, Reef__Jwt__SecretKey becomes JWT_SECRET_KEY
+    /// Returns the short name for a Reef__ name. Reef__Jwt__SecretKey returns JWT_SECRET_KEY.
     /// </summary>
     public static string ShortNameFor(string legacyName)
     {
@@ -75,7 +75,7 @@ public static partial class EnvAliases
     }
 
     /// <summary>
-    /// Logs one warning per Reef__ setting still in use, call once Serilog is up
+    /// Logs one warning per Reef__ setting in use. Call after Serilog is configured.
     /// </summary>
     public static void WarnOnLegacyUsage()
     {
@@ -83,7 +83,7 @@ public static partial class EnvAliases
             Log.Warning("Environment variable {OldName} is deprecated, use {NewName} instead", group.First(), group.Key);
     }
 
-    // normalized name to setting, lists keep the number of entries the configuration holds
+    // Maps normalized names to settings. List settings include their entry count.
     private static Dictionary<string, (string Key, int Count)> Settings(IConfiguration current)
     {
         var lists = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);

@@ -382,7 +382,7 @@ public static class WebhooksEndpoints
             // Validate token format
             if (!WebhookService.IsValidTokenFormat(token))
             {
-                Log.Warning("Invalid webhook token format received for token {Token}", token);
+                Log.Warning("Invalid webhook token format received for token {Token}", WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
@@ -397,7 +397,7 @@ public static class WebhooksEndpoints
             var webhook = await service.GetByTokenAsync(token);
             if (webhook == null)
             {
-                Log.Warning("Webhook token not found for token {Token}", token);
+                Log.Warning("Webhook token not found for token {Token}", WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
@@ -411,7 +411,7 @@ public static class WebhooksEndpoints
             // Check if webhook is active
             if (!webhook.IsActive)
             {
-                Log.Warning("Inactive webhook {WebhookId} triggered for token {Token}", webhook.Id, token);
+                Log.Warning("Inactive webhook {WebhookId} triggered for token {Token}", webhook.Id, WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
@@ -428,7 +428,7 @@ public static class WebhooksEndpoints
             if (!service.CheckRateLimit(webhook.Id))
             {
                 var (count, oldest) = service.GetRateLimitInfo(webhook.Id);
-                Log.Warning("Rate limit exceeded for webhook {WebhookId} and token {Token}", webhook.Id, token);
+                Log.Warning("Rate limit exceeded for webhook {WebhookId} and token {Token}", webhook.Id, WebhookService.MaskToken(token));
 
                 var resetTime = oldest.HasValue ? oldest.Value.AddHours(1) : DateTime.UtcNow.AddHours(1);
                 var retryAfterSeconds = (int)Math.Max(1, (resetTime - DateTime.UtcNow).TotalSeconds);
@@ -462,7 +462,7 @@ public static class WebhooksEndpoints
             {
                 // Execute profile
                 Log.Information("Triggering profile {ProfileId} via webhook {WebhookId} and token {Token}",
-                    webhook.ProfileId.Value, webhook.Id, token);
+                    webhook.ProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
                 var (executionId, success, outputPath, errorMessage) = await executionService.ExecuteProfileAsync(
                     webhook.ProfileId.Value,
@@ -492,7 +492,7 @@ public static class WebhooksEndpoints
             {
                 // Trigger job
                 Log.Information("Triggering job {JobId} via webhook {WebhookId} and token {Token}",
-                    webhook.JobId.Value, webhook.Id, token);
+                    webhook.JobId.Value, webhook.Id, WebhookService.MaskToken(token));
 
                 var jobService = context.RequestServices.GetRequiredService<JobService>();
                 var job = await jobService.GetByIdAsync(webhook.JobId.Value);
@@ -535,7 +535,7 @@ public static class WebhooksEndpoints
             {
                 // Execute import profile
                 Log.Information("Triggering import profile {ImportProfileId} via webhook {WebhookId} and token {Token}",
-                    webhook.ImportProfileId.Value, webhook.Id, token);
+                    webhook.ImportProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
                 var importExecService = context.RequestServices.GetRequiredService<ImportExecutionService>();
                 var exec = await importExecService.ExecuteAsync(webhook.ImportProfileId.Value, $"Webhook/{webhook.Id}", ct);
@@ -572,7 +572,7 @@ public static class WebhooksEndpoints
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing webhook trigger for token {Token}", token);
+            Log.Error(ex, "Error processing webhook trigger for token {Token}", WebhookService.MaskToken(token));
             return Results.Json(
                 new
                 {

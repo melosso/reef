@@ -10,7 +10,7 @@
   import OidcTab from '../components/admin/OidcTab.svelte';
   import SystemTab from '../components/admin/SystemTab.svelte';
   import UsersTab from '../components/admin/UsersTab.svelte';
-  import { route, setQuery } from '../lib/router.svelte';
+  import { match, navigate, route } from '../lib/router.svelte';
   import type { Component } from 'svelte';
 
   const GROUPS: { title: string; tabs: [string, string, Component][] }[] = [
@@ -26,7 +26,7 @@
       title: 'Access',
       tabs: [
         ['users', 'Users', UsersTab],
-        ['apikeys', 'API keys', ApiKeysTab],
+        ['api-keys', 'API keys', ApiKeysTab],
         ['oidc', 'OIDC', OidcTab],
       ],
     },
@@ -42,7 +42,7 @@
   ];
   const ALL = GROUPS.flatMap((g) => g.tabs);
 
-  const tab = $derived(ALL.find(([id]) => id === route.query.get('tab')) ?? ALL[0]);
+  const tab = $derived(ALL.find(([id]) => id === match('/admin/:tab', route.path)?.tab) ?? ALL[0]);
 </script>
 
 <Page crumbs={[{ label: 'Admin', href: '/admin' }, { label: tab[1] }]}>
@@ -54,7 +54,7 @@
           <button
             type="button"
             aria-current={tab[0] === id ? 'page' : undefined}
-            onclick={() => setQuery('tab', id === 'system' ? null : id)}>{label}</button
+            onclick={() => navigate(id === 'system' ? '/admin' : `/admin/${id}`)}>{label}</button
           >
         {/each}
       {/each}

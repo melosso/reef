@@ -33,7 +33,7 @@ public class PasswordPepperTests(ReefApiFactory factory)
         (await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username, password = Password }, _ct)).StatusCode;
 
     [Fact]
-    public async Task Stored_password_hashes_depend_on_the_encryption_key()
+    public async Task StoredPasswordHashesDependOnTheEncryptionKey()
     {
         var name = await CreateUserAsync();
 
@@ -42,7 +42,7 @@ public class PasswordPepperTests(ReefApiFactory factory)
     }
 
     [Fact]
-    public async Task Legacy_hashes_still_sign_in_and_are_upgraded()
+    public async Task LegacyHashesStillSignInAndAreUpgraded()
     {
         var name = await CreateUserAsync();
         await using (var conn = Open())

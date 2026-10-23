@@ -39,7 +39,7 @@ public class ImportExecutionService(
     ImportFileOutputService fileOutputService,
     IScriptRunner scriptRunner)
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ImportExecutionService>();
 
     // Public Entry Points
 

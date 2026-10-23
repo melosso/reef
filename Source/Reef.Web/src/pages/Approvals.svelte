@@ -12,7 +12,8 @@
   import type { PagedResult } from '../models/PagedResult';
   import { formatBytes, formatDateTime } from '../lib/format';
   import { notify } from '../lib/notify';
-  import { route, setQuery } from '../lib/router.svelte';
+  import { match, navigate, route } from '../lib/router.svelte';
+  import { urlPaging } from '../lib/paging.svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { statusKind, statusLabel } from '../lib/status';
   import { tooltip } from '../lib/tooltip';
@@ -20,13 +21,13 @@
   type Tab = 'pending' | 'approved' | 'history';
   type Action = 'approve' | 'reject' | 'skip';
 
-  const tab = $derived((route.query.get('tab') as Tab) || 'pending');
-  const PAGE_SIZE = 25;
+  const TABS: Tab[] = ['pending', 'approved', 'history'];
+  const tab = $derived(TABS.find((t) => t === match('/approvals/:tab', route.path)?.tab) ?? 'pending');
+  const paging = urlPaging(25);
 
   let approvals = $state<EmailApproval[]>([]);
   let profiles = $state<ExportProfile[]>([]);
   let loaded = $state(false);
-  let page = $state(1);
   const selected = new SvelteSet<string>();
   let preview = $state<EmailPreview | null>(null);
   let action = $state<{ kind: Action; guids: string[] } | null>(null);
@@ -59,8 +60,8 @@
     history: approvals.filter((a) => ['Sent', 'Failed', 'Rejected', 'Skipped'].includes(a.status)),
   });
   const current = $derived(lists[tab]);
-  const pages = $derived(Math.max(1, Math.ceil(current.length / PAGE_SIZE)));
-  const pageItems = $derived(current.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE));
+  const pages = $derived(Math.max(1, Math.ceil(current.length / paging.size)));
+  const pageItems = $derived(current.slice((paging.page - 1) * paging.size, paging.page * paging.size));
   const allOnPage = $derived(pageItems.length > 0 && pageItems.every((a) => selected.has(a.guid)));
   const someOnPage = $derived(pageItems.some((a) => selected.has(a.guid)));
 
@@ -110,8 +111,7 @@
   }
 
   function showTab(next: Tab | null) {
-    setQuery('tab', next);
-    page = 1;
+    navigate(next ? `/approvals/${next}` : '/approvals');
   }
 
   function ask(kind: Action, guids: string[]) {
@@ -277,11 +277,11 @@
     {#if pages > 1}
       <div class="pager">
         <span class="spacer"></span>
-        <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}
+        <button type="button" class="btn icon" aria-label="Previous page" disabled={paging.page <= 1} onclick={() => paging.page--}
           ><ChevronLeft size={15} /></button
         >
-        <span class="num">{page} / {pages}</span>
-        <button type="button" class="btn icon" aria-label="Next page" disabled={page >= pages} onclick={() => page++}
+        <span class="num">{paging.page} / {pages}</span>
+        <button type="button" class="btn icon" aria-label="Next page" disabled={paging.page >= pages} onclick={() => paging.page++}
           ><ChevronRight size={15} /></button
         >
       </div>

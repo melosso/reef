@@ -24,7 +24,7 @@
       const data = await api.post<PasswordChangeResult>('/api/auth/change-password', { currentPassword: current, newPassword: next });
       notify.success('Password changed');
       dialog.close();
-      if (data?.requiresLogoff) navigate('/logoff');
+      if (data?.requiresLogoff) navigate('/logout');
     } catch (error) {
       notify.fail(error, 'password-required');
     } finally {

@@ -16,7 +16,7 @@
     type DestField,
   } from '../lib/destinationSchema';
   import { notify } from '../lib/notify';
-  import { route, setQuery } from '../lib/router.svelte';
+  import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { CheckResult } from '../models/CheckResult';
   import type { Destination } from '../models/Destination';
@@ -66,10 +66,7 @@
     load();
   });
 
-  $effect(() => {
-    const id = route.query.get('id');
-    if (id && loaded && form?.id !== Number(id)) edit(Number(id));
-  });
+  const records = detailRoute('/destinations', { create, edit, dismiss });
 
   const visible = $derived(
     list.filter((d) => {
@@ -122,10 +119,14 @@
     }
   }
 
-  function close() {
+  function dismiss() {
     form = null;
     endpointForm = null;
-    if (route.query.get('id')) setQuery('id', null);
+  }
+
+  function close() {
+    dismiss();
+    records.close();
   }
 
   async function testConfig(configurationJson: string, label: string) {
@@ -315,7 +316,7 @@
 
 <Page crumbs={[{ label: 'Destinations' }]}>
   {#snippet actions()}
-    <button type="button" class="btn primary" onclick={create}><Plus size={15} />New destination</button>
+    <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New destination</button>
   {/snippet}
   <div class="page-body">
     <div class="toolbar">
@@ -338,7 +339,7 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button')) setQuery('id', String(d.id));
+                if (!(e.target as Element).closest('button')) records.open(d.id);
               }}
             >
               <td class="strong">{d.name}</td>
@@ -358,7 +359,7 @@
                   class="btn ghost icon"
                   aria-label="Edit {d.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => setQuery('id', String(d.id))}><Pencil size={15} /></button
+                  onclick={() => records.open(d.id)}><Pencil size={15} /></button
                 >
                 <button
                   type="button"
@@ -377,7 +378,7 @@
                   <div class="empty-state">
                     <h2>No destinations</h2>
                     <p>A destination receives the files and emails that profiles produce.</p>
-                    <button type="button" class="btn primary" onclick={create}>New destination</button>
+                    <button type="button" class="btn primary" onclick={() => records.open('new')}>New destination</button>
                   </div>
                 {:else}No destination matches the search.{/if}
               </td></tr

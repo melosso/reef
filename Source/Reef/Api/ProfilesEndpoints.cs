@@ -47,9 +47,9 @@ public static class ProfilesEndpoints
         group.MapPost("/{id:int}/test-query", TestQuery);
         group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
-        group.MapPost("/test-script", TestScript);
-        group.MapGet("/interpreters", GetInterpreters);
-        group.MapPost("/interpreters/{name}/test", TestInterpreter);
+        group.MapPost("/test-script", TestScript).RequireAuthorization(policy => policy.RequireRole("Admin"));
+        group.MapGet("/interpreters", GetInterpreters).RequireAuthorization(policy => policy.RequireRole("Admin"));
+        group.MapPost("/interpreters/{name}/test", TestInterpreter).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         // Unified import profile execution endpoints (use ?type=import)
         group.MapPost("/{id:int}/execute", ExecuteProfile);

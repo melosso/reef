@@ -9,7 +9,7 @@ public class ImportParserFactoryTests
     [InlineData("CSV")]
     [InlineData("csv")]
     [InlineData("Csv")]
-    public void Create_CsvFormat_ReturnsCsvParser(string format)
+    public void CreateCsvFormatReturnsCsvParser(string format)
     {
         var parser = ImportParserFactory.Create(format);
         parser.Should().BeOfType<CsvImportParser>();
@@ -18,7 +18,7 @@ public class ImportParserFactoryTests
     [Theory]
     [InlineData("TSV")]
     [InlineData("tsv")]
-    public void Create_TsvFormat_ReturnsCsvParser(string format)
+    public void CreateTsvFormatReturnsCsvParser(string format)
     {
         // TSV uses CSV parser with tab delimiter
         var parser = ImportParserFactory.Create(format);
@@ -30,7 +30,7 @@ public class ImportParserFactoryTests
     [InlineData("json")]
     [InlineData("JSONL")]
     [InlineData("jsonl")]
-    public void Create_JsonFormat_ReturnsJsonParser(string format)
+    public void CreateJsonFormatReturnsJsonParser(string format)
     {
         var parser = ImportParserFactory.Create(format);
         parser.Should().BeOfType<JsonImportParser>();
@@ -39,7 +39,7 @@ public class ImportParserFactoryTests
     [Theory]
     [InlineData("XML")]
     [InlineData("xml")]
-    public void Create_XmlFormat_ReturnsXmlParser(string format)
+    public void CreateXmlFormatReturnsXmlParser(string format)
     {
         var parser = ImportParserFactory.Create(format);
         parser.Should().BeOfType<XmlImportParser>();
@@ -50,7 +50,7 @@ public class ImportParserFactoryTests
     [InlineData("yaml")]
     [InlineData("YML")]
     [InlineData("yml")]
-    public void Create_YamlFormat_ReturnsYamlParser(string format)
+    public void CreateYamlFormatReturnsYamlParser(string format)
     {
         var parser = ImportParserFactory.Create(format);
         parser.Should().BeOfType<YamlImportParser>();
@@ -60,7 +60,7 @@ public class ImportParserFactoryTests
     [InlineData("EXCEL")]
     [InlineData("PARQUET")]
     [InlineData("UNKNOWN")]
-    public void Create_UnsupportedFormat_ThrowsNotSupportedException(string format)
+    public void CreateUnsupportedFormatThrowsNotSupportedException(string format)
     {
         var act = () => ImportParserFactory.Create(format);
         act.Should().Throw<NotSupportedException>()
@@ -68,7 +68,7 @@ public class ImportParserFactoryTests
     }
 
     [Fact]
-    public void SupportedFormats_ContainsAllExpectedFormats()
+    public void SupportedFormatsContainsAllExpectedFormats()
     {
         var formats = ImportParserFactory.SupportedFormats;
         formats.Should().Contain(["CSV", "TSV", "JSON", "JSONL", "XML", "YAML"]);

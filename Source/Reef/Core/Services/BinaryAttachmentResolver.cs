@@ -10,7 +10,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class BinaryAttachmentResolver
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<BinaryAttachmentResolver>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<BinaryAttachmentResolver>();
 
     private readonly AttachmentVariableResolver _variableResolver;
 

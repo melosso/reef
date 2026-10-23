@@ -9,12 +9,33 @@
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
   import { tooltip } from '../lib/tooltip';
+  import { detailRoute } from '../lib/detailRoute.svelte';
 
   let groups = $state<ProfileGroup[]>([]);
   let counts = $state<Record<number, number>>({});
   let loaded = $state(false);
   let form = $state<{ id?: number; name: string; description: string } | null>(null);
   let busy = $state(false);
+
+  const records = detailRoute('/groups', {
+    create: () => (form = { name: '', description: '' }),
+    edit,
+    dismiss: () => (form = null),
+  });
+
+  async function edit(id: number) {
+    try {
+      const g = await api.get<ProfileGroup>(`/api/groups/${id}`);
+      form = { id: g.id, name: g.name, description: g.description ?? '' };
+    } catch (e) {
+      notify.fail(e);
+    }
+  }
+
+  function close() {
+    form = null;
+    records.close();
+  }
 
   async function load() {
     const [g, exports, imports] = await Promise.all([
@@ -47,7 +68,7 @@
       if (form.id) await api.put(`/api/groups/${form.id}`, body);
       else await api.post('/api/groups', body);
       notify.success(`${form.name} saved`, { key: 'group-save' });
-      form = null;
+      close();
       await load();
     } catch (err) {
       notify.fail(err, 'group-save');
@@ -78,7 +99,7 @@
 
 <Page crumbs={[{ label: 'Groups' }]}>
   {#snippet actions()}
-    <button type="button" class="btn primary" onclick={() => (form = { name: '', description: '' })}><Plus size={15} />New group</button>
+    <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New group</button>
   {/snippet}
   <div class="page-body">
     <div class="table-wrap">
@@ -96,7 +117,7 @@
                   class="btn ghost icon"
                   aria-label="Edit {g.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => (form = { id: g.id, name: g.name, description: g.description ?? '' })}><Pencil size={15} /></button
+                  onclick={() => records.open(g.id)}><Pencil size={15} /></button
                 >
                 <button
                   type="button"
@@ -114,7 +135,7 @@
                   <div class="empty-state">
                     <h2>No groups</h2>
                     <p>A group collects profiles. Jobs run every profile in a group.</p>
-                    <button type="button" class="btn primary" onclick={() => (form = { name: '', description: '' })}>New group</button>
+                    <button type="button" class="btn primary" onclick={() => records.open('new')}>New group</button>
                   </div>
                 {/if}
               </td></tr
@@ -127,7 +148,7 @@
 </Page>
 
 {#if form}
-  <Sheet title={form.id ? 'Edit group' : 'New group'} onclose={() => (form = null)}>
+  <Sheet title={form.id ? 'Edit group' : 'New group'} onclose={close}>
     <form id="group-form" class="fields" onsubmit={save}>
       <div class="field"><label for="g-name">Name</label><input id="g-name" bind:value={form.name} autocomplete="off" /></div>
       <div class="field">
@@ -135,7 +156,7 @@
       </div>
     </form>
     {#snippet footer()}
-      <button type="button" class="btn" onclick={() => (form = null)}>Cancel</button>
+      <button type="button" class="btn" onclick={close}>Cancel</button>
       <button type="submit" form="group-form" class="btn primary" aria-busy={busy}>Save</button>
     {/snippet}
   </Sheet>

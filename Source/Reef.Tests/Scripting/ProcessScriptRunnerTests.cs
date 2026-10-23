@@ -8,7 +8,7 @@ public class ProcessScriptRunnerTests
     private readonly ProcessScriptRunner _runner = new();
 
     [Fact]
-    public async Task RunAsync_InlineScriptExitingZero_ReturnsSuccessWithStdout()
+    public async Task RunAsyncInlineScriptExitingZeroReturnsSuccessWithStdout()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -24,7 +24,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_InlineScriptExitingNonZero_ReturnsFailure()
+    public async Task RunAsyncInlineScriptExitingNonZeroReturnsFailure()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -39,7 +39,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_ScriptReadsStdin_ReceivesPayload()
+    public async Task RunAsyncScriptReadsStdinReceivesPayload()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -54,7 +54,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_ScriptIgnoresStdin_DoesNotFailOnBrokenPipe()
+    public async Task RunAsyncScriptIgnoresStdinDoesNotFailOnBrokenPipe()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -69,7 +69,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_ScriptExceedsTimeout_IsKilledAndReportsTimeout()
+    public async Task RunAsyncScriptExceedsTimeoutIsKilledAndReportsTimeout()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -85,7 +85,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_NonExistentScriptPath_ReturnsFailureWithoutThrowing()
+    public async Task RunAsyncNonExistentScriptPathReturnsFailureWithoutThrowing()
     {
         var result = await _runner.RunAsync(new ScriptExecutionRequest
         {
@@ -100,7 +100,7 @@ public class ProcessScriptRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_EnvAllowlist_PassesOnlyAllowedVariables()
+    public async Task RunAsyncEnvAllowlistPassesOnlyAllowedVariables()
     {
         Environment.SetEnvironmentVariable("REEF_TEST_ALLOWED", "visible");
         Environment.SetEnvironmentVariable("REEF_TEST_BLOCKED", "secret");
@@ -124,6 +124,40 @@ public class ProcessScriptRunnerTests
         {
             Environment.SetEnvironmentVariable("REEF_TEST_ALLOWED", null);
             Environment.SetEnvironmentVariable("REEF_TEST_BLOCKED", null);
+        }
+    }
+
+    [Theory]
+    [InlineData("ENCRYPTION_KEY", true)]
+    [InlineData("reef_encryption_key", true)]
+    [InlineData("JWT_SECRET_KEY", true)]
+    [InlineData("Reef__Jwt__SecretKey", true)]
+    [InlineData("MY_API_KEY", false)]
+    [InlineData("REEF_TEST_ALLOWED", false)]
+    public void ReefSecretsAreNeverPassedToScripts(string name, bool blocked) =>
+        ProcessScriptRunner.IsReefSecret(name).Should().Be(blocked);
+
+    [Fact]
+    public async Task RunAsyncEnvAllowlistSkipsReefSettings()
+    {
+        Environment.SetEnvironmentVariable("Reef__Probe__Secret", "hidden");
+
+        try
+        {
+            var result = await _runner.RunAsync(new ScriptExecutionRequest
+            {
+                Interpreter = "sh",
+                ScriptPathOrInline = "echo \"S=$Reef__Probe__Secret\"",
+                IsInline = true,
+                StdinJson = "{}",
+                EnvAllowlist = new List<string> { "Reef__Probe__Secret" }
+            }, TestContext.Current.CancellationToken);
+
+            result.Stdout.Should().NotContain("hidden");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("Reef__Probe__Secret", null);
         }
     }
 }

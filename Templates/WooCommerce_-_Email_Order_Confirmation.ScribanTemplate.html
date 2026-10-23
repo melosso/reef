@@ -117,7 +117,7 @@
                     {{~ else ~}}
                       {{~ status_class = "status-processing" ~}}
                     {{~ end ~}}
-                    <div class="order-status {{~ status_class ~}}">{{~ row.order_status | html.escape ~}}</div>
+                    <div class="order-status {{~ status_class | html.escape ~}}">{{~ row.order_status | html.escape ~}}</div>
                   {{~ end ~}}
                 </div>
               </td>
@@ -138,7 +138,7 @@
                   </div>
                   <div class="summary-card">
                     <div class="summary-label">Order Total</div>
-                    <div class="summary-value">{{~ row.currency_symbol | default "$" ~}}{{~ row.total | html.escape ~}}</div>
+                    <div class="summary-value">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.total | html.escape ~}}</div>
                   </div>
                   <div class="summary-card">
                     <div class="summary-label">Est. Delivery</div>
@@ -156,7 +156,7 @@
                         <div class="customer-value">
                           {{~ shipping.name | default "" | html.escape ~}}<br>
                           {{~ shipping.street | default "" | html.escape ~}}<br>
-                          {{~ shipping.city | default "" ~}}{{~ if shipping.state ~}}, {{~ shipping.state | html.escape ~}}{{~ end ~}} {{~ shipping.postal | default "" | html.escape ~}}<br>
+                          {{~ shipping.city | default "" | html.escape ~}}{{~ if shipping.state ~}}, {{~ shipping.state | html.escape ~}}{{~ end ~}} {{~ shipping.postal | default "" | html.escape ~}}<br>
                           {{~ shipping.country | default "" | html.escape ~}}
                         </div>
                       {{~ end ~}}
@@ -168,7 +168,7 @@
                         <div class="customer-value">
                           {{~ billing.name | default "" | html.escape ~}}<br>
                           {{~ billing.street | default "" | html.escape ~}}<br>
-                          {{~ billing.city | default "" ~}}{{~ if billing.state ~}}, {{~ billing.state | html.escape ~}}{{~ end ~}} {{~ billing.postal | default "" | html.escape ~}}<br>
+                          {{~ billing.city | default "" | html.escape ~}}{{~ if billing.state ~}}, {{~ billing.state | html.escape ~}}{{~ end ~}} {{~ billing.postal | default "" | html.escape ~}}<br>
                           {{~ billing.country | default "" | html.escape ~}}
                         </div>
                       {{~ end ~}}
@@ -198,8 +198,8 @@
                           {{~ if item.attributes ~}}<div class="product-sku">{{~ item.attributes | html.escape ~}}</div>{{~ end ~}}
                         </td>
                         <td class="text-right">{{~ item.quantity | html.escape ~}}</td>
-                        <td class="text-right text-mono">{{~ row.currency_symbol | default "$" ~}}{{~ item.unit_price | html.escape ~}}</td>
-                        <td class="text-right text-mono" style="font-weight:600;">{{~ row.currency_symbol | default "$" ~}}{{~ item.line_total | html.escape ~}}</td>
+                        <td class="text-right text-mono">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ item.unit_price | html.escape ~}}</td>
+                        <td class="text-right text-mono" style="font-weight:600;">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ item.line_total | html.escape ~}}</td>
                       </tr>
                       {{~ end ~}}
                     </tbody>
@@ -212,34 +212,34 @@
                   {{~ if row.subtotal ~}}
                   <div class="summary-row">
                     <span class="summary-label">Subtotal</span>
-                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" ~}}{{~ row.subtotal | html.escape ~}}</span>
+                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.subtotal | html.escape ~}}</span>
                   </div>
                   {{~ end ~}}
 
                   {{~ if row.discount && row.discount != "0" && row.discount != "0.00" ~}}
                   <div class="summary-row">
                     <span class="summary-label">{{~ row.discount_label | default "Discount" | html.escape ~}}</span>
-                    <span class="summary-amount text-mono" style="color:#188038;">-{{~ row.currency_symbol | default "$" ~}}{{~ row.discount | html.escape ~}}</span>
+                    <span class="summary-amount text-mono" style="color:#188038;">-{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.discount | html.escape ~}}</span>
                   </div>
                   {{~ end ~}}
 
                   {{~ if row.shipping ~}}
                   <div class="summary-row">
                     <span class="summary-label">Shipping</span>
-                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" ~}}{{~ row.shipping | html.escape ~}}</span>
+                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.shipping | html.escape ~}}</span>
                   </div>
                   {{~ end ~}}
 
                   {{~ if row.tax ~}}
                   <div class="summary-row">
                     <span class="summary-label">Tax</span>
-                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" ~}}{{~ row.tax | html.escape ~}}</span>
+                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.tax | html.escape ~}}</span>
                   </div>
                   {{~ end ~}}
 
                   <div class="summary-row total">
                     <span class="summary-label">Total</span>
-                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" ~}}{{~ row.total | html.escape ~}}</span>
+                    <span class="summary-amount text-mono">{{~ row.currency_symbol | default "$" | html.escape ~}}{{~ row.total | html.escape ~}}</span>
                   </div>
                 </div>
 
@@ -273,7 +273,7 @@
               <td class="email-footer">
                 <div class="footer-main">
                   <div class="footer-address muted">{{~ row.company | html.escape ~}} &nbsp;&middot;&nbsp; {{~ row.company_address | default "Your Company Address" | html.escape ~}}</div>
-                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 ~}}</div>
+                  <div class="footer-copyright muted">©&nbsp;{{~ row.year | default 2025 | html.escape ~}}</div>
                 </div>
 
                 <div class="footer-secondary">

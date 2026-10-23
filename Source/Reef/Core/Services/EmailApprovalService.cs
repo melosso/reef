@@ -21,7 +21,7 @@ public class EmailApprovalService
     private readonly ProfileService _profileService;
     private readonly NotificationService _notificationService;
     private readonly DeltaSyncService _deltaSyncService;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailApprovalService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailApprovalService>();
 
     public EmailApprovalService(
         DatabaseConfig config,

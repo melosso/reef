@@ -50,7 +50,7 @@
       if (reset)
         setTimeout(() => {
           clearSession();
-          navigate('/logoff');
+          navigate('/logout');
         }, 1500);
     } catch (e) {
       notify.fail(e);

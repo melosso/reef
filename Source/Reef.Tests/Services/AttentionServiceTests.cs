@@ -12,7 +12,7 @@ public class AttentionServiceTests
     private static readonly AttentionRun[] Usual = [Run(100, 2000), Run(110, 2100), Run(90, 1900)];
 
     [Fact]
-    public void Flags_runs_far_from_the_median_and_ignores_small_or_expected_changes()
+    public void FlagsRunsFarFromTheMedianAndIgnoresSmallOrExpectedChanges()
     {
         AttentionService.FindAnomaly(Run(5, 2000), Usual)!.Reason.Should().Be("rows");
         AttentionService.FindAnomaly(Run(100, 5000), Usual)!.Reason.Should().Be("duration");

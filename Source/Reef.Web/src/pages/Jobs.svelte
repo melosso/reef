@@ -8,7 +8,8 @@
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatNumber, formatRelative } from '../lib/format';
   import { copyText, notify } from '../lib/notify';
-  import { navigate, route, setQuery } from '../lib/router.svelte';
+  import { navigate } from '../lib/router.svelte';
+  import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { Connection } from '../models/Connection';
   import type { Destination } from '../models/Destination';
@@ -130,10 +131,7 @@
     return () => clearInterval(timer);
   });
 
-  $effect(() => {
-    const id = route.query.get('id');
-    if (id && loaded && form?.id !== Number(id)) edit(Number(id));
-  });
+  const records = detailRoute('/jobs', { create, edit, dismiss });
 
   const isPaused = (j: Job) => (j.tags ?? '').includes('circuit-breaker');
 
@@ -251,9 +249,13 @@
     }
   }
 
-  function close() {
+  function dismiss() {
     form = null;
-    if (route.query.get('id')) setQuery('id', null);
+  }
+
+  function close() {
+    dismiss();
+    records.close();
   }
 
   const selectedProfile = $derived(
@@ -394,7 +396,7 @@
 
 <Page crumbs={[{ label: 'Jobs' }]}>
   {#snippet actions()}
-    <button type="button" class="btn primary" onclick={create}><Plus size={15} />New job</button>
+    <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New job</button>
   {/snippet}
   <div class="page-body">
     {#if metrics}
@@ -456,7 +458,7 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button, a')) setQuery('id', String(j.id));
+                if (!(e.target as Element).closest('button, a')) records.open(j.id);
               }}
             >
               <td
@@ -499,14 +501,14 @@
                   class="btn ghost icon"
                   aria-label="History of {j.name}"
                   use:tooltip={'Execution history'}
-                  onclick={() => navigate(`/executions?jobId=${j.id}`)}><History size={15} /></button
+                  onclick={() => navigate(`/executions?job=${j.id}`)}><History size={15} /></button
                 >
                 <button
                   type="button"
                   class="btn ghost icon"
                   aria-label="Edit {j.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => setQuery('id', String(j.id))}><Pencil size={15} /></button
+                  onclick={() => records.open(j.id)}><Pencil size={15} /></button
                 >
                 <button
                   type="button"
@@ -525,7 +527,7 @@
                   <div class="empty-state">
                     <h2>No jobs</h2>
                     <p>A job runs a profile on a schedule, an interval or a webhook call.</p>
-                    <button type="button" class="btn primary" onclick={create}>New job</button>
+                    <button type="button" class="btn primary" onclick={() => records.open('new')}>New job</button>
                   </div>
                 {:else}No job matches the filters.{/if}
               </td></tr

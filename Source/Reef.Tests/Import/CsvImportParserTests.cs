@@ -30,7 +30,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_SimpleHeaderedCsv_ReturnsCorrectRows()
+    public async Task ParseAsyncSimpleHeaderedCsvReturnsCorrectRows()
     {
         var csv = "Name,Age,City\nAlice,30,London\nBob,25,Paris\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -44,7 +44,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_NoHeader_GeneratesColNames()
+    public async Task ParseAsyncNoHeaderGeneratesColNames()
     {
         var csv = "Alice,30\nBob,25\n";
         var config = DefaultConfig();
@@ -60,7 +60,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_QuotedFieldsWithComma_ParsesCorrectly()
+    public async Task ParseAsyncQuotedFieldsWithCommaParsesCorrectly()
     {
         var csv = "Name,Address\n\"Smith, John\",\"123 Main St, NY\"\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -71,7 +71,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_EscapedQuotesInField_ParsesCorrectly()
+    public async Task ParseAsyncEscapedQuotesInFieldParsesCorrectly()
     {
         var csv = "Name,Quote\nAlice,\"He said \"\"hello\"\"\"\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -81,7 +81,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_TsvWithTabDelimiter_ParsesCorrectly()
+    public async Task ParseAsyncTsvWithTabDelimiterParsesCorrectly()
     {
         var tsv = "Name\tAge\tCity\nAlice\t30\tLondon\n";
         var config = DefaultConfig();
@@ -95,7 +95,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_NullValue_ReturnsNullForMatchingFields()
+    public async Task ParseAsyncNullValueReturnsNullForMatchingFields()
     {
         var csv = "Name,Age\nAlice,\\N\nBob,25\n";
         var config = DefaultConfig();
@@ -109,7 +109,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_SkipRows_SkipsSpecifiedNumberOfRows()
+    public async Task ParseAsyncSkipRowsSkipsSpecifiedNumberOfRows()
     {
         var csv = "# Comment line\nName,Age\nAlice,30\n";
         var config = DefaultConfig();
@@ -122,7 +122,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_EmptyLines_SkipsEmptyLines()
+    public async Task ParseAsyncEmptyLinesSkipsEmptyLines()
     {
         var csv = "Name,Age\nAlice,30\n\nBob,25\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -131,7 +131,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_TrimWhitespace_TrimsFieldValues()
+    public async Task ParseAsyncTrimWhitespaceTrimsFieldValues()
     {
         var csv = "Name , Age\n Alice , 30 \n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -142,7 +142,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_LineNumbers_AreAssignedCorrectly()
+    public async Task ParseAsyncLineNumbersAreAssignedCorrectly()
     {
         var csv = "Name,Age\nAlice,30\nBob,25\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -152,21 +152,21 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_EmptyStream_ReturnsNoRows()
+    public async Task ParseAsyncEmptyStreamReturnsNoRows()
     {
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(""), DefaultConfig(), TestContext.Current.CancellationToken));
         rows.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ParseAsync_HeaderOnlyNoCsvRows_ReturnsNoRows()
+    public async Task ParseAsyncHeaderOnlyNoCsvRowsReturnsNoRows()
     {
         var rows = await CollectAsync(_parser.ParseAsync(ToStream("Name,Age\n"), DefaultConfig(), TestContext.Current.CancellationToken));
         rows.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task ParseAsync_FewerColumnsThanHeader_FillsWithEmpty()
+    public async Task ParseAsyncFewerColumnsThanHeaderFillsWithEmpty()
     {
         var csv = "Name,Age,City\nAlice,30\n";
         var rows = await CollectAsync(_parser.ParseAsync(ToStream(csv), DefaultConfig(), TestContext.Current.CancellationToken));
@@ -176,7 +176,7 @@ public class CsvImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_CancellationRequested_ThrowsOperationCanceledException()
+    public async Task ParseAsyncCancellationRequestedThrowsOperationCanceledException()
     {
         var csv = "Name,Age\nAlice,30\nBob,25\nCarol,35\n";
         var cts = new CancellationTokenSource();

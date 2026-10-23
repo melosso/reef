@@ -7,7 +7,8 @@
   import { api } from '../lib/api';
   import { confirm } from '../lib/confirm.svelte';
   import { copyText, notify } from '../lib/notify';
-  import { navigate, route, setQuery } from '../lib/router.svelte';
+  import { navigate } from '../lib/router.svelte';
+  import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { ExportProfile } from '../models/ExportProfile';
   import type { GitHubFile } from '../models/GitHubFile';
@@ -105,10 +106,7 @@
     load();
   });
 
-  $effect(() => {
-    const id = route.query.get('id');
-    if (id && loaded && form?.id !== Number(id)) edit(Number(id));
-  });
+  const records = detailRoute('/templates', { create, edit, dismiss });
 
   const visible = $derived(
     templates.filter((t) => {
@@ -182,9 +180,13 @@
     }
   }
 
-  function close() {
+  function dismiss() {
     form = null;
-    if (route.query.get('id')) setQuery('id', null);
+  }
+
+  function close() {
+    dismiss();
+    records.close();
   }
 
   function changeType(type: string) {
@@ -420,7 +422,7 @@
 <Page crumbs={[{ label: 'Templates' }]}>
   {#snippet actions()}
     <button type="button" class="btn" onclick={openGallery}><LibraryBig size={15} />Template gallery</button>
-    <button type="button" class="btn primary" onclick={create}><Plus size={15} />New template</button>
+    <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New template</button>
   {/snippet}
   <div class="page-body">
     <div class="toolbar">
@@ -441,7 +443,7 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button')) setQuery('id', String(t.id));
+                if (!(e.target as Element).closest('button')) records.open(t.id);
               }}
             >
               <td
@@ -467,7 +469,7 @@
                   class="btn ghost icon"
                   aria-label="Edit {t.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => setQuery('id', String(t.id))}><Pencil size={15} /></button
+                  onclick={() => records.open(t.id)}><Pencil size={15} /></button
                 >
                 <button
                   type="button"
@@ -494,7 +496,7 @@
                     <h2>No templates</h2>
                     <p>A template shapes query rows into CSV, XML, JSON, EDI or a PDF document.</p>
                     <div class="toolbar">
-                      <button type="button" class="btn primary" onclick={create}>New template</button><button
+                      <button type="button" class="btn primary" onclick={() => records.open('new')}>New template</button><button
                         type="button"
                         class="btn"
                         onclick={openGallery}>Template gallery</button

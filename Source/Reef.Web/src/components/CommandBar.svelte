@@ -58,7 +58,7 @@
     })),
     { id: 'theme-light', label: 'Use light theme', group: 'Theme', icon: Sun, run: () => setTheme('light') },
     { id: 'theme-dark', label: 'Use dark theme', group: 'Theme', icon: Moon, run: () => setTheme('dark') },
-    { id: 'sign-out', label: 'Sign out', group: 'Account', icon: LogOut, run: () => navigate('/logoff') },
+    { id: 'sign-out', label: 'Sign out', group: 'Account', icon: LogOut, run: () => navigate('/logout') },
   ]);
 
   const results = $derived.by(() => {

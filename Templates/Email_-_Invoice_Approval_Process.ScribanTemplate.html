@@ -178,16 +178,16 @@
     <div class="email-container">
         <div class="header">
             <h1>Invoice Approval Required</h1>
-            <p>Action requested for {{ rows | array.size }} pending document{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</p>
+            <p>Action requested for {{ rows | array.size | html.escape }} pending document{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</p>
         </div>
         
         <div class="content">
             <div class="greeting">
-                Hello {{ rows[0].approver_name }},
+                Hello {{ rows[0].approver_name | html.escape }},
             </div>
             
             <div class="message">
-                Review is required for <strong>{{ rows | array.size }} invoice{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</strong>. Please verify the associated documentation and execute the necessary approval workflow.
+                Review is required for <strong>{{ rows | array.size | html.escape }} invoice{{~ if (rows | array.size) > 1 ~}}s{{~ end ~}}</strong>. Please verify the associated documentation and execute the necessary approval workflow.
             </div>
             
             <div class="invoice-summary-card">
@@ -197,7 +197,7 @@
                     <li class="invoice-item">
                         <div class="invoice-details">
                             <div class="invoice-number">
-                                {{ invoice.invoice_number }}
+                                {{ invoice.invoice_number | html.escape }}
                                 {{~ if invoice.priority == 1 ~}}
                                 <span class="priority-chip priority-1">High Priority</span>
                                 {{~ else if invoice.priority == 2 ~}}
@@ -207,7 +207,7 @@
                                 {{~ end ~}}
                             </div>
                             <div class="invoice-meta">
-                                {{ invoice.vendor_name }} | {{ invoice.category }}<br>
+                                {{ invoice.vendor_name | html.escape }} | {{ invoice.category | html.escape }}<br>
                                 Due: {{ date.to_string invoice.due_date "%b %d, %Y" }}
                             </div>
                         </div>
@@ -247,15 +247,15 @@
         </div>
         
         <div class="footer">
-            <p><strong>{{ rows[0].company_name }}</strong></p>
-            <p>{{ rows[0].company_address }}</p>
+            <p><strong>{{ rows[0].company_name | html.escape }}</strong></p>
+            <p>{{ rows[0].company_address | html.escape }}</p>
             <p>This is a system-generated notification regarding your assigned administrative responsibilities.</p>
             <p style="margin-top: 16px;">
                 <a href="#">Visit Dashboard</a> &nbsp;•&nbsp; 
                 <a href="#">Preferences</a>
             </p>
             <p style="color: #9aa0a6; font-size: 11px;">
-                © {{ date.now.year }} {{ rows[0].company_name }}. Data Classification: Internal.
+                © {{ date.now.year | html.escape }} {{ rows[0].company_name | html.escape }}. Data Classification: Internal.
             </p>
         </div>
     </div>

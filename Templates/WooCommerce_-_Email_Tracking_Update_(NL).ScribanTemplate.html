@@ -156,7 +156,7 @@
                                                       </td>
                                                       <td class="td font-family text-align-right" style="color: #4b4b4b; border: 0; font-family: &quot;Helvetica Neue&quot;,Helvetica,Roboto,Arial,sans-serif; text-align: right; padding: 8px 12px; padding-right: 0; border-bottom: 1px solid rgba(0,0,0,.2); padding-bottom: 24px; vertical-align: middle; white-space: nowrap; width: 100px;" align="right" width="100">
                                                         <span class="woocommerce-Price-amount amount">
-                                                          <span class="woocommerce-Price-currencySymbol">{{~ row.currency_symbol | default "€" ~}}</span>&nbsp;{{~ item.line_total | html.escape ~}}
+                                                          <span class="woocommerce-Price-currencySymbol">{{~ row.currency_symbol | default "€" | html.escape ~}}</span>&nbsp;{{~ item.line_total | html.escape ~}}
                                                         </span>
                                                       </td>
                                                     </tr>

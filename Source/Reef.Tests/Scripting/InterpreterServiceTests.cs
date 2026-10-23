@@ -9,7 +9,7 @@ public class InterpreterServiceTests
     private readonly InterpreterService _service = new(new ProcessScriptRunner());
 
     [Fact]
-    public async Task CheckOneAsync_RunnableInterpreter_ReportsAvailableWithOutput()
+    public async Task CheckOneAsyncRunnableInterpreterReportsAvailableWithOutput()
     {
         var status = await _service.CheckOneAsync("sh", TestContext.Current.CancellationToken);
 
@@ -19,7 +19,7 @@ public class InterpreterServiceTests
     }
 
     [Fact]
-    public async Task CheckOneAsync_UnknownInterpreter_ReportsUnavailableWithError()
+    public async Task CheckOneAsyncUnknownInterpreterReportsUnavailableWithError()
     {
         var status = await _service.CheckOneAsync("not-a-real-interpreter", TestContext.Current.CancellationToken);
 
@@ -28,7 +28,7 @@ public class InterpreterServiceTests
     }
 
     [Fact]
-    public async Task CheckAllAsync_ReturnsOneStatusPerKnownInterpreter()
+    public async Task CheckAllAsyncReturnsOneStatusPerKnownInterpreter()
     {
         var statuses = await _service.CheckAllAsync(TestContext.Current.CancellationToken);
 
@@ -38,7 +38,7 @@ public class InterpreterServiceTests
     }
 
     [Fact]
-    public async Task CheckAllAsync_OnThisHost_FindsAtLeastShAndBashAvailable()
+    public async Task CheckAllAsyncOnThisHostFindsAtLeastShAndBashAvailable()
     {
         // sh/bash are present on every Linux/macOS CI runner and dev box this
         // project targets - a sane baseline so a regression in the probe

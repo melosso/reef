@@ -13,7 +13,7 @@ namespace Reef.Core.Sources;
 /// </summary>
 public class DestinationSourceAdapter(DestinationService destinationService)
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<DestinationSourceAdapter>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<DestinationSourceAdapter>();
 
     /// <summary>
     /// If profile.SourceDestinationId is set, resolve the destination and merge its config

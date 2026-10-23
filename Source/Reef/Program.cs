@@ -102,6 +102,9 @@ public partial class Program
         {
             var builder = WebApplication.CreateBuilder(args);
             EnvAliases.ApplyConfigAliases(builder.Configuration);
+            builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+            builder.Configuration["Reef:Jwt:SecretKey"] = JwtSecretResolver.Resolve(
+                builder.Configuration["Reef:Jwt:SecretKey"], Path.Combine(EncryptionService.FindProjectRoot(AppContext.BaseDirectory), ".core"));
             EnvAliases.WarnOnLegacyUsage();
 
             // Initialize Serilog globally
@@ -311,6 +314,10 @@ public partial class Program
         services.AddSingleton(new UserPasswordHasher(EncryptionKeyLoader.Key));
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<LoginThrottle>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<PrivilegedSettingsGuard>();
+        services.AddSingleton<TokenUserValidator>();
+        services.AddSingleton<SpaPageGuard>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ApiKeyValidator>();
         services.AddHttpClient();
@@ -372,7 +379,7 @@ public partial class Program
 
         // Destination services
         services.AddScoped<DestinationService>(sp =>
-            new DestinationService(connectionString, sp.GetRequiredService<EncryptionService>()));
+            new DestinationService(connectionString, sp.GetRequiredService<EncryptionService>(), sp.GetRequiredService<PrivilegedSettingsGuard>()));
 
         // Query template service
         services.AddScoped<QueryTemplateService>(sp =>
@@ -435,6 +442,12 @@ public partial class Program
             // OIDC sign-in sets only the HttpOnly cookie, refresh exchanges it for a bearer token
             options.Events = new JwtBearerEvents
             {
+                OnTokenValidated = async context =>
+                {
+                    var validator = context.HttpContext.RequestServices.GetRequiredService<TokenUserValidator>();
+                    if (!await validator.IsCurrentAsync(context.Principal!))
+                        context.Fail("The account changed after this token was issued.");
+                },
                 OnMessageReceived = context =>
                 {
                     if (string.IsNullOrEmpty(context.Token)
@@ -466,6 +479,11 @@ public partial class Program
             {
                 await next();
             }
+            catch (Reef.Core.Exceptions.PrivilegedSettingsException ex)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unhandled exception");
@@ -477,9 +495,13 @@ public partial class Program
             }
         });
 
+        var shell = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"), "app", "index.html");
+        var contentSecurityPolicy = ContentSecurityPolicy.Build(File.Exists(shell) ? await File.ReadAllTextAsync(shell) : null);
+
         // Security headers
         app.Use(async (context, next) =>
         {
+            context.Response.Headers.Append("Content-Security-Policy", contentSecurityPolicy);
             context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
             context.Response.Headers.Append("X-Frame-Options", "DENY");
             context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
@@ -534,7 +556,6 @@ public partial class Program
                 : "no-cache"
         });
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
-        app.UseMiddleware<AuthenticationMiddleware>();
 
         app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
@@ -579,6 +600,14 @@ public partial class Program
             {
                 context.Response.StatusCode = 404;
                 await context.Response.WriteAsJsonAsync(new { error = "Not found" });
+                return;
+            }
+
+            if (!SpaPageGuard.IsPublic(context.Request.Path)
+                && !await context.RequestServices.GetRequiredService<SpaPageGuard>().IsSignedInAsync(context))
+            {
+                var page = context.Request.Path + context.Request.QueryString;
+                context.Response.Redirect($"/login?next={Uri.EscapeDataString(page)}");
                 return;
             }
 

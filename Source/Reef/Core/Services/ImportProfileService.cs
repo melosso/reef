@@ -15,16 +15,19 @@ public class ImportProfileService
     private readonly string _connectionString;
     private readonly EncryptionService _encryptionService;
     private readonly HashValidator _hashValidator;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportProfileService>();
+    private readonly PrivilegedSettingsGuard _guard;
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ImportProfileService>();
 
     public ImportProfileService(
         DatabaseConfig config,
         EncryptionService encryptionService,
-        HashValidator hashValidator)
+        HashValidator hashValidator,
+        PrivilegedSettingsGuard guard)
     {
         _connectionString = config.ConnectionString;
         _encryptionService = encryptionService;
         _hashValidator = hashValidator;
+        _guard = guard;
     }
 
     // Queries
@@ -86,6 +89,7 @@ public class ImportProfileService
 
     public async Task<int> CreateAsync(ImportProfile profile, int? createdByUserId)
     {
+        _guard.Check(profile, null);
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
 
@@ -163,6 +167,7 @@ public class ImportProfileService
     {
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
+        _guard.Check(profile, await conn.QuerySingleOrDefaultAsync<ImportProfile>("SELECT * FROM ImportProfiles WHERE Id = @Id", new { profile.Id }));
 
         try
         {
@@ -518,6 +523,7 @@ public class ImportProfileService
 
     public async Task<int> AddOutputTargetAsync(ImportOutputTarget target)
     {
+        Reef.Helpers.SafePath.EnsureContainedRelative(target.FilenameTemplate, "File name");
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
 
@@ -537,6 +543,7 @@ public class ImportProfileService
 
     public async Task<bool> UpdateOutputTargetAsync(ImportOutputTarget target)
     {
+        Reef.Helpers.SafePath.EnsureContainedRelative(target.FilenameTemplate, "File name");
         await using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync();
 

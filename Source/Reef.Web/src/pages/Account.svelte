@@ -9,11 +9,12 @@
   import type { TotpSetup } from '../models/TotpSetup';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
-  import { navigate, route, setQuery } from '../lib/router.svelte';
+  import { match, navigate, route } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
 
-  type Tab = 'profile' | 'password' | 'mfa';
-  const tab = $derived((route.query.get('tab') as Tab) || 'profile');
+  type Tab = 'profile' | 'password' | 'security';
+  const TABS: Tab[] = ['profile', 'password', 'security'];
+  const tab = $derived(TABS.find((t) => t === match('/account/:tab', route.path)?.tab) ?? 'profile');
 
   let profile = $state<AccountProfile>({ username: session.username, displayName: '', email: '' });
   let current = $state('');
@@ -76,7 +77,7 @@
         'Password change failed.',
       );
       notify.success('Password changed. Sign in with the new password.', { key: 'account-password' });
-      setTimeout(() => navigate('/logoff'), 1500);
+      setTimeout(() => navigate('/logout'), 1500);
     });
   };
 
@@ -165,9 +166,9 @@
 <Page crumbs={[{ label: 'Account' }]}>
   <div class="page-body narrow">
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'profile'} onclick={() => setQuery('tab', null)}>Profile</button>
-      <button type="button" role="tab" aria-selected={tab === 'password'} onclick={() => setQuery('tab', 'password')}>Password</button>
-      <button type="button" role="tab" aria-selected={tab === 'mfa'} onclick={() => setQuery('tab', 'mfa')}
+      <button type="button" role="tab" aria-selected={tab === 'profile'} onclick={() => navigate('/account')}>Profile</button>
+      <button type="button" role="tab" aria-selected={tab === 'password'} onclick={() => navigate('/account/password')}>Password</button>
+      <button type="button" role="tab" aria-selected={tab === 'security'} onclick={() => navigate('/account/security')}
         >Two-factor authentication</button
       >
     </div>

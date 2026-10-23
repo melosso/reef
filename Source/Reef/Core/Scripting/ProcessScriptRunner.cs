@@ -12,7 +12,7 @@ namespace Reef.Core.Scripting;
 /// </summary>
 public class ProcessScriptRunner : IScriptRunner
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ProcessScriptRunner>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ProcessScriptRunner>();
 
     public async Task<ScriptExecutionResult> RunAsync(ScriptExecutionRequest request, CancellationToken ct = default)
     {
@@ -199,6 +199,12 @@ public class ProcessScriptRunner : IScriptRunner
         };
     }
 
+    private static readonly string[] ReefSecrets = ["ENCRYPTION_KEY", "REEF_ENCRYPTION_KEY", "JWT_SECRET_KEY", "REEF_JWT_SECRET_KEY"];
+
+    // Reef settings and keys stay out of script environments regardless of the allowlist.
+    public static bool IsReefSecret(string name) =>
+        ReefSecrets.Contains(name, StringComparer.OrdinalIgnoreCase) || name.StartsWith("Reef__", StringComparison.OrdinalIgnoreCase);
+
     private static void ApplyMinimalEnvironment(ProcessStartInfo psi, List<string>? envAllowlist)
     {
         psi.EnvironmentVariables.Clear();
@@ -216,7 +222,7 @@ public class ProcessScriptRunner : IScriptRunner
 
         if (envAllowlist == null) return;
 
-        foreach (var name in envAllowlist)
+        foreach (var name in envAllowlist.Where(name => !IsReefSecret(name)))
         {
             var value = Environment.GetEnvironmentVariable(name);
             if (value != null)

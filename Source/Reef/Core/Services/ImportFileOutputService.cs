@@ -11,7 +11,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class ImportFileOutputService(DestinationService destinationService)
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportFileOutputService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ImportFileOutputService>();
 
     private static readonly JsonSerializerOptions _jsonOpts = new()
     {

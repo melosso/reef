@@ -46,7 +46,7 @@ public static class OidcEndpoints
     {
         var settings = await service.GetOidcSettingsAsync();
         if (settings is not { IsEnabled: true })
-            return Results.Redirect("/index?sso=" + OidcFlow.Disabled);
+            return Results.Redirect("/login?sso=" + OidcFlow.Disabled);
 
         try
         {
@@ -57,7 +57,7 @@ public static class OidcEndpoints
         catch (Exception ex)
         {
             Log.Warning(ex, "Failed to start the SSO sign-in flow");
-            return Results.Redirect("/index?sso=" + OidcFlow.Failed);
+            return Results.Redirect("/login?sso=" + OidcFlow.Failed);
         }
     }
 
@@ -77,17 +77,17 @@ public static class OidcEndpoints
         [FromServices] IHttpClientFactory httpClientFactory)
     {
         var flow = OidcFlow.Claim(state);
-        if (flow == null) return Results.Redirect("/index?sso=" + OidcFlow.Failed);
+        if (flow == null) return Results.Redirect("/login?sso=" + OidcFlow.Failed);
 
         if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(code))
         {
             Log.Information("SSO sign-in was cancelled or denied by the provider");
-            return Results.Redirect("/index?sso=" + OidcFlow.Denied);
+            return Results.Redirect("/login?sso=" + OidcFlow.Denied);
         }
 
         var pair = await service.GetOidcSettingsForSignInAsync();
         if (pair is not { Settings.IsEnabled: true })
-            return Results.Redirect("/index?sso=" + OidcFlow.Disabled);
+            return Results.Redirect("/login?sso=" + OidcFlow.Disabled);
 
         var (settings, clientSecret) = pair.Value;
 
@@ -103,13 +103,13 @@ public static class OidcEndpoints
             identity = null;
         }
 
-        if (identity == null) return Results.Redirect("/index?sso=" + OidcFlow.Failed);
+        if (identity == null) return Results.Redirect("/login?sso=" + OidcFlow.Failed);
 
         await using var connection = new SqliteConnection(dbConfig.ConnectionString);
         await connection.OpenAsync();
 
         var (user, problem) = await ResolveAccountAsync(connection, passwordHasher, settings, identity);
-        if (user == null) return Results.Redirect("/index?sso=" + problem);
+        if (user == null) return Results.Redirect("/login?sso=" + problem);
 
         await AuthEndpoints.IssueToken(user, connection, jwtService, auditService, context);
         return Results.Redirect("/dashboard");
@@ -119,7 +119,7 @@ public static class OidcEndpoints
     /// Decide which Reef user an incoming SSO identity maps to: an existing link by subject,
     /// then an auto-link by username or verified email, then optional first-time provisioning.
     /// </summary>
-    private static async Task<(User? User, string Problem)> ResolveAccountAsync(
+    internal static async Task<(User? User, string Problem)> ResolveAccountAsync(
         SqliteConnection connection,
         UserPasswordHasher passwordHasher,
         OidcSettings settings,
@@ -129,13 +129,7 @@ public static class OidcEndpoints
             "SELECT * FROM Users WHERE OidcSubject = @Subject AND IsDeleted = 0",
             new { identity.Subject });
 
-        if (user == null && !string.IsNullOrEmpty(identity.Username))
-        {
-            user = await connection.QueryFirstOrDefaultAsync<User>(
-                "SELECT * FROM Users WHERE OidcSubject = '' AND LOWER(Username) = LOWER(@Username) AND IsDeleted = 0",
-                new { identity.Username });
-        }
-
+        // Links by verified email. The username claim is editable at many providers.
         if (user == null && identity.EmailVerified && !string.IsNullOrEmpty(identity.Email))
         {
             user = await connection.QueryFirstOrDefaultAsync<User>(

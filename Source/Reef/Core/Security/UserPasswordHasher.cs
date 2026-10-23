@@ -4,7 +4,7 @@ using System.Text;
 namespace Reef.Core.Security;
 
 /// <summary>
-/// BCrypt hashing for user passwords with a pepper derived from REEF_ENCRYPTION_KEY
+/// Hashes user passwords with BCrypt and a pepper derived from ENCRYPTION_KEY.
 /// </summary>
 public sealed class UserPasswordHasher(string encryptionKey)
 {
@@ -15,7 +15,7 @@ public sealed class UserPasswordHasher(string encryptionKey)
 
     public bool VerifyPassword(string password, string hash) => VerifyPassword(password, hash, out _);
 
-    // hashes stored before the pepper still verify and report that they need a rehash
+    // Hashes without the pepper verify and report a required rehash.
     public bool VerifyPassword(string password, string hash, out bool needsRehash)
     {
         needsRehash = false;
@@ -24,7 +24,7 @@ public sealed class UserPasswordHasher(string encryptionKey)
         return needsRehash;
     }
 
-    // hmac output keeps every input under the bcrypt 72 byte limit
+    // HMAC output keeps every input below the BCrypt 72 byte limit.
     private string Pepper(string password) => Convert.ToBase64String(HMACSHA256.HashData(_pepper, Encoding.UTF8.GetBytes(password)));
 
     private static bool Verify(string text, string hash)

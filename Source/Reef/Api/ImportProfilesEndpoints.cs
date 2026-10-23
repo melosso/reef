@@ -1,3 +1,4 @@
+using Reef.Core.Security;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Parsers;
@@ -223,8 +224,10 @@ public static class ImportProfilesEndpoints
 
     private static async Task<IResult> TestSource(
         [FromBody] TestImportSourceRequest req,
+        [FromServices] PrivilegedSettingsGuard guard,
         CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(req.SourceFilePath)) guard.RequireAdministrator("Local file paths");
         try
         {
             var source = ImportSourceFactory.Create(req.SourceType);
@@ -255,8 +258,10 @@ public static class ImportProfilesEndpoints
 
     private static async Task<IResult> ListSourceFiles(
         [FromBody] TestImportSourceRequest req,
+        [FromServices] PrivilegedSettingsGuard guard,
         CancellationToken ct)
     {
+        if (!string.IsNullOrWhiteSpace(req.SourceFilePath)) guard.RequireAdministrator("Local file paths");
         try
         {
             var source = ImportSourceFactory.Create(req.SourceType);
@@ -285,8 +290,10 @@ public static class ImportProfilesEndpoints
     private static async Task<IResult> Preview(
         [FromBody] PreviewImportRequest req,
         [FromServices] ImportProfileService svc,
+        [FromServices] PrivilegedSettingsGuard guard,
         CancellationToken ct)
     {
+        if (!req.ImportProfileId.HasValue && !string.IsNullOrWhiteSpace(req.SourceFilePath)) guard.RequireAdministrator("Local file paths");
         try
         {
             ImportProfile profile;
@@ -403,8 +410,10 @@ public static class ImportProfilesEndpoints
         [FromServices] ConnectionService connSvc,
         [FromServices] DatabaseImportTarget dbTarget,
         [FromServices] LocalFileImportTarget fileTarget,
+        [FromServices] PrivilegedSettingsGuard guard,
         CancellationToken ct)
     {
+        if (req.TargetType?.Equals("LocalFile", StringComparison.OrdinalIgnoreCase) == true) guard.RequireAdministrator("Local file paths");
         try
         {
             bool isLocalFile = req.TargetType?.Equals("LocalFile", StringComparison.OrdinalIgnoreCase) == true;

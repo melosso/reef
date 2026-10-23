@@ -4,19 +4,19 @@
   import type { LogEntry } from '../../models/LogEntry';
   import type { PagedResult } from '../../models/PagedResult';
   import { queryString } from '../../lib/query';
+  import { urlPaging } from '../../lib/paging.svelte';
   import { formatDateTime } from '../../lib/format';
   import { notify } from '../../lib/notify';
 
   let level = $state('');
-  let page = $state(1);
-  let pageSize = $state(100);
+  const paging = urlPaging(100);
   let total = $state(0);
   let pages = $state(1);
   let logs = $state<LogEntry[]>([]);
   let live = $state(false);
 
   async function load() {
-    const q = queryString({ page, pageSize, minimumLevel: level });
+    const q = queryString({ page: paging.page, pageSize: paging.size, minimumLevel: level });
     try {
       const r = await api.get<PagedResult<LogEntry>>(`/api/admin/logs?${q}`);
       logs = r?.data ?? [];
@@ -46,7 +46,7 @@
     value={level}
     onchange={(e) => {
       level = e.currentTarget.value;
-      page = 1;
+      paging.page = 1;
     }}
   >
     <option value="">All levels</option>
@@ -76,7 +76,7 @@
     </tbody>
   </table>
 </div>
-<Pager bind:page bind:pageSize {total} {pages} sizes={[50, 100, 250]} />
+<Pager bind:page={paging.page} bind:pageSize={paging.size} {total} {pages} sizes={[50, 100, 250]} />
 
 <style>
   .spacer {

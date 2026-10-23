@@ -5,7 +5,7 @@ using Reef.Helpers;
 namespace Reef.Core.Security;
 
 /// <summary>
-/// Resolves ENCRYPTION_KEY or REEF_ENCRYPTION_KEY from the machine environment, the process environment, the .env file or the fallback key
+/// Resolves ENCRYPTION_KEY or REEF_ENCRYPTION_KEY from the machine environment, the process environment, the .env file or the fallback key.
 /// </summary>
 public static class EncryptionKeyLoader
 {

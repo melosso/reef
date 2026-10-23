@@ -9,7 +9,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class AttachmentVariableResolver
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<AttachmentVariableResolver>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<AttachmentVariableResolver>();
 
     // Pattern to match {variable} placeholders
     private static readonly Regex VariablePattern = new(@"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", RegexOptions.Compiled);

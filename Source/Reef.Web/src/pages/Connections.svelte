@@ -7,7 +7,7 @@
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatRelative } from '../lib/format';
   import { notify } from '../lib/notify';
-  import { route, setQuery } from '../lib/router.svelte';
+  import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { Connection } from '../models/Connection';
   import type { ConnectionTestResult } from '../models/ConnectionTestResult';
@@ -48,10 +48,7 @@
     load();
   });
 
-  $effect(() => {
-    const id = route.query.get('id');
-    if (id && loaded && form?.id !== Number(id)) edit(Number(id));
-  });
+  const records = detailRoute('/connections', { create, edit, dismiss });
 
   const tags = $derived(
     [
@@ -94,9 +91,13 @@
     }
   }
 
-  function close() {
+  function dismiss() {
     form = null;
-    if (route.query.get('id')) setQuery('id', null);
+  }
+
+  function close() {
+    dismiss();
+    records.close();
   }
 
   async function test(f: Form, quiet = false) {
@@ -198,7 +199,7 @@
 
 <Page crumbs={[{ label: 'Connections' }]}>
   {#snippet actions()}
-    <button type="button" class="btn primary" onclick={create}><Plus size={15} />New connection</button>
+    <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New connection</button>
   {/snippet}
   <div class="page-body">
     <div class="toolbar">
@@ -221,7 +222,7 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button')) setQuery('id', String(c.id));
+                if (!(e.target as Element).closest('button')) records.open(c.id);
               }}
             >
               <td class="strong">{c.name}</td>
@@ -248,7 +249,7 @@
                   class="btn ghost icon"
                   aria-label="Edit {c.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => setQuery('id', String(c.id))}><Pencil size={15} /></button
+                  onclick={() => records.open(c.id)}><Pencil size={15} /></button
                 >
                 <button
                   type="button"
@@ -267,7 +268,7 @@
                   <div class="empty-state">
                     <h2>No connections</h2>
                     <p>A connection stores the database address and credentials that profiles query.</p>
-                    <button type="button" class="btn primary" onclick={create}>New connection</button>
+                    <button type="button" class="btn primary" onclick={() => records.open('new')}>New connection</button>
                   </div>
                 {:else}No connection matches the search.{/if}
               </td></tr

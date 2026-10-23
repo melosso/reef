@@ -35,7 +35,7 @@
     navigate(href);
   }
 
-  const runHref = (kind: string, id: number) => (kind === 'import' ? `/executions?importId=${id}` : `/executions?id=${id}`);
+  const runHref = (kind: string, id: number) => `/executions/${kind}/${id}`;
   const describe = (a: AttentionAnomaly) =>
     a.reason === 'rows'
       ? `${formatNumber(a.value)} rows, usually ${formatNumber(a.median)}`
@@ -97,7 +97,7 @@
           <table class="data">
             <tbody>
               {#each attention.upNext as job (job.id)}
-                <tr class="clickable" onclick={() => navigate(`/jobs?id=${job.id}`)}>
+                <tr class="clickable" onclick={() => navigate(`/jobs/${job.id}`)}>
                   <td class="strong">{job.name}</td>
                   <td class="when"><span use:tooltip={formatDateTime(job.nextRunTime)}>{formatRelative(job.nextRunTime)}</span></td>
                 </tr>
