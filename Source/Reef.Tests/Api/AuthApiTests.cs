@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using Xunit;
 
@@ -31,5 +32,15 @@ public class AuthApiTests(ReefApiFactory factory)
 
         (await LoginAsync($"{name}@example.com", "Secret-Pass-123")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await LoginAsync($"{name}@example.com", "wrong-password")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task First_admin_gets_a_random_account_from_the_log_and_must_change_the_password()
+    {
+        var (username, changeRequired) = await factory.SeededAdminAsync();
+
+        username.Should().MatchRegex(@"^admin-[a-z0-9]{8}@reef\.local$");
+        changeRequired.Should().BeTrue();
+        (await LoginAsync("admin@reef.local", "admin123")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

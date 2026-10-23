@@ -1061,29 +1061,29 @@ public class DatabaseInitializer
 
         if (userCount == 0)
         {
-            // Create default admin user with BCrypt hashed password "admin123"
-            // Force password change on first login for security
             const string insertUserSql = @"
                 INSERT INTO Users (Username, DisplayName, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
                 VALUES (@Username, @DisplayName, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
             ";
 
+            const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+            var username = $"admin-{System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet, 8)}@reef.local";
+            var password = System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet + "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 16);
             var passwordHasher = new Reef.Core.Security.PasswordHasher();
-            var passwordHash = passwordHasher.HashPassword("admin123");
 
             await connection.ExecuteAsync(insertUserSql, new
             {
-                Username = "admin@reef.local",
+                Username = username,
                 DisplayName = "Administrator",
-                PasswordHash = passwordHash,
+                PasswordHash = passwordHasher.HashPassword(password),
                 Role = "Admin",
                 IsActive = 1,
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("Created the default admin user (username: admin@reef.local, password: admin123)");
-            Log.Warning("The default admin user must change the password at first sign-in");
+            Log.Warning("Created the first admin account {Username:l} with one-time password {Password:l}", username, password);
+            Log.Warning("Reef asks for a new password at the first sign-in");
         }
     }
 

@@ -61,7 +61,7 @@ mkdir -p exports && docker compose up -d
 
 Access at **http://localhost:8085**
 
-Upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. After you log in, follow the steps to change your password right away.
+The first start creates an admin account `admin-<random>@reef.local` with a one-time password (printed to the logs).
 
 <summary>
 <details>How to install on Windows</details>
@@ -88,7 +88,7 @@ Download the latest release from Releases.
 
 4. Open browser → **http://localhost:8085**
 
-As mentioned hereabove, upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. You will be prompted to change them immediately.
+Sign in with the admin account from the first-start log. Reef asks for a new password at the first sign-in.
 
 </summary>
 

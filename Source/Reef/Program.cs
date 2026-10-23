@@ -40,6 +40,13 @@ public partial class Program
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json", optional: true)
             .Build();
 
+        // account recovery without the web ui, runs instead of the web host
+        if (args is ["accounts", ..])
+        {
+            Environment.ExitCode = await AccountsCli.RunAsync(args, new ConfigurationBuilder().AddConfiguration(tempConfig).AddEnvironmentVariables().Build());
+            return;
+        }
+
         bool useEventLog = tempConfig.GetValue<bool>("Windows:UseEventLog", false);
 
         var logDirectory = Path.Combine(AppContext.BaseDirectory, "log");
