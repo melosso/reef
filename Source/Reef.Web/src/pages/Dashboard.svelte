@@ -51,7 +51,8 @@
           <h2>Needs attention</h2>
           <span class="spacer"></span>
           <span class="muted" use:tooltip={'Runs started in the last 24 hours'}
-            >{formatNumber(attention.last24h.runs)} {attention.last24h.runs === 1 ? 'run' : 'runs'}, {formatNumber(attention.last24h.failed)} failed</span
+            >{formatNumber(attention.last24h.runs)}
+            {attention.last24h.runs === 1 ? 'run' : 'runs'}, {formatNumber(attention.last24h.failed)} failed</span
           >
         </div>
         {#if issues}
@@ -60,7 +61,13 @@
               {#each attention.failed as f (f.kind + f.executionId)}
                 <tr class="clickable" onclick={() => navigate(runHref(f.kind, f.executionId))}>
                   <td class="mark"><StatusMark kind="err" label="Failed" /></td>
-                  <td><a class="strong" href="/profiles/{f.kind}/{f.profileId}" onclick={(e) => open(e, `/profiles/${f.kind}/${f.profileId}`)}>{f.profileName}</a></td>
+                  <td
+                    ><a
+                      class="strong"
+                      href="/profiles/{f.kind}/{f.profileId}"
+                      onclick={(e) => open(e, `/profiles/${f.kind}/${f.profileId}`)}>{f.profileName}</a
+                    ></td
+                  >
                   <td class="detail" use:tooltip={f.error}>{f.error}</td>
                   <td class="when"><span use:tooltip={formatDateTime(f.startedAt)}>{formatRelative(f.startedAt)}</span></td>
                 </tr>
@@ -68,7 +75,13 @@
               {#each attention.anomalies as a (a.kind + a.executionId)}
                 <tr class="clickable" onclick={() => navigate(runHref(a.kind, a.executionId))}>
                   <td class="mark"><StatusMark kind="warn" label={a.reason === 'rows' ? 'Fewer rows' : 'Slower'} /></td>
-                  <td><a class="strong" href="/profiles/{a.kind}/{a.profileId}" onclick={(e) => open(e, `/profiles/${a.kind}/${a.profileId}`)}>{a.profileName}</a></td>
+                  <td
+                    ><a
+                      class="strong"
+                      href="/profiles/{a.kind}/{a.profileId}"
+                      onclick={(e) => open(e, `/profiles/${a.kind}/${a.profileId}`)}>{a.profileName}</a
+                    ></td
+                  >
                   <td class="detail">{describe(a)}</td>
                   <td class="when"><span use:tooltip={formatDateTime(a.startedAt)}>{formatRelative(a.startedAt)}</span></td>
                 </tr>

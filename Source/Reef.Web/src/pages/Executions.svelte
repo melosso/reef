@@ -329,12 +329,7 @@
       <span class="muted"><span class="num">{formatNumber(total)}</span> export executions</span>
       <span class="spacer"></span>
       <label class="inline" for="page-size">Rows per page</label>
-      <select
-        id="page-size"
-        class="size"
-        value={String(paging.size)}
-        onchange={(e) => (paging.size = Number(e.currentTarget.value))}
-      >
+      <select id="page-size" class="size" value={String(paging.size)} onchange={(e) => (paging.size = Number(e.currentTarget.value))}>
         {#each [10, 25, 50, 100] as n (n)}<option value={String(n)}>{n}</option>{/each}
       </select>
       <button type="button" class="btn icon" aria-label="Previous page" disabled={paging.page <= 1} onclick={() => paging.page--}

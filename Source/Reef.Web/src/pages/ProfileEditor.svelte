@@ -72,7 +72,13 @@
   $effect(() => {
     setLeaveGuard(
       dirty
-        ? () => confirm({ title: 'Leave without saving?', message: 'Unsaved changes to this profile are discarded.', confirm: 'Leave', danger: true })
+        ? () =>
+            confirm({
+              title: 'Leave without saving?',
+              message: 'Unsaved changes to this profile are discarded.',
+              confirm: 'Leave',
+              danger: true,
+            })
         : null,
     );
   });

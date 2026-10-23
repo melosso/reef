@@ -155,7 +155,6 @@
 
 <Page crumbs={[{ label: 'Approvals' }]}>
   <div class="page-body">
-
     <div class="tabs" role="tablist">
       <button type="button" role="tab" aria-selected={tab === 'pending'} onclick={() => showTab(null)}
         >Pending <span class="num">{lists.pending.length}</span></button

@@ -33,8 +33,7 @@
       <a href={item.href} aria-current={active(item.href) ? 'page' : undefined}>
         <item.icon size={16} strokeWidth={1.75} />
         <span class="label">{item.label}</span>
-        {#if item.href === '/approvals' && approvals > 0}<span class="num count" aria-label="{approvals} pending">{approvals}</span
-          >{/if}
+        {#if item.href === '/approvals' && approvals > 0}<span class="num count" aria-label="{approvals} pending">{approvals}</span>{/if}
       </a>
     {/each}
   </nav>
