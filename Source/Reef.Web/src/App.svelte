@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Component } from 'svelte';
   import { Toaster } from 'svelte-sonner';
   import { match, navigate, route } from './lib/router.svelte';
   import { refresh, restoreFromCookie, session } from './lib/session.svelte';
@@ -8,7 +9,7 @@
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import PasswordRequired from './components/PasswordRequired.svelte';
 
-  type Loader = () => Promise<{ default: any }>;
+  type Loader = () => Promise<{ default: Component }>;
   interface Route {
     pattern: string;
     load: Loader;
@@ -64,7 +65,7 @@
 
 {#if resolved.route.public}
   {#await resolved.route.load() then page}
-    <page.default params={resolved.params} />
+    <page.default />
   {/await}
 {:else if session.token}
   <div class="shell">
@@ -72,7 +73,7 @@
     <main class="main">
       {#key resolved.route.pattern + JSON.stringify(resolved.params)}
         {#await resolved.route.load() then page}
-          <page.default params={resolved.params} />
+          <page.default />
         {/await}
       {/key}
     </main>

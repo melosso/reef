@@ -2,12 +2,14 @@
   import { Copy, Plus, Trash2 } from '@lucide/svelte';
   import StatusMark from '../StatusMark.svelte';
   import { api } from '../../lib/api';
+  import type { ApiKey } from '../../models/ApiKey';
+  import type { ApiKeyCreated } from '../../models/ApiKeyCreated';
   import { confirm } from '../../lib/confirm.svelte';
   import { formatDateTime, parseDate } from '../../lib/format';
   import { copyText, notify } from '../../lib/notify';
   import { tooltip } from '../../lib/tooltip';
 
-  let keys = $state<any[]>([]);
+  let keys = $state<ApiKey[]>([]);
   let dialog: HTMLDialogElement;
   let name = $state('');
   let permissions = $state('{"read":true,"write":false}');
@@ -16,7 +18,7 @@
   let busy = $state(false);
 
   async function load() {
-    keys = await api.get<any[]>('/api/admin/api-keys').catch((e) => {
+    keys = await api.get<ApiKey[]>('/api/admin/api-keys').catch((e) => {
       notify.fail(e, 'apikeys');
       return [];
     });
@@ -38,7 +40,7 @@
     e.preventDefault();
     busy = true;
     try {
-      const r = await api.post('/api/admin/api-keys', { name: name.trim(), permissions, expiresAt: expiresAt || null });
+      const r = await api.post<ApiKeyCreated>('/api/admin/api-keys', { name: name.trim(), permissions, expiresAt: expiresAt || null });
       created = r.apiKey;
       await load();
     } catch (err) {
@@ -48,7 +50,7 @@
     }
   }
 
-  async function remove(k: any) {
+  async function remove(k: ApiKey) {
     if (
       !(await confirm({
         title: `Revoke ${k.name}?`,
@@ -67,7 +69,7 @@
     }
   }
 
-  const expired = (k: any) => !!k.expiresAt && (parseDate(k.expiresAt)?.getTime() ?? Infinity) < Date.now();
+  const expired = (k: ApiKey) => !!k.expiresAt && (parseDate(k.expiresAt)?.getTime() ?? Infinity) < Date.now();
 </script>
 
 <div class="toolbar">

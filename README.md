@@ -46,9 +46,9 @@ services:
       - reef_db:/app/data
       - ./exports:/app/exports
     environment:
-      - REEF_ENCRYPTION_KEY=YourKeyHere
-      - Reef__DatabasePath=/app/data/Reef.db
-      - Reef__AllowedOrigins=http://localhost:8085,http://localhost:3000
+      - ENCRYPTION_KEY=YourKeyHere
+      - DATABASE_PATH=/app/data/Reef.db
+      #- KNOWN_NETWORKS=172.16.0.0/12
 
 volumes:
   reef_core:
@@ -58,6 +58,10 @@ volumes:
 ```bash
 mkdir -p exports && docker compose up -d
 ```
+
+Every setting under `Reef` in `appsettings.json` takes a short environment variable name, such as `DATABASE_PATH`, `JWT_SECRET_KEY` or `JOBS_MAX_CONCURRENT_JOBS`. A `REEF_` prefix (`REEF_DATABASE_PATH`) wins over the bare name, and lists such as `ALLOWED_ORIGINS` take comma separated values. `Reef__DatabasePath` style names still work and log a deprecation warning.
+
+Behind a reverse proxy, set `KNOWN_PROXIES` (addresses) or `KNOWN_NETWORKS` (CIDR, such as `172.16.0.0/12` for Docker networks) so Reef reads the client address from `X-Forwarded-For`. Without them the header is ignored, which keeps sign-in throttling from being bypassed with a spoofed header.
 
 Access at **http://localhost:8085**
 

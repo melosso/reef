@@ -9,7 +9,13 @@ function initial(): ThemeChoice {
   }
 }
 
-export const theme = $state({ choice: initial() });
+const media = matchMedia('(prefers-color-scheme: dark)');
+
+export const theme = $state({ choice: initial(), systemDark: media.matches });
+
+media.addEventListener('change', (e) => (theme.systemDark = e.matches));
+
+export const isDark = (): boolean => theme.choice === 'dark' || (theme.choice === 'system' && theme.systemDark);
 
 export function setTheme(choice: ThemeChoice): void {
   theme.choice = choice;

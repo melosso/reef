@@ -30,7 +30,7 @@
       page = 1;
     }}
   >
-    {#each sizes as n}<option value={String(n)}>{n}</option>{/each}
+    {#each sizes as n (n)}<option value={String(n)}>{n}</option>{/each}
   </select>
   <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}
     ><ChevronLeft size={15} /></button

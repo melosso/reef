@@ -53,7 +53,7 @@ RUN mkdir -p /app/exports /app/log /app/.core /app/data
 # Set environment variables
 ENV ASPNETCORE_HTTP_PORTS=
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV REEF_ENCRYPTION_KEY=""
+ENV ENCRYPTION_KEY=""
 
 # Copy published output
 COPY --from=build /app/publish .

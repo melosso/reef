@@ -7,7 +7,8 @@
   import { notify } from '../lib/notify';
   import { runProfile } from '../lib/profiles';
   import { remember } from '../lib/recent.svelte';
-  import { navigate, setLeaveGuard } from '../lib/router.svelte';
+  import { match, navigate, route, setLeaveGuard } from '../lib/router.svelte';
+  import { confirm } from '../lib/confirm.svelte';
   import { theme } from '../lib/theme.svelte';
   import { tooltip } from '../lib/tooltip';
   import CanvasToolbar from '../editor/CanvasToolbar.svelte';
@@ -18,9 +19,9 @@
   import { stepIcon } from '../editor/icons';
   import { loadOptions } from '../editor/options';
   import { lastRunLabel, loadLastRun, stepStat, type LastRun } from '../editor/stepStats';
-  import type { Catalog, DocNode, NodeDefinition, Options, ProfileDoc } from '../editor/types';
+  import type { Catalog, Config, DocNode, Options, ProfileDoc } from '../editor/types';
 
-  let { params }: { params: Record<string, string> } = $props();
+  const params = $derived(match('/profiles/:kind/new', route.path) ?? match('/profiles/:kind/:id', route.path) ?? {});
 
   const API = '/api/profile-documents';
   const CARD_WIDTH = 220;
@@ -69,7 +70,11 @@
   });
 
   $effect(() => {
-    setLeaveGuard(dirty ? () => window.confirm('Leave without saving? Unsaved changes to this profile are discarded.') : null);
+    setLeaveGuard(
+      dirty
+        ? () => confirm({ title: 'Leave without saving?', message: 'Unsaved changes to this profile are discarded.', confirm: 'Leave', danger: true })
+        : null,
+    );
   });
 
   async function load() {
@@ -243,7 +248,7 @@
   }
 
   function flatten() {
-    return api.post(`${API}/${kind}/flatten${doc?.id ? `?id=${doc.id}` : ''}`, doc);
+    return api.post<Config>(`${API}/${kind}/flatten${doc?.id ? `?id=${doc.id}` : ''}`, doc);
   }
 
   function errorFor(nodeId: string | null, key: string) {
@@ -441,14 +446,17 @@
                 {/if}
               </div>
             {:else}
-              <StepActions
-                {kind}
-                id={doc.id}
-                step={panel === 'settings' ? 'settings' : (selectedNode?.type ?? '')}
-                config={panel === 'settings' ? doc.settings : (selectedNode?.config ?? {})}
-                {dirty}
-                {flatten}
-              />
+              {@const step = panel === 'settings' ? 'settings' : (selectedNode?.type ?? '')}
+              {#key `${kind}:${step}`}
+                <StepActions
+                  {kind}
+                  id={doc.id}
+                  {step}
+                  config={panel === 'settings' ? doc.settings : (selectedNode?.config ?? {})}
+                  {dirty}
+                  {flatten}
+                />
+              {/key}
             {/if}
           </div>
         </aside>

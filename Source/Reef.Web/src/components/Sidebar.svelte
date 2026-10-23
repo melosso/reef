@@ -29,7 +29,7 @@
 <aside class="side">
   <a class="brand" href="/dashboard"><Logo /><span>Reef</span></a>
   <nav aria-label="Main">
-    {#each navItems as item}
+    {#each navItems as item (item.href)}
       <a href={item.href} aria-current={active(item.href) ? 'page' : undefined}>
         <item.icon size={16} strokeWidth={1.75} />
         <span class="label">{item.label}</span>

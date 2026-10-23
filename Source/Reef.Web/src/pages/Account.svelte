@@ -2,6 +2,11 @@
   import Page from '../components/Page.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
+  import type { AccountProfile } from '../models/AccountProfile';
+  import type { CheckResult } from '../models/CheckResult';
+  import type { PasswordChangeResult } from '../models/PasswordChangeResult';
+  import type { TotpConfirmResult } from '../models/TotpConfirmResult';
+  import type { TotpSetup } from '../models/TotpSetup';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
   import { navigate, route, setQuery } from '../lib/router.svelte';
@@ -10,7 +15,7 @@
   type Tab = 'profile' | 'password' | 'mfa';
   const tab = $derived((route.query.get('tab') as Tab) || 'profile');
 
-  let profile = $state<any>({ username: session.username, displayName: '', email: '' });
+  let profile = $state<AccountProfile>({ username: session.username, displayName: '', email: '' });
   let current = $state('');
   let next = $state('');
   let busy = $state<string | null>(null);
@@ -20,7 +25,7 @@
   let verifyCode = $state('');
 
   async function load() {
-    profile = await api.get('/api/account/profile').catch((e) => {
+    profile = await api.get<AccountProfile>('/api/account/profile').catch((e) => {
       notify.fail(e);
       return profile;
     });
@@ -44,7 +49,7 @@
     }
   }
 
-  function ensure(data: any, fallback: string) {
+  function ensure(data: { success?: boolean; message?: string | null } | null | undefined, fallback: string) {
     if (data && data.success === false) throw new Error(data.message || fallback);
   }
 
@@ -52,7 +57,7 @@
     e.preventDefault();
     return step('profile', async () => {
       ensure(
-        await api.put('/api/account/profile', { displayName: profile.displayName?.trim(), email: profile.email?.trim() }),
+        await api.put<CheckResult>('/api/account/profile', { displayName: profile.displayName?.trim(), email: profile.email?.trim() }),
         'Profile save failed.',
       );
       session.displayName = profile.displayName || null;
@@ -66,23 +71,26 @@
   const changePassword = (e: SubmitEvent) => {
     e.preventDefault();
     return step('password', async () => {
-      ensure(await api.post('/api/auth/change-password', { currentPassword: current, newPassword: next }), 'Password change failed.');
+      ensure(
+        await api.post<PasswordChangeResult>('/api/auth/change-password', { currentPassword: current, newPassword: next }),
+        'Password change failed.',
+      );
       notify.success('Password changed. Sign in with the new password.', { key: 'account-password' });
       setTimeout(() => navigate('/logoff'), 1500);
     });
   };
 
-  function showSetup(data: any) {
+  function showSetup(data: TotpSetup) {
     totp = { qr: data.qrCodePng, key: data.secretBase32.match(/.{1,4}/g)?.join(' ') ?? data.secretBase32 };
     verifyCode = '';
   }
 
-  const startTotp = () => step('totp', async () => showSetup(await api.post('/api/account/mfa/totp/setup', {})));
+  const startTotp = () => step('totp', async () => showSetup(await api.post<TotpSetup>('/api/account/mfa/totp/setup', {})));
 
   const submitReconfirm = (e: SubmitEvent) => {
     e.preventDefault();
     return step('reconfirm', async () => {
-      showSetup(await api.post('/api/account/mfa/totp/setup', { currentCode: reconfirmCode.replace(/\s/g, '') }));
+      showSetup(await api.post<TotpSetup>('/api/account/mfa/totp/setup', { currentCode: reconfirmCode.replace(/\s/g, '') }));
       reconfirm = false;
       reconfirmCode = '';
     });
@@ -91,7 +99,7 @@
   const confirmTotp = (e: SubmitEvent) => {
     e.preventDefault();
     return step('verify', async () => {
-      const data = await api.post('/api/account/mfa/totp/confirm', { code: verifyCode.replace(/\s/g, '') });
+      const data = await api.post<TotpConfirmResult>('/api/account/mfa/totp/confirm', { code: verifyCode.replace(/\s/g, '') });
       ensure(data, 'Invalid code.');
       totp = null;
       profile = { ...profile, mfaEnabled: true, mfaMethod: 'totp' };

@@ -3,6 +3,7 @@
   import Sheet from '../Sheet.svelte';
   import StatusMark from '../StatusMark.svelte';
   import { api } from '../../lib/api';
+  import type { User } from '../../models/User';
   import { confirm } from '../../lib/confirm.svelte';
   import { formatDateTime, formatRelative } from '../../lib/format';
   import { notify } from '../../lib/notify';
@@ -19,12 +20,12 @@
     isActive: boolean;
   }
 
-  let users = $state<any[]>([]);
+  let users = $state<User[]>([]);
   let form = $state<Form | null>(null);
   let busy = $state(false);
 
   async function load() {
-    users = await api.get<any[]>('/api/admin/users').catch((e) => {
+    users = await api.get<User[]>('/api/admin/users').catch((e) => {
       notify.fail(e, 'users');
       return [];
     });
@@ -34,7 +35,7 @@
     load();
   });
 
-  function edit(u: any) {
+  function edit(u: User) {
     form = {
       id: u.id,
       username: u.username,
@@ -74,7 +75,7 @@
     }
   }
 
-  async function remove(u: any) {
+  async function remove(u: User) {
     if (
       !(await confirm({
         title: `Delete ${u.username}?`,
@@ -110,13 +111,15 @@
     >
     <tbody>
       {#each users as u (u.id)}
-        {@const seen = u.lastLoginAt || u.lastSeenAt || u.LastSeenAt}
+        {@const seen = u.lastLoginAt || u.lastSeenAt}
         <tr>
-          <td
-            ><span class="strong">{u.username}</span>{#if u.displayName}<span class="muted">
-                {u.displayName}</span
-              >{/if}{#if u.username === session.username}<span class="muted"> (you)</span>{/if}</td
-          >
+          <td>
+            <span class="who">
+              <span class="strong">{u.username}</span>
+              {#if u.displayName}<span class="muted">{u.displayName}</span>{/if}
+              {#if u.username === session.username}<span class="muted">(you)</span>{/if}
+            </span>
+          </td>
           <td>{u.role}</td>
           <td><StatusMark kind={u.isActive ? 'ok' : 'off'} label={u.isActive ? 'Active' : 'Off'} /></td>
           <td><span use:tooltip={formatDateTime(seen)}>{seen ? formatRelative(seen) : 'Never'}</span></td>
@@ -169,7 +172,7 @@
           >{form.id ? 'New password' : 'Password'}</label
         ><input id="u-pass" type="password" autocomplete="new-password" bind:value={form.password} />
       </div>
-      {#if form.id}<label class="check"><input type="checkbox" bind:checked={form.isActive} />Active</label>{/if}
+      {#if form.id}<label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />Active</label>{/if}
     </form>
     {#snippet footer()}
       <button type="button" class="btn" onclick={() => (form = null)}>Cancel</button>
@@ -184,5 +187,10 @@
   }
   .strong {
     font-weight: 500;
+  }
+  .who {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 6px;
   }
 </style>

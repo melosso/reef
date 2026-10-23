@@ -1,13 +1,14 @@
 <script lang="ts">
   import StatusMark from '../StatusMark.svelte';
   import { api } from '../../lib/api';
+  import type { Interpreter } from '../../models/Interpreter';
   import { notify } from '../../lib/notify';
 
-  let list = $state<any[]>([]);
+  let list = $state<Interpreter[]>([]);
   let busy = $state<string | null>(null);
 
   async function load() {
-    list = await api.get<any[]>('/api/profiles/interpreters').catch((e) => {
+    list = await api.get<Interpreter[]>('/api/profiles/interpreters').catch((e) => {
       notify.fail(e);
       return [];
     });
@@ -20,7 +21,7 @@
   async function test(name: string) {
     busy = name;
     try {
-      const s = await api.post(`/api/profiles/interpreters/${name}/test`);
+      const s = await api.post<Interpreter>(`/api/profiles/interpreters/${name}/test`);
       (s.available ? notify.success : notify.error)(`${s.displayName} is ${s.available ? 'available' : 'not available'}`);
       await load();
     } catch (e) {

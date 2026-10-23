@@ -9,6 +9,11 @@
   import { copyText, notify } from '../lib/notify';
   import { navigate, route, setQuery } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { GitHubFile } from '../models/GitHubFile';
+  import type { QueryTemplate } from '../models/QueryTemplate';
+  import type { TemplatePreview } from '../models/TemplatePreview';
+  import type { TemplateValidation } from '../models/TemplateValidation';
 
   const TYPES: [string, string][] = [
     ['ScribanTemplate', 'Scriban template'],
@@ -75,7 +80,7 @@
     url: string;
   }
 
-  let templates = $state<any[]>([]);
+  let templates = $state<QueryTemplate[]>([]);
   let loaded = $state(false);
   let search = $state('');
   let typeFilter = $state('');
@@ -89,7 +94,7 @@
   let pendingGuide = $state<string>('');
 
   async function load() {
-    templates = await api.get<any[]>('/api/templates').catch((e) => {
+    templates = await api.get<QueryTemplate[]>('/api/templates').catch((e) => {
       notify.fail(e, 'templates');
       return [];
     });
@@ -158,7 +163,7 @@
 
   async function edit(id: number) {
     try {
-      const t = await api.get(`/api/templates/${id}`);
+      const t = await api.get<QueryTemplate>(`/api/templates/${id}`);
       form = {
         id: t.id,
         name: t.name,
@@ -201,7 +206,7 @@
     if (!form || !VALIDATED.includes(form.type)) return true;
     busy = 'validate';
     try {
-      const result = await api.post('/api/templates/validate', { template: content(form), type: form.type });
+      const result = await api.post<TemplateValidation>('/api/templates/validate', { template: content(form), type: form.type });
       validated = result?.isValid ? 'valid' : 'invalid';
       if (result?.isValid) notify.success(result.message || 'Template is valid', { key: 'tpl-validate' });
       else notify.error(`Template is invalid. ${result?.errorMessage ?? ''}`.trim(), { key: 'tpl-validate' });
@@ -219,7 +224,7 @@
     if (!form || !(await validate())) return;
     busy = 'preview';
     try {
-      const result = await api.post('/api/templates/preview', {
+      const result = await api.post<TemplatePreview>('/api/templates/preview', {
         template: content(form),
         type: form.type,
         outputFormat: form.outputFormat,
@@ -262,8 +267,8 @@
     }
   }
 
-  async function remove(t: any) {
-    const users = await api.get<any[]>(`/api/profiles?templateId=${t.id}`).catch(() => []);
+  async function remove(t: QueryTemplate) {
+    const users = await api.get<ExportProfile[]>(`/api/profiles?templateId=${t.id}`).catch(() => []);
     if (users?.length) {
       notify.warning(
         `${t.name} is used by ${users.length} ${users.length === 1 ? 'profile' : 'profiles'}: ${users.map((p) => p.name).join(', ')}. Turn the template off instead.`,
@@ -289,9 +294,9 @@
     }
   }
 
-  async function toggleActive(t: any) {
+  async function toggleActive(t: QueryTemplate) {
     try {
-      const full = await api.get(`/api/templates/${t.id}`);
+      const full = await api.get<QueryTemplate>(`/api/templates/${t.id}`);
       await api.put(`/api/templates/${t.id}`, { ...full, isActive: !full.isActive });
       notify.success(`${t.name} turned ${full.isActive ? 'off' : 'on'}`);
       await load();
@@ -300,7 +305,7 @@
     }
   }
 
-  function toml(t: any): string {
+  function toml(t: QueryTemplate): string {
     const esc = (s: string | null | undefined) =>
       !s ? '""' : s.includes('\n') ? `"""\n${s}\n"""` : `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
     const tags = t.tags
@@ -326,9 +331,9 @@
     ].join('\n');
   }
 
-  async function exportToml(t: any) {
+  async function exportToml(t: QueryTemplate) {
     try {
-      const full = await api.get(`/api/templates/${t.id}`);
+      const full = await api.get<QueryTemplate>(`/api/templates/${t.id}`);
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([toml(full)], { type: 'text/plain' }));
       a.download = `${full.name.replace(/[^a-z0-9_-]/gi, '_').toLowerCase()}.toml`;
@@ -355,11 +360,11 @@
     try {
       const response = await fetch('https://api.github.com/repos/melosso/reef/contents/Templates');
       if (!response.ok) throw new Error(`GitHub returned status ${response.status}.`);
-      const files = await response.json();
+      const files: GitHubFile[] = await response.json();
       gallery = files
-        .filter((f: any) => f.type === 'file' && !f.name.toLowerCase().endsWith('.md'))
-        .map((f: any) => parseFile(f.name, f.download_url))
-        .filter(Boolean);
+        .filter((f) => f.type === 'file' && !f.name.toLowerCase().endsWith('.md'))
+        .map((f) => parseFile(f.name, f.download_url))
+        .filter((t): t is GitTemplate => t !== null);
     } catch (e) {
       gallery = null;
       notify.error(`Template gallery failed to load. ${(e as Error).message}`);
@@ -422,7 +427,7 @@
       <input type="search" placeholder="Search name, description, tag or format" aria-label="Search templates" bind:value={search} />
       <select aria-label="Type" bind:value={typeFilter}>
         <option value="">All types</option>
-        {#each TYPES as [value, label]}<option {value}>{label}</option>{/each}
+        {#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}
       </select>
       <span class="spacer"></span>
       <span class="muted"><span class="num">{visible.length}</span> of <span class="num">{templates.length}</span></span>
@@ -514,7 +519,7 @@
         <div class="field">
           <label for="t-type">Type</label>
           <select id="t-type" value={form.type} onchange={(e) => changeType(e.currentTarget.value)}
-            >{#each TYPES as [value, label]}<option {value}>{label}</option>{/each}</select
+            >{#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}</select
           >
         </div>
       </div>
@@ -568,7 +573,7 @@
       <div class="grid2">
         <div class="field">
           <label for="t-format">Output format</label><select id="t-format" bind:value={form.outputFormat}
-            >{#each FORMATS[form.type] as f}<option>{f}</option>{/each}</select
+            >{#each FORMATS[form.type] as f (f)}<option>{f}</option>{/each}</select
           >
         </div>
         <div class="field">
@@ -580,7 +585,7 @@
           />
         </div>
       </div>
-      <label class="check"><input type="checkbox" bind:checked={form.isActive} />Active</label>
+      <label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />Active</label>
       {#if preview !== null}
         <section class="fields">
           <h3 class="row">
@@ -637,7 +642,7 @@
 {#if guidance}
   <Sheet title="Query for {guidance.name}" onclose={() => (guidance = null)} wide>
     <p class="muted">The template expects the columns from this query. Paste the query into the source step of an export profile.</p>
-    {#each guidance.snippets as [db, sql]}
+    {#each guidance.snippets as [db, sql], i (i)}
       <section class="fields">
         <h3 class="row">
           {db}<span class="grow"></span><button

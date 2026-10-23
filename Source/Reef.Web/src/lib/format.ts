@@ -9,6 +9,10 @@ export function parseDate(value: string | null | undefined): Date | null {
   return Number.isNaN(date.getTime()) || date.getFullYear() < 1971 ? null : date;
 }
 
+export function startOfToday(): number {
+  return new Date().setHours(0, 0, 0, 0);
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   const date = parseDate(value);
   return date ? dateTime.format(date) : '';

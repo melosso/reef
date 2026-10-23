@@ -32,7 +32,7 @@
 <div class="page">
   <header class="head">
     <nav aria-label="Breadcrumb" class="crumbs">
-      {#each crumbs as crumb, i}
+      {#each crumbs as crumb, i (i)}
         {#if i > 0}<span aria-hidden="true">/</span>{/if}
         {#if crumb.href && i < crumbs.length - 1}<a href={crumb.href}>{crumb.label}</a>
         {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}

@@ -12,9 +12,10 @@ import {
   RefreshCw,
   Split,
   Workflow,
+  type LucideIcon,
 } from '@lucide/svelte';
 
-const ICONS: Record<string, any> = {
+const ICONS: Record<string, LucideIcon> = {
   'arrow-right-left': ArrowRightLeft,
   'check-circle': CircleCheck,
   copy: Copy,
@@ -29,6 +30,6 @@ const ICONS: Record<string, any> = {
   split: Split,
 };
 
-export function stepIcon(name: string): any {
+export function stepIcon(name: string): LucideIcon {
   return ICONS[name] ?? Workflow;
 }

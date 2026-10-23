@@ -1,27 +1,36 @@
 <script lang="ts">
   import Facts from '../executions/Facts.svelte';
   import { api } from '../../lib/api';
+  import type { AdminMetrics } from '../../models/AdminMetrics';
+  import type { GitHubRelease } from '../../models/GitHubRelease';
+  import type { SystemInfo } from '../../models/SystemInfo';
+  import type { VersionInfo } from '../../models/VersionInfo';
   import { formatDateTime } from '../../lib/format';
 
-  let info = $state<any>(null);
+  let info = $state<SystemInfo | null>(null);
   let version = $state('');
   let latest = $state<{ tag: string; url: string } | null>(null);
   let now = $state(new Date());
+  let storage = $state<AdminMetrics['system'] | null>(null);
 
   $effect(() => {
     api
-      .get('/api/system/info')
+      .get<SystemInfo>('/api/system/info')
       .then((d) => (info = d))
       .catch(() => {});
     api
-      .get('/api/admin/version')
+      .get<AdminMetrics>('/api/admin/metrics')
+      .then((d) => (storage = d?.system ?? null))
+      .catch(() => {});
+    api
+      .get<VersionInfo>('/api/admin/version')
       .then((d) => {
         version = d?.version ?? '';
         return fetch('https://api.github.com/repos/melosso/reef/releases/latest');
       })
-      .then((r) => (r?.ok ? r.json() : null))
+      .then((r): Promise<GitHubRelease | null> | null => (r?.ok ? r.json() : null))
       .then((r) => {
-        if (r?.tag_name) latest = { tag: r.tag_name, url: r.html_url };
+        if (r?.tag_name) latest = { tag: r.tag_name, url: r.html_url ?? '' };
       })
       .catch(() => {});
     const timer = setInterval(() => (now = new Date()), 1000);
@@ -45,6 +54,12 @@
         ['Version', info?.version ?? version],
         ['Environment', info?.environment ?? 'Production'],
         ['Uptime', info?.uptime?.days !== undefined ? `${info.uptime.days} days` : null],
+        [
+          'Storage',
+          storage
+            ? `Database ${storage.databaseSizeMb ?? 0} MB of ${storage.databaseSizeThresholdMb || 1024} MB, exports ${storage.exportsSizeMb ?? 0} MB`
+            : null,
+        ],
         ['Server time', now.toLocaleTimeString()],
         ['Server date', now.toLocaleDateString()],
         ['Reported at', info?.timestamp ? formatDateTime(info.timestamp) : null],

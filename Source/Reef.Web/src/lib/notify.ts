@@ -13,6 +13,7 @@ export const notify = {
   error: (message: string, o: Options = {}) =>
     toast.error(message, { id: o.key, description: o.description, duration: Number.POSITIVE_INFINITY, closeButton: true }),
   fail: (error: unknown, key?: string) => {
+    if (error instanceof ApiError && error.status === 0) return;
     const message = error instanceof Error ? error.message : String(error);
     const extra =
       error instanceof ApiError && error.errors.length > 1 ? `${error.errors.length - 1} more problems in this form` : undefined;

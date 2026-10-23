@@ -1,0 +1,32 @@
+export interface ImportExecution {
+  id: number;
+  importProfileId: number;
+  status: string;
+  triggeredBy?: string | null;
+  startedAt: string;
+  completedAt?: string | null;
+  totalRowsRead: number;
+  rowsInserted: number;
+  rowsUpdated: number;
+  rowsSkipped: number;
+  rowsDeleted: number;
+  rowsFailed: number;
+  currentPhase?: string | null;
+  errorMessage?: string | null;
+  stackTrace?: string | null;
+  executionLog?: string | null;
+  preProcessStdout?: string | null;
+  preProcessStderr?: string | null;
+  preProcessExitCode?: number | null;
+  postProcessStdout?: string | null;
+  postProcessStderr?: string | null;
+  postProcessExitCode?: number | null;
+  filesProcessed: number;
+  bytesProcessed: number;
+  deltaSyncNewRows: number;
+  deltaSyncChangedRows: number;
+  deltaSyncUnchangedRows: number;
+  deltaSyncDeletedRows: number;
+  phaseTimingsJson?: string | null;
+  outputTargetsJson?: string | null;
+}

@@ -3,11 +3,14 @@
   import Page from '../components/Page.svelte';
   import Sheet from '../components/Sheet.svelte';
   import { api } from '../lib/api';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { ImportProfile } from '../models/ImportProfile';
+  import type { ProfileGroup } from '../models/ProfileGroup';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
   import { tooltip } from '../lib/tooltip';
 
-  let groups = $state<any[]>([]);
+  let groups = $state<ProfileGroup[]>([]);
   let counts = $state<Record<number, number>>({});
   let loaded = $state(false);
   let form = $state<{ id?: number; name: string; description: string } | null>(null);
@@ -15,12 +18,12 @@
 
   async function load() {
     const [g, exports, imports] = await Promise.all([
-      api.get<any[]>('/api/groups').catch((e) => {
+      api.get<ProfileGroup[]>('/api/groups').catch((e) => {
         notify.fail(e, 'groups');
         return [];
       }),
-      api.get<any[]>('/api/profiles').catch(() => []),
-      api.get<any[]>('/api/profiles?type=import').catch(() => []),
+      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
+      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
     ]);
     groups = g ?? [];
     const next: Record<number, number> = {};
@@ -53,7 +56,7 @@
     }
   }
 
-  async function remove(g: any) {
+  async function remove(g: ProfileGroup) {
     if (
       !(await confirm({
         title: `Delete ${g.name}?`,

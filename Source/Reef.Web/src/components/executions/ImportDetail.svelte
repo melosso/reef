@@ -6,11 +6,15 @@
   import { formatBytes, formatDateTime, formatDuration, formatNumber, parseDate } from '../../lib/format';
   import { notify } from '../../lib/notify';
   import { statusKind, statusLabel } from '../../lib/status';
+  import type { ImportExecution } from '../../models/ImportExecution';
+  import type { ImportExecutionError } from '../../models/ImportExecutionError';
+  import type { ImportProfile } from '../../models/ImportProfile';
+  import type { ImportTargetResult } from '../../models/ImportTargetResult';
 
-  let { id, profiles }: { id: number; profiles: any[] } = $props();
+  let { id, profiles }: { id: number; profiles: ImportProfile[] } = $props();
 
-  let exec = $state<any>(null);
-  let errors = $state<any[]>([]);
+  let exec = $state<ImportExecution | null>(null);
+  let errors = $state<ImportExecutionError[]>([]);
 
   $effect(() => {
     load(id);
@@ -21,8 +25,8 @@
     errors = [];
     try {
       [exec, errors] = await Promise.all([
-        api.get(`/api/import-profiles/executions/${executionId}`),
-        api.get<any[]>(`/api/import-profiles/executions/${executionId}/errors`).catch(() => []),
+        api.get<ImportExecution>(`/api/import-profiles/executions/${executionId}`),
+        api.get<ImportExecutionError[]>(`/api/import-profiles/executions/${executionId}/errors`).catch(() => []),
       ]);
     } catch (err) {
       notify.fail(err);
@@ -40,8 +44,11 @@
   const durationMs = $derived(exec?.completedAt ? parseDate(exec.completedAt)!.getTime() - parseDate(exec.startedAt)!.getTime() : null);
   const phases = $derived(Object.entries(parse<Record<string, number>>(exec?.phaseTimingsJson, {})));
   const maxPhase = $derived(Math.max(1, ...phases.map(([, ms]) => ms)));
-  const targets = $derived(parse<any[]>(exec?.outputTargetsJson, []));
-  const name = $derived(exec ? (profiles.find((p) => p.id === exec.importProfileId)?.name ?? `Profile ${exec.importProfileId}`) : '');
+  const targets = $derived(parse<ImportTargetResult[]>(exec?.outputTargetsJson, []));
+  const name = $derived.by(() => {
+    const profileId = exec?.importProfileId;
+    return profileId === undefined ? '' : (profiles.find((p) => p.id === profileId)?.name ?? `Profile ${profileId}`);
+  });
 </script>
 
 {#if !exec}
@@ -82,7 +89,7 @@
   {#if phases.length}
     <section class="block">
       <h4>Phases</h4>
-      {#each phases as [phase, ms]}
+      {#each phases as [phase, ms] (phase)}
         <div class="phase">
           <span>{phase}</span><span class="bar"><span style:width="{Math.round((ms / maxPhase) * 100)}%"></span></span><span class="num"
             >{formatDuration(ms)}</span
@@ -136,7 +143,7 @@
       <table class="data">
         <thead><tr><th>Destination</th><th>Rows</th><th>Status</th></tr></thead>
         <tbody>
-          {#each targets as t}
+          {#each targets as t, i (i)}
             <tr>
               <td
                 >{t.destinationName ?? `Destination ${t.destinationId}`}{#if t.finalPath}<div class="muted small">
@@ -158,7 +165,7 @@
       <table class="data">
         <thead><tr><th>Row</th><th>Phase</th><th>Error</th></tr></thead>
         <tbody>
-          {#each errors as e}
+          {#each errors as e (e.id)}
             <tr>
               <td class="num">{e.rowNumber ?? ''}</td>
               <td>{e.phase ?? e.errorType}</td>

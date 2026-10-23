@@ -1,6 +1,7 @@
 // Source/Reef/Core/Services/ConfigurationValidator.cs
 // Validates application configuration on startup
 
+using Reef.Helpers;
 using Serilog;
 
 namespace Reef.Core.Services;
@@ -56,20 +57,18 @@ public static class ConfigurationValidator
         }
 
         // Validate encryption key environment variable
-        var encryptionKey = Environment.GetEnvironmentVariable("REEF_ENCRYPTION_KEY");
+        var encryptionKey = EnvAliases.GetDirect("ENCRYPTION_KEY");
         if (string.IsNullOrWhiteSpace(encryptionKey))
         {
-            Log.Warning("REEF_ENCRYPTION_KEY environment variable is not set - encryption will use default key (NOT RECOMMENDED for production)");
+            Log.Warning("ENCRYPTION_KEY environment variable is not set - encryption will use default key (NOT RECOMMENDED for production)");
         }
         else if (encryptionKey.Length < 32)
         {
-            errors.Add("REEF_ENCRYPTION_KEY must be at least 32 characters long");
+            errors.Add("ENCRYPTION_KEY must be at least 32 characters long");
         }
 
         // Validate CORS configuration
-        var corsOriginsArray = configuration.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        var corsOriginsString = configuration.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-        var corsOrigins = corsOriginsArray.Concat(corsOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var corsOrigins = configuration.GetList("Reef:AllowedOrigins");
         if (corsOrigins == null || corsOrigins.Length == 0)
         {
             Log.Warning("Reef:AllowedOrigins is not configured - CORS will be disabled");
@@ -180,9 +179,7 @@ public static class ConfigurationValidator
         }
 
         // Check for insecure CORS configuration
-        var corsOriginsArray = configuration.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        var corsOriginsString = configuration.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-        var corsOrigins = corsOriginsArray.Concat(corsOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var corsOrigins = configuration.GetList("Reef:AllowedOrigins");
         if (corsOrigins != null && corsOrigins.Any(o => o == "*"))
         {
             warnings.Add("CORS is configured to allow all origins (*) - this is insecure for production");
@@ -217,7 +214,7 @@ public static class ConfigurationValidator
             { "Reef:Jobs:CheckIntervalSeconds", configuration.GetValue<int>("Reef:Jobs:CheckIntervalSeconds", 10) },
             { "Reef:Jobs:MaxConcurrentJobs", configuration.GetValue<int>("Reef:Jobs:MaxConcurrentJobs", 10) },
             { "Environment", Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production" },
-            { "AllowedOrigins", string.Join(", ", (configuration.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>()).Concat(configuration.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>()).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase)) }
+            { "AllowedOrigins", string.Join(", ", configuration.GetList("Reef:AllowedOrigins")) }
         };
     }
 }

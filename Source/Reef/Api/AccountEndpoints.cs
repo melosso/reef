@@ -86,6 +86,13 @@ public static class AccountEndpoints
             var atIdx = request.Email.IndexOf('@');
             if (atIdx <= 0 || atIdx == request.Email.Length - 1)
                 return Results.Json(new { success = false, message = "Invalid email address" }, statusCode: 400);
+
+            // sign-in accepts an email, so it must not resolve to another account
+            var taken = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Users WHERE Id <> @Id AND IsDeleted = 0 AND (LOWER(Email) = @Email OR LOWER(Username) = @Email)",
+                new { user.Id, Email = request.Email.Trim().ToLowerInvariant() });
+            if (taken > 0)
+                return Results.Json(new { success = false, message = "This email address is used by another account" }, statusCode: 409);
         }
 
         await conn.ExecuteAsync(

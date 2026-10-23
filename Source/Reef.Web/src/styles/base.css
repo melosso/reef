@@ -130,6 +130,47 @@ label.check {
   color: var(--ink);
   margin: 0;
 }
+input[role='switch'] {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--line-strong);
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+input[role='switch']::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 0.15s;
+}
+input[role='switch']:checked {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+input[role='switch']:checked::before {
+  transform: translateX(12px);
+}
+input[role='switch']:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  input[role='switch'],
+  input[role='switch']::before {
+    transition: none;
+  }
+}
 
 .field {
   display: flex;
@@ -196,6 +237,26 @@ label.check {
 .btn[aria-busy='true'] {
   cursor: progress;
   opacity: 0.75;
+}
+.btn[aria-busy='true']::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn[aria-busy='true']::before {
+    animation-duration: 2s;
+  }
 }
 
 .link {
@@ -337,31 +398,6 @@ table.data th button {
   color: var(--ink);
   font-weight: 500;
   border-bottom-color: var(--accent);
-}
-
-.cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-.stat {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.stat .value {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--ink);
-}
-.stat .label {
-  font-size: 12px;
-  color: var(--muted);
 }
 
 .sheet {

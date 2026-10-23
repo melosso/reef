@@ -6,9 +6,17 @@
   import ExportDetail from '../components/executions/ExportDetail.svelte';
   import ImportDetail from '../components/executions/ImportDetail.svelte';
   import { api } from '../lib/api';
+  import { queryString } from '../lib/query';
   import { formatDateTime, formatDuration, formatNumber, formatRelative, parseDate } from '../lib/format';
   import { notify } from '../lib/notify';
   import { route, setQuery } from '../lib/router.svelte';
+  import type { ExecuteResult } from '../models/ExecuteResult';
+  import type { ExportExecution } from '../models/ExportExecution';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { ImportExecution } from '../models/ImportExecution';
+  import type { ImportProfile } from '../models/ImportProfile';
+  import type { Job } from '../models/Job';
+  import type { PagedResult } from '../models/PagedResult';
   import { statusKind, statusLabel } from '../lib/status';
   import { tooltip } from '../lib/tooltip';
 
@@ -37,11 +45,11 @@
   let pageSize = $state(25);
   let total = $state(0);
   let pages = $state(1);
-  let exportsList = $state<any[]>([]);
-  let importsList = $state<any[]>([]);
-  let profiles = $state<any[]>([]);
-  let importProfiles = $state<any[]>([]);
-  let jobs = $state<any[]>([]);
+  let exportsList = $state<ExportExecution[]>([]);
+  let importsList = $state<(ImportExecution & { _name: string; _code: string })[]>([]);
+  let profiles = $state<ExportProfile[]>([]);
+  let importProfiles = $state<ImportProfile[]>([]);
+  let jobs = $state<Job[]>([]);
   let loaded = $state(false);
   let runDialog: HTMLDialogElement;
   let runMode = $state<'profile' | 'job'>('profile');
@@ -63,9 +71,9 @@
 
   async function loadLookups() {
     [profiles, importProfiles, jobs] = await Promise.all([
-      api.get<any[]>('/api/profiles').catch(() => []),
-      api.get<any[]>('/api/profiles?type=import').catch(() => []),
-      api.get<any[]>('/api/jobs').catch(() => []),
+      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
+      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
+      api.get<Job[]>('/api/jobs').catch(() => []),
     ]);
     await loadImports();
   }
@@ -74,7 +82,7 @@
     const lists = await Promise.all(
       importProfiles.map((p) =>
         api
-          .get<any[]>(`/api/profiles/${p.id}/executions?type=import&limit=10`)
+          .get<ImportExecution[]>(`/api/profiles/${p.id}/executions?type=import&limit=10`)
           .then((list) => (list ?? []).map((e) => ({ ...e, _name: p.name, _code: p.code })))
           .catch(() => []),
       ),
@@ -88,15 +96,18 @@
       loaded = true;
       return;
     }
-    const q = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (filters.profileId) q.set('profileId', filters.profileId);
-    if (filters.jobId) q.set('jobId', filters.jobId);
-    if (filters.status) q.set('status', filters.status);
-    if (filters.fromDate) q.set('fromDate', filters.fromDate);
-    if (filters.toDate) q.set('toDate', filters.toDate);
-    if (filters.searchTerm) q.set('search', filters.searchTerm);
+    const q = queryString({
+      page,
+      pageSize,
+      profileId: filters.profileId,
+      jobId: filters.jobId,
+      status: filters.status,
+      fromDate: filters.fromDate,
+      toDate: filters.toDate,
+      search: filters.searchTerm,
+    });
     try {
-      const result = await api.get(`/api/executions?${q}`);
+      const result = await api.get<PagedResult<ExportExecution>>(`/api/executions?${q}`);
       exportsList = result.data ?? [];
       total = result.totalCount ?? exportsList.length;
       pages = Math.max(1, result.totalPages ?? 1);
@@ -111,9 +122,6 @@
   });
 
   $effect(() => {
-    JSON.stringify(filters);
-    page;
-    pageSize;
     loadExports();
   });
 
@@ -139,7 +147,7 @@
     let imports = importOnly !== null ? importsList.filter((e) => e.importProfileId === importOnly) : exportFiltered ? [] : importsList;
     if (term) imports = imports.filter((e) => `${e._name} ${e._code ?? ''}`.toLowerCase().includes(term));
     if (filters.status) imports = imports.filter((e) => e.status === filters.status);
-    const time = (e: any) => parseDate(e.startedAt)?.getTime() ?? 0;
+    const time = (e: { startedAt: string }) => parseDate(e.startedAt)?.getTime() ?? 0;
     return [
       ...exportsList.map((e) => ({
         kind: 'export' as const,
@@ -205,7 +213,9 @@
     running = true;
     try {
       const result =
-        runMode === 'profile' ? await api.post(`/api/executions/execute/${runTarget}`) : await api.post(`/api/jobs/${runTarget}/trigger`);
+        runMode === 'profile'
+          ? await api.post<ExecuteResult>(`/api/executions/execute/${runTarget}`)
+          : await api.post<ExecuteResult>(`/api/jobs/${runTarget}/trigger`);
       notify.success(runMode === 'profile' ? `Execution ${result?.executionId ?? ''} started`.trim() : 'Job triggered');
       runDialog.close();
       await Promise.all([loadExports(), loadImports()]);
@@ -216,7 +226,7 @@
     }
   }
 
-  function processMark(status: string | null) {
+  function processMark(status: string | null | undefined) {
     return status ? statusKind(status) : null;
   }
 </script>
@@ -248,15 +258,15 @@
       <select aria-label="Profile" value={filters.profileId} onchange={(e) => setFilter('profileId', e.currentTarget.value)}>
         <option value="">All profiles</option>
         <optgroup label="Export profiles"
-          >{#each profiles as p}<option value={String(p.id)}>{p.name}</option>{/each}</optgroup
+          >{#each profiles as p (p.id)}<option value={String(p.id)}>{p.name}</option>{/each}</optgroup
         >
         {#if importProfiles.length}<optgroup label="Import profiles"
-            >{#each importProfiles as p}<option value="import:{p.id}">{p.name}</option>{/each}</optgroup
+            >{#each importProfiles as p (p.id)}<option value="import:{p.id}">{p.name}</option>{/each}</optgroup
           >{/if}
       </select>
       <select aria-label="Job" value={filters.jobId} onchange={(e) => setFilter('jobId', e.currentTarget.value)}>
         <option value="">All jobs</option>
-        {#each jobs as j}<option value={String(j.id)}>{j.name}</option>{/each}
+        {#each jobs as j (j.id)}<option value={String(j.id)}>{j.name}</option>{/each}
       </select>
       <select aria-label="Status" value={filters.status} onchange={(e) => setFilter('status', e.currentTarget.value)}>
         <option value="">All statuses</option>
@@ -338,7 +348,7 @@
           page = 1;
         }}
       >
-        {#each [10, 25, 50, 100] as n}<option value={String(n)}>{n}</option>{/each}
+        {#each [10, 25, 50, 100] as n (n)}<option value={String(n)}>{n}</option>{/each}
       </select>
       <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}
         ><ChevronLeft size={15} /></button
@@ -369,7 +379,7 @@
         <label for="run-target">{runMode === 'profile' ? 'Export profile' : 'Job'}</label>
         <select id="run-target" bind:value={runTarget}>
           <option value="">Choose</option>
-          {#each runMode === 'profile' ? profiles : jobs as item}<option value={String(item.id)}>{item.name}</option>{/each}
+          {#each runMode === 'profile' ? profiles : jobs as item (item.id)}<option value={String(item.id)}>{item.name}</option>{/each}
         </select>
       </div>
     </div>

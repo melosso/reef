@@ -1,6 +1,7 @@
 <script lang="ts">
   import CodeEditor from '../../editor/CodeEditor.svelte';
   import { api } from '../../lib/api';
+  import type { NotificationTemplate } from '../../models/NotificationTemplate';
   import { confirm } from '../../lib/confirm.svelte';
   import { notify } from '../../lib/notify';
   import { tooltip } from '../../lib/tooltip';
@@ -18,7 +19,7 @@
   ];
 
   let type = $state('');
-  let t = $state<any>(null);
+  let t = $state<NotificationTemplate | null>(null);
   let showPreview = $state(false);
   let busy = $state<string | null>(null);
 
@@ -27,7 +28,7 @@
     showPreview = false;
     if (!kind) return;
     try {
-      t = await api.get(`/api/admin/notification-templates/${kind}`);
+      t = await api.get<NotificationTemplate>(`/api/admin/notification-templates/${kind}`);
     } catch (e) {
       notify.fail(e);
     }
@@ -38,6 +39,7 @@
   });
 
   async function save() {
+    if (!t) return;
     busy = 'save';
     try {
       await api.put(`/api/admin/notification-templates/${type}`, {
@@ -83,7 +85,7 @@
   <div class="field narrow">
     <label for="e-type">Notification</label>
     <select id="e-type" bind:value={type}
-      ><option value="">Choose</option>{#each TYPES as [value, label]}<option {value}>{label}</option>{/each}</select
+      ><option value="">Choose</option>{#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}</select
     >
   </div>
   {#if t}
@@ -94,7 +96,7 @@
       />
     </div>
     <div class="field">
-      <label for="e-body">HTML body</label><CodeEditor id="e-body" value={t.htmlBody ?? ''} rows={16} onchange={(v) => (t.htmlBody = v)} />
+      <label for="e-body">HTML body</label><CodeEditor id="e-body" value={t.htmlBody ?? ''} rows={16} onchange={(v) => (t!.htmlBody = v)} />
     </div>
     <div class="grid2">
       <div class="field"><label for="e-cta">Button text</label><input id="e-cta" bind:value={t.ctaButtonText} /></div>

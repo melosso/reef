@@ -10,6 +10,15 @@
   import { copyText, notify } from '../lib/notify';
   import { navigate, route, setQuery } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
+  import type { Connection } from '../models/Connection';
+  import type { Destination } from '../models/Destination';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { ImportProfile } from '../models/ImportProfile';
+  import type { Job } from '../models/Job';
+  import type { PagedResult } from '../models/PagedResult';
+  import type { ProfileGroup } from '../models/ProfileGroup';
+  import type { QueueMetrics } from '../models/QueueMetrics';
+  import type { Webhook } from '../models/Webhook';
 
   const STATUS: Record<number, [string, StatusKind]> = {
     0: ['Idle', 'idle'],
@@ -49,7 +58,8 @@
     autoPauseEnabled: boolean;
   }
 
-  const num = (v: any, map: Record<string, number>) => (typeof v === 'string' ? (map[v] ?? Number.parseInt(v, 10)) : v) ?? 0;
+  const num = (v: string | number | null | undefined, map: Record<string, number>) =>
+    (typeof v === 'string' ? (map[v] ?? Number.parseInt(v, 10)) : v) ?? 0;
 
   function stored() {
     const empty = { search: '', health: '', status: '', profile: '', connection: '', group: '' };
@@ -60,18 +70,18 @@
     }
   }
 
-  let jobs = $state<any[]>([]);
-  let profiles = $state<any[]>([]);
-  let importProfiles = $state<any[]>([]);
-  let destinations = $state<any[]>([]);
-  let connections = $state<any[]>([]);
-  let groups = $state<any[]>([]);
-  let metrics = $state<any>(null);
+  let jobs = $state<Job[]>([]);
+  let profiles = $state<ExportProfile[]>([]);
+  let importProfiles = $state<ImportProfile[]>([]);
+  let destinations = $state<Destination[]>([]);
+  let connections = $state<Connection[]>([]);
+  let groups = $state<ProfileGroup[]>([]);
+  let metrics = $state<QueueMetrics | null>(null);
   let loaded = $state(false);
   let filters = $state(stored());
   let form = $state<Form | null>(null);
   let tab = $state<'settings' | 'webhooks'>('settings');
-  let hooks = $state<any[]>([]);
+  let hooks = $state<Webhook[]>([]);
   let revealed = $state('');
   let busy = $state<string | null>(null);
 
@@ -83,13 +93,13 @@
 
   async function load() {
     const [j, p, ip, d] = await Promise.all([
-      api.get<any>('/api/jobs').catch((e) => {
+      api.get<Job[] | PagedResult<Job>>('/api/jobs').catch((e) => {
         notify.fail(e, 'jobs');
         return [];
       }),
-      api.get<any[]>('/api/profiles').catch(() => []),
-      api.get<any[]>('/api/profiles?type=import').catch(() => []),
-      api.get<any[]>('/api/destinations').catch(() => []),
+      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
+      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
+      api.get<Destination[]>('/api/destinations').catch(() => []),
     ]);
     jobs = Array.isArray(j) ? j : (j?.data ?? []);
     profiles = p ?? [];
@@ -102,18 +112,18 @@
   }
 
   async function loadMetrics() {
-    metrics = await api.get('/api/jobs/queue/metrics').catch(() => null);
+    metrics = await api.get<QueueMetrics>('/api/jobs/queue/metrics').catch(() => null);
   }
 
   $effect(() => {
     load();
     loadMetrics();
     api
-      .get<any[]>('/api/connections')
+      .get<Connection[]>('/api/connections')
       .then((c) => (connections = c ?? []))
       .catch(() => {});
     api
-      .get<any[]>('/api/groups')
+      .get<ProfileGroup[]>('/api/groups')
       .then((g) => (groups = g ?? []))
       .catch(() => {});
     const timer = setInterval(loadMetrics, 15000);
@@ -125,9 +135,9 @@
     if (id && loaded && form?.id !== Number(id)) edit(Number(id));
   });
 
-  const isPaused = (j: any) => (j.tags ?? '').includes('circuit-breaker');
+  const isPaused = (j: Job) => (j.tags ?? '').includes('circuit-breaker');
 
-  function health(j: any): { label: string; kind: StatusKind; hint: string } {
+  function health(j: Job): { label: string; kind: StatusKind; hint: string } {
     const f = j.consecutiveFailures || 0;
     if (isPaused(j)) return { label: 'Auto-paused', kind: 'err', hint: 'Paused after 10 consecutive failures' };
     if (f >= 7) return { label: 'Failing', kind: 'err', hint: `${f} consecutive failures. Auto-pause follows at 10.` };
@@ -136,11 +146,11 @@
     return { label: 'Healthy', kind: 'ok', hint: 'No recent failures' };
   }
 
-  function profileOf(j: any) {
+  function profileOf(j: Job) {
     return profiles.find((p) => p.id === j.profileId) ?? importProfiles.find((p) => p.id === j.importProfileId);
   }
 
-  function schedule(j: any): string {
+  function schedule(j: Job): string {
     const t = num(j.scheduleType, SCHEDULE_NAMES);
     if (t === 1) return `Cron ${j.cronExpression ?? ''}`;
     if (t === 2) return `Every ${j.intervalMinutes} min`;
@@ -208,7 +218,7 @@
 
   async function edit(id: number) {
     try {
-      const j = await api.get(`/api/jobs/${id}`);
+      const j = await api.get<Job>(`/api/jobs/${id}`);
       form = {
         id: j.id,
         name: j.name,
@@ -235,7 +245,7 @@
       };
       tab = 'settings';
       revealed = '';
-      hooks = await api.get<any[]>(`/api/webhooks?jobId=${id}`).catch(() => []);
+      hooks = await api.get<Webhook[]>(`/api/webhooks?jobId=${id}`).catch(() => []);
     } catch (e) {
       notify.fail(e);
     }
@@ -249,7 +259,7 @@
   const selectedProfile = $derived(
     form?.profile.startsWith('export:') ? profiles.find((p) => p.id === Number(form!.profile.split(':')[1])) : null,
   );
-  const emailProfile = $derived(!!(selectedProfile?.isEmailExport || selectedProfile?.IsEmailExport));
+  const emailProfile = $derived(!!selectedProfile?.isEmailExport);
 
   async function save(e: SubmitEvent) {
     e.preventDefault();
@@ -292,14 +302,14 @@
     }
   }
 
-  async function trigger(j: any) {
+  async function trigger(j: Job) {
     busy = `run-${j.id}`;
     try {
       await api.post(`/api/jobs/${j.id}/trigger`);
       notify.success(`${j.name} triggered`, { key: `job-run-${j.id}` });
       for (let i = 0; i < 30; i++) {
         await new Promise((r) => setTimeout(r, 1000));
-        const current = await api.get(`/api/jobs/${j.id}`).catch(() => null);
+        const current = await api.get<Job>(`/api/jobs/${j.id}`).catch(() => null);
         const s = num(current?.status, STATUS_NAMES);
         if (current && s !== 1 && s !== 2) break;
       }
@@ -311,7 +321,7 @@
     }
   }
 
-  async function act(j: any, path: string, message: string) {
+  async function act(j: Job, path: string, message: string) {
     try {
       await api.post(`/api/jobs/${j.id}/${path}`);
       notify.success(message);
@@ -321,7 +331,7 @@
     }
   }
 
-  async function remove(j: any) {
+  async function remove(j: Job) {
     if (
       !(await confirm({
         title: `Delete ${j.name}?`,
@@ -341,11 +351,11 @@
     }
   }
 
-  async function hookAction(action: 'add' | 'toggle' | 'regenerate' | 'delete', hook?: any) {
-    if (!form?.id) return;
+  async function hookAction(action: 'add' | 'toggle' | 'regenerate' | 'delete', hook?: Webhook) {
+    if (!form?.id || (action !== 'add' && !hook)) return;
     try {
-      if (action === 'add') reveal((await api.post('/api/webhooks', { jobId: form.id })).url);
-      if (action === 'toggle') await api.post(`/api/webhooks/${hook.id}/${hook.isActive ? 'disable' : 'enable'}`);
+      if (action === 'add') reveal((await api.post<Webhook>('/api/webhooks', { jobId: form.id })).url ?? '');
+      if (action === 'toggle') await api.post(`/api/webhooks/${hook!.id}/${hook!.isActive ? 'disable' : 'enable'}`);
       if (action === 'regenerate') {
         if (
           !(await confirm({
@@ -356,7 +366,7 @@
           }))
         )
           return;
-        reveal((await api.post(`/api/webhooks/${hook.id}/regenerate`)).url);
+        reveal((await api.post<Webhook>(`/api/webhooks/${hook!.id}/regenerate`)).url ?? '');
       }
       if (action === 'delete') {
         if (
@@ -368,9 +378,9 @@
           }))
         )
           return;
-        await api.del(`/api/webhooks/${hook.id}`);
+        await api.del(`/api/webhooks/${hook!.id}`);
       }
-      hooks = await api.get<any[]>(`/api/webhooks?jobId=${form.id}`);
+      hooks = await api.get<Webhook[]>(`/api/webhooks?jobId=${form.id}`);
     } catch (e) {
       notify.fail(e);
     }
@@ -408,19 +418,19 @@
       </select>
       <select aria-label="Status" bind:value={filters.status}>
         <option value="">All statuses</option>
-        {#each Object.entries(STATUS) as [value, [label]]}<option {value}>{label}</option>{/each}
+        {#each Object.entries(STATUS) as [value, [label]] (value)}<option {value}>{label}</option>{/each}
       </select>
       <select aria-label="Profile" bind:value={filters.profile}>
         <option value="">All profiles</option>
-        {#each profiles as p}<option value={String(p.id)}>{p.name}</option>{/each}
+        {#each profiles as p (p.id)}<option value={String(p.id)}>{p.name}</option>{/each}
       </select>
       <select aria-label="Connection" bind:value={filters.connection}>
         <option value="">All connections</option>
-        {#each connections as c}<option value={String(c.id)}>{c.name}</option>{/each}
+        {#each connections as c (c.id)}<option value={String(c.id)}>{c.name}</option>{/each}
       </select>
       <select aria-label="Group" bind:value={filters.group}>
         <option value="">All groups</option>
-        {#each groups as g}<option value={String(g.id)}>{g.name}</option>{/each}
+        {#each groups as g (g.id)}<option value={String(g.id)}>{g.name}</option>{/each}
       </select>
       {#if Object.values(filters).some(Boolean)}<button
           type="button"
@@ -548,10 +558,10 @@
           <select id="j-profile" bind:value={form.profile}>
             <option value="">Choose</option>
             <optgroup label="Export profiles"
-              >{#each profiles as p}<option value="export:{p.id}">{p.name}</option>{/each}</optgroup
+              >{#each profiles as p (p.id)}<option value="export:{p.id}">{p.name}</option>{/each}</optgroup
             >
             {#if importProfiles.length}<optgroup label="Import profiles"
-                >{#each importProfiles as p}<option value="import:{p.id}">{p.name}</option>{/each}</optgroup
+                >{#each importProfiles as p (p.id)}<option value="import:{p.id}">{p.name}</option>{/each}</optgroup
               >{/if}
           </select>
         </div>
@@ -563,13 +573,13 @@
           >
           <select id="j-dest" bind:value={form.destinationId} disabled={emailProfile}>
             <option value="">Profile destination</option>
-            {#each destinations.filter((d) => d.type !== 'Email') as d}<option value={String(d.id)}>{d.name}</option>{/each}
+            {#each destinations.filter((d) => d.type !== 'Email') as d (d.id)}<option value={String(d.id)}>{d.name}</option>{/each}
           </select>
         </div>
         <div class="field">
           <label for="j-sched">Schedule</label>
           <select id="j-sched" bind:value={form.scheduleType}
-            >{#each SCHEDULES as label, i}<option value={i}>{label}</option>{/each}</select
+            >{#each SCHEDULES as label, i (i)}<option value={i}>{label}</option>{/each}</select
           >
         </div>
         {#if form.scheduleType === 1}
@@ -588,7 +598,7 @@
         {:else if form.scheduleType >= 3}
           {#if form.scheduleType === 4}
             <fieldset class="days">
-              <legend>Days</legend>{#each DAYS as day, i}<label class="check"
+              <legend>Days</legend>{#each DAYS as day, i (day)}<label class="check"
                   ><input
                     type="checkbox"
                     checked={form.weekDays.includes(i)}
@@ -616,7 +626,7 @@
         <div class="grid2">
           <div class="field">
             <label for="j-prio">Priority</label><select id="j-prio" bind:value={form.priority}
-              >{#each PRIORITIES as label, i}<option value={i}>{label}</option>{/each}</select
+              >{#each PRIORITIES as label, i (i)}<option value={i}>{label}</option>{/each}</select
             >
           </div>
           <div class="field">
@@ -636,7 +646,7 @@
           <label for="j-tags">Tags</label><input id="j-tags" bind:value={form.tags} use:tooltip={'Comma-separated'} />
         </div>
         <label class="check"><input type="checkbox" bind:checked={form.allowConcurrent} />Allow concurrent runs</label>
-        <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />Enabled</label>
+        <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />Enabled</label>
         <label class="check" use:tooltip={'Pause the job after 10 consecutive failures'}
           ><input type="checkbox" bind:checked={form.autoPauseEnabled} />Auto-pause on repeated failures</label
         >

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { LoginResult } from '../models/LoginResult';
   import { onMount } from 'svelte';
   import Logo from '../components/Logo.svelte';
   import { request } from '../lib/api';
@@ -46,9 +47,9 @@
     e.preventDefault();
     busy = true;
     try {
-      const data = await request<any>('POST', '/api/auth/login', { username, password });
+      const data = await request<LoginResult>('POST', '/api/auth/login', { username, password });
       if (data?.mfaRequired) {
-        mfa = { sessionId: data.mfaSessionId, method: data.mfaMethod };
+        mfa = { sessionId: data.mfaSessionId ?? '', method: data.mfaMethod ?? '' };
         return;
       }
       storeSession(data);
@@ -65,7 +66,7 @@
     if (!mfa || code.length !== 6) return;
     busy = true;
     try {
-      const data = await request<any>('POST', '/api/auth/mfa', { mfaSessionId: mfa.sessionId, code });
+      const data = await request<LoginResult>('POST', '/api/auth/mfa', { mfaSessionId: mfa.sessionId, code });
       storeSession(data);
       navigate(next(), true);
     } catch (error) {

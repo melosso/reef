@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { LogOut, Monitor, Moon, Sun, User } from '@lucide/svelte';
+  import { LogOut, Moon, Sun, User } from '@lucide/svelte';
   import { displayName, session } from '../lib/session.svelte';
-  import { setTheme, theme, type ThemeChoice } from '../lib/theme.svelte';
+  import { isDark, setTheme } from '../lib/theme.svelte';
   import { navigate } from '../lib/router.svelte';
+  import { tooltip } from '../lib/tooltip';
 
   let menu: HTMLElement;
   const initials = $derived(
@@ -13,11 +14,7 @@
       .slice(0, 2)
       .toUpperCase(),
   );
-  const choices: { value: ThemeChoice; label: string; icon: typeof Sun }[] = [
-    { value: 'system', label: 'System', icon: Monitor },
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-  ];
+  const toggleLabel = $derived(isDark() ? 'Switch to light theme' : 'Switch to dark theme');
 
   function go(path: string) {
     menu.hidePopover();
@@ -25,6 +22,14 @@
   }
 </script>
 
+<button
+  type="button"
+  class="btn ghost icon"
+  aria-label={toggleLabel}
+  use:tooltip={toggleLabel}
+  onclick={() => setTheme(isDark() ? 'light' : 'dark')}
+  >{#if isDark()}<Sun size={16} />{:else}<Moon size={16} />{/if}</button
+>
 <button type="button" class="avatar" popovertarget="account-menu" aria-label="Account menu">{initials}</button>
 <div id="account-menu" popover bind:this={menu} class="menu">
   <div class="who">
@@ -32,13 +37,6 @@
     <span class="muted">{session.username} · {session.role}</span>
   </div>
   <button type="button" onclick={() => go('/account')}><User size={15} />Account settings</button>
-  <div class="theme" role="radiogroup" aria-label="Theme">
-    {#each choices as choice}
-      <button type="button" role="radio" aria-checked={theme.choice === choice.value} onclick={() => setTheme(choice.value)}>
-        <choice.icon size={14} />{choice.label}
-      </button>
-    {/each}
-  </div>
   <button type="button" onclick={() => go('/logoff')}><LogOut size={15} />Sign out</button>
 </div>
 
@@ -92,32 +90,5 @@
   }
   .menu > button:hover {
     background: var(--hover);
-  }
-  .theme {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 2px;
-    padding: 4px;
-    margin: 4px 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-  }
-  .theme button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 5px 0;
-    border: 0;
-    border-radius: var(--radius);
-    background: none;
-    font-size: 12px;
-    color: var(--soft);
-    cursor: pointer;
-  }
-  .theme button[aria-checked='true'] {
-    background: var(--accent-soft);
-    color: var(--accent-ink);
-    font-weight: 500;
   }
 </style>

@@ -18,6 +18,9 @@
   import { notify } from '../lib/notify';
   import { route, setQuery } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
+  import type { CheckResult } from '../models/CheckResult';
+  import type { Destination } from '../models/Destination';
+  import type { DestinationConfig } from '../models/DestinationConfig';
 
   const TYPE_LABEL = Object.fromEntries(DESTINATION_TYPES);
 
@@ -28,7 +31,7 @@
     description: string;
     tags: string;
     isActive: boolean;
-    config: Record<string, any>;
+    config: DestinationConfig;
   }
   interface Endpoint {
     id: number;
@@ -41,7 +44,7 @@
     keyPrefix?: string | null;
   }
 
-  let list = $state<any[]>([]);
+  let list = $state<Destination[]>([]);
   let loaded = $state(false);
   let search = $state('');
   let typeFilter = $state('');
@@ -52,7 +55,7 @@
   let endpointForm = $state<Endpoint | null>(null);
 
   async function load() {
-    list = await api.get<any[]>('/api/destinations').catch((e) => {
+    list = await api.get<Destination[]>('/api/destinations').catch((e) => {
       notify.fail(e, 'destinations');
       return [];
     });
@@ -101,7 +104,7 @@
 
   async function edit(id: number) {
     try {
-      const d = await api.get(`/api/destinations/${id}`);
+      const d = await api.get<Destination>(`/api/destinations/${id}`);
       form = {
         id: d.id,
         name: d.name,
@@ -128,7 +131,7 @@
   async function testConfig(configurationJson: string, label: string) {
     busy = 'test';
     try {
-      const result = await api.post('/api/destinations/test', { type: form!.type, configurationJson });
+      const result = await api.post<CheckResult>('/api/destinations/test', { type: form!.type, configurationJson });
       if (result?.success) notify.success(`${label} test passed`, { key: 'dest-test' });
       else notify.error(`${label} test failed. ${result?.message ?? ''}`.trim(), { key: 'dest-test' });
     } catch (e) {
@@ -186,7 +189,7 @@
     )
       return;
     try {
-      const current = await api.get(`/api/destinations/${form.id}`);
+      const current = await api.get<Destination>(`/api/destinations/${form.id}`);
       await api.put(`/api/destinations/${form.id}`, { ...current, isActive: !off });
       notify.success(`${form.name} turned ${off ? 'off' : 'on'}`);
       close();
@@ -231,6 +234,7 @@
       keyPrefix: ep.keyPrefix?.trim() || null,
       sortOrder: 0,
     };
+    busy = 'endpoint';
     try {
       if (ep.id) await api.put(`/api/destinations/${form.id}/endpoints/${ep.id}`, body);
       else await api.post(`/api/destinations/${form.id}/endpoints`, body);
@@ -239,6 +243,8 @@
       endpoints = await api.get<Endpoint[]>(`/api/destinations/${form.id}/endpoints`);
     } catch (e) {
       notify.fail(e, 'endpoint-save');
+    } finally {
+      busy = null;
     }
   }
 
@@ -269,13 +275,15 @@
 
 {#snippet configField(f: DestField)}
   {#if f.kind === 'bool'}
-    <label class="check"><input type="checkbox" bind:checked={form!.config[f.key]} />{f.label}</label>
+    <label class="check"
+      ><input type="checkbox" bind:checked={() => form!.config[f.key] === true, (v) => (form!.config[f.key] = v)} />{f.label}</label
+    >
   {:else}
     <div class="field">
       <label for={fieldId(f)} use:tooltip={f.hint ?? null}>{f.label}</label>
       {#if f.kind === 'select'}
         <select id={fieldId(f)} bind:value={form!.config[f.key]}
-          >{#each f.options ?? [] as [value, label]}<option {value}>{label}</option>{/each}</select
+          >{#each f.options ?? [] as [value, label] (value)}<option {value}>{label}</option>{/each}</select
         >
       {:else if f.kind === 'textarea'}
         <textarea
@@ -314,7 +322,7 @@
       <input type="search" placeholder="Search name, description or tag" aria-label="Search destinations" bind:value={search} />
       <select aria-label="Type" bind:value={typeFilter}>
         <option value="">All types</option>
-        {#each DESTINATION_TYPES as [value, label]}<option {value}>{label}</option>{/each}
+        {#each DESTINATION_TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}
       </select>
       <span class="spacer"></span>
       <span class="muted"><span class="num">{visible.length}</span> of <span class="num">{list.length}</span></span>
@@ -388,7 +396,7 @@
       <div class="field">
         <label for="d-type">Type</label>
         <select id="d-type" value={form.type} onchange={(e) => changeType(e.currentTarget.value)}>
-          {#each DESTINATION_TYPES as [value, label]}<option {value}>{label}</option>{/each}
+          {#each DESTINATION_TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}
         </select>
       </div>
       <div class="field"><label for="d-desc">Description</label><input id="d-desc" bind:value={form.description} /></div>
@@ -438,7 +446,7 @@
                 </div>
                 <div class="field">
                   <label for="ep-method">Method</label><select id="ep-method" bind:value={endpointForm.method}
-                    ><option value="">Inherit, POST</option>{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as m}<option value={m}
+                    ><option value="">Inherit, POST</option>{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as m (m)}<option value={m}
                         >{m}</option
                       >{/each}</select
                   >
@@ -464,7 +472,7 @@
               </div>
             {/if}
             <div class="row">
-              <button type="button" class="btn primary" onclick={saveEndpoint}>Save endpoint</button>
+              <button type="button" class="btn primary" aria-busy={busy === 'endpoint'} onclick={saveEndpoint}>Save endpoint</button>
               {#if form.type === 'Http'}<button type="button" class="btn" onclick={() => testEndpoint(endpointForm!)}>Test</button>{/if}
               <button type="button" class="btn ghost" onclick={() => (endpointForm = null)}>Cancel</button>
             </div>

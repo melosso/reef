@@ -411,7 +411,7 @@ jobs:
 
           Required Configuration:
           - Set encryption key (HIGHLY RECOMMENDED):
-            export REEF_ENCRYPTION_KEY=your-secure-random-key-here
+            export ENCRYPTION_KEY=your-secure-random-key-here
 
           - Edit appsettings.json for:
             * Port (default: 8085)
@@ -434,7 +434,7 @@ jobs:
             ExecStart=/opt/reef/Reef
             Restart=always
             RestartSec=10
-            Environment=REEF_ENCRYPTION_KEY=your-key-here
+            Environment=ENCRYPTION_KEY=your-key-here
 
             [Install]
             WantedBy=multi-user.target
@@ -460,7 +460,7 @@ jobs:
           1. Run: ./Reef (check console errors)
           2. Check logs in: log/reef-YYYYMMDD.log
           3. Verify port 8085 is available
-          4. Ensure REEF_ENCRYPTION_KEY is set
+          4. Ensure ENCRYPTION_KEY is set
 
           Web UI not accessible:
           1. Check service status: systemctl status reef
@@ -470,7 +470,7 @@ jobs:
           SECURITY NOTES
           ==============
 
-          - Set REEF_ENCRYPTION_KEY environment variable
+          - Set ENCRYPTION_KEY environment variable
           - Change default JWT secret in appsettings.json
           - Use HTTPS in production (reverse proxy recommended: nginx/caddy)
           - Backup Reef.db regularly

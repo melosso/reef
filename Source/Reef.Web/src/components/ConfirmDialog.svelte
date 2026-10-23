@@ -1,8 +1,11 @@
 <script lang="ts">
   import { pending, settle } from '../lib/confirm.svelte';
 
+  const TYPED_DELAY_MS = 5000;
+
   let dialog: HTMLDialogElement;
   let typed = $state('');
+  let armed = $state(false);
 
   $effect(() => {
     if (pending.request && !dialog.open) {
@@ -13,7 +16,17 @@
     }
   });
 
-  const blocked = $derived(!!pending.request?.typed && typed !== pending.request.typed);
+  $effect(() => {
+    if (!pending.request?.typed) {
+      armed = true;
+      return;
+    }
+    armed = false;
+    const timer = setTimeout(() => (armed = true), TYPED_DELAY_MS);
+    return () => clearTimeout(timer);
+  });
+
+  const blocked = $derived(!!pending.request?.typed && (!armed || typed !== pending.request.typed));
 </script>
 
 <dialog bind:this={dialog} onclose={() => settle(false)} aria-labelledby="confirm-title">
@@ -31,7 +44,14 @@
         {#if pending.request.typed}
           <div class="field">
             <label for="confirm-typed">Type <strong class="num">{pending.request.typed}</strong> to confirm</label>
-            <input id="confirm-typed" bind:value={typed} autocomplete="off" spellcheck="false" />
+            <input
+              id="confirm-typed"
+              bind:value={typed}
+              autocomplete="off"
+              spellcheck="false"
+              onpaste={(e) => e.preventDefault()}
+              ondrop={(e) => e.preventDefault()}
+            />
           </div>
         {/if}
       </div>

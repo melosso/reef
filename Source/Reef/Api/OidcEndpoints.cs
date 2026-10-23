@@ -71,7 +71,7 @@ public static class OidcEndpoints
         string? error,
         [FromServices] AdminService service,
         [FromServices] DatabaseConfig dbConfig,
-        [FromServices] PasswordHasher passwordHasher,
+        [FromServices] UserPasswordHasher passwordHasher,
         [FromServices] JwtTokenService jwtService,
         [FromServices] AuditService auditService,
         [FromServices] IHttpClientFactory httpClientFactory)
@@ -121,7 +121,7 @@ public static class OidcEndpoints
     /// </summary>
     private static async Task<(User? User, string Problem)> ResolveAccountAsync(
         SqliteConnection connection,
-        PasswordHasher passwordHasher,
+        UserPasswordHasher passwordHasher,
         OidcSettings settings,
         OidcIdentity identity)
     {

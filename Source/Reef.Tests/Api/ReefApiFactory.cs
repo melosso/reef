@@ -6,16 +6,16 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Reef.Tests.Api;
 
-// Boots Reef against a throwaway data folder. Main reads its configuration from environment variables.
+// Boots Reef against a throwaway data folder through the short environment variable names
 public class ReefApiFactory : WebApplicationFactory<Reef.Program>
 {
     public string DataFolder { get; } = Directory.CreateTempSubdirectory("reef-api").FullName;
 
     public ReefApiFactory()
     {
-        Environment.SetEnvironmentVariable("Reef__DatabasePath", Path.Combine(DataFolder, "Reef.db"));
-        Environment.SetEnvironmentVariable("REEF_ENCRYPTION_KEY", "ReefApiTestsEncryptionKey0123456789");
-        Environment.SetEnvironmentVariable("Reef__ListenPort", FreePort().ToString());
+        Environment.SetEnvironmentVariable("DATABASE_PATH", Path.Combine(DataFolder, "Reef.db"));
+        Environment.SetEnvironmentVariable("ENCRYPTION_KEY", "ReefApiTestsEncryptionKey0123456789");
+        Environment.SetEnvironmentVariable("LISTEN_PORT", FreePort().ToString());
     }
 
     // Main refuses to start when its configured port is taken.

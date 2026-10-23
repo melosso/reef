@@ -1,6 +1,9 @@
 <script lang="ts">
   import Pager from '../Pager.svelte';
   import { api } from '../../lib/api';
+  import type { LogEntry } from '../../models/LogEntry';
+  import type { PagedResult } from '../../models/PagedResult';
+  import { queryString } from '../../lib/query';
   import { formatDateTime } from '../../lib/format';
   import { notify } from '../../lib/notify';
 
@@ -9,14 +12,13 @@
   let pageSize = $state(100);
   let total = $state(0);
   let pages = $state(1);
-  let logs = $state<any[]>([]);
+  let logs = $state<LogEntry[]>([]);
   let live = $state(false);
 
   async function load() {
-    const q = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (level) q.set('minimumLevel', level);
+    const q = queryString({ page, pageSize, minimumLevel: level });
     try {
-      const r = await api.get(`/api/admin/logs?${q}`);
+      const r = await api.get<PagedResult<LogEntry>>(`/api/admin/logs?${q}`);
       logs = r?.data ?? [];
       total = r?.totalCount ?? 0;
       pages = r?.totalPages ?? 1;
@@ -26,9 +28,6 @@
   }
 
   $effect(() => {
-    level;
-    page;
-    pageSize;
     load();
   });
 
@@ -51,9 +50,9 @@
     }}
   >
     <option value="">All levels</option>
-    {#each ['Debug', 'Information', 'Warning', 'Error', 'Fatal'] as l}<option value={l}>{l}</option>{/each}
+    {#each ['Debug', 'Information', 'Warning', 'Error', 'Fatal'] as l (l)}<option value={l}>{l}</option>{/each}
   </select>
-  <label class="check"><input type="checkbox" bind:checked={live} />Refresh every 5 seconds</label>
+  <label class="check"><input type="checkbox" role="switch" bind:checked={live} />Refresh every 5 seconds</label>
   <span class="spacer"></span>
   <button type="button" class="btn" onclick={load}>Refresh</button>
 </div>

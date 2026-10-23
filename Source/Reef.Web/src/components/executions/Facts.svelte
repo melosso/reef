@@ -3,7 +3,7 @@
 </script>
 
 <dl class="facts">
-  {#each items.filter(([, v]) => v !== null && v !== undefined && v !== '') as [label, value]}
+  {#each items.filter(([, v]) => v !== null && v !== undefined && v !== '') as [label, value] (label)}
     <div>
       <dt>{label}</dt>
       <dd class:num={typeof value === 'number'}>{value}</dd>

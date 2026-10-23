@@ -4,9 +4,16 @@
   import Sheet from '../components/Sheet.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
-  import { formatBytes, formatDateTime, formatNumber } from '../lib/format';
+  import type { ApprovalAttachment } from '../models/ApprovalAttachment';
+  import type { AttachmentConfig } from '../models/AttachmentConfig';
+  import type { EmailApproval } from '../models/EmailApproval';
+  import type { EmailPreview } from '../models/EmailPreview';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { PagedResult } from '../models/PagedResult';
+  import { formatBytes, formatDateTime } from '../lib/format';
   import { notify } from '../lib/notify';
   import { route, setQuery } from '../lib/router.svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import { statusKind, statusLabel } from '../lib/status';
   import { tooltip } from '../lib/tooltip';
 
@@ -16,44 +23,34 @@
   const tab = $derived((route.query.get('tab') as Tab) || 'pending');
   const PAGE_SIZE = 25;
 
-  let approvals = $state<any[]>([]);
-  let stats = $state<any>({});
-  let profiles = $state<any[]>([]);
+  let approvals = $state<EmailApproval[]>([]);
+  let profiles = $state<ExportProfile[]>([]);
   let loaded = $state(false);
   let page = $state(1);
-  let selected = $state<Set<string>>(new Set());
-  let preview = $state<any>(null);
+  const selected = new SvelteSet<string>();
+  let preview = $state<EmailPreview | null>(null);
   let action = $state<{ kind: Action; guids: string[] } | null>(null);
   let note = $state('');
   let busy = $state(false);
   let dialog: HTMLDialogElement;
 
   async function load() {
-    const [list, s] = await Promise.all([
-      api.get('/api/email-approvals?pageSize=1000').catch((e) => {
-        notify.fail(e, 'approvals');
-        return { data: approvals };
-      }),
-      api.get('/api/email-approvals/statistics').catch(() => stats),
-    ]);
+    const list = await api.get<PagedResult<EmailApproval>>('/api/email-approvals?pageSize=1000').catch((e) => {
+      notify.fail(e, 'approvals');
+      return { data: approvals } as PagedResult<EmailApproval>;
+    });
     approvals = list?.data ?? [];
-    stats = s ?? {};
     loaded = true;
   }
 
   $effect(() => {
     api
-      .get<any[]>('/api/profiles')
+      .get<ExportProfile[]>('/api/profiles')
       .then((p) => (profiles = p ?? []))
       .catch(() => {});
     load();
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
-  });
-
-  $effect(() => {
-    tab;
-    page = 1;
   });
 
   const lists = $derived({
@@ -70,10 +67,10 @@
   const profileName = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Profile ${id}`;
   const redacted = (v: string | null | undefined) => v === '[REDACTED]';
 
-  function attachments(config: string | null | undefined): any[] {
+  function attachments(config: string | null | undefined): ApprovalAttachment[] {
     if (!config || config === 'null') return [];
     try {
-      const c = JSON.parse(config);
+      const c: AttachmentConfig = JSON.parse(config);
       return c.attachments || c.generatedAttachments || c.GeneratedAttachments || [];
     } catch {
       return [];
@@ -83,7 +80,7 @@
   function hasAttachments(config: string | null | undefined): boolean {
     if (!config || config === 'null') return false;
     try {
-      const c = JSON.parse(config);
+      const c: AttachmentConfig = JSON.parse(config);
       return (c.generatedAttachments || c.GeneratedAttachments || []).length > 0 || !!((c.enabled ?? c.Enabled) && (c.mode ?? c.Mode));
     } catch {
       return false;
@@ -91,25 +88,30 @@
   }
 
   function toggle(guid: string) {
-    const next = new Set(selected);
-    if (next.has(guid)) next.delete(guid);
-    else next.add(guid);
-    selected = next;
+    if (selected.has(guid)) selected.delete(guid);
+    else selected.add(guid);
   }
 
   function toggleAll() {
-    const next = new Set(selected);
-    pageItems.forEach((a) => (allOnPage ? next.delete(a.guid) : next.add(a.guid)));
-    selected = next;
+    const clear = allOnPage;
+    for (const a of pageItems) {
+      if (clear) selected.delete(a.guid);
+      else selected.add(a.guid);
+    }
   }
 
   async function openPreview(guid: string) {
     try {
-      const data = await api.get(`/api/email-approvals/${guid}/preview`);
+      const data = await api.get<EmailPreview>(`/api/email-approvals/${guid}/preview`);
       preview = { ...data, guid, status: approvals.find((a) => a.guid === guid)?.status ?? data?.status };
     } catch (e) {
       notify.fail(e);
     }
+  }
+
+  function showTab(next: Tab | null) {
+    setQuery('tab', next);
+    page = 1;
   }
 
   function ask(kind: Action, guids: string[]) {
@@ -141,7 +143,6 @@
         failed++;
       }
     }
-    selected = new Set(selected);
     busy = false;
     dialog.close();
     if (preview && guids.includes(preview.guid)) preview = null;
@@ -154,22 +155,15 @@
 
 <Page crumbs={[{ label: 'Approvals' }]}>
   <div class="page-body">
-    <div class="cards">
-      <div class="stat"><span class="label">Pending</span><span class="value">{formatNumber(stats.pendingCount ?? 0)}</span></div>
-      <div class="stat"><span class="label">Approved</span><span class="value">{formatNumber(stats.approvedCount ?? 0)}</span></div>
-      <div class="stat"><span class="label">Sent this week</span><span class="value">{formatNumber(stats.sentThisWeek ?? 0)}</span></div>
-      <div class="stat"><span class="label">Skipped</span><span class="value">{formatNumber(stats.skippedCount ?? 0)}</span></div>
-      <div class="stat"><span class="label">Rejected</span><span class="value">{formatNumber(stats.rejectedCount ?? 0)}</span></div>
-    </div>
 
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'pending'} onclick={() => setQuery('tab', null)}
+      <button type="button" role="tab" aria-selected={tab === 'pending'} onclick={() => showTab(null)}
         >Pending <span class="num">{lists.pending.length}</span></button
       >
-      <button type="button" role="tab" aria-selected={tab === 'approved'} onclick={() => setQuery('tab', 'approved')}
+      <button type="button" role="tab" aria-selected={tab === 'approved'} onclick={() => showTab('approved')}
         >Approved <span class="num">{lists.approved.length}</span></button
       >
-      <button type="button" role="tab" aria-selected={tab === 'history'} onclick={() => setQuery('tab', 'history')}
+      <button type="button" role="tab" aria-selected={tab === 'history'} onclick={() => showTab('history')}
         >History <span class="num">{lists.history.length}</span></button
       >
     </div>
@@ -179,7 +173,7 @@
         <span><span class="num">{selected.size}</span> selected</span>
         <button type="button" class="btn primary" onclick={() => ask('approve', [...selected])}><Check size={14} />Approve and send</button>
         <button type="button" class="btn danger" onclick={() => ask('reject', [...selected])}><X size={14} />Reject</button>
-        <button type="button" class="link" onclick={() => (selected = new Set())}>Clear selection</button>
+        <button type="button" class="link" onclick={() => selected.clear()}>Clear selection</button>
       </div>
     {/if}
 
@@ -309,11 +303,8 @@
       <details>
         <summary><span class="num">{attachments(preview.attachmentConfig).length}</span> attachments</summary>
         <ul class="files">
-          {#each attachments(preview.attachmentConfig) as att, i}
-            {@const size =
-              att.fileSize ||
-              att.FileSize ||
-              (att.contentBase64 || att.ContentBase64 ? Math.floor(((att.contentBase64 || att.ContentBase64).length * 3) / 4) : 0)}
+          {#each attachments(preview.attachmentConfig) as att, i (i)}
+            {@const size = att.fileSize || att.FileSize || Math.floor(((att.contentBase64 || att.ContentBase64 || '').length * 3) / 4)}
             <li>
               <Paperclip size={13} />{att.fileName || att.filename || att.Filename || `Attachment ${i + 1}`}
               <span class="muted num">{formatBytes(size)}</span>
@@ -330,9 +321,10 @@
     {/if}
     {#snippet footer()}
       {#if preview?.status === 'Pending'}
-        <button type="button" class="btn danger" onclick={() => ask('reject', [preview.guid])}>Reject</button>
-        <button type="button" class="btn" onclick={() => ask('skip', [preview.guid])}>Skip</button>
-        <button type="button" class="btn primary" onclick={() => ask('approve', [preview.guid])}>Approve and send</button>
+        {@const guid = preview.guid}
+        <button type="button" class="btn danger" onclick={() => ask('reject', [guid])}>Reject</button>
+        <button type="button" class="btn" onclick={() => ask('skip', [guid])}>Skip</button>
+        <button type="button" class="btn primary" onclick={() => ask('approve', [guid])}>Approve and send</button>
       {:else}
         <button type="button" class="btn" onclick={() => (preview = null)}>Close</button>
       {/if}

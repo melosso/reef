@@ -1,18 +1,19 @@
 <script lang="ts">
   import { Copy } from '@lucide/svelte';
   import { api } from '../../lib/api';
+  import type { OidcSettings } from '../../models/OidcSettings';
   import { copyText, notify } from '../../lib/notify';
   import { tooltip } from '../../lib/tooltip';
 
   const redirectUri = `${location.origin}/api/auth/oidc/callback`;
-  let form = $state<any>(null);
+  let form = $state<OidcSettings | null>(null);
   let hasSecret = $state(false);
   let busy = $state(false);
 
   async function load() {
-    const d = await api.get('/api/admin/oidc-settings').catch((e) => {
+    const d = await api.get<Partial<OidcSettings>>('/api/admin/oidc-settings').catch((e) => {
       notify.fail(e);
-      return {};
+      return null;
     });
     hasSecret = !!d?.hasClientSecret;
     form = {
@@ -56,7 +57,7 @@
       Reef supports one OpenID Connect provider, for example Pocket ID or Microsoft Entra ID. Sign-in matches accounts by username or
       verified email address.
     </p>
-    <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
+    <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
     <div class="field">
       <label for="o-name" use:tooltip={'Displayed on the sign-in button'}>Provider name</label><input
         id="o-name"

@@ -36,7 +36,7 @@ RUN mkdir -p /app/exports /app/log /app/.core
 # Set environment variables
 ENV ASPNETCORE_URLS=http://+:8085
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV REEF_ENCRYPTION_KEY=""
+ENV ENCRYPTION_KEY=""
 
 # Copy published output
 COPY --from=build /app/publish .

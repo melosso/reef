@@ -1,20 +1,24 @@
-export const route = $state({ path: location.pathname, query: new URLSearchParams(location.search) });
+import { SvelteURLSearchParams } from 'svelte/reactivity';
 
-type Guard = () => boolean;
+export const route = $state({ path: location.pathname, query: new SvelteURLSearchParams(location.search) });
+
+type Guard = () => boolean | Promise<boolean>;
 let leaveGuard: Guard | null = null;
+let current = location.pathname + location.search;
 
 export function setLeaveGuard(guard: Guard | null): void {
   leaveGuard = guard;
 }
 
 function sync(): void {
+  current = location.pathname + location.search;
   route.path = location.pathname;
-  route.query = new URLSearchParams(location.search);
+  route.query = new SvelteURLSearchParams(location.search);
 }
 
-export function navigate(to: string, replace = false): void {
+export async function navigate(to: string, replace = false): Promise<void> {
   if (to === location.pathname + location.search) return;
-  if (leaveGuard && !leaveGuard()) return;
+  if (leaveGuard && !(await leaveGuard())) return;
   leaveGuard = null;
   if (replace) history.replaceState(null, '', to);
   else history.pushState(null, '', to);
@@ -22,10 +26,10 @@ export function navigate(to: string, replace = false): void {
 }
 
 export function setQuery(key: string, value: string | null): void {
-  const url = new URL(location.href);
-  if (value) url.searchParams.set(key, value);
-  else url.searchParams.delete(key);
-  history.replaceState(null, '', url.pathname + url.search);
+  const query = new SvelteURLSearchParams(location.search);
+  if (value) query.set(key, value);
+  else query.delete(key);
+  history.replaceState(null, '', query.size ? `${location.pathname}?${query}` : location.pathname);
   sync();
 }
 
@@ -41,7 +45,13 @@ export function match(pattern: string, path: string): Record<string, string> | n
   return params;
 }
 
-window.addEventListener('popstate', sync);
+window.addEventListener('popstate', () => {
+  if (!leaveGuard) return sync();
+  // back and forward already moved the url, so restore it until the guard answers
+  const to = location.pathname + location.search;
+  history.pushState(null, '', current);
+  navigate(to);
+});
 
 document.addEventListener('click', (e) => {
   if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

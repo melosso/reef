@@ -9,6 +9,8 @@
   import { notify } from '../lib/notify';
   import { route, setQuery } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
+  import type { Connection } from '../models/Connection';
+  import type { ConnectionTestResult } from '../models/ConnectionTestResult';
 
   const TYPES: Record<string, string> = { SqlServer: 'SQL Server', MySQL: 'MySQL', PostgreSQL: 'PostgreSQL', Sqlite: 'SQLite' };
   const EXAMPLES: Record<string, string> = {
@@ -27,7 +29,7 @@
     isActive: boolean;
   }
 
-  let connections = $state<any[]>([]);
+  let connections = $state<Connection[]>([]);
   let loaded = $state(false);
   let search = $state('');
   let tag = $state('');
@@ -35,7 +37,7 @@
   let busy = $state<string | null>(null);
 
   async function load() {
-    connections = await api.get<any[]>('/api/connections').catch((e) => {
+    connections = await api.get<Connection[]>('/api/connections').catch((e) => {
       notify.fail(e, 'connections');
       return [];
     });
@@ -85,7 +87,7 @@
 
   async function edit(id: number) {
     try {
-      const c = await api.get(`/api/connections/${id}`);
+      const c = await api.get<Connection>(`/api/connections/${id}`);
       form = { id: c.id, name: c.name, type: c.type, connectionString: c.connectionString ?? '', tags: c.tags ?? '', isActive: c.isActive };
     } catch (e) {
       notify.fail(e);
@@ -100,7 +102,7 @@
   async function test(f: Form, quiet = false) {
     busy = 'test';
     try {
-      const result = await api.post('/api/connections/test', {
+      const result = await api.post<ConnectionTestResult>('/api/connections/test', {
         type: f.type,
         connectionString: f.connectionString,
         ...(f.id ? { connectionId: f.id } : {}),
@@ -132,7 +134,9 @@
         isActive: form.isActive,
         hash: '',
       };
-      const saved = form.id ? await api.put(`/api/connections/${form.id}`, body) : await api.post('/api/connections', body);
+      const saved = form.id
+        ? await api.put<Connection>(`/api/connections/${form.id}`, body)
+        : await api.post<Connection>('/api/connections', body);
       notify.success(`${form.name} saved`, { key: 'conn-save' });
       const created = !form.id;
       const snapshot = { ...form, id: saved?.id ?? form.id };
@@ -161,7 +165,7 @@
     )
       return;
     try {
-      const current = await api.get(`/api/connections/${form.id}`);
+      const current = await api.get<Connection>(`/api/connections/${form.id}`);
       await api.put(`/api/connections/${form.id}`, { ...current, isActive: !off });
       notify.success(`${form.name} turned ${off ? 'off' : 'on'}`);
       close();
@@ -201,7 +205,7 @@
       <input type="search" placeholder="Search name, type or tag" aria-label="Search connections" bind:value={search} />
       <select aria-label="Tag" bind:value={tag}>
         <option value="">All tags</option>
-        {#each tags as t}<option value={t}>{t}</option>{/each}
+        {#each tags as t (t)}<option value={t}>{t}</option>{/each}
       </select>
       <span class="spacer"></span>
       <span class="muted"><span class="num">{visible.length}</span> of <span class="num">{connections.length}</span></span>
@@ -226,7 +230,7 @@
                 {#each (c.tags ?? '')
                   .split(',')
                   .map((t: string) => t.trim())
-                  .filter(Boolean) as t}
+                  .filter(Boolean) as t, i (i)}
                   <button type="button" class="link tag" onclick={() => (tag = t)}>{t}</button>
                 {/each}
               </td>
@@ -282,7 +286,7 @@
       <div class="field">
         <label for="c-type">Type</label>
         <select id="c-type" bind:value={form.type}
-          >{#each Object.entries(TYPES) as [value, label]}<option {value}>{label}</option>{/each}</select
+          >{#each Object.entries(TYPES) as [value, label] (value)}<option {value}>{label}</option>{/each}</select
         >
       </div>
       <div class="field">

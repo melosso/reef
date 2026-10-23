@@ -40,15 +40,17 @@ export interface DocNode {
   type: string;
   x: number;
   y: number;
-  config?: Record<string, any>;
+  config?: Config;
 }
 
 export interface ProfileDoc {
   kind: 'export' | 'import';
   id?: number | null;
   code?: string | null;
-  settings: Record<string, any>;
+  settings: Config;
   nodes: DocNode[];
 }
 
 export type Options = Record<string, FieldOption[]>;
+
+export type Config = Record<string, unknown>;

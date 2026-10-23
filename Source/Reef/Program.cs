@@ -43,7 +43,11 @@ public partial class Program
         // account recovery without the web ui, runs instead of the web host
         if (args is ["accounts", ..])
         {
-            Environment.ExitCode = await AccountsCli.RunAsync(args, new ConfigurationBuilder().AddConfiguration(tempConfig).AddEnvironmentVariables().Build());
+            var cliConfig = new ConfigurationManager();
+            cliConfig.AddConfiguration(tempConfig);
+            cliConfig.AddEnvironmentVariables();
+            EnvAliases.ApplyConfigAliases(cliConfig);
+            Environment.ExitCode = await AccountsCli.RunAsync(args, cliConfig);
             return;
         }
 
@@ -97,6 +101,8 @@ public partial class Program
         try
         {
             var builder = WebApplication.CreateBuilder(args);
+            EnvAliases.ApplyConfigAliases(builder.Configuration);
+            EnvAliases.WarnOnLegacyUsage();
 
             // Initialize Serilog globally
             builder.Host.UseSerilog();
@@ -122,7 +128,7 @@ public partial class Program
             // Fail fast with a clean message if the port is already taken
             if (IsPortInUse(port))
             {
-                Log.Fatal("Port {Port} is already in use. Stop the existing process, or set Reef__ListenPort to use another port.", port);
+                Log.Fatal("Port {Port} is already in use. Stop the existing process, or set LISTEN_PORT to use another port.", port);
                 await Log.CloseAndFlushAsync();
                 Environment.Exit(1);
             }
@@ -137,15 +143,7 @@ public partial class Program
             // Register services
             RegisterServices(builder.Services, builder.Configuration, encryptionService, connectionString);
 
-            // Configure Forwarded Headers for Reverse Proxy support
-            builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
-            {
-                options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
-                // Clear KnownNetworks and KnownProxies so it accepts forwarded headers from any proxy
-                // In production, you would normally restrict this to specific proxy IPs
-                options.KnownIPNetworks.Clear();
-                options.KnownProxies.Clear();
-            });
+            builder.Services.AddTrustedProxies();
 
             // Add controllers with JSON string enum converter for enums
             builder.Services.AddControllers().AddJsonOptions(options =>
@@ -167,10 +165,10 @@ public partial class Program
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    var allowedOrigins = builder.Configuration.GetSection("Reef:AllowedOrigins").Get<List<string>>();
-                    if (allowedOrigins != null && allowedOrigins.Count > 0)
+                    var allowedOrigins = builder.Configuration.GetList("Reef:AllowedOrigins");
+                    if (allowedOrigins.Length > 0)
                     {
-                        policy.WithOrigins(allowedOrigins.ToArray())
+                        policy.WithOrigins(allowedOrigins)
                               .AllowAnyMethod()
                               .AllowAnyHeader();
                     }
@@ -310,6 +308,9 @@ public partial class Program
             new DatabaseInitializer(connectionString, encryptionService));
         services.AddSingleton<HashValidator>();
         services.AddSingleton<PasswordHasher>();
+        services.AddSingleton(new UserPasswordHasher(EncryptionKeyLoader.Key));
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<LoginThrottle>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ApiKeyValidator>();
         services.AddHttpClient();
@@ -333,6 +334,7 @@ public partial class Program
         services.AddScoped<ValidationService>();
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
+        services.AddScoped<AttentionService>();
         services.AddScoped<ProfileService>();
         services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
         services.AddScoped<ExecutionService>();
@@ -454,8 +456,8 @@ public partial class Program
 
     private static async Task ConfigureMiddleware(WebApplication app)
     {
-        // Use forwarded headers before any other middleware (required for correct reverse proxy IP/scheme resolution)
-        app.UseForwardedHeaders();
+        // forwarded headers run first so every later middleware sees the client address
+        app.UseTrustedForwardedHeaders();
 
         // Global exception handler - always return JSON
         app.Use(async (context, next) =>
@@ -489,8 +491,9 @@ public partial class Program
         var localhostOnly = app.Configuration.GetValue<bool>("Reef:LocalhostOnly", false);
         if (localhostOnly)
         {
-            var allowedHosts = app.Configuration.GetSection("Reef:AllowedHosts").Get<List<string>>()
-                ?? new List<string> { "localhost", "127.0.0.1", "::1" };
+            var allowedHosts = app.Configuration.GetList("Reef:AllowedHosts") is { Length: > 0 } hosts
+                ? hosts
+                : ["localhost", "127.0.0.1", "::1"];
 
             var allowedHostsLower = allowedHosts.Select(h => h.ToLowerInvariant()).ToHashSet();
 
@@ -567,6 +570,7 @@ public partial class Program
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
         ProfileDocumentsEndpoints.Map(app);
+        DashboardEndpoints.Map(app);
 
         var spaIndex = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"), "app", "index.html");
         app.MapFallback(async context =>

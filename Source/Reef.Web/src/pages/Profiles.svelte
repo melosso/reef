@@ -3,6 +3,12 @@
   import Page from '../components/Page.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
+  import type { Connection } from '../models/Connection';
+  import type { Destination } from '../models/Destination';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { ImportProfile } from '../models/ImportProfile';
+  import type { ProfileGroup } from '../models/ProfileGroup';
+  import type { QueryTemplate } from '../models/QueryTemplate';
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatRelative, parseDate } from '../lib/format';
   import { notify } from '../lib/notify';
@@ -28,10 +34,10 @@
     name: string;
     code?: string;
     enabled: boolean;
-    lastRun?: string;
-    groupId?: number;
+    lastRun?: string | null;
+    groupId?: number | null;
     group: string;
-    connectionId?: number;
+    connectionId?: number | null;
     source: string;
     sourceSub: string;
     sourceWarn?: boolean;
@@ -67,7 +73,7 @@
     } catch {}
   });
 
-  function exportRow(p: any, destinations: any[], templates: any[]): Row {
+  function exportRow(p: ExportProfile, destinations: Destination[], templates: QueryTemplate[]): Row {
     const destination = destinations.find((d) => d.id === p.outputDestinationId);
     const template = p.templateId ? templates.find((t) => t.id === p.templateId) : null;
     return {
@@ -95,7 +101,7 @@
     };
   }
 
-  function importRow(p: any): Row {
+  function importRow(p: ImportProfile): Row {
     const database = p.targetType !== 'LocalFile';
     return {
       kind: 'import',
@@ -121,16 +127,14 @@
       notify.fail(e, 'profiles-load');
       return [];
     };
-    const [exports, imports, destinations, templates, conns, grps] = await Promise.all(
-      [
-        api.get<any[]>('/api/profiles'),
-        api.get<any[]>('/api/profiles?type=import'),
-        api.get<any[]>('/api/destinations'),
-        api.get<any[]>('/api/templates'),
-        api.get<any[]>('/api/connections'),
-        api.get<any[]>('/api/groups'),
-      ].map((p) => p.catch(fail)),
-    );
+    const [exports, imports, destinations, templates, conns, grps] = await Promise.all([
+      api.get<ExportProfile[]>('/api/profiles').catch(fail),
+      api.get<ImportProfile[]>('/api/profiles?type=import').catch(fail),
+      api.get<Destination[]>('/api/destinations').catch(fail),
+      api.get<QueryTemplate[]>('/api/templates').catch(fail),
+      api.get<Connection[]>('/api/connections').catch(fail),
+      api.get<ProfileGroup[]>('/api/groups').catch(fail),
+    ]);
     rows = [...(exports ?? []).map((p) => exportRow(p, destinations ?? [], templates ?? [])), ...(imports ?? []).map(importRow)];
     connections = conns ?? [];
     groups = grps ?? [];
@@ -151,7 +155,7 @@
           ? row.enabled
             ? 0
             : 1
-          : String((row as any)[sort.column] ?? '').toLowerCase();
+          : String(row[sort.column] ?? '').toLowerCase();
     return rows
       .filter((row) => !filters.kind || row.kind === filters.kind)
       .filter((row) => !filters.status || (filters.status === 'enabled') === row.enabled)
@@ -280,11 +284,11 @@
       </select>
       <select aria-label="Connection" bind:value={filters.connection}>
         <option value="">All connections</option>
-        {#each connections as c}<option value={String(c.id)}>{c.name}</option>{/each}
+        {#each connections as c (c.id)}<option value={String(c.id)}>{c.name}</option>{/each}
       </select>
       <select aria-label="Group" bind:value={filters.group}>
         <option value="">All groups</option>
-        {#each groups as g}<option value={String(g.id)}>{g.name}</option>{/each}
+        {#each groups as g (g.id)}<option value={String(g.id)}>{g.name}</option>{/each}
       </select>
       {#if filtered}<button type="button" class="link" onclick={clearFilters}>Clear filters</button>{/if}
       <span class="spacer"></span>
@@ -295,7 +299,7 @@
       <table class="data">
         <thead>
           <tr>
-            {#each columns as column}
+            {#each columns as column (column.key)}
               <th aria-sort={sort.column === column.key ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}>
                 <button type="button" onclick={() => toggleSort(column.key)}>
                   {column.label}

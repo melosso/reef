@@ -28,7 +28,7 @@ jobs:
 
       - name: Check frontend
         working-directory: Source/Reef.Web
-        run: npm ci --no-audit --no-fund && npm run check
+        run: npm ci --no-audit --no-fund && npm run check && npm run lint && npm test
 
       - name: Restore and build
         run: dotnet build Source/Reef.slnx --configuration Release

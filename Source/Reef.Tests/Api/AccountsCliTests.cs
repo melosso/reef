@@ -31,6 +31,7 @@ public class AccountsCliTests(ReefApiFactory factory)
         (await RunAsync("create", name, "First-Pass-123", "user")).Should().Be(0);
         (await LoginAsync(name, "First-Pass-123")).Should().Be(HttpStatusCode.OK);
 
+        (await RunAsync("password", name, "First-Pass-123")).Should().Be(1);
         (await RunAsync("password", name, "Second-Pass-123")).Should().Be(0);
         (await LoginAsync(name, "First-Pass-123")).Should().Be(HttpStatusCode.Unauthorized);
         (await LoginAsync(name, "Second-Pass-123")).Should().Be(HttpStatusCode.OK);

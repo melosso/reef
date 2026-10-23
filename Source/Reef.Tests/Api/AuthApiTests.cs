@@ -43,4 +43,68 @@ public class AuthApiTests(ReefApiFactory factory)
         changeRequired.Should().BeTrue();
         (await LoginAsync("admin@reef.local", "admin123")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Fact]
+    public async Task Email_already_used_by_another_account_is_rejected()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var (adminName, _) = await factory.SeededAdminAsync();
+        var name = $"user{Guid.NewGuid():N}"[..16];
+        (await admin.PostAsJsonAsync("/api/admin/users", new { username = name, password = "Secret-Pass-123", role = "User" }, _ct)).EnsureSuccessStatusCode();
+        var login = await LoginAsync(name, "Secret-Pass-123");
+        var user = factory.CreateClient();
+        user.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await login.Content.ReadFromJsonAsync<JsonObject>(_ct))!["token"]!.GetValue<string>());
+
+        (await admin.PutAsJsonAsync("/api/account/profile", new { email = $"{name}-taken@example.com" }, _ct)).EnsureSuccessStatusCode();
+
+        (await user.PutAsJsonAsync("/api/account/profile", new { email = $"{name}-TAKEN@example.com" }, _ct)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await user.PutAsJsonAsync("/api/account/profile", new { email = adminName }, _ct)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await user.PutAsJsonAsync("/api/account/profile", new { email = $"{name}@example.com" }, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await user.PutAsJsonAsync("/api/account/profile", new { email = $"{name}@example.com" }, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Theory]
+    [InlineData("http://localhost", HttpStatusCode.Unauthorized)]
+    [InlineData("https://elsewhere.example", HttpStatusCode.Forbidden)]
+    public async Task Sign_in_accepts_its_own_origin_without_configuration(string origin, HttpStatusCode expected)
+    {
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("Origin", origin);
+
+        var response = await client.PostAsJsonAsync("/api/auth/login", new { username = "nobody@example.com", password = "wrong-password" }, _ct);
+
+        response.StatusCode.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Failed_sign_ins_lock_only_that_account()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+        var locked = $"user{Guid.NewGuid():N}"[..16];
+        var other = $"user{Guid.NewGuid():N}"[..16];
+        foreach (var name in new[] { locked, other })
+            (await admin.PostAsJsonAsync("/api/admin/users", new { username = name, password = "Secret-Pass-123", role = "User" }, _ct)).EnsureSuccessStatusCode();
+
+        for (var i = 0; i < 5; i++)
+            (await LoginAsync(locked, "wrong-password")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        (await LoginAsync(locked, "Secret-Pass-123")).StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+        (await LoginAsync(other, "Secret-Pass-123")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task Spoofed_forwarded_addresses_do_not_bypass_the_lockout()
+    {
+        var name = $"user{Guid.NewGuid():N}"[..16];
+        for (var i = 0; i < 5; i++)
+        {
+            var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Add("X-Forwarded-For", $"203.0.113.{i + 1}");
+            (await client.PostAsJsonAsync("/api/auth/login", new { username = name, password = "wrong-password" }, _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        }
+
+        var last = factory.CreateClient();
+        last.DefaultRequestHeaders.Add("X-Forwarded-For", "203.0.113.99");
+        (await last.PostAsJsonAsync("/api/auth/login", new { username = name, password = "wrong-password" }, _ct)).StatusCode.Should().Be(HttpStatusCode.TooManyRequests);
+    }
 }

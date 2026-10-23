@@ -1,6 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
+  import type { PasswordChangeResult } from '../models/PasswordChangeResult';
+  import type { TokenValidation } from '../models/TokenValidation';
   import { notify } from '../lib/notify';
   import { navigate } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
@@ -11,7 +13,7 @@
   let busy = $state(false);
 
   onMount(async () => {
-    const data = await api.post('/api/auth/validate', { token: session.token }).catch(() => null);
+    const data = await api.post<TokenValidation>('/api/auth/validate', { token: session.token }).catch(() => null);
     if (data?.valid && data.passwordChangeRequired) dialog.showModal();
   });
 
@@ -19,7 +21,7 @@
     e.preventDefault();
     busy = true;
     try {
-      const data = await api.post('/api/auth/change-password', { currentPassword: current, newPassword: next });
+      const data = await api.post<PasswordChangeResult>('/api/auth/change-password', { currentPassword: current, newPassword: next });
       notify.success('Password changed');
       dialog.close();
       if (data?.requiresLogoff) navigate('/logoff');

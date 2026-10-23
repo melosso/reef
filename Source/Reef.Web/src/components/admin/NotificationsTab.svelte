@@ -1,9 +1,14 @@
 <script lang="ts">
   import { api } from '../../lib/api';
+  import type { CheckResult } from '../../models/CheckResult';
+  import type { Destination } from '../../models/Destination';
+  import type { NotificationSettings } from '../../models/NotificationSettings';
   import { notify } from '../../lib/notify';
   import { tooltip } from '../../lib/tooltip';
 
-  const EVENTS: [string, string][] = [
+  type Toggle = { [K in keyof NotificationSettings]-?: NotificationSettings[K] extends boolean ? K : never }[keyof NotificationSettings];
+
+  const EVENTS: [Toggle, string][] = [
     ['notifyOnProfileFailure', 'Export profile failed'],
     ['notifyOnProfileSuccess', 'Export profile succeeded'],
     ['notifyOnImportProfileFailure', 'Import profile failed'],
@@ -15,15 +20,15 @@
     ['notifyOnNewWebhook', 'Webhook created'],
   ];
 
-  let s = $state<any>(null);
-  let destinations = $state<any[]>([]);
+  let s = $state<NotificationSettings | null>(null);
+  let destinations = $state<Destination[]>([]);
   let thresholdMb = $state(1024);
   let busy = $state<string | null>(null);
 
   $effect(() => {
     Promise.all([
-      api.get('/api/admin/notifications').catch(() => null),
-      api.get<any[]>('/api/destinations?type=Email').catch(() => []),
+      api.get<NotificationSettings>('/api/admin/notifications').catch(() => null),
+      api.get<Destination[]>('/api/destinations?type=Email').catch(() => []),
     ]).then(([settings, dests]) => {
       destinations = (dests ?? []).filter((d) => d.type === 'Email');
       s = {
@@ -52,9 +57,11 @@
 
   async function save(e: SubmitEvent) {
     e.preventDefault();
+    if (!s) return;
     busy = 'save';
     try {
-      const dest = destinations.find((d) => d.id === Number(s.destinationId));
+      const destinationId = Number(s.destinationId);
+      const dest = destinations.find((d) => d.id === destinationId);
       await api.post('/api/admin/notifications', {
         ...s,
         id: s.id ?? 0,
@@ -76,9 +83,10 @@
   }
 
   async function test() {
+    if (!s) return;
     busy = 'test';
     try {
-      const r = await api.post('/api/admin/notifications/test', {
+      const r = await api.post<CheckResult>('/api/admin/notifications/test', {
         destinationId: s.destinationId ? Number(s.destinationId) : null,
         recipientEmails: s.recipientEmails?.trim() || null,
       });
@@ -94,12 +102,12 @@
 
 {#if s}
   <form class="fields narrow" onsubmit={save}>
-    <label class="check"><input type="checkbox" bind:checked={s.isEnabled} />Send email notifications</label>
+    <label class="check"><input type="checkbox" role="switch" bind:checked={s.isEnabled} />Send email notifications</label>
     <div class="field">
       <label for="n-dest">Email destination</label>
       <select id="n-dest" bind:value={s.destinationId}>
         <option value={null}>Choose</option>
-        {#each destinations as d}<option value={d.id}>{d.name}</option>{/each}
+        {#each destinations as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
       </select>
     </div>
     <div class="field">
@@ -113,7 +121,7 @@
     <fieldset>
       <legend>Events</legend>
       <div class="grid2">
-        {#each EVENTS as [key, label]}<label class="check"><input type="checkbox" bind:checked={s[key]} />{label}</label>{/each}
+        {#each EVENTS as [key, label] (key)}<label class="check"><input type="checkbox" bind:checked={s[key]} />{label}</label>{/each}
       </div>
     </fieldset>
 

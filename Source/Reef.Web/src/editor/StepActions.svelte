@@ -5,6 +5,16 @@
   import { copyText, notify } from '../lib/notify';
   import { tooltip } from '../lib/tooltip';
   import { textOf } from './config';
+  import type { Config } from './types';
+  import type { CheckResult } from '../models/CheckResult';
+  import type { DeltaSyncStats } from '../models/DeltaSyncStats';
+  import type { EmailPreviewResult } from '../models/EmailPreviewResult';
+  import type { ImportPreviewResult } from '../models/ImportPreviewResult';
+  import type { QueryPreviewResult } from '../models/QueryPreviewResult';
+  import type { ScriptConfig } from '../models/ScriptConfig';
+  import type { ScriptTestResult } from '../models/ScriptTestResult';
+  import type { TargetColumn } from '../models/TargetColumn';
+  import type { Webhook } from '../models/Webhook';
 
   let {
     kind,
@@ -17,19 +27,19 @@
     kind: 'export' | 'import';
     id: number | null | undefined;
     step: string;
-    config: Record<string, any>;
+    config: Config;
     dirty: boolean;
-    flatten: () => Promise<any>;
+    flatten: () => Promise<Config>;
   } = $props();
 
   const key = $derived(`${kind}:${step}`);
   let busy = $state<string | null>(null);
   let note = $state('');
-  let table = $state<{ columns: string[]; rows: Record<string, any>[] } | null>(null);
+  let table = $state<{ columns: string[]; rows: Record<string, unknown>[] } | null>(null);
   let output = $state('');
   let html = $state('');
   let syncText = $state('');
-  let hooks = $state<any[]>([]);
+  let hooks = $state<Webhook[]>([]);
   let revealed = $state('');
 
   const owner = $derived(kind === 'import' ? 'importProfileId' : 'profileId');
@@ -37,12 +47,6 @@
   const scriptPrefix = $derived(step === 'preprocess' ? 'PreProcess' : 'PostProcess');
 
   $effect(() => {
-    key;
-    note = '';
-    table = null;
-    output = '';
-    html = '';
-    revealed = '';
     if (!id) return;
     if (step === 'deltasync') loadSync();
     if (step === 'settings') loadHooks();
@@ -61,7 +65,7 @@
 
   const previewRows = () =>
     act('preview', async () => {
-      const result = await api.post('/api/profiles/test-query-preview', {
+      const result = await api.post<QueryPreviewResult>('/api/profiles/test-query-preview', {
         connectionId: config.ConnectionId || 0,
         query: config.Query || '',
       });
@@ -72,8 +76,8 @@
 
   const runScript = () =>
     act('script', async () => {
-      const cfg = config[`${scriptPrefix}Config`] || {};
-      const result = await api.post('/api/profiles/test-script', {
+      const cfg = (config[`${scriptPrefix}Config`] ?? {}) as ScriptConfig;
+      const result = await api.post<ScriptTestResult>('/api/profiles/test-script', {
         profileId: id || null,
         interpreter: cfg.Interpreter || '',
         scriptPathOrInline: cfg.ScriptPathOrInline || '',
@@ -88,7 +92,7 @@
 
   async function loadSync() {
     try {
-      const stats = await api.get(`${base}/delta-sync/stats`);
+      const stats = await api.get<DeltaSyncStats>(`${base}/delta-sync/stats`);
       syncText = !stats.enabled
         ? stats.message || 'Smart Sync is not saved on this profile.'
         : `${stats.activeRows} tracked, ${stats.deletedRows} deleted. Last run: ${stats.newRowsLastRun ?? 0} new, ${stats.changedRowsLastRun ?? 0} changed, ${stats.unchangedRowsLastRun ?? 0} unchanged.`;
@@ -116,7 +120,7 @@
 
   const previewEmail = () =>
     act('email', async () => {
-      const result = await api.post(`/api/profiles/${id}/preview-email-html`);
+      const result = await api.post<EmailPreviewResult>(`/api/profiles/${id}/preview-email-html`);
       if (!result.success) throw new Error(result.message || 'Preview failed.');
       note = result.message || '';
       html = result.html || '';
@@ -124,7 +128,7 @@
 
   const checkSource = () =>
     act('source', async () => {
-      const result = await api.post('/api/import-profiles/test-source', await flatten());
+      const result = await api.post<CheckResult>('/api/import-profiles/test-source', await flatten());
       (result.success ? notify.success : notify.error)(
         result.message || (result.success ? 'Source is reachable.' : 'Source check failed.'),
       );
@@ -133,7 +137,11 @@
   const previewRecords = () =>
     act('records', async () => {
       const profile = await flatten();
-      const result = await api.post('/api/import-profiles/preview', { ...profile, importProfileId: null, maxRows: 10 });
+      const result = await api.post<ImportPreviewResult>('/api/import-profiles/preview', {
+        ...profile,
+        importProfileId: null,
+        maxRows: 10,
+      });
       if (!result.success) throw new Error(result.errorMessage || 'Preview failed.');
       note = `${result.totalRowsParsed} records read. Showing ${result.rowsReturned}.`;
       table = { columns: result.columns, rows: result.rows };
@@ -143,18 +151,18 @@
   const checkTarget = () =>
     act('target', async () => {
       const profile = await flatten();
-      const result = await api.post('/api/import-profiles/test-target', profile);
+      const result = await api.post<CheckResult>('/api/import-profiles/test-target', profile);
       (result.success ? notify.success : notify.error)(
         result.message || (result.success ? 'Target is reachable.' : 'Target check failed.'),
       );
       if (!result.success || config.TargetType === 'LocalFile') return;
-      const schema = await api.post('/api/import-profiles/target-schema', profile);
+      const schema = await api.post<TargetColumn[] | { columns?: TargetColumn[] }>('/api/import-profiles/target-schema', profile);
       const columns = Array.isArray(schema) ? schema : schema.columns || [];
-      note = columns.length ? `Columns: ${columns.map((c: any) => c.columnName || c.name).join(', ')}` : 'No columns found.';
+      note = columns.length ? `Columns: ${columns.map((c) => c.columnName || c.name).join(', ')}` : 'No columns found.';
     });
 
   async function loadHooks() {
-    hooks = await api.get<any[]>(`/api/webhooks?${owner}=${id}`).catch(() => []);
+    hooks = await api.get<Webhook[]>(`/api/webhooks?${owner}=${id}`).catch(() => []);
   }
 
   function reveal(url: string) {
@@ -164,12 +172,12 @@
 
   const addHook = () =>
     act('hook', async () => {
-      const result = await api.post('/api/webhooks', { [owner]: id });
-      reveal(result.url);
+      const result = await api.post<Webhook>('/api/webhooks', { [owner]: id });
+      reveal(result.url ?? '');
       await loadHooks();
     });
 
-  const hookAction = (hook: any, action: 'toggle' | 'regenerate' | 'delete') =>
+  const hookAction = (hook: Webhook, action: 'toggle' | 'regenerate' | 'delete') =>
     act(`hook-${hook.id}`, async () => {
       if (action === 'toggle') await api.post(`/api/webhooks/${hook.id}/${hook.isActive ? 'disable' : 'enable'}`);
       if (action === 'regenerate') {
@@ -182,7 +190,7 @@
           }))
         )
           return;
-        reveal((await api.post(`/api/webhooks/${hook.id}/regenerate`)).url);
+        reveal((await api.post<Webhook>(`/api/webhooks/${hook.id}/regenerate`)).url ?? '');
       }
       if (action === 'delete') {
         if (
@@ -297,12 +305,12 @@
         <table class="data">
           <thead
             ><tr
-              >{#each table.columns as c}<th>{c}</th>{/each}</tr
+              >{#each table.columns as c, i (i)}<th>{c}</th>{/each}</tr
             ></thead
           >
           <tbody
-            >{#each table.rows as row}<tr
-                >{#each table.columns as c}<td>{textOf(row[c])}</td>{/each}</tr
+            >{#each table.rows as row, r (r)}<tr
+                >{#each table.columns as c, i (i)}<td>{textOf(row[c])}</td>{/each}</tr
               >{/each}</tbody
           >
         </table>

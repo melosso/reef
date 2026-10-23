@@ -2,6 +2,8 @@ import { api } from '../lib/api';
 import { formatBytes, formatNumber, parseDate } from '../lib/format';
 import { statusKind } from '../lib/status';
 import type { StatusKind } from '../components/StatusMark.svelte';
+import type { ExportExecution } from '../models/ExportExecution';
+import type { ImportExecution } from '../models/ImportExecution';
 
 export interface StepStat {
   text: string;
@@ -9,22 +11,20 @@ export interface StepStat {
   status?: StatusKind;
 }
 
-export interface LastRun {
-  kind: 'export' | 'import';
-  run: any;
-}
+export type LastRun = { kind: 'export'; run: ExportExecution } | { kind: 'import'; run: ImportExecution };
 
 export async function loadLastRun(kind: 'export' | 'import', id: number): Promise<LastRun | null> {
-  const list =
-    kind === 'import'
-      ? await api.get<any[]>(`/api/profiles/${id}/executions?type=import&limit=1`).catch(() => [])
-      : await api.get<any[]>(`/api/executions/by-profile/${id}?limit=1`).catch(() => []);
+  if (kind === 'import') {
+    const list = await api.get<ImportExecution[]>(`/api/profiles/${id}/executions?type=import&limit=1`).catch(() => []);
+    return list?.[0] ? { kind, run: list[0] } : null;
+  }
+  const list = await api.get<ExportExecution[]>(`/api/executions/by-profile/${id}?limit=1`).catch(() => []);
   return list?.[0] ? { kind, run: list[0] } : null;
 }
 
 const rows = (n: number | null | undefined, word = 'rows') => `${formatNumber(n ?? 0)} ${word}`;
 
-function exportStat(type: string, e: any): StepStat | null {
+function exportStat(type: string, e: ExportExecution): StepStat | null {
   switch (type) {
     case 'preprocess':
       return e.preProcessStatus ? { text: e.preProcessStatus, ms: e.preProcessTimeMs, status: statusKind(e.preProcessStatus) } : null;
@@ -59,7 +59,7 @@ function exportStat(type: string, e: any): StepStat | null {
   }
 }
 
-function importStat(type: string, e: any): StepStat | null {
+function importStat(type: string, e: ImportExecution): StepStat | null {
   let phases: Record<string, number> = {};
   try {
     phases = e.phaseTimingsJson ? JSON.parse(e.phaseTimingsJson) : {};

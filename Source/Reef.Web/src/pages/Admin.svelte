@@ -6,19 +6,18 @@
   import EmailTemplatesTab from '../components/admin/EmailTemplatesTab.svelte';
   import InterpretersTab from '../components/admin/InterpretersTab.svelte';
   import LogsTab from '../components/admin/LogsTab.svelte';
-  import MetricsTab from '../components/admin/MetricsTab.svelte';
   import NotificationsTab from '../components/admin/NotificationsTab.svelte';
   import OidcTab from '../components/admin/OidcTab.svelte';
   import SystemTab from '../components/admin/SystemTab.svelte';
   import UsersTab from '../components/admin/UsersTab.svelte';
   import { route, setQuery } from '../lib/router.svelte';
+  import type { Component } from 'svelte';
 
-  const GROUPS: { title: string; tabs: [string, string, any][] }[] = [
+  const GROUPS: { title: string; tabs: [string, string, Component][] }[] = [
     {
       title: 'Monitoring',
       tabs: [
         ['system', 'System', SystemTab],
-        ['metrics', 'Metrics', MetricsTab],
         ['logs', 'Logs', LogsTab],
         ['audit', 'Audit log', AuditTab],
       ],
@@ -49,9 +48,9 @@
 <Page crumbs={[{ label: 'Admin', href: '/admin' }, { label: tab[1] }]}>
   <div class="admin">
     <nav class="tablist" aria-label="Admin sections">
-      {#each GROUPS as group}
+      {#each GROUPS as group (group.title)}
         <h2>{group.title}</h2>
-        {#each group.tabs as [id, label]}
+        {#each group.tabs as [id, label] (id)}
           <button
             type="button"
             aria-current={tab[0] === id ? 'page' : undefined}

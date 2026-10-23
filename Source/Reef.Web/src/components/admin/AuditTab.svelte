@@ -1,6 +1,9 @@
 <script lang="ts">
   import Pager from '../Pager.svelte';
   import { api } from '../../lib/api';
+  import type { AuditEntry } from '../../models/AuditEntry';
+  import type { PagedResult } from '../../models/PagedResult';
+  import { queryString } from '../../lib/query';
   import { formatDateTime } from '../../lib/format';
   import { notify } from '../../lib/notify';
 
@@ -10,14 +13,12 @@
   let pageSize = $state(50);
   let total = $state(0);
   let pages = $state(1);
-  let logs = $state<any[]>([]);
+  let logs = $state<AuditEntry[]>([]);
 
   $effect(() => {
-    const q = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (entityType) q.set('entityType', entityType);
-    if (action) q.set('action', action);
+    const q = queryString({ page, pageSize, entityType, action });
     api
-      .get(`/api/admin/audit-logs?${q}`)
+      .get<PagedResult<AuditEntry>>(`/api/admin/audit-logs?${q}`)
       .then((r) => {
         logs = r?.data ?? [];
         total = r?.totalCount ?? 0;
@@ -26,7 +27,7 @@
       .catch((e) => notify.fail(e, 'audit'));
   });
 
-  const pick = (l: any, k: string) => l[k] ?? l[k.charAt(0).toLowerCase() + k.slice(1)];
+  const pick = (l: AuditEntry, k: string) => l[k] ?? l[k.charAt(0).toLowerCase() + k.slice(1)];
 </script>
 
 <div class="toolbar">
@@ -50,7 +51,7 @@
       page = 1;
     }}
   >
-    <option value="">All actions</option>{#each ['Created', 'Updated', 'Deleted', 'Executed'] as a}<option value={a}>{a}</option>{/each}
+    <option value="">All actions</option>{#each ['Created', 'Updated', 'Deleted', 'Executed'] as a (a)}<option value={a}>{a}</option>{/each}
   </select>
 </div>
 <div class="table-wrap">

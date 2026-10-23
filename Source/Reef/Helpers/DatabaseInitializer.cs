@@ -1069,7 +1069,7 @@ public class DatabaseInitializer
             const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
             var username = $"admin-{System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet, 8)}@reef.local";
             var password = System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet + "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 16);
-            var passwordHasher = new Reef.Core.Security.PasswordHasher();
+            var passwordHasher = new Reef.Core.Security.UserPasswordHasher(Reef.Core.Security.EncryptionKeyLoader.Key);
 
             await connection.ExecuteAsync(insertUserSql, new
             {

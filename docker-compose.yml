@@ -11,9 +11,9 @@ services:
       - reef_db:/app/data
       - ./exports:/app/exports:z
     environment:
-      - REEF_ENCRYPTION_KEY=YourKeyHere
-      - Reef__DatabasePath=/app/data/Reef.db
-      - Reef__AllowedOrigins=http://localhost:${REEF_PORT:-8085},http://localhost:3000
+      - ENCRYPTION_KEY=YourKeyHere
+      - DATABASE_PATH=/app/data/Reef.db
+      #- KNOWN_NETWORKS=172.16.0.0/12
 
 volumes:
   reef_core:

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { api } from '../../lib/api';
+  import type { ConfirmationString } from '../../models/ConfirmationString';
+  import type { MessageResult } from '../../models/MessageResult';
   import { confirm } from '../../lib/confirm.svelte';
   import { notify } from '../../lib/notify';
   import { navigate } from '../../lib/router.svelte';
@@ -20,7 +22,7 @@
     )
       return;
     try {
-      const r = await api.post(`/api/admin/danger/clear-old-${kind}`, { retentionDays: Number(days) });
+      const r = await api.post<MessageResult>(`/api/admin/danger/clear-old-${kind}`, { retentionDays: Number(days) });
       notify.success(r?.message ?? 'Records deleted');
     } catch (e) {
       notify.fail(e);
@@ -29,13 +31,13 @@
 
   async function typed(kind: 'clear-all-executions' | 'reset-database') {
     try {
-      const { confirmationString } = await api.get('/api/admin/danger/confirmation-string');
+      const { confirmationString } = await api.get<ConfirmationString>('/api/admin/danger/confirmation-string');
       const reset = kind === 'reset-database';
       if (
         !(await confirm({
           title: reset ? 'Reset the database?' : 'Delete all executions?',
           message: reset
-            ? 'All profiles, connections, destinations, jobs, users and history are deleted. Reef signs everyone out.'
+            ? 'All profiles, connections, destinations, jobs, users and history are deleted.'
             : 'The full execution history is deleted.',
           confirm: reset ? 'Reset database' : 'Delete all executions',
           danger: true,
@@ -43,7 +45,7 @@
         }))
       )
         return;
-      const r = await api.post(`/api/admin/danger/${kind}`, { confirmationString });
+      const r = await api.post<MessageResult>(`/api/admin/danger/${kind}`, { confirmationString });
       notify.success(r?.message ?? (reset ? 'Database reset' : 'Executions deleted'));
       if (reset)
         setTimeout(() => {

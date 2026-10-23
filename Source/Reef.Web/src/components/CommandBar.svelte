@@ -1,11 +1,14 @@
 <script lang="ts">
-  import { LogOut, Monitor, Moon, Play, Plus, SlidersHorizontal, Sun, User, Workflow } from '@lucide/svelte';
+  import type { LucideIcon } from '@lucide/svelte';
+  import { LogOut, Moon, Play, Plus, SlidersHorizontal, Sun, User, Workflow } from '@lucide/svelte';
   import { commandBar } from '../lib/command.svelte';
   import { navItems } from '../lib/nav';
   import { navigate } from '../lib/router.svelte';
   import { isAdmin } from '../lib/session.svelte';
   import { setTheme } from '../lib/theme.svelte';
   import { api } from '../lib/api';
+  import type { ExportProfile } from '../models/ExportProfile';
+  import type { ImportProfile } from '../models/ImportProfile';
   import { notify } from '../lib/notify';
   import { runProfile } from '../lib/profiles';
 
@@ -13,7 +16,7 @@
     id: string;
     label: string;
     group: string;
-    icon: any;
+    icon: LucideIcon;
     run: () => void | Promise<void>;
   }
 
@@ -24,8 +27,8 @@
 
   async function loadProfiles() {
     const [exports, imports] = await Promise.all([
-      api.get<any[]>('/api/profiles').catch(() => []),
-      api.get<any[]>('/api/profiles?type=import').catch(() => []),
+      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
+      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
     ]);
     profiles = [
       ...(exports ?? []).map((p) => ({ kind: 'export' as const, id: p.id, name: p.name })),
@@ -53,7 +56,6 @@
       icon: Play,
       run: () => runProfile(p.kind, p.id, p.name).catch((e) => notify.fail(e)),
     })),
-    { id: 'theme-system', label: 'Use system theme', group: 'Theme', icon: Monitor, run: () => setTheme('system') },
     { id: 'theme-light', label: 'Use light theme', group: 'Theme', icon: Sun, run: () => setTheme('light') },
     { id: 'theme-dark', label: 'Use dark theme', group: 'Theme', icon: Moon, run: () => setTheme('dark') },
     { id: 'sign-out', label: 'Sign out', group: 'Account', icon: LogOut, run: () => navigate('/logoff') },
@@ -76,11 +78,6 @@
     } else if (!commandBar.open && dialog.open) {
       dialog.close();
     }
-  });
-
-  $effect(() => {
-    query;
-    index = 0;
   });
 
   function execute(command: Command | undefined) {
@@ -130,6 +127,7 @@
     aria-controls="command-results"
     aria-activedescendant={results[index] ? `command-${index}` : undefined}
     bind:value={query}
+    oninput={() => (index = 0)}
     {onkeydown}
   />
   <ul id="command-results" role="listbox">

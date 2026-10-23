@@ -10,7 +10,7 @@ namespace Reef.Helpers;
 /// </summary>
 public static class AccountsCli
 {
-    private static readonly PasswordHasher Hasher = new();
+    private static readonly UserPasswordHasher Hasher = new(EncryptionKeyLoader.Key);
 
     /// <summary>
     /// What to type to run this build, which differs between a published apphost and `dotnet Reef.dll`
@@ -113,6 +113,11 @@ public static class AccountsCli
         if (ValidatePassword(password) is { } problem)
         {
             Console.Error.WriteLine(problem);
+            return 1;
+        }
+        if (Hasher.VerifyPassword(password, account.PasswordHash))
+        {
+            Console.Error.WriteLine("New password must be different from the current password.");
             return 1;
         }
 

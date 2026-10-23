@@ -3,7 +3,7 @@
   import { tooltip } from '../lib/tooltip';
   import CodeEditor from './CodeEditor.svelte';
   import { defaultsFor, getPath, setPath, textOf } from './config';
-  import type { CatalogField, FieldOption, Options } from './types';
+  import type { CatalogField, Config, FieldOption, Options } from './types';
 
   let {
     field,
@@ -13,7 +13,7 @@
     onchange,
   }: {
     field: CatalogField;
-    config: Record<string, any>;
+    config: Config;
     options: Options;
     error?: string;
     onchange: (structural: boolean) => void;
@@ -39,11 +39,11 @@
     return typeof v === 'string' ? v : JSON.stringify(v, null, 2);
   }
 
-  function rows(): Record<string, any>[] {
+  function rows(): Config[] {
     return Array.isArray(value) ? value : [];
   }
 
-  function updateRows(next: Record<string, any>[], structural = false) {
+  function updateRows(next: Config[], structural = false) {
     commit(next.length ? next : undefined, structural);
   }
 </script>
@@ -77,7 +77,7 @@
         }}
       >
         {#if !hasEmpty}<option value="">{emptyLabel()}</option>{/if}
-        {#each choices as option}<option value={textOf(option.value)}>{option.label}</option>{/each}
+        {#each choices as option (option.value)}<option value={textOf(option.value)}>{option.label}</option>{/each}
       </select>
     {:else if field.kind === 'code'}
       <CodeEditor
@@ -144,15 +144,16 @@
         <table>
           <thead>
             <tr>
-              {#each field.columns ?? [] as column}<th class:bool={column.kind === 'bool'} use:tooltip={column.tooltip}>{column.label}</th
+              {#each field.columns ?? [] as column (column.key)}<th class:bool={column.kind === 'bool'} use:tooltip={column.tooltip}
+                  >{column.label}</th
                 >{/each}
               <th class="act"><span class="sr">Actions</span></th>
             </tr>
           </thead>
           <tbody>
-            {#each rows() as row, index}
+            {#each rows() as row, index (index)}
               <tr>
-                {#each field.columns ?? [] as column}
+                {#each field.columns ?? [] as column (column.key)}
                   <td class:bool={column.kind === 'bool'}>
                     {#if column.kind === 'bool'}
                       <input
@@ -177,7 +178,7 @@
                         }}
                       >
                         {#if !colChoices.some((o) => o.value === '')}<option value="">Choose</option>{/if}
-                        {#each colChoices as option}<option value={textOf(option.value)}>{option.label}</option>{/each}
+                        {#each colChoices as option (option.value)}<option value={textOf(option.value)}>{option.label}</option>{/each}
                       </select>
                     {:else}
                       <input

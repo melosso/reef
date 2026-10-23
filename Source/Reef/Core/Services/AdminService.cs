@@ -19,13 +19,15 @@ public class AdminService
 {
     private readonly string _connectionString;
     private readonly PasswordHasher _passwordHasher;
+    private readonly UserPasswordHasher _userPasswordHasher;
     private readonly EncryptionService _encryptionService;
     private readonly NotificationService _notificationService;
 
-    public AdminService(DatabaseConfig config, PasswordHasher passwordHasher, EncryptionService encryptionService, NotificationService notificationService)
+    public AdminService(DatabaseConfig config, PasswordHasher passwordHasher, UserPasswordHasher userPasswordHasher, EncryptionService encryptionService, NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
         _passwordHasher = passwordHasher;
+        _userPasswordHasher = userPasswordHasher;
         _encryptionService = encryptionService;
         _notificationService = notificationService;
     }
@@ -278,7 +280,7 @@ public class AdminService
             }
 
             // Hash password
-            var passwordHash = _passwordHasher.HashPassword(password);
+            var passwordHash = _userPasswordHasher.HashPassword(password);
 
             // Insert user with normalized (lowercase) username
             var userId = await conn.QuerySingleAsync<int>(
@@ -353,13 +355,13 @@ public class AdminService
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
                 // Prevent reusing the same password
-                if (_passwordHasher.VerifyPassword(newPassword, user.PasswordHash))
+                if (_userPasswordHasher.VerifyPassword(newPassword, user.PasswordHash))
                 {
                     throw new InvalidOperationException("New password must be different from the current password");
                 }
 
                 // Update with new password
-                var passwordHash = _passwordHasher.HashPassword(newPassword);
+                var passwordHash = _userPasswordHasher.HashPassword(newPassword);
                 rowsAffected = await conn.ExecuteAsync(
                     @"UPDATE Users
                       SET Role = @Role, IsActive = @IsActive, DisplayName = @DisplayName, PasswordHash = @PasswordHash

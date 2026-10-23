@@ -1,3 +1,5 @@
+import type { DestinationConfig } from '../models/DestinationConfig';
+
 export interface DestField {
   key: string;
   label: string;
@@ -9,7 +11,7 @@ export interface DestField {
   hint?: string;
   advanced?: boolean;
   ui?: boolean;
-  when?: (c: Record<string, any>) => boolean;
+  when?: (c: DestinationConfig) => boolean;
 }
 
 export const DESTINATION_TYPES: [string, string][] = [
@@ -43,11 +45,11 @@ const REGIONS: [string, string][] = [
   ['ca-central-1', 'Canada, Central'],
 ];
 
-const smtp = (c: Record<string, any>) => (c.EmailProvider || 'Smtp') === 'Smtp';
+const smtp = (c: DestinationConfig) => (c.EmailProvider || 'Smtp') === 'Smtp';
 const httpAuth =
   (...types: string[]) =>
-  (c: Record<string, any>) =>
-    types.includes(c.AuthType ?? '');
+  (c: DestinationConfig) =>
+    types.includes(String(c.AuthType ?? ''));
 
 export const DESTINATION_FIELDS: Record<string, DestField[]> = {
   Local: [
@@ -271,27 +273,27 @@ export const DESTINATION_FIELDS: Record<string, DestField[]> = {
   ],
 };
 
-export function defaultsFor(type: string): Record<string, any> {
-  const config: Record<string, any> = {};
+export function defaultsFor(type: string): DestinationConfig {
+  const config: DestinationConfig = {};
   for (const f of DESTINATION_FIELDS[type] ?? []) if (f.default !== undefined) config[f.key] = f.default;
   return config;
 }
 
-export function fromStored(type: string, json: string | null | undefined): Record<string, any> {
-  let stored: Record<string, any> = {};
+export function fromStored(type: string, json: string | null | undefined): DestinationConfig {
+  let stored: Record<string, unknown> = {};
   try {
     stored = json ? JSON.parse(json) : {};
   } catch {}
-  const config = { ...defaultsFor(type), ...stored };
+  const config = { ...defaultsFor(type), ...stored } as DestinationConfig;
   if (type === 'Email' && !stored.EmailProvider)
     config.EmailProvider = stored.ResendApiKey ? 'Resend' : stored.SendGridApiKey ? 'SendGrid' : 'Smtp';
   if (type === 'Sftp') config._auth = stored.PrivateKey ? 'privatekey' : 'password';
-  if (config.Headers && typeof config.Headers === 'object') config.Headers = JSON.stringify(config.Headers, null, 2);
+  if (stored.Headers && typeof stored.Headers === 'object') config.Headers = JSON.stringify(stored.Headers, null, 2);
   return config;
 }
 
-export function toStored(type: string, config: Record<string, any>): string {
-  const out: Record<string, any> = {};
+export function toStored(type: string, config: DestinationConfig): string {
+  const out: Record<string, unknown> = {};
   for (const f of DESTINATION_FIELDS[type] ?? []) {
     if (f.ui || (f.when && !f.when(config))) continue;
     const value = config[f.key];
@@ -301,7 +303,7 @@ export function toStored(type: string, config: Record<string, any>): string {
       if (f.secret && config[`__secret_${f.key}`]) out[f.key] = '[SECRET]';
     } else if (f.key === 'Headers') {
       try {
-        out[f.key] = JSON.parse(value);
+        out[f.key] = JSON.parse(String(value));
       } catch {
         out[f.key] = value;
       }
@@ -311,7 +313,7 @@ export function toStored(type: string, config: Record<string, any>): string {
   return JSON.stringify(out);
 }
 
-export function maskSecrets(type: string, config: Record<string, any>): Record<string, any> {
+export function maskSecrets(type: string, config: DestinationConfig): DestinationConfig {
   for (const f of DESTINATION_FIELDS[type] ?? []) {
     if (f.secret && config[f.key] === '[SECRET]') {
       config[f.key] = '';

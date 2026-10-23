@@ -58,7 +58,9 @@ export function tooltip(node: HTMLElement, param: Param) {
   return {
     update(next: Param) {
       current = normalize(next);
-      if (owner === node) current.text ? show() : hide();
+      if (owner !== node) return;
+      if (current.text) show();
+      else hide();
     },
     destroy() {
       hide();
