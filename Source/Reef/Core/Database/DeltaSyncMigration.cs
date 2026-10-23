@@ -51,7 +51,7 @@ public class DeltaSyncMigration
             await AddProfileExecutionColumnsAsync(conn);
             await CreateIndexesAsync(conn);
 
-            Log.Information("✓ Delta Sync migrations completed successfully");
+            Log.Debug("Delta Sync migrations completed");
         }
         catch (Exception ex)
         {
@@ -73,7 +73,7 @@ public class DeltaSyncMigration
 
         if (tableExists > 0)
         {
-            Log.Debug("✓ DeltaSyncState table already exists");
+            Log.Debug("DeltaSyncState table already exists");
             return;
         }
 
@@ -94,7 +94,7 @@ public class DeltaSyncMigration
             )
         ");
 
-        Log.Debug("✓ DeltaSyncState table created");
+        Log.Debug("DeltaSyncState table created");
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public class DeltaSyncMigration
         await AddColumnIfNotExistsAsync(conn, "Profiles", "DeltaSyncRemoveNonPrintable", "INTEGER NOT NULL DEFAULT 0");
         await AddColumnIfNotExistsAsync(conn, "Profiles", "DeltaSyncReefIdNormalization", "TEXT NULL DEFAULT 'Trim'");
 
-        Log.Debug("✓ Profiles table columns added");
+        Log.Debug("Profiles table columns added");
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public class DeltaSyncMigration
         await AddColumnIfNotExistsAsync(conn, "ProfileExecution", "DeltaSyncUnchangedRows", "INTEGER NULL");
         await AddColumnIfNotExistsAsync(conn, "ProfileExecution", "DeltaSyncTotalHashedRows", "INTEGER NULL");
 
-        Log.Debug("✓ ProfileExecution table columns added");
+        Log.Debug("ProfileExecution table columns added");
     }
 
     /// <summary>
@@ -157,7 +157,7 @@ public class DeltaSyncMigration
         await CreateIndexIfNotExistsAsync(conn, "idx_deltasync_deleted",
             "DeltaSyncState", "(ProfileId, IsDeleted)");
 
-        Log.Debug("✓ Indexes created");
+        Log.Debug("Indexes created");
     }
 
     /// <summary>

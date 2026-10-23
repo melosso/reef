@@ -1,0 +1,6 @@
+**/node_modules
+**/bin
+**/obj
+Source/Reef/wwwroot/app
+.claude
+TestResults

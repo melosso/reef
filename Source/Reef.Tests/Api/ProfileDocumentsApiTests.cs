@@ -7,7 +7,8 @@ using Xunit;
 
 namespace Reef.Tests.Api;
 
-public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<ReefApiFactory>
+[Collection(ApiCollection.Name)]
+public class ProfileDocumentsApiTests(ReefApiFactory factory)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 

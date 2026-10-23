@@ -300,21 +300,24 @@ public static class AuthEndpoints
             await connection.OpenAsync();
 
             var normalizedUsername = request.Username.ToLowerInvariant();
-            const string sql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
-            var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new { Username = normalizedUsername });
+            const string sql = "SELECT * FROM Users WHERE (LOWER(Username) = @Username OR LOWER(Email) = @Username) AND IsActive = 1 AND IsDeleted = 0";
+            var candidates = (await connection.QueryAsync<User>(sql, new { Username = normalizedUsername })).ToList();
+            // A shared email address never picks an account; the username stays unambiguous
+            var user = candidates.FirstOrDefault(u => u.Username.Equals(normalizedUsername, StringComparison.OrdinalIgnoreCase))
+                ?? (candidates.Count == 1 ? candidates[0] : null);
 
             if (user == null)
             {
                 RecordFailedLoginAttempt(clientIp);
                 Log.Warning("Login attempt failed for user {Username}. Reason: user not found", request.Username);
-                return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new { message = "Email or password is incorrect." }, statusCode: 401);
             }
 
             if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
             {
                 RecordFailedLoginAttempt(clientIp);
                 Log.Warning("Login attempt failed for user {Username}. Reason: invalid password", request.Username);
-                return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new { message = "Email or password is incorrect." }, statusCode: 401);
             }
 
             // ── MFA gate ──────────────────────────────────────────────────────────

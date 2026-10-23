@@ -173,9 +173,8 @@ public class EncryptionService
         }
 
         // Priority 4: Fallback to hardcoded key (with warning)
-        Log.Warning("! No REEF_ENCRYPTION_KEY found in environment or .env file. Using fallback key.");
-        Log.Warning("! For production, set REEF_ENCRYPTION_KEY environment variable or create .env file.");
-        Log.Information("");
+        Log.Warning("REEF_ENCRYPTION_KEY is not set in the environment or .env file. The fallback key is in use.");
+        Log.Warning("Set REEF_ENCRYPTION_KEY for production use.");
 
         return FallbackKey;
     }
@@ -239,7 +238,7 @@ public class EncryptionService
 
             // Update current public key
             _currentPublicKeyPem = publicKeyPem;
-            Log.Information("! Generated new RSA keypair for encryption");
+            Log.Information("Generated a new RSA keypair for encryption");
         }
         else
         {

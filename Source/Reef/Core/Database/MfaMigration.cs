@@ -21,7 +21,7 @@ public class MfaMigration(string connectionString)
         await AddColumnIfMissingAsync(conn, "Users", "PendingTotpSecret", "TEXT NULL");
         await AddColumnIfMissingAsync(conn, "Users", "BackupCodes", "TEXT NULL");
 
-        Log.Debug("✓ MFA migration completed");
+        Log.Debug("MFA migration completed");
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection conn, string table, string column, string definition)

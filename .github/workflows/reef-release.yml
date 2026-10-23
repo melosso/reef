@@ -41,6 +41,13 @@ jobs:
           dotnet-version: ${{ env.DOTNET_VERSION }}
           dotnet-quality: 'preview'
 
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Source/Reef.Web/package-lock.json
+
       - name: Install dependencies
         run: |
           dotnet tool install -g dotnet-project-licenses

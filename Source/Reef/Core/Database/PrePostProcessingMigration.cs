@@ -40,7 +40,7 @@ public class PrePostProcessingMigration
             await AddProfileExecutionColumnsAsync(conn);
             await AddIndexesAsync(conn);
 
-            Log.Debug("✓ PrePostProcessing migrations completed");
+            Log.Debug("PrePostProcessing migrations completed");
         }
         catch (Exception ex)
         {
@@ -67,45 +67,45 @@ public class PrePostProcessingMigration
         if (!columnsList.Contains("PreProcessType"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PreProcessType TEXT NULL");
-            Log.Debug("✓ Added PreProcessType column");
+            Log.Debug("Added PreProcessType column");
         }
 
         // Add PreProcessConfig column
         if (!columnsList.Contains("PreProcessConfig"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PreProcessConfig TEXT NULL");
-            Log.Debug("✓ Added PreProcessConfig column");
+            Log.Debug("Added PreProcessConfig column");
         }
 
         // Add PreProcessRollbackOnFailure column (default true = 1)
         if (!columnsList.Contains("PreProcessRollbackOnFailure"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PreProcessRollbackOnFailure INTEGER DEFAULT 1");
-            Log.Debug("✓ Added PreProcessRollbackOnFailure column");
+            Log.Debug("Added PreProcessRollbackOnFailure column");
         }
 
         // Add PostProcessSkipOnFailure column (default true = 1)
         if (!columnsList.Contains("PostProcessSkipOnFailure"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PostProcessSkipOnFailure INTEGER DEFAULT 1");
-            Log.Debug("✓ Added PostProcessSkipOnFailure column");
+            Log.Debug("Added PostProcessSkipOnFailure column");
         }
 
         // Add PostProcessRollbackOnFailure column (default false = 0)
         if (!columnsList.Contains("PostProcessRollbackOnFailure"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PostProcessRollbackOnFailure INTEGER DEFAULT 0");
-            Log.Debug("✓ Added PostProcessRollbackOnFailure column");
+            Log.Debug("Added PostProcessRollbackOnFailure column");
         }
 
         // Add PostProcessOnZeroRows column (default false = 0)
         if (!columnsList.Contains("PostProcessOnZeroRows"))
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN PostProcessOnZeroRows INTEGER DEFAULT 0");
-            Log.Debug("✓ Added PostProcessOnZeroRows column");
+            Log.Debug("Added PostProcessOnZeroRows column");
         }
 
-        Log.Debug("✓ Profile columns migration completed");
+        Log.Debug("Profile columns migration completed");
     }
 
     /// <summary>
@@ -132,65 +132,65 @@ public class PrePostProcessingMigration
         if (!columnsList.Contains("PreProcessStartedAt"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PreProcessStartedAt TEXT NULL");
-            Log.Debug("✓ Added PreProcessStartedAt column");
+            Log.Debug("Added PreProcessStartedAt column");
         }
 
         if (!columnsList.Contains("PreProcessCompletedAt"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PreProcessCompletedAt TEXT NULL");
-            Log.Debug("✓ Added PreProcessCompletedAt column");
+            Log.Debug("Added PreProcessCompletedAt column");
         }
 
         if (!columnsList.Contains("PreProcessStatus"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PreProcessStatus TEXT NULL");
-            Log.Debug("✓ Added PreProcessStatus column");
+            Log.Debug("Added PreProcessStatus column");
         }
 
         if (!columnsList.Contains("PreProcessError"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PreProcessError TEXT NULL");
-            Log.Debug("✓ Added PreProcessError column");
+            Log.Debug("Added PreProcessError column");
         }
 
         if (!columnsList.Contains("PreProcessTimeMs"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PreProcessTimeMs INTEGER NULL");
-            Log.Debug("✓ Added PreProcessTimeMs column");
+            Log.Debug("Added PreProcessTimeMs column");
         }
 
         // Post-Processing tracking columns
         if (!columnsList.Contains("PostProcessStartedAt"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessStartedAt TEXT NULL");
-            Log.Debug("✓ Added PostProcessStartedAt column");
+            Log.Debug("Added PostProcessStartedAt column");
         }
 
         if (!columnsList.Contains("PostProcessCompletedAt"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessCompletedAt TEXT NULL");
-            Log.Debug("✓ Added PostProcessCompletedAt column");
+            Log.Debug("Added PostProcessCompletedAt column");
         }
 
         if (!columnsList.Contains("PostProcessStatus"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessStatus TEXT NULL");
-            Log.Debug("✓ Added PostProcessStatus column");
+            Log.Debug("Added PostProcessStatus column");
         }
 
         if (!columnsList.Contains("PostProcessError"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessError TEXT NULL");
-            Log.Debug("✓ Added PostProcessError column");
+            Log.Debug("Added PostProcessError column");
         }
 
         if (!columnsList.Contains("PostProcessTimeMs"))
         {
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessTimeMs INTEGER NULL");
-            Log.Debug("✓ Added PostProcessTimeMs column");
+            Log.Debug("Added PostProcessTimeMs column");
         }
 
-        Log.Debug("✓ ProfileExecutions columns migration completed");
+        Log.Debug("ProfileExecutions columns migration completed");
     }
 
     /// <summary>
@@ -228,7 +228,7 @@ public class PrePostProcessingMigration
             }
         }
 
-        Log.Debug("✓ Indexes created successfully");
+        Log.Debug("Indexes created successfully");
     }
 
     /// <summary>

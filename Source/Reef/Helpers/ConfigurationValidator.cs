@@ -155,7 +155,7 @@ public static class ConfigurationValidator
             throw new InvalidOperationException(errorMessage);
         }
 
-        Log.Debug("✓ Configuration validation passed");
+        Log.Debug("Configuration validation passed");
     }
 
     /// <summary>

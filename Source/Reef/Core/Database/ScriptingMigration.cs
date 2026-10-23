@@ -30,7 +30,7 @@ public class ScriptingMigration
 
             await AddProfileExecutionColumnsAsync(conn);
 
-            Log.Debug("✓ Scripting migrations completed");
+            Log.Debug("Scripting migrations completed");
         }
         catch (Exception ex)
         {
@@ -66,7 +66,7 @@ public class ScriptingMigration
         if (!existingColumns.Contains("PostProcessExitCode"))
             await conn.ExecuteAsync("ALTER TABLE ProfileExecutions ADD COLUMN PostProcessExitCode INTEGER NULL");
 
-        Log.Debug("✓ ProfileExecutions scripting columns migration completed");
+        Log.Debug("ProfileExecutions scripting columns migration completed");
     }
 
     public async Task<object> GetStatsAsync()

@@ -765,7 +765,7 @@ public class DatabaseInitializer
                 CREATE INDEX IF NOT EXISTS idx_deltasync_deleted ON DeltaSyncState(ProfileId, IsDeleted);
             ";
             await connection.ExecuteAsync(sql);
-            Log.Debug("✓ DeltaSyncState table created");
+            Log.Debug("DeltaSyncState table created");
         }
     }
 
@@ -1082,9 +1082,8 @@ public class DatabaseInitializer
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
-            Log.Warning("! Password change will be required on first login");
-            Log.Information("");
+            Log.Warning("Created the default admin user (username: admin@reef.local, password: admin123)");
+            Log.Warning("The default admin user must change the password at first sign-in");
         }
     }
 
@@ -1579,7 +1578,7 @@ public class DatabaseInitializer
             await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_OldUsername ON UsernameHistory(OldUsername)");
             await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_NewUsername ON UsernameHistory(NewUsername)");
 
-            Log.Debug("✓ Created UsernameHistory table");
+            Log.Debug("Created UsernameHistory table");
         }
     }
 
@@ -1621,7 +1620,7 @@ public class DatabaseInitializer
                 AND typeof(CreatedBy) = 'text'
             ");
 
-            Log.Debug("✓ Migrated Connections.CreatedBy to User IDs");
+            Log.Debug("Migrated Connections.CreatedBy to User IDs");
         }
 
         // Check if CreatedBy in Profiles contains text data (needs migration)
@@ -1653,13 +1652,13 @@ public class DatabaseInitializer
                 AND typeof(CreatedBy) = 'text'
             ");
 
-            Log.Debug("✓ Migrated Profiles.CreatedBy to User IDs");
+            Log.Debug("Migrated Profiles.CreatedBy to User IDs");
         }
 
         // Note: AuditLog.PerformedBy remains as string (username) intentionally
         // Audit logs are historical records and should preserve the username used at the time
 
-        Log.Debug("✓ Migrated CreatedBy columns to User IDs");
+        Log.Debug("Migrated CreatedBy columns to User IDs");
     }
 
     /// <summary>
@@ -1721,7 +1720,7 @@ public class DatabaseInitializer
             ";
 
             await connection.ExecuteAsync(createTableSql);
-            Log.Debug("✓ Created PendingEmailApprovals table");
+            Log.Debug("Created PendingEmailApprovals table");
         }
 
         // Add indexes for performance (except Guid index which requires the column to exist first)
@@ -1766,7 +1765,7 @@ public class DatabaseInitializer
                 WHERE Guid IS NULL OR Guid = ''
             ";
             await connection.ExecuteAsync(populateGuids);
-            Log.Debug("✓ Migrated existing records to include GUIDs");
+            Log.Debug("Migrated existing records to include GUIDs");
         }
 
         // Create the Guid index (for both new and migrated tables)
@@ -1779,7 +1778,7 @@ public class DatabaseInitializer
             Log.Warning(ex, "Failed to create Guid index, continuing");
         }
 
-        Log.Debug("✓ Email approval migrations completed");
+        Log.Debug("Email approval migrations completed");
     }
 
     /// <summary>
@@ -3059,7 +3058,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportProfiles table ready");
+        Log.Debug("ImportProfiles table ready");
     }
 
     /// <summary>
@@ -3297,7 +3296,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impexec_status   ON ImportProfileExecutions(Status);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportProfileExecutions table ready");
+        Log.Debug("ImportProfileExecutions table ready");
     }
 
     private static async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
@@ -3321,7 +3320,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_imperrors_phase     ON ImportExecutionErrors(ExecutionId, Phase);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportExecutionErrors table ready");
+        Log.Debug("ImportExecutionErrors table ready");
     }
 
     private static async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
@@ -3347,7 +3346,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impdelta_deleted      ON ImportDeltaSyncState(ImportProfileId, IsDeleted);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportDeltaSyncState table ready");
+        Log.Debug("ImportDeltaSyncState table ready");
     }
 
     private static async Task CreateImportOutputTargetsTableAsync(SqliteConnection connection)
@@ -3371,7 +3370,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impoutputs_profile ON ImportOutputTargets(ImportProfileId);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportOutputTargets table ready");
+        Log.Debug("ImportOutputTargets table ready");
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Reef.Core.Services;
 using Reef.Core.Destinations;
@@ -12,7 +13,6 @@ using Reef.Core.Middleware;
 using Serilog;
 using Serilog.Sinks.EventLog;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Security.Claims;
 using System.Runtime.InteropServices;
 using Dapper;
@@ -24,12 +24,6 @@ namespace Reef;
 /// </summary>
 public partial class Program
 {
-    [GeneratedRegex(@"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->")]
-    private static partial Regex TitleRegex();
-
-    [GeneratedRegex(@"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline)]
-    private static partial Regex ScriptsRegex();
-
     public static async Task Main(string[] args)
     {
         // Register Dapper type handlers for TimeSpan (must be done before any database operations)
@@ -87,14 +81,7 @@ public partial class Program
 
         Log.Logger = loggerConfig.CreateLogger();
 
-        Log.Information("");
-        Log.Information("██████╗ ███████╗███████╗███████╗");
-        Log.Information("██╔══██╗██╔════╝██╔════╝██╔════╝");
-        Log.Information("██████╔╝█████╗  █████╗  █████╗  ");
-        Log.Information("██╔══██╗██╔══╝  ██╔══╝  ██╔══╝  ");
-        Log.Information("██║  ██║███████╗███████╗██║     ");
-        Log.Information("╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ");
-        Log.Information("");
+        StartupLogHelper.LogApplicationBanner();
 
         // Initialize encryption service
         var encryptionService = new EncryptionService(AppContext.BaseDirectory);
@@ -128,7 +115,7 @@ public partial class Program
             // Fail fast with a clean message if the port is already taken
             if (IsPortInUse(port))
             {
-                Log.Fatal("Port {Port} is already in use. Stop whatever is using it and try again.", port);
+                Log.Fatal("Port {Port} is already in use. Stop the existing process, or set Reef__ListenPort to use another port.", port);
                 await Log.CloseAndFlushAsync();
                 Environment.Exit(1);
             }
@@ -263,51 +250,21 @@ public partial class Program
             // Map API endpoints
             MapEndpoints(app);
 
-            var accessNote = localhostOnly ? "(localhost only)" : "(reachable from other devices)";
-            Log.Information("Reef is spinning up on http://localhost:{Port} {AccessNote}", port, accessNote);
-            Log.Information("Endpoints online: /api and /health");
-            Log.Information("");
+            StartupLogHelper.LogHostingSummary(app, port, localhostOnly);
 
-            // Register shutdown handlers
-            var lifetime = app.Lifetime;
-
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                Log.Information("✓ Application started successfully");
-                Log.Information("");
-            });
-
-            lifetime.ApplicationStopping.Register(() =>
+            app.Lifetime.ApplicationStopping.Register(() =>
             {
                 Log.Information("");
-                Log.Information("Exit: Application is stopping...");
-            });
-
-            lifetime.ApplicationStopped.Register(() =>
-            {
-                Log.Information("Application stopped");
+                Log.Information("Application shutting down...");
             });
 
             await app.RunAsync();
-
-            Log.Information("Exit: Application shutdown complete");
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Application terminated unexpectedly");
-
-            // Show error if Serilog fails
-            Console.WriteLine("");
-            Console.WriteLine("Fatal error during application startup:");
-            Console.WriteLine(ex.ToString());
-
-            // If running as console, wait for user input
-            if (!OperatingSystem.IsWindows() || Environment.UserInteractive)
-            {
-                Console.WriteLine("\nPress any key to exit...");
-                Console.ReadKey();
-            }
-
+            Log.Fatal("");
+            Log.Fatal(ex, "Application failed to start.");
+            Log.CloseAndFlush();
             Environment.Exit(1);
         }
         finally
@@ -337,6 +294,9 @@ public partial class Program
         EncryptionService encryptionService,
         string connectionString)
     {
+        // Keys live next to the encryption keys so tokens survive restarts and container rebuilds
+        services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, ".core", "keys")));
+
         // Singleton services (one instance for the app lifetime)
         services.AddSingleton(encryptionService);
         services.AddSingleton<DatabaseInitializer>(sp =>
@@ -463,6 +423,21 @@ public partial class Program
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
+            // OIDC sign-in sets only the HttpOnly cookie, refresh exchanges it for a bearer token
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    if (string.IsNullOrEmpty(context.Token)
+                        && !context.Request.Headers.ContainsKey("Authorization")
+                        && context.Request.Path.Equals("/api/auth/refresh", StringComparison.OrdinalIgnoreCase)
+                        && context.Request.Cookies.TryGetValue("reef_token", out var cookie))
+                    {
+                        context.Token = cookie;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
         services.AddAuthorization();
@@ -544,157 +519,12 @@ public partial class Program
         app.UseCors();
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Path.StartsWithSegments("/app/assets")
                 ? "public, max-age=31536000, immutable"
                 : "no-cache"
         });
-        var assetVersioner = new AssetVersioner(app.Environment.WebRootFileProvider);
-
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
         app.UseMiddleware<AuthenticationMiddleware>();
-
-        // Serve HTML views from Views folder (try both casings for Linux compatibility)
-        var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-        if (!Directory.Exists(viewsFolder))
-            viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
-        if (!Directory.Exists(viewsFolder))
-        {
-            var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-            var projectRoot = parentDir?.Parent?.Parent?.FullName;
-            if (projectRoot != null)
-            {
-                viewsFolder = Path.Combine(projectRoot, "Views");
-                if (!Directory.Exists(viewsFolder))
-                    viewsFolder = Path.Combine(projectRoot, "views");
-            }
-        }
-
-        if (Directory.Exists(viewsFolder))
-        {
-            Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
-
-            // Pages served as static files (we won't rely on layout injection here)
-            var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "index.html", "logoff.html", "404.html", "otp.html"
-            };
-
-            // Authenticated pages that get the shared layout
-            var layoutPages = new[]
-            {
-                "dashboard.html",
-                "connections.html",
-                "destinations.html",
-                "templates.html",
-                "profiles.html",
-                "jobs.html",
-                "groups.html",
-                "executions.html",
-                "email-approvals.html",
-                "documentation.html",
-                "admin.html",
-                "account.html"
-            };
-
-            var navPages = new[] { "dashboard", "connections", "destinations", "templates",
-                                   "profiles", "jobs", "groups", "executions",
-                                   "email-approvals", "documentation", "admin", "account" };
-
-            var layoutPath = Path.Combine(viewsFolder, "_layout.html");
-            var layoutExists = File.Exists(layoutPath);
-
-            var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Map static pages (served as-is)
-            foreach (var fileName in staticPages)
-            {
-                var filePath = Path.Combine(viewsFolder, fileName);
-                if (File.Exists(filePath))
-                {
-                    var route = "/" + Path.GetFileNameWithoutExtension(fileName);
-                    if (mappedRoutes.Add(route))
-                    {
-                        app.MapGet(route, async context =>
-                        {
-                            Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
-                            context.Response.ContentType = "text/html";
-                            await context.Response.WriteAsync(assetVersioner.Apply(await File.ReadAllTextAsync(filePath)));
-                        });
-                    }
-                }
-            }
-
-            // Map authenticated pages (served via layout renderer)
-            foreach (var fileName in layoutPages)
-            {
-                var filePath = Path.Combine(viewsFolder, fileName);
-                if (!File.Exists(filePath)) continue;
-
-                var route = "/" + Path.GetFileNameWithoutExtension(fileName);
-                if (!mappedRoutes.Add(route)) continue;
-
-                var pageName = Path.GetFileNameWithoutExtension(fileName);
-
-                if (!layoutExists)
-                {
-                    // Fallback: serve raw if layout is missing
-                    app.MapGet(route, async context =>
-                    {
-                        Log.Debug("Serving HTML route (no layout): {Route} -> {File}", route, filePath);
-                        context.Response.ContentType = "text/html";
-                        await context.Response.SendFileAsync(filePath);
-                    });
-                }
-                else
-                {
-                    app.MapGet(route, async context =>
-                    {
-                        Log.Debug("Serving HTML route (layout): {Route} -> {File}", route, filePath);
-
-                        var layoutTemplate = await File.ReadAllTextAsync(layoutPath);
-                        var pageContent = await File.ReadAllTextAsync(filePath);
-                        var username = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
-                        var userInitial = username.Length > 0 ? username[0].ToString().ToUpper() : "?";
-                        var displayName = username.Length > 1
-                            ? char.ToUpper(username[0]) + username[1..]
-                            : username.ToUpper();
-
-                        var titleMatch = TitleRegex().Match(pageContent);
-                        var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
-
-                        var scriptsMatch = ScriptsRegex().Match(pageContent);
-                        var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
-
-                        var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
-                        var content = contentStart >= 0 ? pageContent[contentStart..] : pageContent;
-
-                        var html = layoutTemplate
-                            .Replace("{{PAGE_TITLE}}", pageTitle)
-                            .Replace("{{USERNAME}}", displayName)
-                            .Replace("{{USER_INITIAL}}", userInitial)
-                            .Replace("{{PAGE_SCRIPTS}}", extraScripts)
-                            .Replace("{{PAGE_CONTENT}}", content);
-
-                        foreach (var nav in navPages)
-                        {
-                            var activeClass = nav == pageName
-                                ? "bg-teal-500/10 text-teal-300"
-                                : "hover:bg-zinc-800/60 hover:text-zinc-200";
-                            html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
-                        }
-
-                        context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(assetVersioner.Apply(html));
-                    });
-                }
-            }
-
-            // Redirect root "/" to "/index"
-            if (mappedRoutes.Contains("/index"))
-            {
-                app.MapGet("/", () => Results.Redirect("/index"));
-            }
-        }
 
         app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
@@ -731,39 +561,19 @@ public partial class Program
         ImportProfilesEndpoints.Map(app);
         ProfileDocumentsEndpoints.Map(app);
 
-        // Fallback handler for unmapped routes (404)
+        var spaIndex = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"), "app", "index.html");
         app.MapFallback(async context =>
         {
-            var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-            if (!Directory.Exists(viewsFolder))
-                viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
-            if (!Directory.Exists(viewsFolder))
+            if (!HttpMethods.IsGet(context.Request.Method) || context.Request.Path.StartsWithSegments("/api") || !File.Exists(spaIndex))
             {
-                var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-                var projectRoot = parentDir?.Parent?.Parent?.FullName;
-                if (projectRoot != null)
-                {
-                    viewsFolder = Path.Combine(projectRoot, "Views");
-                    if (!Directory.Exists(viewsFolder))
-                        viewsFolder = Path.Combine(projectRoot, "views");
-                }
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
+                return;
             }
 
-            var notFoundPath = Path.Combine(viewsFolder, "404.html");
-            if (File.Exists(notFoundPath))
-            {
-                Log.Debug("Serving 404 page for unmapped route: {Route}", context.Request.Path);
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "text/html";
-                await context.Response.SendFileAsync(notFoundPath);
-            }
-            else
-            {
-                // Fallback JSON response if 404.html doesn't exist
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
-            }
+            context.Response.ContentType = "text/html";
+            context.Response.Headers.CacheControl = "no-cache";
+            await context.Response.SendFileAsync(spaIndex);
         });
 
         Log.Debug("Endpoints mapped");

@@ -16,7 +16,7 @@ public class OidcMigration(string connectionString)
 
         await AddColumnIfMissingAsync(conn, "Users", "OidcSubject", "TEXT NOT NULL DEFAULT ''");
 
-        Log.Debug("✓ OIDC migration completed");
+        Log.Debug("OIDC migration completed");
     }
 
     private static async Task AddColumnIfMissingAsync(SqliteConnection conn, string table, string column, string definition)

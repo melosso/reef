@@ -36,7 +36,7 @@ public class TransformationOptionsMigration
 
             await AddTransformationOptionsColumnAsync(conn);
 
-            Log.Debug("✓ TransformationOptions migration completed");
+            Log.Debug("TransformationOptions migration completed");
         }
         catch (Exception ex)
         {
@@ -60,11 +60,11 @@ public class TransformationOptionsMigration
         if (existingColumn == null)
         {
             await conn.ExecuteAsync("ALTER TABLE Profiles ADD COLUMN TransformationOptionsJson TEXT NULL");
-            Log.Information("✓ Added TransformationOptionsJson column to Profiles table");
+            Log.Debug("Added TransformationOptionsJson column to Profiles table");
         }
         else
         {
-            Log.Debug("✓ TransformationOptionsJson column already exists, skipping");
+            Log.Debug("TransformationOptionsJson column already exists, skipping");
         }
     }
 
