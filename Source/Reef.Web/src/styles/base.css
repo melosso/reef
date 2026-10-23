@@ -248,6 +248,17 @@ input[role='switch']:disabled {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+.btn.icon[aria-busy='true'] {
+  position: relative;
+}
+.btn.icon[aria-busy='true'] > * {
+  visibility: hidden;
+}
+.btn.icon[aria-busy='true']::before {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);

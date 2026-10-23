@@ -64,7 +64,7 @@ public class ImportExecutionService(
         var phaseTimings = new Dictionary<string, long>();
 
         // Push profile code into log context so all downstream messages carry it
-        using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
+        using var profileLogCtx = LogContext.PushProperty(ExecutionLogContext.ProfileProperty, ExecutionLogContext.Prefix(profile.Code));
 
         Log.Information("ImportExecution {Id} started for profile {Code} ({ProfileName})",
             exec.Id, profile.Code, profile.Name);

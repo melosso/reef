@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Activity, CircleCheck, Copy, History, Pencil, Play, Plus, RotateCcw, Trash2 } from '@lucide/svelte';
+  import { Activity, CircleCheck, Copy, History, Pencil, Play, Plus, RotateCcw, Trash2, TriangleAlert, X } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
   import Sheet from '../components/Sheet.svelte';
   import StatusMark from '../components/StatusMark.svelte';
@@ -16,6 +16,10 @@
   import type { ExportProfile } from '../models/ExportProfile';
   import type { ImportProfile } from '../models/ImportProfile';
   import type { Job } from '../models/Job';
+  import type { ExportExecution } from '../models/ExportExecution';
+  import type { JobExecution } from '../models/JobExecution';
+  import type { JobOutcome } from '../models/JobOutcome';
+  import { jobOutcome } from '../lib/jobOutcome';
   import type { PagedResult } from '../models/PagedResult';
   import type { ProfileGroup } from '../models/ProfileGroup';
   import type { QueueMetrics } from '../models/QueueMetrics';
@@ -304,20 +308,54 @@
     }
   }
 
+  const OUTCOME_LABEL: Record<Exclude<JobOutcome, 'running'>, string> = {
+    success: 'Completed',
+    partial: 'Completed with errors',
+    failed: 'Failed',
+  };
+  let outcomes = $state<Record<number, Exclude<JobOutcome, 'running'>>>({});
+
+  const latestExecution = (id: number) => api.get<JobExecution>(`/api/jobs/${id}/executions/latest`).catch(() => null);
+
+  async function outcomeOf(j: Job, execution: JobExecution): Promise<JobOutcome> {
+    const outcome = jobOutcome(execution);
+    if (outcome !== 'success' || !j.profileId) return outcome;
+    let executionId: number | undefined;
+    try {
+      executionId = JSON.parse(execution.outputData ?? '{}').executionId;
+    } catch {}
+    const run = executionId ? await api.get<ExportExecution>(`/api/executions/${executionId}`).catch(() => null) : null;
+    return jobOutcome(execution, run);
+  }
+
   async function trigger(j: Job) {
+    const key = `job-run-${j.id}`;
     busy = `run-${j.id}`;
     try {
+      const before = (await latestExecution(j.id))?.id ?? 0;
       await api.post(`/api/jobs/${j.id}/trigger`);
-      notify.success(`${j.name} triggered`, { key: `job-run-${j.id}` });
-      for (let i = 0; i < 30; i++) {
+      let execution: JobExecution | null = null;
+      let outcome: JobOutcome = 'running';
+      for (let i = 0; i < 120 && outcome === 'running'; i++) {
         await new Promise((r) => setTimeout(r, 1000));
-        const current = await api.get<Job>(`/api/jobs/${j.id}`).catch(() => null);
-        const s = num(current?.status, STATUS_NAMES);
-        if (current && s !== 1 && s !== 2) break;
+        execution = await latestExecution(j.id);
+        if (execution && execution.id > before) outcome = await outcomeOf(j, execution);
+      }
+      if (outcome === 'running') notify.info(`${j.name} is still running`, { key });
+      else {
+        if (outcome === 'success') notify.success(`${j.name} completed`, { key });
+        else if (outcome === 'partial')
+          notify.warning(`${j.name} completed with errors`, {
+            key,
+            description: execution?.errorMessage ?? 'Open the execution for details.',
+          });
+        else notify.error(`${j.name} failed`, { key, description: execution?.errorMessage ?? undefined });
+        outcomes[j.id] = outcome;
+        setTimeout(() => delete outcomes[j.id], 4000);
       }
       await Promise.all([load(), loadMetrics()]);
     } catch (e) {
-      notify.fail(e, `job-run-${j.id}`);
+      notify.fail(e, key);
     } finally {
       busy = null;
     }
@@ -476,11 +514,17 @@
               <td class="actions">
                 <button
                   type="button"
-                  class="btn ghost icon"
-                  aria-label="Run {j.name}"
+                  class="btn ghost icon run"
+                  class:ok={outcomes[j.id] === 'success'}
+                  class:warn={outcomes[j.id] === 'partial'}
+                  class:err={outcomes[j.id] === 'failed'}
+                  aria-label={outcomes[j.id] ? `${j.name}: ${OUTCOME_LABEL[outcomes[j.id]]}` : `Run ${j.name}`}
                   aria-busy={busy === `run-${j.id}`}
-                  use:tooltip={'Run now'}
-                  onclick={() => trigger(j)}><Play size={15} /></button
+                  use:tooltip={outcomes[j.id] ? OUTCOME_LABEL[outcomes[j.id]] : 'Run now'}
+                  onclick={() => trigger(j)}
+                  >{#if outcomes[j.id] === 'success'}<CircleCheck size={15} />{:else if outcomes[j.id] === 'partial'}<TriangleAlert
+                      size={15}
+                    />{:else if outcomes[j.id] === 'failed'}<X size={15} />{:else}<Play size={15} />{/if}</button
                 >
                 {#if isPaused(j)}<button
                     type="button"
@@ -698,6 +742,15 @@
 {/if}
 
 <style>
+  .run.ok {
+    color: var(--ok);
+  }
+  .run.warn {
+    color: var(--warn);
+  }
+  .run.err {
+    color: var(--err);
+  }
   .strong {
     font-weight: 500;
     display: block;

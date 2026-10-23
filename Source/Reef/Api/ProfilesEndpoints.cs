@@ -1657,7 +1657,7 @@ public static class ProfilesEndpoints
                 }
             }
 
-            Log.Information("Testing query preview for connection {ConnectionId}: {Query}", request.ConnectionId, testQuery);
+            Log.Debug("Testing query preview for connection {ConnectionId}: {Query}", request.ConnectionId, testQuery);
 
             // Execute query
             var (success, rows, error, executionTime) = await queryExecutor.ExecuteQueryAsync(
@@ -1681,7 +1681,7 @@ public static class ProfilesEndpoints
             // Take only first 25 rows (in case query already had a larger limit)
             var limitedRows = rows?.Take(25).ToList() ?? [];
 
-            Log.Information("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
+            Log.Debug("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
                 request.ConnectionId, limitedRows.Count, executionTime);
 
             return Results.Ok(new

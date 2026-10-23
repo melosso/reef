@@ -110,7 +110,7 @@ public class ExecutionService
             }
 
             // Push profile code into log context so all downstream messages (including destinations) carry it
-            using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
+            using var profileLogCtx = LogContext.PushProperty(ExecutionLogContext.ProfileProperty, ExecutionLogContext.Prefix(profile.Code));
 
             var connection = await _connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)

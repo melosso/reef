@@ -168,7 +168,7 @@ public class QueryExecutor
                 Log.Warning("Query validation warning for {ConnectionName}: {Warning}", connection.Name, warning);
             }
 
-            Log.Information("Executing query on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
+            Log.Debug("Executing query on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
             Log.Debug("Query: {Query}", query);
 
             List<Dictionary<string, object>> rows;
@@ -198,7 +198,7 @@ public class QueryExecutor
             }
 
             stopwatch.Stop();
-            Log.Information("Query executed successfully. Rows returned: {RowCount}, Time: {ExecutionTimeMs}ms",
+            Log.Debug("Query executed successfully. Rows returned: {RowCount}, Time: {ExecutionTimeMs}ms",
                 rows.Count, stopwatch.ElapsedMilliseconds);
 
             return (true, rows, null, stopwatch.ElapsedMilliseconds);
