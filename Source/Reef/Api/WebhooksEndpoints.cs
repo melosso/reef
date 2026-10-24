@@ -374,13 +374,14 @@ public static class WebhooksEndpoints
     private static async Task<IResult> TriggerWebhook(
         string token,
         HttpContext context,
-        CancellationToken ct,
         [FromBody] WebhookTriggerRequest? request,
         [FromServices] WebhookService service,
         [FromServices] ExecutionService executionService,
         [FromServices] JobExecutorService jobExecutorService,
         [FromServices] AuditService auditService,
-        [FromServices] PublicIdMap ids)
+        [FromServices] PublicIdMap ids,
+        [FromServices] IServiceScopeFactory scopes,
+        [FromServices] IHostApplicationLifetime lifetime)
     {
         try
         {
@@ -469,11 +470,11 @@ public static class WebhooksEndpoints
                 Log.Information("Triggering profile {ProfileId} via webhook {WebhookId} and token {Token}",
                     webhook.ProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
-                var (executionId, success, outputPath, errorMessage) = await executionService.ExecuteProfileAsync(
-                    webhook.ProfileId.Value,
-                    parameters,
-                    $"Webhook/{webhook.Id}"
-                );
+                var profileId = webhook.ProfileId.Value;
+                var triggeredBy = $"Webhook/{webhook.Id}";
+                var executionId = await executionService.CreateExecutionRecordAsync(profileId, triggeredBy);
+                RunInBackground(scopes, lifetime, $"profile {profileId}", (services, stopping) =>
+                    services.GetRequiredService<ExecutionService>().ExecuteProfileAsync(profileId, parameters, triggeredBy, ct: stopping, startedExecutionId: executionId));
 
                 // Update webhook last triggered
                 await service.UpdateLastTriggeredAsync(webhook.Id);
@@ -482,15 +483,11 @@ public static class WebhooksEndpoints
                 var profileChanges = JsonSerializer.Serialize(new { parameters, executionId });
                 await auditService.LogAsync("WebhookTrigger", webhook.Id, "Triggered", "Webhook", profileChanges, context);
 
-                // Return execution status immediately (don't wait for completion)
                 result = new
                 {
-                    executionId,
-                    status = success ? "Started" : "Failed",
-                    message = success
-                        ? $"Profile execution started with ID {executionId}"
-                        : $"Profile execution failed: {errorMessage}",
-                    errorMessage = success ? null : errorMessage
+                    executionId = ids.ToUlid(PublicIdTables.ProfileExecutions, executionId),
+                    status = "Started",
+                    message = "Profile execution started"
                 };
             }
             else if (webhook.JobId.HasValue)
@@ -542,8 +539,24 @@ public static class WebhooksEndpoints
                 Log.Information("Triggering import profile {ImportProfileId} via webhook {WebhookId} and token {Token}",
                     webhook.ImportProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
-                var importExecService = context.RequestServices.GetRequiredService<ImportExecutionService>();
-                var exec = await importExecService.ExecuteAsync(webhook.ImportProfileId.Value, $"Webhook/{webhook.Id}", ct);
+                var importProfileId = webhook.ImportProfileId.Value;
+                if (await context.RequestServices.GetRequiredService<ImportProfileService>().GetByIdAsync(importProfileId) == null)
+                {
+                    return Results.Json(
+                        new
+                        {
+                            error = "import_profile_not_found",
+                            message = "Import profile not found or deleted",
+                            webhookId = ids.ToUlid("WebhookTriggers", webhook.Id)
+                        },
+                        statusCode: 404
+                    );
+                }
+
+                var triggeredBy = $"Webhook/{webhook.Id}";
+                var exec = await context.RequestServices.GetRequiredService<ImportExecutionService>().StartAsync(importProfileId, triggeredBy);
+                RunInBackground(scopes, lifetime, $"import profile {importProfileId}", (services, stopping) =>
+                    services.GetRequiredService<ImportExecutionService>().ExecuteAsync(importProfileId, triggeredBy, stopping, exec));
 
                 // Update webhook last triggered
                 await service.UpdateLastTriggeredAsync(webhook.Id);
@@ -555,7 +568,7 @@ public static class WebhooksEndpoints
                 result = new
                 {
                     executionId = ids.ToUlid(PublicIdTables.ImportProfileExecutions, exec.Id),
-                    status = exec.Status,
+                    status = "Started",
                     message = "Import profile execution started"
                 };
             }
@@ -573,7 +586,7 @@ public static class WebhooksEndpoints
                 );
             }
 
-            return Results.Ok(result);
+            return Results.Accepted(null, result);
         }
         catch (Exception ex)
         {
@@ -588,6 +601,18 @@ public static class WebhooksEndpoints
             );
         }
     }
+
+    // The request scope ends with the response, so the run resolves its services from a scope of its own
+    private static void RunInBackground(IServiceScopeFactory scopes, IHostApplicationLifetime lifetime, string target, Func<IServiceProvider, CancellationToken, Task> run) =>
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                await run(scope.ServiceProvider, lifetime.ApplicationStopping);
+            }
+            catch (Exception ex) { Log.Error(ex, "Webhook run of {Target} failed", target); }
+        });
 }
 
 /// <summary>

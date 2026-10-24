@@ -43,14 +43,8 @@ public class ImportExecutionService(
 
     // Public Entry Points
 
-    public async Task<ImportProfileExecution> ExecuteAsync(
-        int importProfileId,
-        string triggeredBy = "Manual",
-        CancellationToken ct = default)
+    public async Task<ImportProfileExecution> StartAsync(int importProfileId, string triggeredBy)
     {
-        var profile = await profileService.GetByIdAsync(importProfileId)
-            ?? throw new InvalidOperationException($"ImportProfile {importProfileId} not found");
-
         var exec = new ImportProfileExecution
         {
             ImportProfileId = importProfileId,
@@ -59,8 +53,20 @@ public class ImportExecutionService(
             StartedAt = DateTime.UtcNow,
             CurrentPhase = "Initialising"
         };
-
         exec.Id = await profileService.CreateExecutionAsync(exec);
+        return exec;
+    }
+
+    public async Task<ImportProfileExecution> ExecuteAsync(
+        int importProfileId,
+        string triggeredBy = "Manual",
+        CancellationToken ct = default,
+        ImportProfileExecution? started = null)
+    {
+        var profile = await profileService.GetByIdAsync(importProfileId)
+            ?? throw new InvalidOperationException($"ImportProfile {importProfileId} not found");
+
+        var exec = started ?? await StartAsync(importProfileId, triggeredBy);
         var phaseTimings = new Dictionary<string, long>();
 
         // Push profile code into log context so all downstream messages carry it

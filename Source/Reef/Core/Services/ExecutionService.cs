@@ -84,7 +84,8 @@ public class ExecutionService
             string triggeredBy = "Manual",
             int? jobId = null,
             int? destinationOverrideId = null,
-            CancellationToken ct = default)
+            CancellationToken ct = default,
+            int? startedExecutionId = null)
     {
         var stopwatch = Stopwatch.StartNew();
         int executionId = 0;
@@ -92,7 +93,7 @@ public class ExecutionService
         try
         {
             // Create ProfileExecution record FIRST - ensures all execution attempts are tracked
-            executionId = await CreateExecutionRecordAsync(profileId, triggeredBy, jobId);
+            executionId = startedExecutionId ?? await CreateExecutionRecordAsync(profileId, triggeredBy, jobId);
 
             // Load profile and connection
             var profile = await _profileService.GetByIdAsync(profileId);
@@ -1695,7 +1696,7 @@ public class ExecutionService
     /// <summary>
     /// Create initial execution record
     /// </summary>
-    private async Task<int> CreateExecutionRecordAsync(int profileId, string triggeredBy, int? jobId = null)
+    public async Task<int> CreateExecutionRecordAsync(int profileId, string triggeredBy, int? jobId = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
