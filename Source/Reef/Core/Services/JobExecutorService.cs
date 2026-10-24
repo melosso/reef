@@ -18,6 +18,8 @@ public class JobExecutorService
     private readonly ImportExecutionService _importExecutionService;
     private readonly NotificationService _notificationService;
     private readonly DatabaseConfig _database;
+    private readonly AdminService _adminService;
+    private readonly IConfiguration _configuration;
     private readonly IServiceScopeFactory _scopes;
     private readonly IHostApplicationLifetime _lifetime;
 
@@ -28,6 +30,8 @@ public class JobExecutorService
         ImportExecutionService importExecutionService,
         NotificationService notificationService,
         DatabaseConfig database,
+        AdminService adminService,
+        IConfiguration configuration,
         IServiceScopeFactory scopes,
         IHostApplicationLifetime lifetime)
     {
@@ -37,6 +41,8 @@ public class JobExecutorService
         _importExecutionService = importExecutionService;
         _notificationService = notificationService;
         _database = database;
+        _adminService = adminService;
+        _configuration = configuration;
         _scopes = scopes;
         _lifetime = lifetime;
     }
@@ -416,32 +422,24 @@ public class JobExecutorService
     /// <summary>
     /// Execute cleanup job
     /// </summary>
-    private Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
+    private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
         ExecuteCleanupJobAsync()
     {
         try
         {
-            // Clean up old execution records (older than 90 days)
-            var cutoffDate = DateTime.UtcNow.AddDays(-90);
-            var deletedCount = 0;
+            var retentionDays = _configuration.GetValue("Reef:Jobs:RetentionDays", 90);
+            var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
+            var deletedCount = await _adminService.ClearOldExecutionLogsAsync(retentionDays)
+                + await _jobService.DeleteExecutionsBeforeAsync(cutoffDate);
 
-            // This would require a method in JobService to delete old executions
-            // For now, we'll just log the intent
-            Log.Information("Cleanup job would delete executions older than {CutoffDate}", cutoffDate);
-
-            var outputData = JsonSerializer.Serialize(new
-            {
-                deletedRecords = deletedCount,
-                cutoffDate,
-                timestamp = DateTime.UtcNow
-            });
-
-            return Task.FromResult<(bool, string?, string?, int?)>((true, outputData, null, deletedCount));
+            Log.Information("Cleanup job deleted {Count} executions older than {CutoffDate}", deletedCount, cutoffDate);
+            var outputData = JsonSerializer.Serialize(new { deletedRecords = deletedCount, cutoffDate, timestamp = DateTime.UtcNow });
+            return (true, outputData, null, deletedCount);
         }
         catch (Exception ex)
         {
             Log.Error(ex, "Cleanup job failed");
-            return Task.FromResult<(bool, string?, string?, int?)>((false, null, ex.Message, null));
+            return (false, null, ex.Message, null);
         }
     }
 

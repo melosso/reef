@@ -851,7 +851,7 @@ public class AdminService
 
             var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
             var deletedCount = await conn.ExecuteAsync(
-                "DELETE FROM ProfileExecutions WHERE StartedAt < @CutoffDate",
+                "DELETE FROM ProfileExecutions WHERE StartedAt < @CutoffDate AND Id NOT IN (SELECT LastSeenExecutionId FROM DeltaSyncState WHERE LastSeenExecutionId IS NOT NULL)",
                 new { CutoffDate = cutoffDate });
 
             Log.Information("Deleted {Count} execution log entries older than {Days} days", deletedCount, retentionDays);

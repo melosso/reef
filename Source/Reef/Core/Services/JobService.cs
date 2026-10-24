@@ -1263,6 +1263,12 @@ public class JobService
 
     #region Cleanup
 
+    public async Task<int> DeleteExecutionsBeforeAsync(DateTime cutoff)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        return await conn.ExecuteAsync("DELETE FROM JobExecutions WHERE CompletedAt IS NOT NULL AND StartedAt < @Cutoff", new { Cutoff = cutoff });
+    }
+
     // Call before the host starts: a run that is Running at that point belongs to a stopped process.
     public async Task ResetInterruptedRunsAsync()
     {
