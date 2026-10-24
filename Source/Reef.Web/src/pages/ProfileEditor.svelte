@@ -62,9 +62,12 @@
     const beforeUnload = (e: BeforeUnloadEvent) => {
       if (dirty) e.preventDefault();
     };
+    const refreshOptions = () => loadOptions().then((o) => (options = o));
     window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('focus', refreshOptions);
     return () => {
       window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('focus', refreshOptions);
       setLeaveGuard(null);
     };
   });
