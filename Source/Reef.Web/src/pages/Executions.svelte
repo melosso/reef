@@ -12,6 +12,7 @@
   import { match, navigate, route } from '../lib/router.svelte';
   import { urlPaging } from '../lib/paging.svelte';
   import type { ExecuteResult } from '../models/ExecuteResult';
+  import { runOutcome, type RunResult } from '../lib/profiles';
   import type { ExportExecution } from '../models/ExportExecution';
   import type { ExportProfile } from '../models/ExportProfile';
   import type { ImportExecution } from '../models/ImportExecution';
@@ -202,11 +203,13 @@
     e.preventDefault();
     running = true;
     try {
-      const result =
-        runMode === 'profile'
-          ? await api.post<ExecuteResult>(`/api/executions/execute/${runTarget}`)
-          : await api.post<ExecuteResult>(`/api/jobs/${runTarget}/trigger`);
-      notify.success(runMode === 'profile' ? `Execution ${result?.executionId ?? ''} started`.trim() : 'Job triggered');
+      if (runMode === 'profile') {
+        const outcome = runOutcome('export', (await api.post<RunResult>(`/api/executions/execute/${runTarget}`)) ?? {});
+        notify[outcome.level](outcome.message, { key: 'executions-run' });
+      } else {
+        await api.post<ExecuteResult>(`/api/jobs/${runTarget}/trigger`);
+        notify.success('Job triggered', { key: 'executions-run' });
+      }
       runDialog.close();
       await Promise.all([loadExports(), loadImports()]);
     } catch (err) {

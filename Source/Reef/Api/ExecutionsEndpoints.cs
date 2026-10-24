@@ -215,7 +215,7 @@ public static class ExecutionsEndpoints
                 return Results.Ok(new
                 {
                     executionId,
-                    status = "Failed",
+                    status = (await service.GetExecutionByIdAsync(executionId))?.Status ?? "Failed",
                     error = errorMessage
                 });
             }
