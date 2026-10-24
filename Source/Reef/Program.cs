@@ -501,7 +501,7 @@ public partial class Program
                 Log.Error(ex, "Unhandled exception");
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "application/json";
-                var error = new { success = false, message = "An unexpected error occurred.", detail = ex.Message };
+                var error = new { success = false, message = "An unexpected error occurred." };
                 var json = System.Text.Json.JsonSerializer.Serialize(error);
                 await context.Response.WriteAsync(json);
             }
