@@ -13,7 +13,7 @@
 Reef automates data exports, integration pipelines, and background synchronizations all from an intuitive interface. Query databases using native SQL, transform outputs with optional Scriban templates, and generate raw data or formatted documents directly through your browser.
 
 > [!IMPORTANT]  
-> Reef is actively in development. While stable for production use, expect breaking changes during updates.
+> Reef has not reached a stable release, yet. While stable for production use, expect breaking changes during updates.
 
 **Key Capabilities**
 
