@@ -1851,10 +1851,9 @@ public class ExecutionService
             }
 
             // Build and execute command
-            var command = BuildDatabaseCommand(connection.Type, config, context);
+            var (command, parameters) = ProcessingCommandBuilder.Build(connection.Type, config, context);
             Log.Debug("Executing pre-processing command: {Command}", command);
 
-            var parameters = BuildParametersDictionary(config.Parameters, context);
             var (success, rowsAffected, error, _) = await _queryExecutor.ExecuteCommandAsync(connection, command, parameters, config.Timeout);
 
             stopwatch.Stop();
@@ -1973,10 +1972,9 @@ public class ExecutionService
             }
 
             // Build and execute command
-            var command = BuildDatabaseCommand(connection.Type, config, context);
+            var (command, parameters) = ProcessingCommandBuilder.Build(connection.Type, config, context);
             Log.Debug("Executing post-processing command: {Command}", command);
 
-            var parameters = BuildParametersDictionary(config.Parameters, context);
             var (success, rowsAffected, error, _) = await _queryExecutor.ExecuteCommandAsync(connection, command, parameters, config.Timeout);
 
             stopwatch.Stop();
@@ -2010,124 +2008,6 @@ public class ExecutionService
             await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
-    }
-
-    /// <summary>
-    /// Build database-specific command for query or stored procedure execution
-    /// Handles SQL Server (EXEC), MySQL (CALL), and PostgreSQL (CALL) syntax
-    /// </summary>
-    /// <param name="connectionType">Database type (SqlServer, MySQL, PostgreSQL)</param>
-    /// <param name="config">Processing configuration</param>
-    /// <param name="context">Context for variable substitution</param>
-    /// <returns>SQL command string</returns>
-    private string BuildDatabaseCommand(string connectionType, ProcessingConfig config, ProcessingContext context)
-    {
-        if (string.IsNullOrWhiteSpace(config.Command))
-            throw new ArgumentException($"ProcessingConfig.Command is required for Type={config.Type}");
-
-        // Substitute context variables in the command
-        var command = SubstituteContextVariables(config.Command, context);
-
-        // For Query type, return the command as-is (already SQL)
-        if (config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase))
-        {
-            return command;
-        }
-
-        // For StoredProcedure type, build database-specific syntax
-        if (config.Type.Equals("StoredProcedure", StringComparison.OrdinalIgnoreCase))
-        {
-            var procedureName = command.Trim();
-
-            // Build parameter list if provided
-            string parameterList = "";
-            if (config.Parameters != null && config.Parameters.Count > 0)
-            {
-                var paramNames = config.Parameters.Select(p =>
-                {
-                    var paramName = p.Name.StartsWith("@") || p.Name.StartsWith("p_") ? p.Name : $"@{p.Name}";
-                    return paramName;
-                });
-                parameterList = " " + string.Join(", ", paramNames);
-            }
-
-            // Generate database-specific syntax
-            return connectionType.ToLowerInvariant() switch
-            {
-                "sqlserver" => $"EXEC {procedureName}{parameterList}",
-                "mysql" => $"CALL {procedureName}({parameterList.Trim()})",
-                "postgresql" => $"CALL {procedureName}({parameterList.Trim()})",
-                _ => $"EXEC {procedureName}{parameterList}" // Default to SQL Server syntax
-            };
-        }
-
-        throw new ArgumentException($"Unknown processing type: {config.Type}");
-    }
-
-    /// <summary>
-    /// Substitute context variables in a string with actual values
-    /// Supports: {executionid}, {profileid}, {rowcount}, {outputpath}, {filesizebytes}, 
-    ///           {executiontimems}, {outputformat}, {triggeredby}, {startedat}, {completedat}, 
-    ///           {status}, {errormessage}
-    /// </summary>
-    /// <param name="input">Input string with {placeholder} variables</param>
-    /// <param name="context">Context containing actual values</param>
-    /// <returns>String with variables replaced</returns>
-    private string SubstituteContextVariables(string input, ProcessingContext context)
-    {
-        if (string.IsNullOrEmpty(input))
-        {
-            return input;
-        }
-
-        var result = input;
-
-        // Replace all supported context variables
-        result = result.Replace("{executionid}", context.ExecutionId.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{profileid}", context.ProfileId.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{rowcount}", context.RowCount.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{outputpath}", context.OutputPath ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{filesizebytes}", (context.FileSizeBytes ?? 0).ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{executiontimems}", context.ExecutionTimeMs.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{outputformat}", context.OutputFormat, StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{triggeredby}", context.TriggeredBy ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{startedat}", context.StartedAt.ToString("O"), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{completedat}", (context.CompletedAt?.ToString("O") ?? ""), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{status}", context.Status, StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{errormessage}", context.ErrorMessage ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{deltasyncreefidcolumn}", context.DeltaSyncReefIdColumn ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{splitkeycolumn}", context.SplitKeyColumn ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{splitkey}", context.SplitKey ?? "", StringComparison.OrdinalIgnoreCase);
-
-        return result;
-    }
-
-    /// <summary>
-    /// Build parameters dictionary with context variable substitution
-    /// </summary>
-    /// <param name="configParameters">Parameters from ProcessingConfig</param>
-    /// <param name="context">Context for variable substitution</param>
-    /// <returns>Dictionary of parameter name/value pairs</returns>
-    private Dictionary<string, string> BuildParametersDictionary(
-        List<ProcessingParameter>? configParameters,
-        ProcessingContext context)
-    {
-        var parameters = new Dictionary<string, string>();
-
-        if (configParameters == null || configParameters.Count == 0)
-        {
-            return parameters;
-        }
-
-        foreach (var param in configParameters)
-        {
-            // Preserve @ prefix for parameter names to match SQL/stored procedure expectations
-            var paramName = param.Name.StartsWith("@") ? param.Name : "@" + param.Name;
-            var paramValue = SubstituteContextVariables(param.Value, context);
-            parameters[paramName] = paramValue;
-        }
-
-        return parameters;
     }
 
     /// <summary>
