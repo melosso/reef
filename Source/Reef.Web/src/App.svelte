@@ -138,4 +138,25 @@
   :global(.reef-toast [data-title]) {
     font-weight: 500 !important;
   }
+  :global(.reef-toast[data-type='success']) {
+    border-left: 3px solid var(--ok) !important;
+  }
+  :global(.reef-toast[data-type='info']) {
+    border-left: 3px solid var(--accent) !important;
+  }
+  :global(.reef-toast[data-type='warning']) {
+    border-left: 3px solid var(--warn) !important;
+  }
+  :global(.reef-toast[data-type='error']) {
+    border-left: 3px solid var(--err) !important;
+  }
+  :global(.reef-toast[data-type='success'] [data-icon]) {
+    color: var(--ok);
+  }
+  :global(.reef-toast[data-type='warning'] [data-icon]) {
+    color: var(--warn);
+  }
+  :global(.reef-toast[data-type='error'] [data-icon]) {
+    color: var(--err);
+  }
 </style>

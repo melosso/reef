@@ -11,7 +11,7 @@ export const notify = {
   info: (message: string, o: Options = {}) => toast.info(message, { id: o.key, description: o.description, duration: 5000 }),
   warning: (message: string, o: Options = {}) => toast.warning(message, { id: o.key, description: o.description, duration: 8000 }),
   error: (message: string, o: Options = {}) =>
-    toast.error(message, { id: o.key, description: o.description, duration: Number.POSITIVE_INFINITY, closeButton: true }),
+    toast.error(message, { id: o.key, description: o.description, duration: 12000, closeButton: true }),
   fail: (error: unknown, key?: string) => {
     if (error instanceof ApiError && error.status === 0) return;
     const message = error instanceof Error ? error.message : String(error);
