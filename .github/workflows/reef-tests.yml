@@ -19,6 +19,17 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: Source/Reef.Web/package-lock.json
+
+      - name: Check frontend
+        working-directory: Source/Reef.Web
+        run: npm ci --no-audit --no-fund && npm run check && npm run lint && npm test
+
       - name: Restore and build
         run: dotnet build Source/Reef.slnx --configuration Release
 

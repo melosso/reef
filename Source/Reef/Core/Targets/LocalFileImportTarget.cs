@@ -11,7 +11,7 @@ namespace Reef.Core.Targets;
 /// </summary>
 public class LocalFileImportTarget : IImportTarget
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<LocalFileImportTarget>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<LocalFileImportTarget>();
 
     public async Task<ImportBatchResult> WriteBatchAsync(
         IReadOnlyList<Dictionary<string, object?>> rows,
@@ -64,6 +64,7 @@ public class LocalFileImportTarget : IImportTarget
         IReadOnlyList<string> deletedReefIds,
         string reefIdColumn,
         ImportProfile profile,
+        ImportWriteContext context,
         CancellationToken ct = default)
     {
         // File targets do not support row-level deletes

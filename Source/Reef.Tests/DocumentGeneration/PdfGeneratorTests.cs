@@ -14,7 +14,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public void OutputFormat_ShouldBePDF()
+    public void OutputFormatShouldBePDF()
     {
         // Act
         var format = _generator.OutputFormat;
@@ -24,7 +24,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithValidData_ShouldCreatePdfFile()
+    public async Task GenerateAsyncWithValidDataShouldCreatePdfFile()
     {
         // Arrange
         var data = new List<Dictionary<string, object>>
@@ -71,7 +71,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithMultipleSections_ShouldIncludeHeaderAndFooter()
+    public async Task GenerateAsyncWithMultipleSectionsShouldIncludeHeaderAndFooter()
     {
         // Arrange
         var data = new List<Dictionary<string, object>>
@@ -109,7 +109,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithLandscapeOrientation_ShouldSucceed()
+    public async Task GenerateAsyncWithLandscapeOrientationShouldSucceed()
     {
         // Arrange
         var data = new List<Dictionary<string, object>> { new() };
@@ -140,7 +140,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithPageNumbers_ShouldIncludePageNumbers()
+    public async Task GenerateAsyncWithPageNumbersShouldIncludePageNumbers()
     {
         // Arrange
         var data = new List<Dictionary<string, object>> { new() };
@@ -176,7 +176,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithWatermark_ShouldSucceed()
+    public async Task GenerateAsyncWithWatermarkShouldSucceed()
     {
         // Arrange
         var data = new List<Dictionary<string, object>> { new() };
@@ -214,7 +214,7 @@ public class PdfGeneratorTests
     [InlineData("A4")]
     [InlineData("Letter")]
     [InlineData("Legal")]
-    public async Task GenerateAsync_WithDifferentPageSizes_ShouldSucceed(string pageSize)
+    public async Task GenerateAsyncWithDifferentPageSizesShouldSucceed(string pageSize)
     {
         // Arrange
         var data = new List<Dictionary<string, object>> { new() };
@@ -245,7 +245,7 @@ public class PdfGeneratorTests
     }
 
     [Fact]
-    public async Task GenerateAsync_WithEmptyData_ShouldStillSucceed()
+    public async Task GenerateAsyncWithEmptyDataShouldStillSucceed()
     {
         // Arrange
         var data = new List<Dictionary<string, object>>();

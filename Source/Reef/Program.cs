@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.IdentityModel.Tokens;
 using Reef.Core.Services;
 using Reef.Core.Destinations;
@@ -9,10 +10,11 @@ using Reef.Core.TemplateEngines;
 using Reef.Api;
 using Reef.Helpers;
 using Reef.Core.Middleware;
+using Reef.Core.PublicIds;
+using System.Text.Json.Serialization.Metadata;
 using Serilog;
 using Serilog.Sinks.EventLog;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Security.Claims;
 using System.Runtime.InteropServices;
 using Dapper;
@@ -24,12 +26,6 @@ namespace Reef;
 /// </summary>
 public partial class Program
 {
-    [GeneratedRegex(@"<!--REEF:TITLE-->(.*?)<!--/REEF:TITLE-->")]
-    private static partial Regex TitleRegex();
-
-    [GeneratedRegex(@"<!--REEF:SCRIPTS-->(.*?)<!--/REEF:SCRIPTS-->", RegexOptions.Singleline)]
-    private static partial Regex ScriptsRegex();
-
     public static async Task Main(string[] args)
     {
         // Register Dapper type handlers for TimeSpan (must be done before any database operations)
@@ -45,6 +41,17 @@ public partial class Program
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production"}.json", optional: true)
             .Build();
+
+        // account recovery without the web ui, runs instead of the web host
+        if (args is ["accounts", ..])
+        {
+            var cliConfig = new ConfigurationManager();
+            cliConfig.AddConfiguration(tempConfig);
+            cliConfig.AddEnvironmentVariables();
+            EnvAliases.ApplyConfigAliases(cliConfig);
+            Environment.ExitCode = await AccountsCli.RunAsync(args, cliConfig);
+            return;
+        }
 
         bool useEventLog = tempConfig.GetValue<bool>("Windows:UseEventLog", false);
 
@@ -87,14 +94,7 @@ public partial class Program
 
         Log.Logger = loggerConfig.CreateLogger();
 
-        Log.Information("");
-        Log.Information("██████╗ ███████╗███████╗███████╗");
-        Log.Information("██╔══██╗██╔════╝██╔════╝██╔════╝");
-        Log.Information("██████╔╝█████╗  █████╗  █████╗  ");
-        Log.Information("██╔══██╗██╔══╝  ██╔══╝  ██╔══╝  ");
-        Log.Information("██║  ██║███████╗███████╗██║     ");
-        Log.Information("╚═╝  ╚═╝╚══════╝╚══════╝╚═╝     ");
-        Log.Information("");
+        StartupLogHelper.LogApplicationBanner();
 
         // Initialize encryption service
         var encryptionService = new EncryptionService(AppContext.BaseDirectory);
@@ -103,6 +103,12 @@ public partial class Program
         try
         {
             var builder = WebApplication.CreateBuilder(args);
+            EnvAliases.ApplyConfigAliases(builder.Configuration);
+            EncryptionKeyLoader.EnsureConfigured(builder.Environment.IsDevelopment(), EncryptionKeyLoader.Key);
+            builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+            builder.Configuration["Reef:Jwt:SecretKey"] = JwtSecretResolver.Resolve(
+                builder.Configuration["Reef:Jwt:SecretKey"], Path.Combine(EncryptionService.FindProjectRoot(AppContext.BaseDirectory), ".core"));
+            EnvAliases.WarnOnLegacyUsage();
 
             // Initialize Serilog globally
             builder.Host.UseSerilog();
@@ -128,7 +134,7 @@ public partial class Program
             // Fail fast with a clean message if the port is already taken
             if (IsPortInUse(port))
             {
-                Log.Fatal("Port {Port} is already in use. Stop whatever is using it and try again.", port);
+                Log.Fatal("Port {Port} is already in use. Stop the existing process, or set LISTEN_PORT to use another port.", port);
                 await Log.CloseAndFlushAsync();
                 Environment.Exit(1);
             }
@@ -143,26 +149,23 @@ public partial class Program
             // Register services
             RegisterServices(builder.Services, builder.Configuration, encryptionService, connectionString);
 
-            // Configure Forwarded Headers for Reverse Proxy support
-            builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
-            {
-                options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.All;
-                // Clear KnownNetworks and KnownProxies so it accepts forwarded headers from any proxy
-                // In production, you would normally restrict this to specific proxy IPs
-                options.KnownIPNetworks.Clear();
-                options.KnownProxies.Clear();
-            });
+            builder.Services.AddTrustedProxies();
 
-            // Add controllers with JSON string enum converter for enums
+            var publicIds = new PublicIdMap(connectionString);
+            var publicIdJson = new PublicIdJsonModifier(publicIds);
+            builder.Services.AddSingleton(publicIds);
+            builder.Services.AddRouting(options => options.ConstraintMap["ulid"] = typeof(UlidRouteConstraint));
+
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                options.JsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { publicIdJson.Apply } };
             });
 
-            // Also configure minimal API JSON options for string enums
             builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
             {
                 options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                options.SerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { publicIdJson.Apply } };
             });
 
             // Configure JWT Authentication
@@ -173,10 +176,10 @@ public partial class Program
             {
                 options.AddDefaultPolicy(policy =>
                 {
-                    var allowedOrigins = builder.Configuration.GetSection("Reef:AllowedOrigins").Get<List<string>>();
-                    if (allowedOrigins != null && allowedOrigins.Count > 0)
+                    var allowedOrigins = builder.Configuration.GetList("Reef:AllowedOrigins");
+                    if (allowedOrigins.Length > 0)
                     {
-                        policy.WithOrigins(allowedOrigins.ToArray())
+                        policy.WithOrigins(allowedOrigins)
                               .AllowAnyMethod()
                               .AllowAnyHeader();
                     }
@@ -241,9 +244,13 @@ public partial class Program
             var scriptingStats = await scriptingMigration.GetStatsAsync();
             Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
 
+            await new UlidMigration(connectionString).ApplyAsync();
+            await new ApiKeyPrefixMigration(connectionString).ApplyAsync();
+
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
+            await jobService.ResetInterruptedRunsAsync();
             await jobService.FixCorruptedNextRunTimesAsync();
             Log.Debug("Done! Job cleanup completed");
 
@@ -263,51 +270,21 @@ public partial class Program
             // Map API endpoints
             MapEndpoints(app);
 
-            var accessNote = localhostOnly ? "(localhost only)" : "(reachable from other devices)";
-            Log.Information("Reef is spinning up on http://localhost:{Port} {AccessNote}", port, accessNote);
-            Log.Information("Endpoints online: /api and /health");
-            Log.Information("");
+            StartupLogHelper.LogHostingSummary(app, port, localhostOnly);
 
-            // Register shutdown handlers
-            var lifetime = app.Lifetime;
-
-            lifetime.ApplicationStarted.Register(() =>
-            {
-                Log.Information("✓ Application started successfully");
-                Log.Information("");
-            });
-
-            lifetime.ApplicationStopping.Register(() =>
+            app.Lifetime.ApplicationStopping.Register(() =>
             {
                 Log.Information("");
-                Log.Information("Exit: Application is stopping...");
-            });
-
-            lifetime.ApplicationStopped.Register(() =>
-            {
-                Log.Information("Application stopped");
+                Log.Information("Application shutting down...");
             });
 
             await app.RunAsync();
-
-            Log.Information("Exit: Application shutdown complete");
         }
         catch (Exception ex)
         {
-            Log.Fatal(ex, "Application terminated unexpectedly");
-
-            // Show error if Serilog fails
-            Console.WriteLine("");
-            Console.WriteLine("Fatal error during application startup:");
-            Console.WriteLine(ex.ToString());
-
-            // If running as console, wait for user input
-            if (!OperatingSystem.IsWindows() || Environment.UserInteractive)
-            {
-                Console.WriteLine("\nPress any key to exit...");
-                Console.ReadKey();
-            }
-
+            Log.Fatal("");
+            Log.Fatal(ex, "Application failed to start.");
+            Log.CloseAndFlush();
             Environment.Exit(1);
         }
         finally
@@ -337,12 +314,21 @@ public partial class Program
         EncryptionService encryptionService,
         string connectionString)
     {
+        // Keys live next to the encryption keys so tokens survive restarts and container rebuilds
+        services.AddDataProtection().PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, ".core", "keys")));
+
         // Singleton services (one instance for the app lifetime)
         services.AddSingleton(encryptionService);
         services.AddSingleton<DatabaseInitializer>(sp =>
             new DatabaseInitializer(connectionString, encryptionService));
         services.AddSingleton<HashValidator>();
-        services.AddSingleton<PasswordHasher>();
+        services.AddSingleton(new UserPasswordHasher(EncryptionKeyLoader.Key));
+        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton<LoginThrottle>();
+        services.AddHttpContextAccessor();
+        services.AddSingleton<PrivilegedSettingsGuard>();
+        services.AddSingleton<TokenUserValidator>();
+        services.AddSingleton<SpaPageGuard>();
         services.AddSingleton<JwtTokenService>();
         services.AddSingleton<ApiKeyValidator>();
         services.AddHttpClient();
@@ -366,6 +352,7 @@ public partial class Program
         services.AddScoped<ValidationService>();
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
+        services.AddScoped<AttentionService>();
         services.AddScoped<ProfileService>();
         services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
         services.AddScoped<ExecutionService>();
@@ -381,6 +368,7 @@ public partial class Program
         // Import Profile services
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
+        services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
@@ -403,7 +391,7 @@ public partial class Program
 
         // Destination services
         services.AddScoped<DestinationService>(sp =>
-            new DestinationService(connectionString, sp.GetRequiredService<EncryptionService>()));
+            new DestinationService(connectionString, sp.GetRequiredService<EncryptionService>(), sp.GetRequiredService<PrivilegedSettingsGuard>()));
 
         // Query template service
         services.AddScoped<QueryTemplateService>(sp =>
@@ -447,9 +435,11 @@ public partial class Program
 
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = "Reef";
         })
+        .AddPolicyScheme("Reef", "JWT or API key", options => options.ForwardDefaultSelector = context =>
+            context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.Header) ? ApiKeyAuthenticationHandler.SchemeName : JwtBearerDefaults.AuthenticationScheme)
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
         .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
@@ -463,17 +453,41 @@ public partial class Program
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             };
+            // OIDC sign-in sets only the HttpOnly cookie, refresh exchanges it for a bearer token
+            options.Events = new JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var validator = context.HttpContext.RequestServices.GetRequiredService<TokenUserValidator>();
+                    if (!await validator.IsCurrentAsync(context.Principal!))
+                        context.Fail("The account changed after this token was issued.");
+                },
+                OnMessageReceived = context =>
+                {
+                    if (string.IsNullOrEmpty(context.Token)
+                        && !context.Request.Headers.ContainsKey("Authorization")
+                        && context.Request.Path.Equals("/api/auth/refresh", StringComparison.OrdinalIgnoreCase)
+                        && context.Request.Cookies.TryGetValue("reef_token", out var cookie))
+                    {
+                        context.Token = cookie;
+                    }
+                    return Task.CompletedTask;
+                }
+            };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options => options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(ApiKeyAuthenticationHandler.MayCall)
+            .Build());
 
         Log.Debug("Authentication configured");
     }
 
     private static async Task ConfigureMiddleware(WebApplication app)
     {
-        // Use forwarded headers before any other middleware (required for correct reverse proxy IP/scheme resolution)
-        app.UseForwardedHeaders();
+        // forwarded headers run first so every later middleware sees the client address
+        app.UseTrustedForwardedHeaders();
 
         // Global exception handler - always return JSON
         app.Use(async (context, next) =>
@@ -482,20 +496,30 @@ public partial class Program
             {
                 await next();
             }
+            catch (Reef.Core.Exceptions.PrivilegedSettingsException ex)
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unhandled exception");
                 context.Response.StatusCode = 500;
                 context.Response.ContentType = "application/json";
-                var error = new { success = false, message = "An unexpected error occurred.", detail = ex.Message };
+                var error = new { success = false, message = "An unexpected error occurred." };
                 var json = System.Text.Json.JsonSerializer.Serialize(error);
                 await context.Response.WriteAsync(json);
             }
         });
 
+        var shell = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");
+        using var shellReader = shell.Exists ? new StreamReader(shell.CreateReadStream()) : null;
+        var contentSecurityPolicy = ContentSecurityPolicy.Build(shellReader is null ? null : await shellReader.ReadToEndAsync());
+
         // Security headers
         app.Use(async (context, next) =>
         {
+            context.Response.Headers.Append("Content-Security-Policy", contentSecurityPolicy);
             context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
             context.Response.Headers.Append("X-Frame-Options", "DENY");
             context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
@@ -507,8 +531,9 @@ public partial class Program
         var localhostOnly = app.Configuration.GetValue<bool>("Reef:LocalhostOnly", false);
         if (localhostOnly)
         {
-            var allowedHosts = app.Configuration.GetSection("Reef:AllowedHosts").Get<List<string>>()
-                ?? new List<string> { "localhost", "127.0.0.1", "::1" };
+            var allowedHosts = app.Configuration.GetList("Reef:AllowedHosts") is { Length: > 0 } hosts
+                ? hosts
+                : ["localhost", "127.0.0.1", "::1"];
 
             var allowedHostsLower = allowedHosts.Select(h => h.ToLowerInvariant()).ToHashSet();
 
@@ -544,161 +569,16 @@ public partial class Program
         app.UseCors();
         app.UseStaticFiles(new StaticFileOptions
         {
-            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+            OnPrepareResponse = ctx => ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Path.StartsWithSegments("/app/assets")
                 ? "public, max-age=31536000, immutable"
                 : "no-cache"
         });
-        var assetVersioner = new AssetVersioner(app.Environment.WebRootFileProvider);
-
         // Authentication middleware - validates JWT from cookie and redirects to /logoff if invalid
-        app.UseMiddleware<AuthenticationMiddleware>();
-
-        // Serve HTML views from Views folder (try both casings for Linux compatibility)
-        var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-        if (!Directory.Exists(viewsFolder))
-            viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
-        if (!Directory.Exists(viewsFolder))
-        {
-            var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-            var projectRoot = parentDir?.Parent?.Parent?.FullName;
-            if (projectRoot != null)
-            {
-                viewsFolder = Path.Combine(projectRoot, "Views");
-                if (!Directory.Exists(viewsFolder))
-                    viewsFolder = Path.Combine(projectRoot, "views");
-            }
-        }
-
-        if (Directory.Exists(viewsFolder))
-        {
-            Log.Debug("Serving HTML from folder: {ViewsFolder}", viewsFolder);
-
-            // Pages served as static files (we won't rely on layout injection here)
-            var staticPages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                "index.html", "logoff.html", "404.html", "otp.html"
-            };
-
-            // Authenticated pages that get the shared layout
-            var layoutPages = new[]
-            {
-                "dashboard.html",
-                "connections.html",
-                "destinations.html",
-                "templates.html",
-                "profiles.html",
-                "jobs.html",
-                "groups.html",
-                "executions.html",
-                "email-approvals.html",
-                "documentation.html",
-                "admin.html",
-                "account.html"
-            };
-
-            var navPages = new[] { "dashboard", "connections", "destinations", "templates",
-                                   "profiles", "jobs", "groups", "executions",
-                                   "email-approvals", "documentation", "admin", "account" };
-
-            var layoutPath = Path.Combine(viewsFolder, "_layout.html");
-            var layoutExists = File.Exists(layoutPath);
-
-            var mappedRoutes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            // Map static pages (served as-is)
-            foreach (var fileName in staticPages)
-            {
-                var filePath = Path.Combine(viewsFolder, fileName);
-                if (File.Exists(filePath))
-                {
-                    var route = "/" + Path.GetFileNameWithoutExtension(fileName);
-                    if (mappedRoutes.Add(route))
-                    {
-                        app.MapGet(route, async context =>
-                        {
-                            Log.Debug("Serving HTML route: {Route} -> {File}", route, filePath);
-                            context.Response.ContentType = "text/html";
-                            await context.Response.WriteAsync(assetVersioner.Apply(await File.ReadAllTextAsync(filePath)));
-                        });
-                    }
-                }
-            }
-
-            // Map authenticated pages (served via layout renderer)
-            foreach (var fileName in layoutPages)
-            {
-                var filePath = Path.Combine(viewsFolder, fileName);
-                if (!File.Exists(filePath)) continue;
-
-                var route = "/" + Path.GetFileNameWithoutExtension(fileName);
-                if (!mappedRoutes.Add(route)) continue;
-
-                var pageName = Path.GetFileNameWithoutExtension(fileName);
-
-                if (!layoutExists)
-                {
-                    // Fallback: serve raw if layout is missing
-                    app.MapGet(route, async context =>
-                    {
-                        Log.Debug("Serving HTML route (no layout): {Route} -> {File}", route, filePath);
-                        context.Response.ContentType = "text/html";
-                        await context.Response.SendFileAsync(filePath);
-                    });
-                }
-                else
-                {
-                    app.MapGet(route, async context =>
-                    {
-                        Log.Debug("Serving HTML route (layout): {Route} -> {File}", route, filePath);
-
-                        var layoutTemplate = await File.ReadAllTextAsync(layoutPath);
-                        var pageContent = await File.ReadAllTextAsync(filePath);
-                        var username = context.User.FindFirst(ClaimTypes.Name)?.Value ?? "User";
-                        var userInitial = username.Length > 0 ? username[0].ToString().ToUpper() : "?";
-                        var displayName = username.Length > 1
-                            ? char.ToUpper(username[0]) + username[1..]
-                            : username.ToUpper();
-
-                        var titleMatch = TitleRegex().Match(pageContent);
-                        var pageTitle = titleMatch.Success ? titleMatch.Groups[1].Value : pageName;
-
-                        var scriptsMatch = ScriptsRegex().Match(pageContent);
-                        var extraScripts = scriptsMatch.Success ? scriptsMatch.Groups[1].Value : "";
-
-                        var contentStart = pageContent.IndexOf("<div class=\"flex-1 flex flex-col overflow-hidden\"", StringComparison.Ordinal);
-                        var content = contentStart >= 0 ? pageContent[contentStart..] : pageContent;
-
-                        var html = layoutTemplate
-                            .Replace("{{PAGE_TITLE}}", pageTitle)
-                            .Replace("{{USERNAME}}", displayName)
-                            .Replace("{{USER_INITIAL}}", userInitial)
-                            .Replace("{{PAGE_SCRIPTS}}", extraScripts)
-                            .Replace("{{PAGE_CONTENT}}", content);
-
-                        foreach (var nav in navPages)
-                        {
-                            var activeClass = nav == pageName
-                                ? "bg-teal-500/10 text-teal-300"
-                                : "hover:bg-zinc-800/60 hover:text-zinc-200";
-                            html = html.Replace($"{{{{NAV_{nav}}}}}", activeClass);
-                        }
-
-                        context.Response.ContentType = "text/html";
-                        await context.Response.WriteAsync(assetVersioner.Apply(html));
-                    });
-                }
-            }
-
-            // Redirect root "/" to "/index"
-            if (mappedRoutes.Contains("/index"))
-            {
-                app.MapGet("/", () => Results.Redirect("/index"));
-            }
-        }
 
         app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
         app.UseAuthorization();
+        app.UseMiddleware<PublicIdMiddleware>();
 
         Log.Debug("Middleware configured");
     }
@@ -730,40 +610,29 @@ public partial class Program
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
         ProfileDocumentsEndpoints.Map(app);
+        DashboardEndpoints.Map(app);
 
-        // Fallback handler for unmapped routes (404)
+        var spaIndex = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");
         app.MapFallback(async context =>
         {
-            var viewsFolder = Path.Combine(AppContext.BaseDirectory, "views");
-            if (!Directory.Exists(viewsFolder))
-                viewsFolder = Path.Combine(AppContext.BaseDirectory, "Views");
-            if (!Directory.Exists(viewsFolder))
+            if (!HttpMethods.IsGet(context.Request.Method) || context.Request.Path.StartsWithSegments("/api") || !spaIndex.Exists)
             {
-                var parentDir = Directory.GetParent(AppContext.BaseDirectory);
-                var projectRoot = parentDir?.Parent?.Parent?.FullName;
-                if (projectRoot != null)
-                {
-                    viewsFolder = Path.Combine(projectRoot, "Views");
-                    if (!Directory.Exists(viewsFolder))
-                        viewsFolder = Path.Combine(projectRoot, "views");
-                }
+                context.Response.StatusCode = 404;
+                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
+                return;
             }
 
-            var notFoundPath = Path.Combine(viewsFolder, "404.html");
-            if (File.Exists(notFoundPath))
+            if (!SpaPageGuard.IsPublic(context.Request.Path)
+                && !await context.RequestServices.GetRequiredService<SpaPageGuard>().IsSignedInAsync(context))
             {
-                Log.Debug("Serving 404 page for unmapped route: {Route}", context.Request.Path);
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "text/html";
-                await context.Response.SendFileAsync(notFoundPath);
+                var page = context.Request.Path + context.Request.QueryString;
+                context.Response.Redirect($"/login?next={Uri.EscapeDataString(page)}");
+                return;
             }
-            else
-            {
-                // Fallback JSON response if 404.html doesn't exist
-                context.Response.StatusCode = 404;
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(new { error = "Not found" });
-            }
+
+            context.Response.ContentType = "text/html";
+            context.Response.Headers.CacheControl = "no-cache";
+            await context.Response.SendFileAsync(spaIndex);
         });
 
         Log.Debug("Endpoints mapped");

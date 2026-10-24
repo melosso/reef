@@ -25,6 +25,6 @@ public class ProfileCanvasMigration(string connectionString)
             }
         }
 
-        Log.Debug("✓ Profile canvas migration completed");
+        Log.Debug("Profile canvas migration completed");
     }
 }

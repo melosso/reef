@@ -313,8 +313,6 @@ public class NotificationTemplateService
             _ => null
         };
     }
-
-    // ===== Default Template HTML Bodies =====
     // These templates MUST match DatabaseInitializer.cs templates for consistency
     // Used for "Reset to Default" feature in the template management UI
 

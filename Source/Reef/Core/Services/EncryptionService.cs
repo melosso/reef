@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Reef.Core.Security;
 using Serilog;
 
 namespace Reef.Core.Services;
@@ -18,9 +19,6 @@ public class EncryptionService
     private const string PublicKeyFileName = "snapshot_blob.bin";
     private readonly string _certsPath;
     private string _currentPublicKeyPem = string.Empty;
-
-    // Fallback key - only used if no environment variable is set
-    private const string FallbackKey = "$REEF2.0_FallbackEncryptionKey_ChangeInProduction_MinLength32Chars#";
 
     private readonly string _encryptionKey;
 
@@ -41,8 +39,7 @@ public class EncryptionService
             }
         }
 
-        // Load encryption key from environment variable or .env file
-        _encryptionKey = LoadEncryptionKey();
+        _encryptionKey = EncryptionKeyLoader.Key;
 
         InitializeKeyPair();
     }
@@ -119,68 +116,6 @@ public class EncryptionService
     }
 
     /// <summary>
-    /// Load encryption key from various sources (priority order)
-    /// </summary>
-    private string LoadEncryptionKey()
-    {
-        // Priority 1: Check Windows environment variable
-        var envKey = Environment.GetEnvironmentVariable("REEF_ENCRYPTION_KEY", EnvironmentVariableTarget.Machine);
-        if (!string.IsNullOrWhiteSpace(envKey))
-        {
-            Log.Debug("Using encryption key from Windows system environment variable");
-            return envKey;
-        }
-
-        // Priority 2: Check process environment variable
-        envKey = Environment.GetEnvironmentVariable("REEF_ENCRYPTION_KEY", EnvironmentVariableTarget.Process);
-        if (!string.IsNullOrWhiteSpace(envKey))
-        {
-            Log.Debug("Using encryption key from process environment variable");
-            return envKey;
-        }
-
-        // Priority 3: Check .env file (for Docker/development)
-        var projectRoot = FindProjectRoot(AppContext.BaseDirectory);
-        var envFilePath = Path.Combine(projectRoot, ".env");
-
-        if (File.Exists(envFilePath))
-        {
-            try
-            {
-                var envLines = File.ReadAllLines(envFilePath);
-                foreach (var line in envLines)
-                {
-                    var trimmed = line.Trim();
-                    if (trimmed.StartsWith("#") || string.IsNullOrWhiteSpace(trimmed))
-                        continue;
-
-                    var parts = trimmed.Split('=', 2);
-                    if (parts.Length == 2 && parts[0].Trim() == "REEF_ENCRYPTION_KEY")
-                    {
-                        var key = parts[1].Trim().Trim('"', '\'');
-                        if (!string.IsNullOrWhiteSpace(key))
-                        {
-                            Log.Debug("Using encryption key from .env file");
-                            return key;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Warning(ex, "Failed to read environment file at {Path}", envFilePath);
-            }
-        }
-
-        // Priority 4: Fallback to hardcoded key (with warning)
-        Log.Warning("! No REEF_ENCRYPTION_KEY found in environment or .env file. Using fallback key.");
-        Log.Warning("! For production, set REEF_ENCRYPTION_KEY environment variable or create .env file.");
-        Log.Information("");
-
-        return FallbackKey;
-    }
-
-    /// <summary>
     /// Find project root by looking for .env file or Reef.db
     /// </summary>
     public static string FindProjectRoot(string startPath)
@@ -239,7 +174,7 @@ public class EncryptionService
 
             // Update current public key
             _currentPublicKeyPem = publicKeyPem;
-            Log.Information("! Generated new RSA keypair for encryption");
+            Log.Information("Generated a new RSA keypair for encryption");
         }
         else
         {

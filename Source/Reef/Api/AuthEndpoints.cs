@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Security;
+using Reef.Helpers;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using OtpNet;
@@ -18,10 +19,6 @@ public static class AuthEndpoints
     private const int MaxMfaAttempts = 5;
     private const int MfaLockoutMinutes = 15;
     private const int OtpLength = 6;
-    private const int MaxLoginAttempts = 5;
-    private static readonly ConcurrentDictionary<string, (int Attempts, DateTime? LockedUntil)> _loginAttempts = new();
-    private const int LoginAttemptWindowMinutes = 15;
-    private const int LoginLockoutMinutes = 15;
     private const int BackupCodeLength = 8;
 
     private record MfaPendingSession(
@@ -46,13 +43,6 @@ public static class AuthEndpoints
     {
         var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         var userAgent = context.Request.Headers.UserAgent.FirstOrDefault() ?? "unknown";
-        var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-
-        if (!string.IsNullOrEmpty(forwarded))
-        {
-            clientIp = forwarded.Split(',')[0].Trim();
-        }
-
         return $"{clientIp}:{userAgent.GetHashCode()}";
     }
 
@@ -85,10 +75,14 @@ public static class AuthEndpoints
             }
         }
 
+        // the web ui is served by reef itself, so its own origin needs no configuration
+        if (string.Equals(origin, $"{context.Request.Scheme}://{context.Request.Host}", StringComparison.OrdinalIgnoreCase))
+        {
+            return (true, origin);
+        }
+
         var config = context.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-        var allowedOriginsArray = config?.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-        var allowedOriginsString = config?.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-        var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var allowedOrigins = config?.GetList("Reef:AllowedOrigins") ?? [];
 
         if (allowedOrigins.Contains("*"))
         {
@@ -115,14 +109,10 @@ public static class AuthEndpoints
             var (isValid, evaluatedOrigin) = ValidateOrigin(context.HttpContext);
             if (!isValid)
             {
-                var clientIp = context.HttpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                    ?? context.HttpContext.Connection.RemoteIpAddress?.ToString()
-                    ?? "unknown";
+                var clientIp = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                 var config = context.HttpContext.RequestServices.GetService(typeof(Microsoft.Extensions.Configuration.IConfiguration)) as Microsoft.Extensions.Configuration.IConfiguration;
-                var allowedOriginsArray = config?.GetSection("Reef:AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
-                var allowedOriginsString = config?.GetValue<string>("Reef:AllowedOrigins")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? Array.Empty<string>();
-                var allowedOrigins = allowedOriginsArray.Concat(allowedOriginsString).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                var allowedOrigins = config?.GetList("Reef:AllowedOrigins") ?? [];
 
                 Log.Warning("Origin validation failed for auth request from IP: {IP}. Evaluated Origin: '{Origin}'. Allowed Origins: {AllowedOrigins}",
                     clientIp, evaluatedOrigin, string.Join(", ", allowedOrigins));
@@ -139,41 +129,6 @@ public static class AuthEndpoints
         RandomNumberGenerator.Fill(bytes);
         var num = BitConverter.ToUInt32(bytes);
         return (num % 900_000 + 100_000).ToString();
-    }
-
-    private static void RecordFailedLoginAttempt(string clientIp)
-    {
-        var now = DateTime.UtcNow;
-        var existing = _loginAttempts.GetOrAdd(clientIp, (0, null));
-        var attempts = existing.Attempts + 1;
-        DateTime? lockedUntil = null;
-
-        if (attempts >= MaxLoginAttempts)
-        {
-            lockedUntil = now.AddMinutes(LoginLockoutMinutes);
-            Log.Warning("IP {IP} has been locked out due to {Attempts} failed login attempts", clientIp, attempts);
-        }
-
-        _loginAttempts[clientIp] = (attempts, lockedUntil);
-    }
-
-    private static void CleanupExpiredLoginAttempts()
-    {
-        var now = DateTime.UtcNow;
-        var lastTicks = Interlocked.Read(ref _lastCleanupTicks);
-        if (now.Ticks - lastTicks < _cleanupInterval.Ticks) return;
-
-        if (Interlocked.CompareExchange(ref _lastCleanupTicks, now.Ticks, lastTicks) != lastTicks) return;
-
-        var expiredKeys = _loginAttempts
-            .Where(kvp => kvp.Value.LockedUntil.HasValue && kvp.Value.LockedUntil < now)
-            .Select(kvp => kvp.Key)
-            .ToList();
-
-        foreach (var key in expiredKeys)
-        {
-            _loginAttempts.TryRemove(key, out _);
-        }
     }
 
     private static void CleanupExpiredSessions()
@@ -274,50 +229,56 @@ public static class AuthEndpoints
     private static async Task<IResult> Login(
         [FromBody] LoginRequest request,
         [FromServices] DatabaseConfig dbConfig,
-        [FromServices] PasswordHasher passwordHasher,
+        [FromServices] UserPasswordHasher passwordHasher,
         [FromServices] JwtTokenService jwtService,
         [FromServices] AuditService auditService,
         [FromServices] NotificationService notificationService,
+        [FromServices] LoginThrottle loginThrottle,
         HttpContext httpContext)
     {
         try
         {
             Log.Debug("Auth endpoint called: /api/auth/login for user {Username}", request.Username);
 
-            // Clean up expired attempts and rate limit
-            CleanupExpiredLoginAttempts();
             var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-            if (_loginAttempts.TryGetValue(clientIp, out var loginAttempt))
+            if (loginThrottle.IsLocked(clientIp, request.Username))
             {
-                if (loginAttempt.LockedUntil.HasValue && loginAttempt.LockedUntil > DateTime.UtcNow)
-                {
-                    Log.Warning("Login rate limit exceeded for IP {IP}", clientIp);
-                    return Results.Json(new { message = "Too many login attempts. Please try again later." }, statusCode: 429);
-                }
+                Log.Warning("Login rate limit exceeded for IP {IP}", clientIp);
+                return Results.Json(new { message = "Too many login attempts. Please try again later." }, statusCode: 429);
             }
 
             await using var connection = new SqliteConnection(dbConfig.ConnectionString);
             await connection.OpenAsync();
 
             var normalizedUsername = request.Username.ToLowerInvariant();
-            const string sql = "SELECT * FROM Users WHERE LOWER(Username) = @Username AND IsActive = 1 AND IsDeleted = 0";
-            var user = await connection.QueryFirstOrDefaultAsync<User>(sql, new { Username = normalizedUsername });
+            const string sql = "SELECT * FROM Users WHERE (LOWER(Username) = @Username OR LOWER(Email) = @Username) AND IsActive = 1 AND IsDeleted = 0";
+            var candidates = (await connection.QueryAsync<User>(sql, new { Username = normalizedUsername })).ToList();
+            // A shared email address never picks an account; the username stays unambiguous
+            var user = candidates.FirstOrDefault(u => u.Username.Equals(normalizedUsername, StringComparison.OrdinalIgnoreCase))
+                ?? (candidates.Count == 1 ? candidates[0] : null);
 
             if (user == null)
             {
-                RecordFailedLoginAttempt(clientIp);
+                loginThrottle.RecordFailure(clientIp, request.Username);
                 Log.Warning("Login attempt failed for user {Username}. Reason: user not found", request.Username);
-                return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new { message = "Email or password is incorrect." }, statusCode: 401);
             }
 
-            if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+            if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash, out var needsRehash))
             {
-                RecordFailedLoginAttempt(clientIp);
+                loginThrottle.RecordFailure(clientIp, request.Username);
                 Log.Warning("Login attempt failed for user {Username}. Reason: invalid password", request.Username);
-                return Results.Json(new { message = "Invalid username or password" }, statusCode: 401);
+                return Results.Json(new { message = "Email or password is incorrect." }, statusCode: 401);
             }
 
-            // ── MFA gate ──────────────────────────────────────────────────────────
+            loginThrottle.RecordSuccess(clientIp, request.Username);
+
+            if (needsRehash)
+            {
+                // The token password stamp is read from user.PasswordHash, so it must match the stored hash.
+                user.PasswordHash = passwordHasher.HashPassword(request.Password);
+                await connection.ExecuteAsync("UPDATE Users SET PasswordHash = @Hash WHERE Id = @Id", new { Hash = user.PasswordHash, user.Id });
+            }
             if (user.MfaEnabled && !string.IsNullOrEmpty(user.MfaMethod))
             {
                 // Clean up any expired sessions for this user
@@ -353,7 +314,6 @@ public static class AuthEndpoints
                     mfaSessionId = sessionId
                 });
             }
-            // ─────────────────────────────────────────────────────────────────────
 
             return await IssueToken(user, connection, jwtService, auditService, httpContext);
         }
@@ -506,7 +466,7 @@ public static class AuthEndpoints
         AuditService auditService,
         HttpContext httpContext)
     {
-        var token = jwtService.GenerateToken(user.Username, user.Role, user.Id);
+        var token = jwtService.GenerateToken(user.Username, user.Role, user.Id, user.PasswordHash);
         var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
         await connection.ExecuteAsync(
@@ -549,26 +509,25 @@ public static class AuthEndpoints
     {
         try
         {
-            var username = httpContext.User.Identity?.Name;
-            var role = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Role)?.Value;
             var userIdClaim = httpContext.User.Claims.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier || c.Type == "userId" || c.Type == "sub")?.Value;
-
-            if (username == null || role == null || !int.TryParse(userIdClaim, out var userId))
+            if (!int.TryParse(userIdClaim, out var userId))
             {
                 return Results.Unauthorized();
             }
 
-            // Get user to fetch displayName
-            string? displayName = null;
-            try
+            // The bearer pipeline rejects stale tokens. The new token uses claims from the stored account.
+            await using var connection = new SqliteConnection(dbConfig.ConnectionString);
+            var user = await connection.QuerySingleOrDefaultAsync<User>(
+                "SELECT * FROM Users WHERE Id = @UserId AND IsActive = 1 AND IsDeleted = 0", new { UserId = userId });
+            if (user == null)
             {
-                using var connection = new SqliteConnection(dbConfig.ConnectionString);
-                const string sql = "SELECT DisplayName FROM Users WHERE Id = @UserId";
-                displayName = await connection.QueryFirstOrDefaultAsync<string>(sql, new { UserId = userId });
+                return Results.Unauthorized();
             }
-            catch { /* Ignore - displayName is optional */ }
 
-            var newToken = jwtService.GenerateToken(username, role, userId);
+            var username = user.Username;
+            var role = user.Role;
+            var displayName = user.DisplayName;
+            var newToken = jwtService.GenerateToken(username, role, userId, user.PasswordHash);
             var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
             var isHttps = httpContext.Request.IsHttps;
@@ -654,7 +613,7 @@ public static class AuthEndpoints
     private static async Task<IResult> ChangePassword(
         [FromBody] ChangePasswordRequest request,
         [FromServices] DatabaseConfig dbConfig,
-        [FromServices] PasswordHasher passwordHasher,
+        [FromServices] UserPasswordHasher passwordHasher,
         [FromServices] AuditService auditService,
         HttpContext httpContext)
     {

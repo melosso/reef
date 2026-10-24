@@ -13,21 +13,21 @@ public class ValidationServiceTests
     [InlineData("INSERT INTO ExportLog (RunId) VALUES (1)")]
     [InlineData("DELETE FROM Staging WHERE Id = 1")]
     [InlineData("TRUNCATE TABLE Staging")]
-    public async Task Processing_commands_may_write(string command)
+    public async Task ProcessingCommandsMayWrite(string command)
     {
         var (isValid, error, _) = await _service.ValidateCommandAsync(command, "Sqlite");
         isValid.Should().BeTrue(error);
     }
 
     [Fact]
-    public async Task Processing_commands_may_not_drop_objects()
+    public async Task ProcessingCommandsMayNotDropObjects()
     {
         var (isValid, _, _) = await _service.ValidateCommandAsync("DROP TABLE Orders", "Sqlite");
         isValid.Should().BeFalse();
     }
 
     [Fact]
-    public async Task Export_queries_stay_read_only()
+    public async Task ExportQueriesStayReadOnly()
     {
         var (isValid, _, _) = await _service.ValidateQueryAsync("UPDATE Orders SET Status = 'x' WHERE OrderId = 1", "Sqlite");
         isValid.Should().BeFalse();

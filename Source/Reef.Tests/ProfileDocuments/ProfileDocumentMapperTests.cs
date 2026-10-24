@@ -25,7 +25,7 @@ public class ProfileDocumentMapperTests
         ProfileDocumentMapper.Apply(catalog, document, ProfileCatalogs.Defaults(catalog.Kind), ProfileCatalogs.Defaults(catalog.Kind)).Deserialize<T>()!;
 
     [Fact]
-    public void Email_export_document_maps_to_profile_columns_and_back()
+    public void EmailExportDocumentMapsToProfileColumnsAndBack()
     {
         var document = Document(Export, "Order mails",
             ("source", new JsonObject { ["ConnectionId"] = 3, ["Query"] = "SELECT 1" }),
@@ -49,7 +49,7 @@ public class ProfileDocumentMapperTests
     }
 
     [Fact]
-    public void Removing_a_node_resets_the_columns_it_owns()
+    public void RemovingANodeResetsTheColumnsItOwns()
     {
         var existing = JsonSerializer.SerializeToNode(new Profile { Name = "x", Query = "q", Hash = "", DeltaSyncEnabled = true, DeltaSyncReefIdColumn = "Id", TemplateId = 4 })!.AsObject();
         var document = Document(Export, "x",
@@ -65,7 +65,7 @@ public class ProfileDocumentMapperTests
     }
 
     [Fact]
-    public void Validator_reports_structure_and_field_problems_per_node()
+    public void ValidatorReportsStructureAndFieldProblemsPerNode()
     {
         var document = Document(Export, "",
             ("source", new JsonObject { ["Query"] = "SELECT 1" }),
@@ -82,7 +82,7 @@ public class ProfileDocumentMapperTests
     }
 
     [Fact]
-    public void Import_document_keeps_structured_columns_json_native()
+    public void ImportDocumentKeepsStructuredColumnsJsonNative()
     {
         var mappings = new JsonArray(new JsonObject { ["sourceColumn"] = "order_id", ["targetColumn"] = "OrderId", ["isKeyColumn"] = true });
         var document = Document(Import, "Orders in",

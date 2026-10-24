@@ -30,8 +30,6 @@ public static class AccountEndpoints
         group.MapDelete("/mfa", DisableMfa);
     }
 
-    // ── GET /api/account/profile ──────────────────────────────────────────────
-
     private static async Task<IResult> GetProfile(
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig)
@@ -62,8 +60,6 @@ public static class AccountEndpoints
         });
     }
 
-    // ── PUT /api/account/profile ─────────────────────────────────────────────
-
     private static async Task<IResult> UpdateProfile(
         [FromBody] UpdateProfileRequest request,
         HttpContext httpContext,
@@ -86,6 +82,13 @@ public static class AccountEndpoints
             var atIdx = request.Email.IndexOf('@');
             if (atIdx <= 0 || atIdx == request.Email.Length - 1)
                 return Results.Json(new { success = false, message = "Invalid email address" }, statusCode: 400);
+
+            // sign-in accepts an email, so it must not resolve to another account
+            var taken = await conn.ExecuteScalarAsync<int>(
+                "SELECT COUNT(*) FROM Users WHERE Id <> @Id AND IsDeleted = 0 AND (LOWER(Email) = @Email OR LOWER(Username) = @Email)",
+                new { user.Id, Email = request.Email.Trim().ToLowerInvariant() });
+            if (taken > 0)
+                return Results.Json(new { success = false, message = "This email address is used by another account" }, statusCode: 409);
         }
 
         await conn.ExecuteAsync(
@@ -172,8 +175,6 @@ public static class AccountEndpoints
         });
     }
 
-    // ── POST /api/account/mfa/totp/confirm ───────────────────────────────────
-
     private static async Task<IResult> ConfirmTotp(
         [FromBody] ConfirmTotpRequest request,
         HttpContext httpContext,
@@ -226,8 +227,6 @@ public static class AccountEndpoints
         return Results.Ok(new { success = true, backupCodes = plainCodes });
     }
 
-    // ── POST /api/account/mfa/email/enable ───────────────────────────────────
-
     private static async Task<IResult> EnableEmailMfa(
         HttpContext httpContext,
         [FromServices] DatabaseConfig dbConfig,
@@ -262,8 +261,6 @@ public static class AccountEndpoints
         Log.Information("User {Username} enabled Email MFA", username);
         return Results.Ok(new { success = true });
     }
-
-    // ── DELETE /api/account/mfa ───────────────────────────────────────────────
 
     private static async Task<IResult> DisableMfa(
         HttpContext httpContext,

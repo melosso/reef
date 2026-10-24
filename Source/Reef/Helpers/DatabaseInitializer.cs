@@ -12,7 +12,7 @@ public class DatabaseInitializer
 {
     private readonly string _connectionString;
     private readonly EncryptionService? _encryptionService;
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<DatabaseInitializer>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<DatabaseInitializer>();
 
     public DatabaseInitializer(string connectionString, EncryptionService? encryptionService = null)
     {
@@ -531,10 +531,7 @@ public class DatabaseInitializer
         ";
         await connection.ExecuteAsync(sql);
     }
-
-    // ============================================
     // REEF TABLES
-    // ============================================
 
     private async Task CreateDestinationsTableAsync(SqliteConnection connection)
     {
@@ -765,7 +762,7 @@ public class DatabaseInitializer
                 CREATE INDEX IF NOT EXISTS idx_deltasync_deleted ON DeltaSyncState(ProfileId, IsDeleted);
             ";
             await connection.ExecuteAsync(sql);
-            Log.Debug("✓ DeltaSyncState table created");
+            Log.Debug("DeltaSyncState table created");
         }
     }
 
@@ -1061,30 +1058,29 @@ public class DatabaseInitializer
 
         if (userCount == 0)
         {
-            // Create default admin user with BCrypt hashed password "admin123"
-            // Force password change on first login for security
             const string insertUserSql = @"
                 INSERT INTO Users (Username, DisplayName, PasswordHash, Role, IsActive, CreatedAt, PasswordChangeRequired)
                 VALUES (@Username, @DisplayName, @PasswordHash, @Role, @IsActive, @CreatedAt, @PasswordChangeRequired)
             ";
 
-            var passwordHasher = new Reef.Core.Security.PasswordHasher();
-            var passwordHash = passwordHasher.HashPassword("admin123");
+            const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+            var username = $"admin-{System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet, 8)}@reef.local";
+            var password = System.Security.Cryptography.RandomNumberGenerator.GetString(alphabet + "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 16);
+            var passwordHasher = new Reef.Core.Security.UserPasswordHasher(Reef.Core.Security.EncryptionKeyLoader.Key);
 
             await connection.ExecuteAsync(insertUserSql, new
             {
-                Username = "admin@reef.local",
+                Username = username,
                 DisplayName = "Administrator",
-                PasswordHash = passwordHash,
+                PasswordHash = passwordHasher.HashPassword(password),
                 Role = "Admin",
                 IsActive = 1,
                 CreatedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss"),
                 PasswordChangeRequired = 1
             });
 
-            Log.Warning("! Created default admin user (username: admin@reef.local, password: admin123)");
-            Log.Warning("! Password change will be required on first login");
-            Log.Information("");
+            Log.Warning("Created the first admin account {Username:l} with one-time password {Password:l}", username, password);
+            Log.Warning("Reef asks for a new password at the first sign-in");
         }
     }
 
@@ -1141,7 +1137,6 @@ public class DatabaseInitializer
         //    - Template field contains actual Scriban syntax
         var templates = new[]
         {
-            // ========== SQL SERVER NATIVE TEMPLATES ==========
             // These use QueryTemplateService.ApplyTransformationAsync with Options
             // The Template field is for reference/documentation only
             
@@ -1181,8 +1176,6 @@ public class DatabaseInitializer
                 OutputFormat = "XML",
                 Tags = "xml,sql-server,native,auto,example"
             },
-            
-            // ========== CUSTOM SCRIBAN TEMPLATES ==========
             // These use ScribanTemplateEngine - Template field contains actual transformation logic
             
             new
@@ -1579,7 +1572,7 @@ public class DatabaseInitializer
             await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_OldUsername ON UsernameHistory(OldUsername)");
             await connection.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_UsernameHistory_NewUsername ON UsernameHistory(NewUsername)");
 
-            Log.Debug("✓ Created UsernameHistory table");
+            Log.Debug("Created UsernameHistory table");
         }
     }
 
@@ -1621,7 +1614,7 @@ public class DatabaseInitializer
                 AND typeof(CreatedBy) = 'text'
             ");
 
-            Log.Debug("✓ Migrated Connections.CreatedBy to User IDs");
+            Log.Debug("Migrated Connections.CreatedBy to User IDs");
         }
 
         // Check if CreatedBy in Profiles contains text data (needs migration)
@@ -1653,13 +1646,13 @@ public class DatabaseInitializer
                 AND typeof(CreatedBy) = 'text'
             ");
 
-            Log.Debug("✓ Migrated Profiles.CreatedBy to User IDs");
+            Log.Debug("Migrated Profiles.CreatedBy to User IDs");
         }
 
         // Note: AuditLog.PerformedBy remains as string (username) intentionally
         // Audit logs are historical records and should preserve the username used at the time
 
-        Log.Debug("✓ Migrated CreatedBy columns to User IDs");
+        Log.Debug("Migrated CreatedBy columns to User IDs");
     }
 
     /// <summary>
@@ -1721,7 +1714,7 @@ public class DatabaseInitializer
             ";
 
             await connection.ExecuteAsync(createTableSql);
-            Log.Debug("✓ Created PendingEmailApprovals table");
+            Log.Debug("Created PendingEmailApprovals table");
         }
 
         // Add indexes for performance (except Guid index which requires the column to exist first)
@@ -1766,7 +1759,7 @@ public class DatabaseInitializer
                 WHERE Guid IS NULL OR Guid = ''
             ";
             await connection.ExecuteAsync(populateGuids);
-            Log.Debug("✓ Migrated existing records to include GUIDs");
+            Log.Debug("Migrated existing records to include GUIDs");
         }
 
         // Create the Guid index (for both new and migrated tables)
@@ -1779,7 +1772,7 @@ public class DatabaseInitializer
             Log.Warning(ex, "Failed to create Guid index, continuing");
         }
 
-        Log.Debug("✓ Email approval migrations completed");
+        Log.Debug("Email approval migrations completed");
     }
 
     /// <summary>
@@ -3059,7 +3052,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_importprofiles_enabled    ON ImportProfiles(IsEnabled);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportProfiles table ready");
+        Log.Debug("ImportProfiles table ready");
     }
 
     /// <summary>
@@ -3297,7 +3290,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impexec_status   ON ImportProfileExecutions(Status);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportProfileExecutions table ready");
+        Log.Debug("ImportProfileExecutions table ready");
     }
 
     private static async Task CreateImportExecutionErrorsTableAsync(SqliteConnection connection)
@@ -3321,7 +3314,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_imperrors_phase     ON ImportExecutionErrors(ExecutionId, Phase);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportExecutionErrors table ready");
+        Log.Debug("ImportExecutionErrors table ready");
     }
 
     private static async Task CreateImportDeltaSyncStateTableAsync(SqliteConnection connection)
@@ -3347,7 +3340,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impdelta_deleted      ON ImportDeltaSyncState(ImportProfileId, IsDeleted);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportDeltaSyncState table ready");
+        Log.Debug("ImportDeltaSyncState table ready");
     }
 
     private static async Task CreateImportOutputTargetsTableAsync(SqliteConnection connection)
@@ -3371,7 +3364,7 @@ public class DatabaseInitializer
             CREATE INDEX IF NOT EXISTS idx_impoutputs_profile ON ImportOutputTargets(ImportProfileId);
         ";
         await connection.ExecuteAsync(sql);
-        Log.Debug("✓ ImportOutputTargets table ready");
+        Log.Debug("ImportOutputTargets table ready");
     }
 
     /// <summary>

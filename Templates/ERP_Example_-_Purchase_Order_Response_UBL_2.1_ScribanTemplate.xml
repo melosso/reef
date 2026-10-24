@@ -68,15 +68,15 @@
 
     <!-- Tax Total -->
     <cac:TaxTotal>
-        <cbc:TaxAmount currencyID="{{~ row.currency ~}}">{{~ row.total_tax | html.escape ~}}</cbc:TaxAmount>
+        <cbc:TaxAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ row.total_tax | html.escape ~}}</cbc:TaxAmount>
     </cac:TaxTotal>
 
     <!-- Monetary Total -->
     <cac:MonetaryTotal>
-        <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:LineExtensionAmount>
-        <cbc:TaxExclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_net | html.escape ~}}</cbc:TaxExclusiveAmount>
-        <cbc:TaxInclusiveAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:TaxInclusiveAmount>
-        <cbc:PayableAmount currencyID="{{~ row.currency ~}}">{{~ row.total_gross | html.escape ~}}</cbc:PayableAmount>
+        <cbc:LineExtensionAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ row.total_net | html.escape ~}}</cbc:LineExtensionAmount>
+        <cbc:TaxExclusiveAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ row.total_net | html.escape ~}}</cbc:TaxExclusiveAmount>
+        <cbc:TaxInclusiveAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ row.total_gross | html.escape ~}}</cbc:TaxInclusiveAmount>
+        <cbc:PayableAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ row.total_gross | html.escape ~}}</cbc:PayableAmount>
     </cac:MonetaryTotal>
 
     <!-- Order Response Lines -->
@@ -93,10 +93,10 @@
         <cac:ResponseLineItem>
             <cbc:ID>{{~ item.id | html.escape ~}}</cbc:ID>
             <cbc:Quantity unitCode="{{~ item.unit_code | html.escape ~}}">{{~ item.confirmed_quantity | html.escape ~}}</cbc:Quantity>
-            <cbc:LineExtensionAmount currencyID="{{~ row.currency ~}}">{{~ item.net_total | html.escape ~}}</cbc:LineExtensionAmount>
+            <cbc:LineExtensionAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ item.net_total | html.escape ~}}</cbc:LineExtensionAmount>
             <cbc:Note>{{~ item.line_note | html.escape ~}}</cbc:Note>
             <cac:Price>
-                <cbc:PriceAmount currencyID="{{~ row.currency ~}}">{{~ item.unit_price | html.escape ~}}</cbc:PriceAmount>
+                <cbc:PriceAmount currencyID="{{~ row.currency | html.escape ~}}">{{~ item.unit_price | html.escape ~}}</cbc:PriceAmount>
             </cac:Price>
             <cac:Item>
                 <cbc:Name>{{~ item.description | html.escape ~}}</cbc:Name>

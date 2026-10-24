@@ -36,16 +36,16 @@ public class QueryExecutor
     /// <param name="maxRetries">Maximum retry attempts for transient errors (default: 2)</param>
     /// <returns>Tuple containing success status, result rows, error message, and execution time</returns>
     public async Task<(bool Success, List<Dictionary<string, object>> Rows, string? ErrorMessage, long ExecutionTimeMs)>
-        ExecuteQueryAsync(Connection connection, string query, Dictionary<string, string>? parameters = null, int commandTimeout = DefaultCommandTimeout, int maxRetries = 2)
+        ExecuteQueryAsync(Connection connection, string query, Dictionary<string, string>? parameters = null, int commandTimeout = DefaultCommandTimeout, int maxRetries = 2, CancellationToken ct = default)
     {
-        return await ExecuteQueryWithRetryAsync(connection, query, parameters, commandTimeout, maxRetries);
+        return await ExecuteQueryWithRetryAsync(connection, query, parameters, commandTimeout, maxRetries, ct);
     }
 
     /// <summary>
     /// Internal method with retry logic for transient database errors
     /// </summary>
     private async Task<(bool Success, List<Dictionary<string, object>> Rows, string? ErrorMessage, long ExecutionTimeMs)>
-        ExecuteQueryWithRetryAsync(Connection connection, string query, Dictionary<string, string>? parameters, int commandTimeout, int maxRetries)
+        ExecuteQueryWithRetryAsync(Connection connection, string query, Dictionary<string, string>? parameters, int commandTimeout, int maxRetries, CancellationToken ct)
     {
         int attempt = 0;
         List<Exception> exceptions = new();
@@ -55,7 +55,7 @@ public class QueryExecutor
         {
             try
             {
-                var result = await ExecuteQueryCoreAsync(connection, query, parameters, commandTimeout);
+                var result = await ExecuteQueryCoreAsync(connection, query, parameters, commandTimeout, ct);
 
                 if (result.Success)
                 {
@@ -81,7 +81,7 @@ public class QueryExecutor
                     var delaySeconds = 2 * (attempt + 1); // 2s, 4s, 6s
                     Log.Information("Retrying query in {DelaySeconds}s (attempt {Attempt}/{MaxRetries})",
                         delaySeconds, attempt + 1, maxRetries);
-                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
                     attempt++;
                     continue;
                 }
@@ -95,7 +95,7 @@ public class QueryExecutor
                 if (attempt < maxRetries)
                 {
                     var delaySeconds = 2 * (attempt + 1);
-                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
                     attempt++;
                     continue;
                 }
@@ -109,7 +109,7 @@ public class QueryExecutor
                 if (attempt < maxRetries)
                 {
                     var delaySeconds = 2 * (attempt + 1);
-                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
                     attempt++;
                     continue;
                 }
@@ -136,7 +136,7 @@ public class QueryExecutor
     /// Core query execution logic (single attempt, no retry)
     /// </summary>
     private async Task<(bool Success, List<Dictionary<string, object>> Rows, string? ErrorMessage, long ExecutionTimeMs)>
-        ExecuteQueryCoreAsync(Connection connection, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        ExecuteQueryCoreAsync(Connection connection, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
         var stopwatch = Stopwatch.StartNew();
 
@@ -168,7 +168,7 @@ public class QueryExecutor
                 Log.Warning("Query validation warning for {ConnectionName}: {Warning}", connection.Name, warning);
             }
 
-            Log.Information("Executing query on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
+            Log.Debug("Executing query on {ConnectionType} connection {ConnectionName}", connection.Type, connection.Name);
             Log.Debug("Query: {Query}", query);
 
             List<Dictionary<string, object>> rows;
@@ -176,20 +176,20 @@ public class QueryExecutor
             switch (connection.Type.ToLowerInvariant())
             {
                 case "sqlserver":
-                    rows = await ExecuteSqlServerQueryAsync(connectionString, query, parameters, commandTimeout);
+                    rows = await ExecuteSqlServerQueryAsync(connectionString, query, parameters, commandTimeout, ct);
                     break;
 
                 case "mysql":
-                    rows = await ExecuteMySqlQueryAsync(connectionString, query, parameters, commandTimeout);
+                    rows = await ExecuteMySqlQueryAsync(connectionString, query, parameters, commandTimeout, ct);
                     break;
 
                 case "postgresql":
                 case "postgres":
-                    rows = await ExecutePostgreSqlQueryAsync(connectionString, query, parameters, commandTimeout);
+                    rows = await ExecutePostgreSqlQueryAsync(connectionString, query, parameters, commandTimeout, ct);
                     break;
 
                 case "sqlite":
-                    rows = await ExecuteSqliteQueryAsync(connectionString, query, parameters, commandTimeout);
+                    rows = await ExecuteSqliteQueryAsync(connectionString, query, parameters, commandTimeout, ct);
                     break;
 
                 default:
@@ -198,7 +198,7 @@ public class QueryExecutor
             }
 
             stopwatch.Stop();
-            Log.Information("Query executed successfully. Rows returned: {RowCount}, Time: {ExecutionTimeMs}ms",
+            Log.Debug("Query executed successfully. Rows returned: {RowCount}, Time: {ExecutionTimeMs}ms",
                 rows.Count, stopwatch.ElapsedMilliseconds);
 
             return (true, rows, null, stopwatch.ElapsedMilliseconds);
@@ -350,7 +350,7 @@ public class QueryExecutor
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -367,7 +367,7 @@ public class QueryExecutor
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -384,7 +384,7 @@ public class QueryExecutor
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -397,7 +397,7 @@ public class QueryExecutor
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -405,75 +405,75 @@ public class QueryExecutor
     /// Execute query against SQL Server
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteSqlServerQueryAsync(
-        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
         var builder = new SqlConnectionStringBuilder(connectionString)
         {
             ApplicationName = "Reef"
         };
         await using var connection = new SqlConnection(builder.ConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
-        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout, ct);
     }
 
     /// <summary>
     /// Execute query against MySQL
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteMySqlQueryAsync(
-        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
         var builder = new MySqlConnectionStringBuilder(connectionString)
         {
             ApplicationName = "Reef"
         };
         await using var connection = new MySqlConnection(builder.ConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
-        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout, ct);
     }
 
     /// <summary>
     /// Execute query against PostgreSQL
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecutePostgreSqlQueryAsync(
-        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
         var builder = new NpgsqlConnectionStringBuilder(connectionString)
         {
             ApplicationName = "Reef"
         };
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
-        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout, ct);
     }
 
     /// <summary>
     /// Execute query against SQLite
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteSqliteQueryAsync(
-        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        string connectionString, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
         await using var connection = new SqliteConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(ct);
 
-        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout);
+        return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout, ct);
     }
+
+    // Dapper reads a dictionary only as IEnumerable<KeyValuePair<string, object>>, any other dictionary is read as a property template
+    private static DynamicParameters? Bind(Dictionary<string, string>? parameters) =>
+        parameters is { Count: > 0 } ? new DynamicParameters(parameters.ToDictionary(p => p.Key, p => (object)p.Value)) : null;
 
     /// <summary>
     /// Execute query using Dapper with native parameterization and convert results to dictionary list
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteQueryWithDapper(
-        IDbConnection connection, string query, Dictionary<string, string>? parameters, int commandTimeout)
+        IDbConnection connection, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
-        object? paramObject = null;
-        if (parameters != null && parameters.Count > 0)
-        {
-            paramObject = new DynamicParameters(parameters);
-        }
+        var paramObject = Bind(parameters);
 
-        var result = await connection.QueryAsync(query, paramObject, commandTimeout: commandTimeout);
+        var result = await connection.QueryAsync(new CommandDefinition(query, paramObject, commandTimeout: commandTimeout, cancellationToken: ct));
 
         var rows = new List<Dictionary<string, object>>();
 

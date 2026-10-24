@@ -13,7 +13,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class ResendEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ResendEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ResendEmailProvider>();
     private const string ResendApiUrl = "https://api.resend.com/emails";
 
     // Rate limiter: 2 requests per second (Resend API limit)
@@ -273,6 +273,28 @@ public class ResendEmailProvider : IEmailProvider
         }
     }
 
+
+    // A sending-only key cannot list domains: Resend answers restricted_api_key, which still proves the key is valid
+    public async Task<string?> VerifyAsync(EmailDestinationConfiguration config, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(config.ResendApiKey))
+            return "Resend API key is required";
+        try
+        {
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(5, config.TimeoutSeconds)) };
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.resend.com/domains");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ResendApiKey);
+            using var response = await httpClient.SendAsync(request, ct);
+            var body = await response.Content.ReadAsStringAsync(ct);
+            return response.IsSuccessStatusCode || body.Contains("restricted_api_key", StringComparison.Ordinal)
+                ? null
+                : $"Resend check failed: {(int)response.StatusCode} {body}";
+        }
+        catch (Exception ex)
+        {
+            return $"Resend check failed: {ex.Message}";
+        }
+    }
 }
 
 [JsonSerializable(typeof(ResendEmailRequest))]

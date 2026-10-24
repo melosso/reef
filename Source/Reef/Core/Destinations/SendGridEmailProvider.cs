@@ -12,7 +12,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class SendGridEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<SendGridEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<SendGridEmailProvider>();
     private const string SendGridApiUrl = "https://api.sendgrid.com/v3/mail/send";
 
     /// <summary>
@@ -198,6 +198,26 @@ public class SendGridEmailProvider : IEmailProvider
         }
     }
 
+
+    public async Task<string?> VerifyAsync(EmailDestinationConfiguration config, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(config.SendGridApiKey))
+            return "SendGrid API key is required";
+        try
+        {
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(Math.Max(5, config.TimeoutSeconds)) };
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.sendgrid.com/v3/scopes");
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.SendGridApiKey);
+            using var response = await httpClient.SendAsync(request, ct);
+            return response.IsSuccessStatusCode
+                ? null
+                : $"SendGrid check failed: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync(ct)}";
+        }
+        catch (Exception ex)
+        {
+            return $"SendGrid check failed: {ex.Message}";
+        }
+    }
 }
 
 [JsonSerializable(typeof(SendGridEmailRequest))]

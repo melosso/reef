@@ -76,7 +76,7 @@ public class DocumentTemplateEngine
                 Directory.CreateDirectory(outputDirectory);
             }
 
-            var outputPath = Path.Combine(outputDirectory, fileName);
+            var outputPath = Reef.Helpers.SafePath.Combine(outputDirectory, fileName);
 
             // Step 4: Get appropriate generator and generate document
             var generator = _generatorFactory.GetGenerator(layout.OutputFormat);

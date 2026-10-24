@@ -33,7 +33,7 @@ public class JobsMigration
         await FixExistingJobsAsync(conn);
         await AddMissingIndexesAsync(conn);
 
-        Log.Debug("✓ Jobs migrations completed");
+        Log.Debug("Jobs migrations completed");
     }
 
     /// <summary>
@@ -134,9 +134,9 @@ public class JobsMigration
 
             if (!hasAutoPauseEnabled)
             {
-                Log.Information("Adding AutoPauseEnabled column to Jobs table...");
+                Log.Debug("Adding AutoPauseEnabled column to Jobs table");
                 await conn.ExecuteAsync("ALTER TABLE Jobs ADD COLUMN AutoPauseEnabled INTEGER NOT NULL DEFAULT 1");
-                Log.Information("✓ AutoPauseEnabled column added successfully");
+                Log.Debug("AutoPauseEnabled column added");
             }
         }
         catch (Exception ex)

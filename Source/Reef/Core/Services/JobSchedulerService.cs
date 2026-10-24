@@ -64,10 +64,8 @@ public class JobScheduler : BackgroundService
         // Wait a bit for other services to initialize
         await Task.Delay(TimeSpan.FromSeconds(3), stoppingToken);
 
-        Log.Information("Job Scheduler running. " +
-                       "We'll be polling every {Interval} seconds, {Workers} workers, max {MaxConcurrent} concurrent",
-                       _checkIntervalSeconds, _workerCount, _maxConcurrentJobs);
-        Log.Information("");
+        Log.Debug("Job scheduler polls every {Interval} seconds with {Workers} workers and {MaxConcurrent} concurrent jobs",
+                  _checkIntervalSeconds, _workerCount, _maxConcurrentJobs);
 
         // Start producer task (enqueues due jobs)
         var producerTask = Task.Run(async () => await ProducerLoopAsync(stoppingToken), stoppingToken);
@@ -94,7 +92,7 @@ public class JobScheduler : BackgroundService
         // Graceful shutdown: cancel all running jobs
         await CancelAllRunningJobsAsync();
 
-        Log.Information("Job Scheduler stopped");
+        Log.Debug("Job scheduler stopped");
     }
 
     /// <summary>
@@ -296,11 +294,9 @@ public class JobScheduler : BackgroundService
 
             try
             {
-                // Execute the job (this is the actual work)
-                await jobExecutor.TriggerJobAsync(
-                    job,
-                    ignoreDependencies: false,
-                    parameters: null);
+                // Execute the job 
+                var execution = await jobExecutor.StartAsync(job, ignoreDependencies: false, parameters: null);
+                await jobExecutor.RunAsync(job, execution, parameters: null, jobCts.Token);
 
                 Log.Information("Job {JobId} ({JobName}) execution completed", job.Id, job.Name);
             }
@@ -346,7 +342,7 @@ public class JobScheduler : BackgroundService
     /// </summary>
     private async Task CancelAllRunningJobsAsync()
     {
-        Log.Information("Cancelling {Count} running jobs...", _runningJobs.Count);
+        Log.Debug("Cancelling {Count} running jobs", _runningJobs.Count);
 
         foreach (var (jobId, cts) in _runningJobs)
         {

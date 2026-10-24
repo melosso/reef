@@ -39,18 +39,12 @@ public class ImportExecutionService(
     ImportFileOutputService fileOutputService,
     IScriptRunner scriptRunner)
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<ImportExecutionService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<ImportExecutionService>();
 
     // Public Entry Points
 
-    public async Task<ImportProfileExecution> ExecuteAsync(
-        int importProfileId,
-        string triggeredBy = "Manual",
-        CancellationToken ct = default)
+    public async Task<ImportProfileExecution> StartAsync(int importProfileId, string triggeredBy)
     {
-        var profile = await profileService.GetByIdAsync(importProfileId)
-            ?? throw new InvalidOperationException($"ImportProfile {importProfileId} not found");
-
         var exec = new ImportProfileExecution
         {
             ImportProfileId = importProfileId,
@@ -59,12 +53,24 @@ public class ImportExecutionService(
             StartedAt = DateTime.UtcNow,
             CurrentPhase = "Initialising"
         };
-
         exec.Id = await profileService.CreateExecutionAsync(exec);
+        return exec;
+    }
+
+    public async Task<ImportProfileExecution> ExecuteAsync(
+        int importProfileId,
+        string triggeredBy = "Manual",
+        CancellationToken ct = default,
+        ImportProfileExecution? started = null)
+    {
+        var profile = await profileService.GetByIdAsync(importProfileId)
+            ?? throw new InvalidOperationException($"ImportProfile {importProfileId} not found");
+
+        var exec = started ?? await StartAsync(importProfileId, triggeredBy);
         var phaseTimings = new Dictionary<string, long>();
 
         // Push profile code into log context so all downstream messages carry it
-        using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
+        using var profileLogCtx = LogContext.PushProperty(ExecutionLogContext.ProfileProperty, ExecutionLogContext.Prefix(profile.Code));
 
         Log.Information("ImportExecution {Id} started for profile {Code} ({ProfileName})",
             exec.Id, profile.Code, profile.Name);
@@ -467,7 +473,7 @@ public class ImportExecutionService(
                 await TimedPhaseAsync("ApplyDeletes", exec, phaseTimings, async () =>
                 {
                     var deleted = await target.ApplyDeletesAsync(
-                        deletedIds, profile.DeltaSyncReefIdColumn!, profile, ct);
+                        deletedIds, profile.DeltaSyncReefIdColumn!, profile, writeContext, ct);
                     exec.RowsDeleted += deleted;
                     exec.DeltaSyncDeletedRows += deleted;
                     await MarkDeltaDeletedAsync(profile.Id, exec.Id, deletedIds, ct);

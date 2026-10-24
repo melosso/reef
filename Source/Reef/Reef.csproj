@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Reef.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MinVer" PrivateAssets="All" IncludeAssets="runtime;build;native;contentfiles;analyzers" />
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" />
     <PackageReference Include="AWSSDK.S3" />
@@ -51,10 +55,25 @@
     <Content Remove="log\**" />
     <Content Remove=".core\**" />
   </ItemGroup>
-  
+
+  <PropertyGroup>
+    <WebDir>$(MSBuildProjectDirectory)/../Reef.Web</WebDir>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Content Include="Views\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <WebSource Include="$(WebDir)/src/**/*;$(WebDir)/index.html;$(WebDir)/package.json;$(WebDir)/package-lock.json;$(WebDir)/vite.config.ts" />
   </ItemGroup>
+
+  <Target Name="BuildWeb" BeforeTargets="BeforeBuild" Condition="'$(SkipWebBuild)' != 'true' And Exists('$(WebDir)/package.json')" Inputs="@(WebSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html">
+    <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(WebDir)" Condition="!Exists('$(WebDir)/node_modules')" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebDir)" />
+  </Target>
+
+  <Target Name="IncludeWebOutput" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild">
+    <ItemGroup>
+      <Content Remove="wwwroot/app/**" />
+      <Content Include="wwwroot/app/**" />
+    </ItemGroup>
+  </Target>
+
 </Project>

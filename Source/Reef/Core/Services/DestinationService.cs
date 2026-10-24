@@ -325,12 +325,14 @@ public class DestinationService
     }
     private readonly string _connectionString;
     private readonly EncryptionService _encryption;
+    private readonly Reef.Core.Security.PrivilegedSettingsGuard _guard;
     private readonly DestinationConfigEncryption _configEncryption;
 
-    public DestinationService(string connectionString, EncryptionService encryption)
+    public DestinationService(string connectionString, EncryptionService encryption, Reef.Core.Security.PrivilegedSettingsGuard guard)
     {
         _connectionString = connectionString;
         _encryption = encryption;
+        _guard = guard;
         _configEncryption = new DestinationConfigEncryption(encryption);
     }
 
@@ -626,6 +628,7 @@ public class DestinationService
 
     public async Task<Destination> CreateAsync(Destination destination, CancellationToken ct = default)
     {
+        _guard.Check(destination.Type.ToString(), destination.ConfigurationJson, null, null);
         using var conn = new SqliteConnection(_connectionString);
         await conn.OpenAsync(ct);
 
@@ -708,6 +711,7 @@ public class DestinationService
                 existingDecrypted,
                 destination.Type);
         }
+        _guard.Check(destination.Type.ToString(), mergedConfig, existing.Type.ToString(), existingDecrypted);
 
         // Encrypt entire merged configuration
         var encryptedConfig = mergedConfig;
@@ -827,6 +831,10 @@ public class DestinationService
                     filePath = await TestHttpDestination(config, testFileName, testBytes);
                     break;
 
+                case DestinationType.Email:
+                    filePath = await TestEmailDestination(destination.ConfigurationJson);
+                    break;
+
                 default:
                     throw new NotImplementedException($"Test not implemented for {destination.Type}");
             }
@@ -912,10 +920,7 @@ public class DestinationService
                     break;
 
                 case DestinationType.Email:
-                    // Email doesn't write to a path, create temp file for testing
-                    var tempPath = Path.Combine(Path.GetTempPath(), testFileName);
-                    await File.WriteAllBytesAsync(tempPath, content);
-                    finalPath = tempPath;
+                    finalPath = await TestEmailDestination(configurationJson);
                     break;
 
                 case DestinationType.NetworkShare:
@@ -963,6 +968,15 @@ public class DestinationService
                 Duration = TimeSpan.FromMilliseconds(duration)
             };
         }
+    }
+
+    // Connects and authenticates without sending a message
+    private static async Task<string> TestEmailDestination(string configurationJson)
+    {
+        var config = JsonSerializer.Deserialize<Reef.Core.Destinations.EmailDestinationConfiguration>(configurationJson)
+            ?? throw new InvalidOperationException("Invalid email configuration");
+        var error = await Reef.Core.Destinations.EmailDestination.ProviderFor(config.EmailProvider).VerifyAsync(config, CancellationToken.None);
+        return error is null ? $"{config.EmailProvider ?? "SMTP"} accepted the connection" : throw new InvalidOperationException(error);
     }
 
     private async Task<string> TestLocalDestination(DestinationConfiguration config, string fileName, byte[] content)

@@ -7,7 +7,7 @@
     <Product>Reef</Product>
     <RepositoryUrl>https://github.com/melosso/reef</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
+    <PackageLicenseExpression>EUPL-1.2-or-later</PackageLicenseExpression>
     <PackageProjectUrl>https://reef.melosso.com/</PackageProjectUrl>
   </PropertyGroup>
 

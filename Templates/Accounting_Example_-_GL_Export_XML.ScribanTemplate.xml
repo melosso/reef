@@ -6,7 +6,7 @@
         <ExportDate>{{ row.export_date | html.escape }}</ExportDate>
         <ExportPeriod>{{ row.export_period | html.escape }}</ExportPeriod>
         <Currency>{{ row.currency | html.escape }}</Currency>
-        <FiscalYear>{{ row.fiscal_year }}</FiscalYear>
+        <FiscalYear>{{ row.fiscal_year | html.escape }}</FiscalYear>
         <ValidationStatus>{{ row.validation_status | html.escape }}</ValidationStatus>
         <Notes>{{ row.notes | html.escape }}</Notes>
     </ExportMetadata>
@@ -18,10 +18,10 @@
             <AccountNumber>{{ account.account_number | html.escape }}</AccountNumber>
             <AccountName>{{ account.account_name | html.escape }}</AccountName>
             <AccountType>{{ account.account_type | html.escape }}</AccountType>
-            <OpeningBalance>{{ account.opening_balance }}</OpeningBalance>
-            <ClosingBalance>{{ account.closing_balance }}</ClosingBalance>
-            <DebitTotal>{{ account.debit_total }}</DebitTotal>
-            <CreditTotal>{{ account.credit_total }}</CreditTotal>
+            <OpeningBalance>{{ account.opening_balance | html.escape }}</OpeningBalance>
+            <ClosingBalance>{{ account.closing_balance | html.escape }}</ClosingBalance>
+            <DebitTotal>{{ account.debit_total | html.escape }}</DebitTotal>
+            <CreditTotal>{{ account.credit_total | html.escape }}</CreditTotal>
 
             <Transactions>
                 {{~ transactions = parse_json(account.transactions_json) ~}}
@@ -31,8 +31,8 @@
                     <Date>{{ txn.date | html.escape }}</Date>
                     <Description>{{ txn.description | html.escape }}</Description>
                     <Reference>{{ txn.reference | html.escape }}</Reference>
-                    <Debit>{{ txn.debit }}</Debit>
-                    <Credit>{{ txn.credit }}</Credit>
+                    <Debit>{{ txn.debit | html.escape }}</Debit>
+                    <Credit>{{ txn.credit | html.escape }}</Credit>
                     <CostCenter>{{ txn.cost_center | html.escape }}</CostCenter>
                 </Transaction>
                 {{~ end ~}}
@@ -42,9 +42,9 @@
     </Accounts>
 
     <Summary>
-        <TotalAccounts>{{ row.total_accounts }}</TotalAccounts>
-        <TotalDebit>{{ row.total_debit }}</TotalDebit>
-        <TotalCredit>{{ row.total_credit }}</TotalCredit>
+        <TotalAccounts>{{ row.total_accounts | html.escape }}</TotalAccounts>
+        <TotalDebit>{{ row.total_debit | html.escape }}</TotalDebit>
+        <TotalCredit>{{ row.total_credit | html.escape }}</TotalCredit>
         <TrialBalance>{{ row.trial_balance | html.escape }}</TrialBalance>
     </Summary>
 </GeneralLedgerExport>

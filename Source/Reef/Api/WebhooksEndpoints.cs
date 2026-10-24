@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Services;
 using Serilog;
 using System.Text.Json;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -16,12 +17,12 @@ public static class WebhooksEndpoints
         // Authenticated management endpoints
         var managementGroup = app.MapGroup("/api/webhooks").RequireAuthorization();
         managementGroup.MapGet("/", GetAll);
-        managementGroup.MapGet("/{id:int}", GetById);
+        managementGroup.MapGet("/{id:ulid(WebhookTriggers)}", GetById);
         managementGroup.MapPost("/", Create);
-        managementGroup.MapDelete("/{id:int}", Delete);
-        managementGroup.MapPost("/{id:int}/regenerate", RegenerateToken);
-        managementGroup.MapPost("/{id:int}/enable", Enable);
-        managementGroup.MapPost("/{id:int}/disable", Disable);
+        managementGroup.MapDelete("/{id:ulid(WebhookTriggers)}", Delete);
+        managementGroup.MapPost("/{id:ulid(WebhookTriggers)}/regenerate", RegenerateToken);
+        managementGroup.MapPost("/{id:ulid(WebhookTriggers)}/enable", Enable);
+        managementGroup.MapPost("/{id:ulid(WebhookTriggers)}/disable", Disable);
 
         // Public webhook trigger (NO AUTHENTICATION REQUIRED)
         var publicGroup = app.MapGroup("/webhooks");
@@ -33,6 +34,7 @@ public static class WebhooksEndpoints
     /// </summary>
     private static async Task<IResult> GetAll(
         [FromServices] WebhookService service,
+        [FromServices] PublicIdMap ids,
         [FromQuery] int? profileId = null,
         [FromQuery] int? jobId = null,
         [FromQuery] int? importProfileId = null)
@@ -61,7 +63,7 @@ public static class WebhooksEndpoints
             // Don't return actual tokens, only masked versions
             var result = webhooks.Select(w => new
             {
-                w.Id,
+                Id = ids.ToUlid("WebhookTriggers", w.Id),
                 w.ProfileId,
                 w.JobId,
                 w.ImportProfileId,
@@ -89,7 +91,8 @@ public static class WebhooksEndpoints
         [FromServices] WebhookService service,
         [FromServices] ProfileService profileService,
         [FromServices] JobService jobService,
-        [FromServices] ImportProfileService importProfileService)
+        [FromServices] ImportProfileService importProfileService,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -107,7 +110,7 @@ public static class WebhooksEndpoints
                 var profile = await profileService.GetByIdAsync(webhook.ProfileId.Value);
                 result = new
                 {
-                    webhook.Id,
+                    Id = ids.ToUlid("WebhookTriggers", webhook.Id),
                     webhook.ProfileId,
                     webhook.JobId,
                     webhook.ImportProfileId,
@@ -124,7 +127,7 @@ public static class WebhooksEndpoints
                 var job = await jobService.GetByIdAsync(webhook.JobId.Value);
                 result = new
                 {
-                    webhook.Id,
+                    Id = ids.ToUlid("WebhookTriggers", webhook.Id),
                     webhook.ProfileId,
                     webhook.JobId,
                     webhook.ImportProfileId,
@@ -141,7 +144,7 @@ public static class WebhooksEndpoints
                 var importProfile = await importProfileService.GetByIdAsync(webhook.ImportProfileId.Value);
                 result = new
                 {
-                    webhook.Id,
+                    Id = ids.ToUlid("WebhookTriggers", webhook.Id),
                     webhook.ProfileId,
                     webhook.JobId,
                     webhook.ImportProfileId,
@@ -178,7 +181,8 @@ public static class WebhooksEndpoints
         [FromServices] ProfileService profileService,
         [FromServices] JobService jobService,
         [FromServices] ImportProfileService importProfileService,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -229,7 +233,7 @@ public static class WebhooksEndpoints
 
             return Results.Ok(new
             {
-                id = webhookId,
+                id = ids.ToUlid("WebhookTriggers", webhookId),
                 token,
                 url = $"{context.Request.Scheme}://{context.Request.Host}/webhooks/{token}",
                 message = "Webhook created successfully. Save the token - it won't be shown again!"
@@ -370,19 +374,21 @@ public static class WebhooksEndpoints
     private static async Task<IResult> TriggerWebhook(
         string token,
         HttpContext context,
-        CancellationToken ct,
         [FromBody] WebhookTriggerRequest? request,
         [FromServices] WebhookService service,
         [FromServices] ExecutionService executionService,
         [FromServices] JobExecutorService jobExecutorService,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids,
+        [FromServices] IServiceScopeFactory scopes,
+        [FromServices] IHostApplicationLifetime lifetime)
     {
         try
         {
             // Validate token format
             if (!WebhookService.IsValidTokenFormat(token))
             {
-                Log.Warning("Invalid webhook token format received for token {Token}", token);
+                Log.Warning("Invalid webhook token format received for token {Token}", WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
@@ -397,7 +403,7 @@ public static class WebhooksEndpoints
             var webhook = await service.GetByTokenAsync(token);
             if (webhook == null)
             {
-                Log.Warning("Webhook token not found for token {Token}", token);
+                Log.Warning("Webhook token not found for token {Token}", WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
@@ -411,13 +417,13 @@ public static class WebhooksEndpoints
             // Check if webhook is active
             if (!webhook.IsActive)
             {
-                Log.Warning("Inactive webhook {WebhookId} triggered for token {Token}", webhook.Id, token);
+                Log.Warning("Inactive webhook {WebhookId} triggered for token {Token}", webhook.Id, WebhookService.MaskToken(token));
                 return Results.Json(
                     new
                     {
                         error = "webhook_disabled",
                         message = "This webhook is disabled",
-                        webhookId = webhook.Id
+                        webhookId = ids.ToUlid("WebhookTriggers", webhook.Id)
                     },
                     statusCode: 403 // Forbidden
                 );
@@ -428,7 +434,7 @@ public static class WebhooksEndpoints
             if (!service.CheckRateLimit(webhook.Id))
             {
                 var (count, oldest) = service.GetRateLimitInfo(webhook.Id);
-                Log.Warning("Rate limit exceeded for webhook {WebhookId} and token {Token}", webhook.Id, token);
+                Log.Warning("Rate limit exceeded for webhook {WebhookId} and token {Token}", webhook.Id, WebhookService.MaskToken(token));
 
                 var resetTime = oldest.HasValue ? oldest.Value.AddHours(1) : DateTime.UtcNow.AddHours(1);
                 var retryAfterSeconds = (int)Math.Max(1, (resetTime - DateTime.UtcNow).TotalSeconds);
@@ -440,7 +446,7 @@ public static class WebhooksEndpoints
                         message = "Webhook rate limit exceeded",
                         details = new
                         {
-                            webhookId = webhook.Id,
+                            webhookId = ids.ToUlid("WebhookTriggers", webhook.Id),
                             requestsInWindow = count,
                             maxRequestsPerHour = 100,
                             windowHours = 1,
@@ -462,13 +468,13 @@ public static class WebhooksEndpoints
             {
                 // Execute profile
                 Log.Information("Triggering profile {ProfileId} via webhook {WebhookId} and token {Token}",
-                    webhook.ProfileId.Value, webhook.Id, token);
+                    webhook.ProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
-                var (executionId, success, outputPath, errorMessage) = await executionService.ExecuteProfileAsync(
-                    webhook.ProfileId.Value,
-                    parameters,
-                    $"Webhook/{webhook.Id}"
-                );
+                var profileId = webhook.ProfileId.Value;
+                var triggeredBy = $"Webhook/{webhook.Id}";
+                var executionId = await executionService.CreateExecutionRecordAsync(profileId, triggeredBy);
+                RunInBackground(scopes, lifetime, $"profile {profileId}", (services, stopping) =>
+                    services.GetRequiredService<ExecutionService>().ExecuteProfileAsync(profileId, parameters, triggeredBy, ct: stopping, startedExecutionId: executionId));
 
                 // Update webhook last triggered
                 await service.UpdateLastTriggeredAsync(webhook.Id);
@@ -477,22 +483,18 @@ public static class WebhooksEndpoints
                 var profileChanges = JsonSerializer.Serialize(new { parameters, executionId });
                 await auditService.LogAsync("WebhookTrigger", webhook.Id, "Triggered", "Webhook", profileChanges, context);
 
-                // Return execution status immediately (don't wait for completion)
                 result = new
                 {
-                    executionId,
-                    status = success ? "Started" : "Failed",
-                    message = success
-                        ? $"Profile execution started with ID {executionId}"
-                        : $"Profile execution failed: {errorMessage}",
-                    errorMessage = success ? null : errorMessage
+                    executionId = ids.ToUlid(PublicIdTables.ProfileExecutions, executionId),
+                    status = "Started",
+                    message = "Profile execution started"
                 };
             }
             else if (webhook.JobId.HasValue)
             {
                 // Trigger job
                 Log.Information("Triggering job {JobId} via webhook {WebhookId} and token {Token}",
-                    webhook.JobId.Value, webhook.Id, token);
+                    webhook.JobId.Value, webhook.Id, WebhookService.MaskToken(token));
 
                 var jobService = context.RequestServices.GetRequiredService<JobService>();
                 var job = await jobService.GetByIdAsync(webhook.JobId.Value);
@@ -505,7 +507,7 @@ public static class WebhooksEndpoints
                         {
                             error = "job_not_found",
                             message = "Job not found or deleted",
-                            webhookId = webhook.Id,
+                            webhookId = ids.ToUlid("WebhookTriggers", webhook.Id),
                             jobId = webhook.JobId.Value
                         },
                         statusCode: 404 // Not Found
@@ -526,19 +528,35 @@ public static class WebhooksEndpoints
                 // Return execution status
                 result = new
                 {
-                    executionId,
+                    executionId = ids.ToUlid("JobExecutions", executionId),
                     status = "Started",
-                    message = $"Job execution started with ID {executionId}"
+                    message = "Job execution started"
                 };
             }
             else if (webhook.ImportProfileId.HasValue)
             {
                 // Execute import profile
                 Log.Information("Triggering import profile {ImportProfileId} via webhook {WebhookId} and token {Token}",
-                    webhook.ImportProfileId.Value, webhook.Id, token);
+                    webhook.ImportProfileId.Value, webhook.Id, WebhookService.MaskToken(token));
 
-                var importExecService = context.RequestServices.GetRequiredService<ImportExecutionService>();
-                var exec = await importExecService.ExecuteAsync(webhook.ImportProfileId.Value, $"Webhook/{webhook.Id}", ct);
+                var importProfileId = webhook.ImportProfileId.Value;
+                if (await context.RequestServices.GetRequiredService<ImportProfileService>().GetByIdAsync(importProfileId) == null)
+                {
+                    return Results.Json(
+                        new
+                        {
+                            error = "import_profile_not_found",
+                            message = "Import profile not found or deleted",
+                            webhookId = ids.ToUlid("WebhookTriggers", webhook.Id)
+                        },
+                        statusCode: 404
+                    );
+                }
+
+                var triggeredBy = $"Webhook/{webhook.Id}";
+                var exec = await context.RequestServices.GetRequiredService<ImportExecutionService>().StartAsync(importProfileId, triggeredBy);
+                RunInBackground(scopes, lifetime, $"import profile {importProfileId}", (services, stopping) =>
+                    services.GetRequiredService<ImportExecutionService>().ExecuteAsync(importProfileId, triggeredBy, stopping, exec));
 
                 // Update webhook last triggered
                 await service.UpdateLastTriggeredAsync(webhook.Id);
@@ -549,9 +567,9 @@ public static class WebhooksEndpoints
 
                 result = new
                 {
-                    executionId = exec.Id,
-                    status = exec.Status,
-                    message = $"Import profile execution started with ID {exec.Id}"
+                    executionId = ids.ToUlid(PublicIdTables.ImportProfileExecutions, exec.Id),
+                    status = "Started",
+                    message = "Import profile execution started"
                 };
             }
             else
@@ -562,17 +580,17 @@ public static class WebhooksEndpoints
                     {
                         error = "invalid_webhook_configuration",
                         message = "Webhook is misconfigured",
-                        webhookId = webhook.Id
+                        webhookId = ids.ToUlid("WebhookTriggers", webhook.Id)
                     },
                     statusCode: 500 // Internal Server Error
                 );
             }
 
-            return Results.Ok(result);
+            return Results.Accepted(null, result);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error processing webhook trigger for token {Token}", token);
+            Log.Error(ex, "Error processing webhook trigger for token {Token}", WebhookService.MaskToken(token));
             return Results.Json(
                 new
                 {
@@ -583,6 +601,18 @@ public static class WebhooksEndpoints
             );
         }
     }
+
+    // The request scope ends with the response, so the run resolves its services from a scope of its own
+    private static void RunInBackground(IServiceScopeFactory scopes, IHostApplicationLifetime lifetime, string target, Func<IServiceProvider, CancellationToken, Task> run) =>
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                await run(scope.ServiceProvider, lifetime.ApplicationStopping);
+            }
+            catch (Exception ex) { Log.Error(ex, "Webhook run of {Target} failed", target); }
+        });
 }
 
 /// <summary>

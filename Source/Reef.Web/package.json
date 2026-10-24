@@ -1,0 +1,51 @@
+{
+  "name": "reef-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write src",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codemirror/lang-sql": "6.10.0",
+    "@codemirror/language": "6.13.1",
+    "@codemirror/view": "6.43.15",
+    "@floating-ui/dom": "1.8.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource/geist-mono": "5.3.0",
+    "@lezer/highlight": "1.2.5",
+    "@lucide/svelte": "1.61.0",
+    "@xyflow/svelte": "1.7.0",
+    "codemirror": "6.0.2",
+    "svelte": "5.57.2",
+    "svelte-sonner": "1.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@testing-library/svelte": "5.4.2",
+    "@tsconfig/svelte": "5.0.8",
+    "eslint": "10.13.0",
+    "eslint-plugin-svelte": "3.23.1",
+    "globals": "17.13.0",
+    "jsdom": "30.1.2",
+    "prettier": "3.9.10",
+    "prettier-plugin-svelte": "4.1.1",
+    "svelte-check": "4.7.7",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0",
+    "vite": "8.3.5",
+    "vitest": "5.0.3"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "printWidth": 140,
+    "plugins": [
+      "prettier-plugin-svelte"
+    ]
+  }
+}

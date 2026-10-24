@@ -854,8 +854,6 @@ public class NotificationService
         }
     }
 
-    // ===== Email Body Builders =====
-
     private Dictionary<string, string> BuildSuccessEmailPlaceholders(ProfileExecution execution, Profile profile)
     {
         var executionTime = execution.ExecutionTimeMs.HasValue

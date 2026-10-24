@@ -23,7 +23,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_SimpleXml_ExtractsChildElements()
+    public async Task ParseAsyncSimpleXmlExtractsChildElements()
     {
         var xml = """
             <Orders>
@@ -41,7 +41,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_WithRecordElementXPath_UsesCustomXPath()
+    public async Task ParseAsyncWithRecordElementXPathUsesCustomXPath()
     {
         var xml = """
             <Root>
@@ -63,7 +63,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_XmlWithAttributes_ExtractsAttributesWithAtPrefix()
+    public async Task ParseAsyncXmlWithAttributesExtractsAttributesWithAtPrefix()
     {
         var xml = """
             <Orders>
@@ -80,7 +80,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_InvalidXml_ReturnsParseErrorRow()
+    public async Task ParseAsyncInvalidXmlReturnsParseErrorRow()
     {
         var xml = "<Orders><Order><Id>1</Id></Orders>"; // unclosed Order tag
 
@@ -92,7 +92,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_InvalidXPath_ReturnsParseErrorRow()
+    public async Task ParseAsyncInvalidXPathReturnsParseErrorRow()
     {
         var xml = "<Orders><Order><Id>1</Id></Order></Orders>";
         var config = DefaultConfig();
@@ -106,7 +106,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_NoMatchingElements_ReturnsNoRows()
+    public async Task ParseAsyncNoMatchingElementsReturnsNoRows()
     {
         var xml = "<Orders><Order><Id>1</Id></Order></Orders>";
         var config = DefaultConfig();
@@ -118,7 +118,7 @@ public class XmlImportParserTests
     }
 
     [Fact]
-    public async Task ParseAsync_LineNumbersAssigned_AreSequential()
+    public async Task ParseAsyncLineNumbersAssignedAreSequential()
     {
         var xml = """
             <Items>

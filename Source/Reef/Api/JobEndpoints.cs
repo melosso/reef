@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -24,7 +25,7 @@ public static class JobsEndpoints
         .Produces<IEnumerable<Job>>(200);
 
         // GET: Get job by ID
-        group.MapGet("/{id:int}", async (
+        group.MapGet("/{id:ulid(Jobs)}", async (
             int id,
             [FromServices] JobService service) =>
         {
@@ -40,12 +41,13 @@ public static class JobsEndpoints
         // POST: Create new job
         group.MapPost("/", async (
             [FromBody] Job job,
-            [FromServices] JobService service) =>
+            [FromServices] JobService service,
+            [FromServices] PublicIdMap ids) =>
         {
             try
             {
                 var created = await service.CreateAsync(job);
-                return Results.Created($"/api/jobs/{created.Id}", created);
+                return Results.Created($"/api/jobs/{ids.ToUlid("Jobs", created.Id)}", created);
             }
             catch (Exception ex)
             {
@@ -57,7 +59,7 @@ public static class JobsEndpoints
         .Produces(400);
 
         // PUT: Update job
-        group.MapPut("/{id:int}", async (
+        group.MapPut("/{id:ulid(Jobs)}", async (
             int id,
             [FromBody] Job job,
             [FromServices] JobService service) =>
@@ -85,7 +87,7 @@ public static class JobsEndpoints
         .Produces(404);
 
         // DELETE: Delete job
-        group.MapDelete("/{id:int}", async (
+        group.MapDelete("/{id:ulid(Jobs)}", async (
             int id,
             [FromServices] JobService service) =>
         {
@@ -106,11 +108,12 @@ public static class JobsEndpoints
         .Produces(404);
 
         // POST: Trigger job manually
-        group.MapPost("/{id:int}/trigger", async (
+        group.MapPost("/{id:ulid(Jobs)}/trigger", async (
             int id,
             [FromBody] JobTriggerRequest? request,
             [FromServices] JobService service,
-            [FromServices] JobExecutorService executor) =>
+            [FromServices] JobExecutorService executor,
+            [FromServices] PublicIdMap ids) =>
         {
             try
             {
@@ -125,8 +128,9 @@ public static class JobsEndpoints
                     request?.IgnoreDependencies ?? false,
                     request?.Parameters);
 
-                return Results.Accepted($"/api/jobs/{id}/executions/{executionId}",
-                    new { executionId, message = "Job triggered successfully" });
+                var executionUlid = ids.ToUlid("JobExecutions", executionId);
+                return Results.Accepted($"/api/jobs/{ids.ToUlid("Jobs", id)}/executions/{executionUlid}",
+                    new { executionId = executionUlid, message = "Job triggered successfully" });
             }
             catch (Exception ex)
             {
@@ -139,7 +143,7 @@ public static class JobsEndpoints
         .Produces(404);
 
         // POST: Control job (start, stop, pause, resume)
-        group.MapPost("/{id:int}/control", async (
+        group.MapPost("/{id:ulid(Jobs)}/control", async (
             int id,
             [FromBody] JobControlRequest request,
             [FromServices] JobService service) =>
@@ -175,7 +179,7 @@ public static class JobsEndpoints
         .Produces(404);
 
         // GET: Get job execution history
-        group.MapGet("/{id:int}/executions", async (
+        group.MapGet("/{id:ulid(Jobs)}/executions", async (
             int id,
             [FromServices] JobService service,
             [FromQuery] int limit = 50) =>
@@ -187,7 +191,7 @@ public static class JobsEndpoints
         .Produces<IEnumerable<JobExecution>>(200);
 
         // GET: Get latest execution
-        group.MapGet("/{id:int}/executions/latest", async (
+        group.MapGet("/{id:ulid(Jobs)}/executions/latest", async (
             int id,
             [FromServices] JobService service) =>
         {
@@ -212,7 +216,7 @@ public static class JobsEndpoints
         .Produces<IEnumerable<Job>>(200);
 
         // GET: Get jobs by profile
-        group.MapGet("/profile/{profileId:int}", async (
+        group.MapGet("/profile/{profileId:ulid(Profiles)}", async (
             int profileId,
             [FromServices] JobService service) =>
         {
@@ -327,7 +331,7 @@ public static class JobsEndpoints
         .Produces(500);
 
         // POST: Resume an auto-paused job (circuit breaker recovery)
-        group.MapPost("/{id:int}/resume", async (
+        group.MapPost("/{id:ulid(Jobs)}/resume", async (
             int id,
             [FromServices] JobService service) =>
         {
@@ -359,7 +363,7 @@ public static class JobsEndpoints
         .Produces(404);
 
         // POST: Acknowledge failures and reset counter
-        group.MapPost("/{id:int}/acknowledge-failures", async (
+        group.MapPost("/{id:ulid(Jobs)}/acknowledge-failures", async (
             int id,
             [FromServices] JobService service) =>
         {

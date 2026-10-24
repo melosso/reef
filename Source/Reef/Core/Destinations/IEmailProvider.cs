@@ -16,4 +16,6 @@ public interface IEmailProvider
     Task<(bool Success, string? FinalPath, string? ErrorMessage)> SendEmailAsync(
         MimeMessage message,
         EmailDestinationConfiguration config);
+
+    Task<string?> VerifyAsync(EmailDestinationConfiguration config, CancellationToken ct);
 }

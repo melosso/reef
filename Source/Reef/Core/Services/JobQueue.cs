@@ -194,7 +194,7 @@ public class JobQueue
         {
             _queue.Clear();
             _enqueuedJobs.Clear();
-            Log.Information("Queue cleared");
+            Log.Debug("Queue cleared");
         }
         finally
         {

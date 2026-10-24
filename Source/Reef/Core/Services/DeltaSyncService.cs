@@ -470,8 +470,6 @@ public class DeltaSyncService
         return stats ?? new ProfileDeltaSyncStats();
     }
 
-    // ===== Private Helper Methods =====
-
     /// <summary>
     /// Normalize a row's column keys to handle case-insensitive matching
     /// Ensures the ReefId column can be found regardless of case

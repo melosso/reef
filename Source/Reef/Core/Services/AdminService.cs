@@ -18,14 +18,14 @@ namespace Reef.Core.Services;
 public class AdminService
 {
     private readonly string _connectionString;
-    private readonly PasswordHasher _passwordHasher;
+    private readonly UserPasswordHasher _userPasswordHasher;
     private readonly EncryptionService _encryptionService;
     private readonly NotificationService _notificationService;
 
-    public AdminService(DatabaseConfig config, PasswordHasher passwordHasher, EncryptionService encryptionService, NotificationService notificationService)
+    public AdminService(DatabaseConfig config, UserPasswordHasher userPasswordHasher, EncryptionService encryptionService, NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
-        _passwordHasher = passwordHasher;
+        _userPasswordHasher = userPasswordHasher;
         _encryptionService = encryptionService;
         _notificationService = notificationService;
     }
@@ -143,7 +143,7 @@ public class AdminService
     /// <summary>
     /// Get audit logs with optional filtering and pagination
     /// </summary>
-    public async Task<(IEnumerable<dynamic> Logs, int TotalCount)> GetAuditLogsAsync(
+    public async Task<(IEnumerable<AuditLogEntry> Logs, int TotalCount)> GetAuditLogsAsync(
         int page = 1,
         int pageSize = 50,
         string? entityType = null,
@@ -217,7 +217,7 @@ public class AdminService
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
 
-            var logs = await conn.QueryAsync<dynamic>(sql, parameters);
+            var logs = await conn.QueryAsync<AuditLogEntry>(sql, parameters);
             return (logs, totalCount);
         }
         catch (Exception ex)
@@ -278,7 +278,7 @@ public class AdminService
             }
 
             // Hash password
-            var passwordHash = _passwordHasher.HashPassword(password);
+            var passwordHash = _userPasswordHasher.HashPassword(password);
 
             // Insert user with normalized (lowercase) username
             var userId = await conn.QuerySingleAsync<int>(
@@ -353,13 +353,13 @@ public class AdminService
             if (!string.IsNullOrWhiteSpace(newPassword))
             {
                 // Prevent reusing the same password
-                if (_passwordHasher.VerifyPassword(newPassword, user.PasswordHash))
+                if (_userPasswordHasher.VerifyPassword(newPassword, user.PasswordHash))
                 {
                     throw new InvalidOperationException("New password must be different from the current password");
                 }
 
                 // Update with new password
-                var passwordHash = _passwordHasher.HashPassword(newPassword);
+                var passwordHash = _userPasswordHasher.HashPassword(newPassword);
                 rowsAffected = await conn.ExecuteAsync(
                     @"UPDATE Users
                       SET Role = @Role, IsActive = @IsActive, DisplayName = @DisplayName, PasswordHash = @PasswordHash
@@ -661,18 +661,17 @@ public class AdminService
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
 
-            // Generate random API key
-            var apiKeyValue = GenerateApiKey();
-            var keyHash = _passwordHasher.HashPassword(apiKeyValue);
+            var (apiKeyValue, keyPrefix, keyHash) = ApiKeyValidator.Generate();
 
             // Insert API key
             var keyId = await conn.QuerySingleAsync<int>(
-                @"INSERT INTO ApiKeys (Name, KeyHash, Permissions, ExpiresAt, IsActive, CreatedAt) 
-                  VALUES (@Name, @KeyHash, @Permissions, @ExpiresAt, 1, @CreatedAt)
+                @"INSERT INTO ApiKeys (Name, KeyPrefix, KeyHash, Permissions, ExpiresAt, IsActive, CreatedAt) 
+                  VALUES (@Name, @KeyPrefix, @KeyHash, @Permissions, @ExpiresAt, 1, @CreatedAt)
                   RETURNING Id",
                 new
                 {
                     Name = name,
+                    KeyPrefix = keyPrefix,
                     KeyHash = keyHash,
                     Permissions = permissions,
                     ExpiresAt = expiresAt,
@@ -721,19 +720,6 @@ public class AdminService
         }
     }
 
-    /// <summary>
-    /// Generate a random API key
-    /// Format: reef_live_32randomcharacters
-    /// </summary>
-    private string GenerateApiKey()
-    {
-        const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-        var random = new Random();
-        var randomPart = new string(Enumerable.Repeat(chars, 32)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-        return $"reef_live_{randomPart}";
-    }
 
     /// <summary>
     /// Generate a random confirmation string for dangerous operations
@@ -849,7 +835,7 @@ public class AdminService
 
             var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
             var deletedCount = await conn.ExecuteAsync(
-                "DELETE FROM ProfileExecutions WHERE StartedAt < @CutoffDate",
+                "DELETE FROM ProfileExecutions WHERE StartedAt < @CutoffDate AND Id NOT IN (SELECT LastSeenExecutionId FROM DeltaSyncState WHERE LastSeenExecutionId IS NOT NULL)",
                 new { CutoffDate = cutoffDate });
 
             Log.Information("Deleted {Count} execution log entries older than {Days} days", deletedCount, retentionDays);

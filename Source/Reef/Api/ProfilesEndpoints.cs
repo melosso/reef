@@ -6,6 +6,7 @@ using Reef.Core.TemplateEngines;
 using Serilog;
 using Dapper;
 using Microsoft.Data.Sqlite;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -20,40 +21,40 @@ public static class ProfilesEndpoints
         var group = app.MapGroup("/api/profiles").RequireAuthorization();
 
         group.MapGet("/", GetAllProfiles);
-        group.MapGet("/{id:int}", GetProfileById);
+        group.MapGet("/{id:ulid(type)}", GetProfileById);
         group.MapPost("/", CreateProfile);
-        group.MapPut("/{id:int}", UpdateProfile);
-        group.MapDelete("/{id:int}", DeleteProfile);
-        group.MapPost("/{id:int}/enable", EnableProfile);
-        group.MapPost("/{id:int}/disable", DisableProfile);
-        group.MapGet("/by-connection/{connectionId:int}", GetProfilesByConnection);
-        group.MapGet("/by-group/{groupId:int}", GetProfilesByGroup);
+        group.MapPut("/{id:ulid(type)}", UpdateProfile);
+        group.MapDelete("/{id:ulid(type)}", DeleteProfile);
+        group.MapPost("/{id:ulid(type)}/enable", EnableProfile);
+        group.MapPost("/{id:ulid(type)}/disable", DisableProfile);
+        group.MapGet("/by-connection/{connectionId:ulid(Connections)}", GetProfilesByConnection);
+        group.MapGet("/by-group/{groupId:ulid(ProfileGroups)}", GetProfilesByGroup);
 
         // Delta Sync endpoints
-        group.MapPost("/{id:int}/delta-sync/reset", ResetDeltaSyncState);
-        group.MapPost("/{id:int}/delta-sync/reset-rows", ResetDeltaSyncRows);
-        group.MapPost("/{id:int}/delta-sync/generate-hashes", GenerateDeltaSyncHashes);
-        group.MapGet("/{id:int}/delta-sync/stats", GetDeltaSyncStats);
+        group.MapPost("/{id:ulid(Profiles)}/delta-sync/reset", ResetDeltaSyncState);
+        group.MapPost("/{id:ulid(Profiles)}/delta-sync/reset-rows", ResetDeltaSyncRows);
+        group.MapPost("/{id:ulid(Profiles)}/delta-sync/generate-hashes", GenerateDeltaSyncHashes);
+        group.MapGet("/{id:ulid(Profiles)}/delta-sync/stats", GetDeltaSyncStats);
 
         // Multi-Output Splitting endpoints
-        group.MapGet("/executions/{executionId:int}/splits", GetExecutionSplits);
+        group.MapGet("/executions/{executionId:ulid(ProfileExecutions)}/splits", GetExecutionSplits);
 
         // Email Export endpoints
-        group.MapGet("/{id:int}/validate-email-config", ValidateEmailExportConfig);
-        group.MapPost("/{id:int}/preview-email-html", PreviewEmailHtml);
-        group.MapPost("/{id:int}/validate-attachment-config", ValidateAttachmentConfig);
+        group.MapGet("/{id:ulid(Profiles)}/validate-email-config", ValidateEmailExportConfig);
+        group.MapPost("/{id:ulid(Profiles)}/preview-email-html", PreviewEmailHtml);
+        group.MapPost("/{id:ulid(Profiles)}/validate-attachment-config", ValidateAttachmentConfig);
 
         // Query Testing endpoints
-        group.MapPost("/{id:int}/test-query", TestQuery);
-        group.MapPost("/{id:int}/test-query-delta", TestQueryDelta);
+        group.MapPost("/{id:ulid(Profiles)}/test-query", TestQuery);
+        group.MapPost("/{id:ulid(Profiles)}/test-query-delta", TestQueryDelta);
         group.MapPost("/test-query-preview", TestQueryPreview);
-        group.MapPost("/test-script", TestScript);
-        group.MapGet("/interpreters", GetInterpreters);
-        group.MapPost("/interpreters/{name}/test", TestInterpreter);
+        group.MapPost("/test-script", TestScript).RequireAuthorization(policy => policy.RequireRole("Admin"));
+        group.MapGet("/interpreters", GetInterpreters).RequireAuthorization(policy => policy.RequireRole("Admin"));
+        group.MapPost("/interpreters/{name}/test", TestInterpreter).RequireAuthorization(policy => policy.RequireRole("Admin"));
 
         // Unified import profile execution endpoints (use ?type=import)
-        group.MapPost("/{id:int}/execute", ExecuteProfile);
-        group.MapGet("/{id:int}/executions", GetProfileExecutions);
+        group.MapPost("/{id:ulid(type)}/execute", ExecuteProfile);
+        group.MapGet("/{id:ulid(type)}/executions", GetProfileExecutions);
     }
 
     /// <summary>
@@ -142,7 +143,8 @@ public static class ProfilesEndpoints
         HttpContext context,
         [FromServices] ProfileService service,
         [FromServices] ImportProfileService importProfileService,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids)
     {
         // Read body once to determine type
         string json;
@@ -170,7 +172,7 @@ public static class ProfilesEndpoints
         {
             try
             {
-                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var opts = context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
                 var importProfile = System.Text.Json.JsonSerializer.Deserialize<ImportProfile>(json, opts);
                 if (importProfile == null) return Results.BadRequest(new { error = "Invalid import profile data" });
                 if (string.IsNullOrWhiteSpace(importProfile.Name)) return Results.BadRequest(new { error = "Name is required" });
@@ -188,7 +190,7 @@ public static class ProfilesEndpoints
                 var userId = int.TryParse(userIdClaim, out var uid) ? (int?)uid : null;
                 var impId = await importProfileService.CreateAsync(importProfile, userId);
                 var created = await importProfileService.GetByIdAsync(impId);
-                return Results.Created($"/api/profiles/{impId}?type=import", created);
+                return Results.Created($"/api/profiles/{ids.ToUlid(PublicIdTables.ImportProfiles, impId)}?type=import", created);
             }
             catch (InvalidOperationException ex)
             {
@@ -205,7 +207,7 @@ public static class ProfilesEndpoints
         Profile profile;
         try
         {
-            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var opts = context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
             profile = System.Text.Json.JsonSerializer.Deserialize<Profile>(json, opts)
                 ?? throw new InvalidOperationException("Invalid profile data");
         }
@@ -352,7 +354,8 @@ public static class ProfilesEndpoints
             await auditService.LogAsync("Profile", id, "Created", username,
                 System.Text.Json.JsonSerializer.Serialize(new { profile.Name, profile.ConnectionId, profile.Query }));
 
-            return Results.Created($"/api/profiles/{id}", new { id });
+            var ulid = ids.ToUlid(PublicIdTables.Profiles, id);
+            return Results.Created($"/api/profiles/{ulid}", new { id = ulid });
         }
         catch (InvalidOperationException ex)
         {
@@ -395,7 +398,7 @@ public static class ProfilesEndpoints
         {
             try
             {
-                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var opts = context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
                 var importProfile = System.Text.Json.JsonSerializer.Deserialize<ImportProfile>(json, opts);
                 if (importProfile == null) return Results.BadRequest(new { error = "Invalid import profile data" });
                 importProfile.Id = id;
@@ -419,7 +422,7 @@ public static class ProfilesEndpoints
         Profile profile;
         try
         {
-            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var opts = context.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>().Value.SerializerOptions;
             profile = System.Text.Json.JsonSerializer.Deserialize<Profile>(json, opts)
                 ?? throw new InvalidOperationException("Invalid profile data");
         }
@@ -780,8 +783,6 @@ public static class ProfilesEndpoints
 
         return Results.BadRequest(new { error = "type=import query parameter is required for this endpoint" });
     }
-
-    // ===== Delta Sync Endpoints =====
 
     /// <summary>
     /// POST /api/profiles/{id}/delta-sync/reset - Reset entire delta sync state for a profile
@@ -1659,7 +1660,7 @@ public static class ProfilesEndpoints
                 }
             }
 
-            Log.Information("Testing query preview for connection {ConnectionId}: {Query}", request.ConnectionId, testQuery);
+            Log.Debug("Testing query preview for connection {ConnectionId}: {Query}", request.ConnectionId, testQuery);
 
             // Execute query
             var (success, rows, error, executionTime) = await queryExecutor.ExecuteQueryAsync(
@@ -1683,7 +1684,7 @@ public static class ProfilesEndpoints
             // Take only first 25 rows (in case query already had a larger limit)
             var limitedRows = rows?.Take(25).ToList() ?? [];
 
-            Log.Information("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
+            Log.Debug("Query preview test successful for connection {ConnectionId}. Returned {Count} rows in {Time}ms",
                 request.ConnectionId, limitedRows.Count, executionTime);
 
             return Results.Ok(new

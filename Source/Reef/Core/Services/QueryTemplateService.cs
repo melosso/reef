@@ -17,7 +17,6 @@ namespace Reef.Core.Services;
 /// Service for managing and applying query transformation templates
 /// 
 /// ARCHITECTURE OVERVIEW:
-/// =====================
 /// This service supports TWO distinct transformation paths for production-ready data exports:
 /// 
 /// 1. SQL SERVER NATIVE TRANSFORMATIONS (Types 4-9: ForXml*, ForJson*)
@@ -39,19 +38,16 @@ namespace Reef.Core.Services;
 ///    - Ideal for: EDI files, SOAP XML, fixed-width formats, legacy system integrations
 /// 
 /// USAGE IN PROFILES:
-/// ==================
 /// - Profile.TemplateId: References QueryTemplates.Id
 /// - Profile.TransformationOptionsJson: Stores serialized ForXmlOptions/ForJsonOptions for native types
 /// - ExecutionService routes to correct path based on template type
 /// 
 /// BACKWARD COMPATIBILITY:
-/// =======================
 /// - Existing templates with populated Template field still work
 /// - Parser extracts options from template strings as fallback
 /// - New profiles should use TransformationOptionsJson for native types
 /// 
 /// MAINTAINABILITY:
-/// ================
 /// - Clear separation between native (performance) and custom (flexibility)
 /// - Strongly typed options prevent runtime errors
 /// - Fallback parsing ensures no breaking changes
@@ -310,7 +306,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
-            parts.Add($"('{options.RowElement}')");
+            parts.Add($"('{options.RowElement.Replace("'", "''")}')");
         }
 
         if (options?.ElementsMode == true)
@@ -320,7 +316,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -337,7 +333,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -349,12 +345,12 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
-            parts.Add($"('{options.RowElement}')");
+            parts.Add($"('{options.RowElement.Replace("'", "''")}')");
         }
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -449,7 +445,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         if (options?.IncludeNullValues == true)

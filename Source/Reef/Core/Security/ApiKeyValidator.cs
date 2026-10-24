@@ -1,103 +1,60 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
-using Reef.Core.Security;
+using Reef.Core.Models;
 
 namespace Reef.Core.Security;
 
-/// <summary>
-/// API key validation service
-/// </summary>
-public class ApiKeyValidator
+public sealed class ApiKeyValidator(DatabaseConfig config, TimeProvider time)
 {
-    private readonly string _connectionString;
-    private readonly PasswordHasher _passwordHasher;
+    private const string KeyStart = "reef_ak_";
+    private static readonly TimeSpan LastUsedThrottle = TimeSpan.FromMinutes(1);
 
-    public ApiKeyValidator(DatabaseConfig config, PasswordHasher passwordHasher)
+    public static (string Key, string KeyPrefix, string KeyHash) Generate()
     {
-        _connectionString = config.ConnectionString;
-        _passwordHasher = passwordHasher;
+        var prefix = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
+        var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var key = $"{KeyStart}{prefix}_{secret}";
+        return (key, prefix, Hash(key));
     }
 
-    /// <summary>
-    /// Validate API key and return permissions if valid
-    /// </summary>
-    public async Task<(bool IsValid, string? Permissions)> ValidateApiKeyAsync(string apiKey)
+    public async Task<ApiKey?> ValidateAsync(string presented)
     {
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
+        var end = presented.StartsWith(KeyStart, StringComparison.Ordinal) ? presented.IndexOf('_', KeyStart.Length) : -1;
+        if (end < 0)
+            return null;
 
-        const string sql = @"
-            SELECT KeyHash, Permissions, ExpiresAt, IsActive
-            FROM ApiKeys
-            WHERE IsActive = 1
-        ";
+        await using var connection = new SqliteConnection(config.ConnectionString);
+        var key = await connection.QuerySingleOrDefaultAsync<ApiKey>(
+            "SELECT * FROM ApiKeys WHERE KeyPrefix = @Prefix AND IsActive = 1",
+            new { Prefix = presented[KeyStart.Length..end] });
 
-        var apiKeys = await connection.QueryAsync<dynamic>(sql);
+        var now = time.GetUtcNow().UtcDateTime;
+        if (key is null
+            || !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(key.KeyHash), Encoding.ASCII.GetBytes(Hash(presented)))
+            || key.ExpiresAt < now)
+            return null;
 
-        foreach (var key in apiKeys)
+        await connection.ExecuteAsync(
+            "UPDATE ApiKeys SET LastUsedAt = @Now WHERE Id = @Id AND (LastUsedAt IS NULL OR LastUsedAt < @Cutoff)",
+            new { Now = now, key.Id, Cutoff = now - LastUsedThrottle });
+        return key;
+    }
+
+    public static bool CanWrite(string permissions)
+    {
+        try
         {
-            // Check if key matches hash
-            if (_passwordHasher.VerifyPassword(apiKey, (string)key.KeyHash))
-            {
-                // Check expiration
-                if (key.ExpiresAt != null)
-                {
-                    if (DateTime.Parse((string)key.ExpiresAt) < DateTime.UtcNow)
-                    {
-                        return (false, null); // Expired
-                    }
-                }
-
-                // Update last used timestamp
-                const string updateSql = @"
-                    UPDATE ApiKeys
-                    SET LastUsedAt = datetime('now')
-                    WHERE KeyHash = @KeyHash
-                ";
-                await connection.ExecuteAsync(updateSql, new { KeyHash = (string)key.KeyHash });
-
-                return (true, (string)key.Permissions);
-            }
+            using var json = JsonDocument.Parse(permissions);
+            return json.RootElement.TryGetProperty("write", out var write) && write.ValueKind == JsonValueKind.True;
         }
-
-        return (false, null);
-    }
-
-    /// <summary>
-    /// Generate a new API key
-    /// </summary>
-    public string GenerateApiKey()
-    {
-        // Generate a 32-byte random key
-        var bytes = new byte[32];
-        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
-        return Convert.ToBase64String(bytes).Replace("+", "").Replace("/", "").Replace("=", "");
-    }
-
-    /// <summary>
-    /// Create a new API key
-    /// </summary>
-    public async Task<string> CreateApiKeyAsync(string name, string permissions, DateTime? expiresAt = null)
-    {
-        var apiKey = GenerateApiKey();
-        var keyHash = _passwordHasher.HashPassword(apiKey);
-
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync();
-
-        const string sql = @"
-            INSERT INTO ApiKeys (Name, KeyHash, Permissions, ExpiresAt, IsActive)
-            VALUES (@Name, @KeyHash, @Permissions, @ExpiresAt, 1)
-        ";
-
-        await connection.ExecuteAsync(sql, new
+        catch (JsonException)
         {
-            Name = name,
-            KeyHash = keyHash,
-            Permissions = permissions,
-            ExpiresAt = expiresAt?.ToString("o")
-        });
-
-        return apiKey;
+            return false;
+        }
     }
+
+    private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
 }

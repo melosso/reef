@@ -490,6 +490,8 @@ public class WebhookService
     /// Generate secure webhook token
     /// Format: reef_wh_<base64url>
     /// </summary>
+    public static string MaskToken(string token) => token.Length > 12 ? $"...{token[^4..]}" : "***";
+
     private string GenerateWebhookToken()
     {
         var bytes = new byte[32];

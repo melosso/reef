@@ -7,11 +7,12 @@ using Xunit;
 
 namespace Reef.Tests.Api;
 
-public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<ReefApiFactory>
+[Collection(ApiCollection.Name)]
+public class ProfileDocumentsApiTests(ReefApiFactory factory)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 
-    private async Task<(HttpClient Client, int ConnectionId, string ShopDb)> SetupAsync()
+    private async Task<(HttpClient Client, string ConnectionId, string ShopDb)> SetupAsync()
     {
         var shopDb = Path.Combine(factory.DataFolder, $"shop-{Guid.NewGuid():N}.db");
         await using (var db = new SqliteConnection($"Data Source={shopDb}"))
@@ -24,18 +25,18 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
         var client = await factory.CreateAdminClientAsync();
         var created = await client.PostAsJsonAsync("/api/connections", new { name = $"Shop {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={shopDb}", isActive = true, hash = "" }, _ct);
         created.EnsureSuccessStatusCode();
-        var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
         return (client, connectionId, shopDb);
     }
 
     private static JsonObject Node(string type, JsonObject config) => new() { ["id"] = type, ["type"] = type, ["x"] = 40, ["y"] = 40, ["config"] = config };
 
     [Fact]
-    public async Task Export_document_saves_and_reads_back_with_positions()
+    public async Task ExportDocumentSavesAndReadsBackWithPositions()
     {
         var (client, connectionId, _) = await SetupAsync();
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<int>();
+        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
         var document = new JsonObject
         {
             ["kind"] = "export",
@@ -47,7 +48,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
         document["nodes"]![1]!["x"] = 400;
 
         var created = await client.PostAsJsonAsync("/api/profile-documents/export", document, _ct);
-        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(_ct));
         var saved = await created.Content.ReadFromJsonAsync<JsonObject>(_ct);
         var read = await client.GetFromJsonAsync<JsonObject>($"/api/profile-documents/export/{saved!["id"]}", _ct);
 
@@ -57,7 +58,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
     }
 
     [Fact]
-    public async Task Invalid_document_returns_errors_per_node_and_field()
+    public async Task InvalidDocumentReturnsErrorsPerNodeAndField()
     {
         var (client, _, _) = await SetupAsync();
         var document = new JsonObject
@@ -77,13 +78,13 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
     }
 
     [Fact]
-    public async Task Import_document_runs_with_column_mapping_and_export_copies()
+    public async Task ImportDocumentRunsWithColumnMappingAndExportCopies()
     {
         var (client, connectionId, shopDb) = await SetupAsync();
         var inbox = Directory.CreateDirectory(Path.Combine(factory.DataFolder, $"in-{Guid.NewGuid():N}")).FullName;
         await File.WriteAllTextAsync(Path.Combine(inbox, "orders.csv"), "order_id,customer_name\n10,Gamma\n11,Delta\n", _ct);
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<int>();
+        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
         var name = $"Import {Guid.NewGuid():N}";
         var document = new JsonObject
         {
@@ -100,15 +101,15 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
         };
 
         var created = await client.PostAsJsonAsync("/api/profile-documents/import", document, _ct);
-        created.StatusCode.Should().Be(HttpStatusCode.Created);
-        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(_ct));
+        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
 
         var duplicate = await client.PostAsJsonAsync("/api/profile-documents/import", document, _ct);
         duplicate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var read = await client.GetFromJsonAsync<JsonObject>($"/api/profile-documents/import/{id}", _ct);
         var copies = read!["nodes"]!.AsArray().Single(n => n!["type"]!.GetValue<string>() == "outputs")!["config"]!["OutputTargets"]!.AsArray();
-        copies.Should().ContainSingle().Which!["Id"]!.GetValue<int>().Should().BePositive();
+        copies.Should().ContainSingle().Which!["Id"]!.GetValue<string>().Should().HaveLength(26);
 
         var run = await client.PostAsJsonAsync($"/api/profiles/{id}/execute?type=import", new { }, _ct);
         var result = await run.Content.ReadFromJsonAsync<JsonObject>(_ct);
@@ -122,7 +123,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
     }
 
     [Fact]
-    public async Task Legacy_import_update_keeps_canvas_positions()
+    public async Task LegacyImportUpdateKeepsCanvasPositions()
     {
         var (client, connectionId, _) = await SetupAsync();
         var document = new JsonObject
@@ -136,7 +137,7 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory) : IClassFixture<Re
         };
         document["nodes"]![2]!["x"] = 640;
         var created = await client.PostAsJsonAsync("/api/profile-documents/import", document, _ct);
-        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
 
         var legacy = await client.GetFromJsonAsync<JsonObject>($"/api/profiles/{id}?type=import", _ct);
         legacy!.Remove("canvasLayoutJson");

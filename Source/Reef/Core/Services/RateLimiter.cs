@@ -8,7 +8,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class RateLimiter
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<RateLimiter>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<RateLimiter>();
 
     private readonly double _tokensPerSecond;
     private readonly double _maxTokens;

@@ -83,7 +83,9 @@ public class ExecutionService
             Dictionary<string, string>? parameters = null,
             string triggeredBy = "Manual",
             int? jobId = null,
-            int? destinationOverrideId = null)
+            int? destinationOverrideId = null,
+            CancellationToken ct = default,
+            int? startedExecutionId = null)
     {
         var stopwatch = Stopwatch.StartNew();
         int executionId = 0;
@@ -91,7 +93,7 @@ public class ExecutionService
         try
         {
             // Create ProfileExecution record FIRST - ensures all execution attempts are tracked
-            executionId = await CreateExecutionRecordAsync(profileId, triggeredBy, jobId);
+            executionId = startedExecutionId ?? await CreateExecutionRecordAsync(profileId, triggeredBy, jobId);
 
             // Load profile and connection
             var profile = await _profileService.GetByIdAsync(profileId);
@@ -110,7 +112,7 @@ public class ExecutionService
             }
 
             // Push profile code into log context so all downstream messages (including destinations) carry it
-            using var profileLogCtx = LogContext.PushProperty("ProfileCode", $"[{profile.Code}] ");
+            using var profileLogCtx = LogContext.PushProperty(ExecutionLogContext.ProfileProperty, ExecutionLogContext.Prefix(profile.Code));
 
             var connection = await _connectionService.GetByIdAsync(profile.ConnectionId);
             if (connection == null)
@@ -148,9 +150,6 @@ public class ExecutionService
                 }
                 Log.Information("Profile {ProfileCode} ({ProfileName}) dependencies validated successfully", profile.Code, profile.Name);
             }
-
-
-            // ===== PHASE 1: PRE-PROCESSING =====
             // Execute pre-processing if configured
             var preProcessContext = new ProcessingContext
             {
@@ -181,20 +180,16 @@ public class ExecutionService
                     $"Pre-processing failed: {preProcessError}");
                 return (executionId, false, null, $"Pre-processing failed: {preProcessError}");
             }
-
-            // ===== PHASE 2: MAIN QUERY =====
             // Execute query
             Log.Debug("Executing query for profile {ProfileId}", profileId);
             var (querySuccess, rows, queryError, queryTime) = await _queryExecutor.ExecuteQueryAsync(
-                connection, profile.Query, parameters);
+                connection, profile.Query, parameters, ct: ct);
 
             if (!querySuccess)
             {
                 await UpdateExecutionRecordAsync(executionId, "Failed", 0, null, stopwatch.ElapsedMilliseconds, queryError);
                 return (executionId, false, null, queryError);
             }
-
-            // ===== PHASE 2.5: DELTA SYNC (IF ENABLED) =====
             int originalRowCount = rows.Count;
             DeltaSyncResult? deltaSyncResult = null;
 
@@ -351,8 +346,6 @@ public class ExecutionService
 
                 return (executionId, true, null, null);
             }
-
-            // ===== PHASE 2.5.5: EMAIL EXPORT (IF ENABLED) =====
             // Skip email export if there's a destination override (test mode or manual override)
             if (profile.IsEmailExport && rows.Count > 0 && !destinationOverrideId.HasValue)
             {
@@ -678,8 +671,6 @@ public class ExecutionService
                     return (executionId, false, null, $"Email export error: {ex.Message}");
                 }
             }
-
-            // ===== PHASE 2.6: MULTI-OUTPUT SPLITTING (IF ENABLED) =====
             if (profile.SplitEnabled && rows.Count > 0)
             {
                 Log.Debug("Profile {ProfileId} executing with multi-output splitting enabled", profile.Id);
@@ -729,8 +720,6 @@ public class ExecutionService
                 }
                 return (splitExecId, splitSuccess, splitOutputPath, splitError);
             }
-
-            // ===== PHASE 2.7: FILTER INTERNAL COLUMNS FROM OUTPUT (IF CONFIGURED) =====
             // Remove ReefId and/or SplitKey columns if they should not be included in output
             rows = FilterInternalColumns(profile, rows);
 
@@ -874,7 +863,7 @@ public class ExecutionService
             // Normalize path separators for cross-platform compatibility
             filename = filename.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
-            var tempFilePath = Path.Combine(Path.GetTempPath(), filename);
+            var tempFilePath = Reef.Helpers.SafePath.Combine(Path.GetTempPath(), filename);
             string? finalPath = null;
 
             try
@@ -1256,8 +1245,6 @@ public class ExecutionService
                         ? Path.GetRelativePath(outputRoot, finalPath).Replace("\\", "/")
                         : null;
                 }
-
-                // ===== PHASE 3: POST-PROCESSING =====
                 // Build context for post-processing
                 var postProcessContext = new ProcessingContext
                 {
@@ -1709,7 +1696,7 @@ public class ExecutionService
     /// <summary>
     /// Create initial execution record
     /// </summary>
-    private async Task<int> CreateExecutionRecordAsync(int profileId, string triggeredBy, int? jobId = null)
+    public async Task<int> CreateExecutionRecordAsync(int profileId, string triggeredBy, int? jobId = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -1864,10 +1851,9 @@ public class ExecutionService
             }
 
             // Build and execute command
-            var command = BuildDatabaseCommand(connection.Type, config, context);
+            var (command, parameters) = ProcessingCommandBuilder.Build(connection.Type, config, context);
             Log.Debug("Executing pre-processing command: {Command}", command);
 
-            var parameters = BuildParametersDictionary(config.Parameters, context);
             var (success, rowsAffected, error, _) = await _queryExecutor.ExecuteCommandAsync(connection, command, parameters, config.Timeout);
 
             stopwatch.Stop();
@@ -1986,10 +1972,9 @@ public class ExecutionService
             }
 
             // Build and execute command
-            var command = BuildDatabaseCommand(connection.Type, config, context);
+            var (command, parameters) = ProcessingCommandBuilder.Build(connection.Type, config, context);
             Log.Debug("Executing post-processing command: {Command}", command);
 
-            var parameters = BuildParametersDictionary(config.Parameters, context);
             var (success, rowsAffected, error, _) = await _queryExecutor.ExecuteCommandAsync(connection, command, parameters, config.Timeout);
 
             stopwatch.Stop();
@@ -2023,124 +2008,6 @@ public class ExecutionService
             await UpdatePostProcessingStatusAsync(executionId, startedAt, DateTime.UtcNow, "Failed", error, stopwatch.ElapsedMilliseconds);
             return (false, error);
         }
-    }
-
-    /// <summary>
-    /// Build database-specific command for query or stored procedure execution
-    /// Handles SQL Server (EXEC), MySQL (CALL), and PostgreSQL (CALL) syntax
-    /// </summary>
-    /// <param name="connectionType">Database type (SqlServer, MySQL, PostgreSQL)</param>
-    /// <param name="config">Processing configuration</param>
-    /// <param name="context">Context for variable substitution</param>
-    /// <returns>SQL command string</returns>
-    private string BuildDatabaseCommand(string connectionType, ProcessingConfig config, ProcessingContext context)
-    {
-        if (string.IsNullOrWhiteSpace(config.Command))
-            throw new ArgumentException($"ProcessingConfig.Command is required for Type={config.Type}");
-
-        // Substitute context variables in the command
-        var command = SubstituteContextVariables(config.Command, context);
-
-        // For Query type, return the command as-is (already SQL)
-        if (config.Type.Equals("Query", StringComparison.OrdinalIgnoreCase))
-        {
-            return command;
-        }
-
-        // For StoredProcedure type, build database-specific syntax
-        if (config.Type.Equals("StoredProcedure", StringComparison.OrdinalIgnoreCase))
-        {
-            var procedureName = command.Trim();
-
-            // Build parameter list if provided
-            string parameterList = "";
-            if (config.Parameters != null && config.Parameters.Count > 0)
-            {
-                var paramNames = config.Parameters.Select(p =>
-                {
-                    var paramName = p.Name.StartsWith("@") || p.Name.StartsWith("p_") ? p.Name : $"@{p.Name}";
-                    return paramName;
-                });
-                parameterList = " " + string.Join(", ", paramNames);
-            }
-
-            // Generate database-specific syntax
-            return connectionType.ToLowerInvariant() switch
-            {
-                "sqlserver" => $"EXEC {procedureName}{parameterList}",
-                "mysql" => $"CALL {procedureName}({parameterList.Trim()})",
-                "postgresql" => $"CALL {procedureName}({parameterList.Trim()})",
-                _ => $"EXEC {procedureName}{parameterList}" // Default to SQL Server syntax
-            };
-        }
-
-        throw new ArgumentException($"Unknown processing type: {config.Type}");
-    }
-
-    /// <summary>
-    /// Substitute context variables in a string with actual values
-    /// Supports: {executionid}, {profileid}, {rowcount}, {outputpath}, {filesizebytes}, 
-    ///           {executiontimems}, {outputformat}, {triggeredby}, {startedat}, {completedat}, 
-    ///           {status}, {errormessage}
-    /// </summary>
-    /// <param name="input">Input string with {placeholder} variables</param>
-    /// <param name="context">Context containing actual values</param>
-    /// <returns>String with variables replaced</returns>
-    private string SubstituteContextVariables(string input, ProcessingContext context)
-    {
-        if (string.IsNullOrEmpty(input))
-        {
-            return input;
-        }
-
-        var result = input;
-
-        // Replace all supported context variables
-        result = result.Replace("{executionid}", context.ExecutionId.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{profileid}", context.ProfileId.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{rowcount}", context.RowCount.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{outputpath}", context.OutputPath ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{filesizebytes}", (context.FileSizeBytes ?? 0).ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{executiontimems}", context.ExecutionTimeMs.ToString(), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{outputformat}", context.OutputFormat, StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{triggeredby}", context.TriggeredBy ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{startedat}", context.StartedAt.ToString("O"), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{completedat}", (context.CompletedAt?.ToString("O") ?? ""), StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{status}", context.Status, StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{errormessage}", context.ErrorMessage ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{deltasyncreefidcolumn}", context.DeltaSyncReefIdColumn ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{splitkeycolumn}", context.SplitKeyColumn ?? "", StringComparison.OrdinalIgnoreCase);
-        result = result.Replace("{splitkey}", context.SplitKey ?? "", StringComparison.OrdinalIgnoreCase);
-
-        return result;
-    }
-
-    /// <summary>
-    /// Build parameters dictionary with context variable substitution
-    /// </summary>
-    /// <param name="configParameters">Parameters from ProcessingConfig</param>
-    /// <param name="context">Context for variable substitution</param>
-    /// <returns>Dictionary of parameter name/value pairs</returns>
-    private Dictionary<string, string> BuildParametersDictionary(
-        List<ProcessingParameter>? configParameters,
-        ProcessingContext context)
-    {
-        var parameters = new Dictionary<string, string>();
-
-        if (configParameters == null || configParameters.Count == 0)
-        {
-            return parameters;
-        }
-
-        foreach (var param in configParameters)
-        {
-            // Preserve @ prefix for parameter names to match SQL/stored procedure expectations
-            var paramName = param.Name.StartsWith("@") ? param.Name : "@" + param.Name;
-            var paramValue = SubstituteContextVariables(param.Value, context);
-            parameters[paramName] = paramValue;
-        }
-
-        return parameters;
     }
 
     /// <summary>
@@ -2407,7 +2274,7 @@ public class ExecutionService
             filename = filename.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 
             // Create temporary file
-            tempFilePath = Path.Combine(Path.GetTempPath(), "reef_splits", filename);
+            tempFilePath = Reef.Helpers.SafePath.Combine(Path.Combine(Path.GetTempPath(), "reef_splits"), filename);
             var directory = Path.GetDirectoryName(tempFilePath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {

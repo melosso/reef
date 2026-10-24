@@ -45,7 +45,13 @@ public class JwtTokenService
     /// <summary>
     /// Generate JWT token for a user
     /// </summary>
-    public string GenerateToken(string username, string role, int userId, int? customExpirationMinutes = null)
+    public const string PasswordStampClaim = "pwd_stamp";
+
+    // Differs per password hash. A password change invalidates existing tokens.
+    public static string PasswordStamp(string passwordHash) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(passwordHash)))[..16];
+
+    public string GenerateToken(string username, string role, int userId, string passwordHash, int? customExpirationMinutes = null)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
@@ -58,6 +64,7 @@ public class JwtTokenService
             new Claim("userId", userId.ToString()), // Additional custom claim for backwards compatibility
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()), // JWT standard subject claim
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(PasswordStampClaim, PasswordStamp(passwordHash)),
             new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 

@@ -6,22 +6,22 @@
   <Accounts>
 {{~ for row in rows ~}}
     <!-- Each row from the query becomes an Account element -->
-    <Account code="{{ row.Code }}" status="{{ row.Status }}" type="{{ row.Type }}">
-      <Name>{{ row.Name }}</Name>
+    <Account code="{{ row.Code | html.escape }}" status="{{ row.Status | html.escape }}" type="{{ row.Type | html.escape }}">
+      <Name>{{ row.Name | html.escape }}</Name>
       
       <!-- Nested structure for custom fields -->
       <FreeFields>
         <FreeTexts>
-          <FreeText number="1">{{ row.FreeText1 }}</FreeText>
-          <FreeText number="2">{{ row.FreeText2 }}</FreeText>
-          <FreeText number="3">{{ row.FreeText3 }}</FreeText>
-          <FreeText number="4">{{ row.FreeText4 }}</FreeText>
-          <FreeText number="5">{{ row.FreeText5 }}</FreeText>
-          <FreeText number="6">{{ row.FreeText6 }}</FreeText>
-          <FreeText number="7">{{ row.FreeText7 }}</FreeText>
-          <FreeText number="8">{{ row.FreeText8 }}</FreeText>
-          <FreeText number="9">{{ row.FreeText9 }}</FreeText>
-          <FreeText number="10">{{ row.FreeText10 }}</FreeText>
+          <FreeText number="1">{{ row.FreeText1 | html.escape }}</FreeText>
+          <FreeText number="2">{{ row.FreeText2 | html.escape }}</FreeText>
+          <FreeText number="3">{{ row.FreeText3 | html.escape }}</FreeText>
+          <FreeText number="4">{{ row.FreeText4 | html.escape }}</FreeText>
+          <FreeText number="5">{{ row.FreeText5 | html.escape }}</FreeText>
+          <FreeText number="6">{{ row.FreeText6 | html.escape }}</FreeText>
+          <FreeText number="7">{{ row.FreeText7 | html.escape }}</FreeText>
+          <FreeText number="8">{{ row.FreeText8 | html.escape }}</FreeText>
+          <FreeText number="9">{{ row.FreeText9 | html.escape }}</FreeText>
+          <FreeText number="10">{{ row.FreeText10 | html.escape }}</FreeText>
         </FreeTexts>
         
         <FreeNumbers>
@@ -34,18 +34,18 @@
         </FreeNumbers>
         
         <FreeYesNos>
-          <FreeYesNo number="1">{{ row.FreeYesNo1 }}</FreeYesNo>
-          <FreeYesNo number="2">{{ row.FreeYesNo2 }}</FreeYesNo>
-          <FreeYesNo number="3">{{ row.FreeYesNo3 }}</FreeYesNo>
-          <FreeYesNo number="4">{{ row.FreeYesNo4 }}</FreeYesNo>
-          <FreeYesNo number="5">{{ row.FreeYesNo5 }}</FreeYesNo>
+          <FreeYesNo number="1">{{ row.FreeYesNo1 | html.escape }}</FreeYesNo>
+          <FreeYesNo number="2">{{ row.FreeYesNo2 | html.escape }}</FreeYesNo>
+          <FreeYesNo number="3">{{ row.FreeYesNo3 | html.escape }}</FreeYesNo>
+          <FreeYesNo number="4">{{ row.FreeYesNo4 | html.escape }}</FreeYesNo>
+          <FreeYesNo number="5">{{ row.FreeYesNo5 | html.escape }}</FreeYesNo>
         </FreeYesNos>
       </FreeFields>
       
       <!-- Audit metadata -->
-      <CreatedDate>{{ row.CreatedDate }}</CreatedDate>
-      <ModifiedDate>{{ row.ModifiedDate }}</ModifiedDate>
-      <UUID>{{ row.UUID }}</UUID>
+      <CreatedDate>{{ row.CreatedDate | html.escape }}</CreatedDate>
+      <ModifiedDate>{{ row.ModifiedDate | html.escape }}</ModifiedDate>
+      <UUID>{{ row.UUID | html.escape }}</UUID>
     </Account>
 {{~ end ~}}
   </Accounts>

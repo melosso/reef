@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -16,12 +17,12 @@ public static class GroupsEndpoints
 
         group.MapGet("/", GetAll);
         group.MapGet("/tree", GetTree);
-        group.MapGet("/{id:int}", GetById);
-        group.MapGet("/{id:int}/profiles", GetProfiles);
+        group.MapGet("/{id:ulid(ProfileGroups)}", GetById);
+        group.MapGet("/{id:ulid(ProfileGroups)}/profiles", GetProfiles);
         group.MapPost("/", Create);
-        group.MapPut("/{id:int}", Update);
-        group.MapPost("/{id:int}/move", MoveGroup);
-        group.MapDelete("/{id:int}", Delete);
+        group.MapPut("/{id:ulid(ProfileGroups)}", Update);
+        group.MapPost("/{id:ulid(ProfileGroups)}/move", MoveGroup);
+        group.MapDelete("/{id:ulid(ProfileGroups)}", Delete);
     }
 
     /// <summary>
@@ -116,7 +117,8 @@ public static class GroupsEndpoints
         HttpContext context,
         [FromBody] CreateGroupRequest request,
         [FromServices] GroupService service,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -146,7 +148,7 @@ public static class GroupsEndpoints
             var changes = System.Text.Json.JsonSerializer.Serialize(request);
             await auditService.LogAsync("ProfileGroup", groupId, "Created", username, changes, context);
 
-            return Results.Ok(new { id = groupId, message = "Group created successfully" });
+            return Results.Ok(new { id = ids.ToUlid("ProfileGroups", groupId), message = "Group created successfully" });
         }
         catch (InvalidOperationException ex)
         {

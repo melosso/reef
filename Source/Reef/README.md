@@ -25,9 +25,8 @@ $bytes = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Cr
 Server=localhost;Database=AdventureWorks;User Id=sa;Password=123;Connection Timeout=15;TrustServerCertificate=true;
 ```
 
-### Default Credentials
-- Username: `admin@reef.local`
-- Password: `admin123` (change immediately)
+### First Sign-In
+The first start creates `admin-<random>@reef.local` with a one-time password, written once to the console and `log/reef-<date>.log`. Reef asks for a new password at the first sign-in.
 
 ## License
-AGPL-3.0-or-later
+EUPL-1.2-or-later

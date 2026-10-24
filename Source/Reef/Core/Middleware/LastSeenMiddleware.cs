@@ -13,7 +13,7 @@ public class LastSeenMiddleware
     private readonly string _connectionString;
     private static readonly ConcurrentDictionary<string, DateTime> _lastUpdateCache = new();
     private static readonly TimeSpan _updateThrottle = TimeSpan.FromMinutes(5);
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<LastSeenMiddleware>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<LastSeenMiddleware>();
 
     public LastSeenMiddleware(RequestDelegate next, IConfiguration configuration)
     {

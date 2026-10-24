@@ -1,3 +1,4 @@
+using Reef.Helpers;
 // Source/Reef/Api/ExecutionsEndpoints.cs
 // API endpoints for execution management and monitoring
 
@@ -19,25 +20,20 @@ public static class ExecutionsEndpoints
         var group = app.MapGroup("/api/executions").RequireAuthorization();
 
         group.MapGet("/", GetAllExecutions);
-        group.MapGet("/{id:int}", GetExecutionById);
-        group.MapGet("/{id:int}/test", GetExecutionById);
-        group.MapGet("/{id:int}/errors", GetExecutionErrors);
-        group.MapPost("/execute/{profileId:int}", ExecuteProfile);
-        group.MapGet("/by-profile/{profileId:int}", GetExecutionsByProfile);
+        group.MapGet("/{id:ulid(ProfileExecutions)}", GetExecutionById);
+        group.MapGet("/{id:ulid(ProfileExecutions)}/test", GetExecutionById);
+        group.MapGet("/{id:ulid(ProfileExecutions)}/errors", GetExecutionErrors);
+        group.MapPost("/execute/{profileId:ulid(Profiles)}", ExecuteProfile);
+        group.MapGet("/by-profile/{profileId:ulid(Profiles)}", GetExecutionsByProfile);
         group.MapGet("/recent", GetRecentExecutions);
-        group.MapGet("/download/{token}", DownloadExecutionFile);
+        group.MapGet("/{id:ulid(ProfileExecutions)}/download", DownloadExecutionFile);
     }
 
-    /// <summary>
-    /// GET /api/executions/download/{token} - Securely download execution output by token
-    /// </summary>
     private static async Task<IResult> DownloadExecutionFile(
-        string token,
+        int id,
         HttpContext context,
         [FromServices] ExecutionService service)
     {
-        // Find execution by a secure, non-enumerable token (e.g., a GUID or hash stored in OutputPath or a separate column)
-        // For this example, assume OutputPath contains a unique token as part of the path, e.g., exports/{date}/{token}/file.csv
         var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
         string outputRoot;
         if (environment == "Development")
@@ -50,9 +46,7 @@ public static class ExecutionsEndpoints
             outputRoot = Path.Combine(AppContext.BaseDirectory, "exports");
         }
 
-        // Find the execution by token (search OutputPath for the token)
-        var executions = await service.GetRecentExecutionsAsync(1000); // Or implement a direct lookup by token
-        var execution = executions.FirstOrDefault(e => e.OutputPath != null && e.OutputPath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        var execution = await service.GetExecutionByIdAsync(id);
         if (execution == null || string.IsNullOrWhiteSpace(execution.OutputPath))
             return Results.NotFound();
 
@@ -64,9 +58,15 @@ public static class ExecutionsEndpoints
             return Results.Forbid();
 
         // Prevent path traversal
-        var filePath = Path.GetFullPath(Path.Combine(outputRoot, Path.GetRelativePath("exports", execution.OutputPath)));
-        if (!filePath.StartsWith(outputRoot))
+        string filePath;
+        try
+        {
+            filePath = SafePath.Combine(outputRoot, execution.OutputPath);
+        }
+        catch (InvalidOperationException)
+        {
             return Results.Forbid();
+        }
 
         if (!System.IO.File.Exists(filePath))
             return Results.NotFound();
@@ -215,7 +215,7 @@ public static class ExecutionsEndpoints
                 return Results.Ok(new
                 {
                     executionId,
-                    status = "Failed",
+                    status = (await service.GetExecutionByIdAsync(executionId))?.Status ?? "Failed",
                     error = errorMessage
                 });
             }

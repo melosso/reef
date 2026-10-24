@@ -14,7 +14,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public class InterpreterService(IScriptRunner scriptRunner)
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<InterpreterService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<InterpreterService>();
 
     // CheckAllAsync runs on every Profile editor page load (it's how the UI
     // greys out unavailable interpreters) - logging "pwsh unavailable" on

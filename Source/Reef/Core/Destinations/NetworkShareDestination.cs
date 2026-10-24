@@ -10,7 +10,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class NetworkShareDestination : IDestination
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<NetworkShareDestination>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<NetworkShareDestination>();
 
     /// <summary>
     /// Save file to network share destination

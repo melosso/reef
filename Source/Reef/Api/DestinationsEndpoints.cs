@@ -1,6 +1,8 @@
+using Reef.Core.Security;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -15,8 +17,10 @@ public static class DestinationsEndpoints
         // POST: Test destination configuration without creating
         group.MapPost("/test", async (
             [FromBody] DestinationTestConfigRequest request,
-            [FromServices] DestinationService service) =>
+            [FromServices] DestinationService service,
+            [FromServices] PrivilegedSettingsGuard guard) =>
         {
+            guard.Check(request.Type.ToString(), request.ConfigurationJson, null, null);
             try
             {
                 // Validate request
@@ -72,9 +76,10 @@ public static class DestinationsEndpoints
         .Produces<IEnumerable<Destination>>(200);
 
         // GET: Get destination by ID (includes endpoints array)
-        group.MapGet("/{id:int}", async (
+        group.MapGet("/{id:ulid(Destinations)}", async (
             int id,
-            [FromServices] DestinationService service) =>
+            [FromServices] DestinationService service,
+            [FromServices] PublicIdMap ids) =>
         {
             var destination = await service.GetByIdAsync(id);
             if (destination == null)
@@ -83,7 +88,7 @@ public static class DestinationsEndpoints
             var endpoints = await service.GetEndpointsByDestinationIdAsync(id);
             return Results.Ok(new
             {
-                destination.Id,
+                Id = ids.ToUlid("Destinations", destination.Id),
                 destination.Name,
                 destination.Description,
                 destination.Type,
@@ -101,7 +106,7 @@ public static class DestinationsEndpoints
         .Produces(404);
 
         // GET: List endpoints for a destination
-        group.MapGet("/{id:int}/endpoints", async (
+        group.MapGet("/{id:ulid(Destinations)}/endpoints", async (
             int id,
             [FromServices] DestinationService service) =>
         {
@@ -112,16 +117,17 @@ public static class DestinationsEndpoints
         .Produces<IEnumerable<DestinationEndpoint>>(200);
 
         // POST: Create endpoint
-        group.MapPost("/{id:int}/endpoints", async (
+        group.MapPost("/{id:ulid(Destinations)}/endpoints", async (
             int id,
             [FromBody] DestinationEndpoint endpoint,
-            [FromServices] DestinationService service) =>
+            [FromServices] DestinationService service,
+            [FromServices] PublicIdMap ids) =>
         {
             try
             {
                 endpoint.DestinationId = id;
                 var created = await service.CreateEndpointAsync(endpoint);
-                return Results.Created($"/api/destinations/{id}/endpoints/{created.Id}", created);
+                return Results.Created($"/api/destinations/{ids.ToUlid("Destinations", id)}/endpoints/{ids.ToUlid("DestinationEndpoints", created.Id)}", created);
             }
             catch (Exception ex)
             {
@@ -133,7 +139,7 @@ public static class DestinationsEndpoints
         .Produces(400);
 
         // PUT: Update endpoint
-        group.MapPut("/{id:int}/endpoints/{epId:int}", async (
+        group.MapPut("/{id:ulid(Destinations)}/endpoints/{epId:ulid(DestinationEndpoints)}", async (
             int id,
             int epId,
             [FromBody] DestinationEndpoint endpoint,
@@ -159,7 +165,7 @@ public static class DestinationsEndpoints
         .Produces(404);
 
         // DELETE: Delete endpoint
-        group.MapDelete("/{id:int}/endpoints/{epId:int}", async (
+        group.MapDelete("/{id:ulid(Destinations)}/endpoints/{epId:ulid(DestinationEndpoints)}", async (
             int id,
             int epId,
             [FromServices] DestinationService service) =>
@@ -186,7 +192,8 @@ public static class DestinationsEndpoints
         // POST: Create new destination
         group.MapPost("/", async (
             [FromBody] Destination destination,
-            [FromServices] DestinationService service) =>
+            [FromServices] DestinationService service,
+            [FromServices] PublicIdMap ids) =>
         {
             try
             {
@@ -195,7 +202,7 @@ public static class DestinationsEndpoints
                 // Reload from DB to get masked version (never return plaintext to client)
                 var masked = await service.GetByIdAsync(created.Id);
 
-                return Results.Created($"/api/destinations/{masked?.Id}", masked);
+                return Results.Created($"/api/destinations/{ids.ToUlid("Destinations", created.Id)}", masked);
             }
             catch (Exception ex)
             {
@@ -207,7 +214,7 @@ public static class DestinationsEndpoints
         .Produces(400);
 
         // PUT: Update destination
-        group.MapPut("/{id:int}", async (
+        group.MapPut("/{id:ulid(Destinations)}", async (
             int id,
             [FromBody] Destination destination,
             [FromServices] DestinationService service) =>
@@ -240,7 +247,7 @@ public static class DestinationsEndpoints
         .Produces(404);
 
         // DELETE: Delete destination
-        group.MapDelete("/{id:int}", async (
+        group.MapDelete("/{id:ulid(Destinations)}", async (
             int id,
             [FromServices] DestinationService service) =>
         {
@@ -266,7 +273,7 @@ public static class DestinationsEndpoints
         .Produces(409);
 
         // POST: Test destination connection
-        group.MapPost("/{id:int}/test", async (
+        group.MapPost("/{id:ulid(Destinations)}/test", async (
             int id,
             [FromBody] DestinationTestRequest? request,
             [FromServices] DestinationService service) =>

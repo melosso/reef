@@ -1,12 +1,12 @@
 # 〰️ Reef
 
-[![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-EUPL%201.2-blue)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/melosso/reef)](https://github.com/melosso/reef/releases/latest)
 [![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
 
 **Reef** is a low-code web platform built to orchestrate your data workflows. Query databases, transform payloads, and deliver files to any destination from a single dashboard. Effortlessly manage connections, export profiles, and automated schedules with zero scripting required.
 
-![Screenshot of Reef](https://github.com/melosso/reef/blob/main/.github/images/screenshot.webp?raw=true)
+![Reef profile canvas with a query, transform and destination step](.github/images/screenshot.webp)
 
 ## What is Reef?
 
@@ -46,9 +46,9 @@ services:
       - reef_db:/app/data
       - ./exports:/app/exports
     environment:
-      - REEF_ENCRYPTION_KEY=YourKeyHere
-      - Reef__DatabasePath=/app/data/Reef.db
-      - Reef__AllowedOrigins=http://localhost:8085,http://localhost:3000
+      - ENCRYPTION_KEY=YourKeyHere
+      - DATABASE_PATH=/app/data/Reef.db
+      #- KNOWN_NETWORKS=172.16.0.0/12
 
 volumes:
   reef_core:
@@ -59,9 +59,13 @@ volumes:
 mkdir -p exports && docker compose up -d
 ```
 
+Every setting under `Reef` in `appsettings.json` takes a short environment variable name, such as `DATABASE_PATH`, `JWT_SECRET_KEY` or `JOBS_MAX_CONCURRENT_JOBS`. A `REEF_` prefix (`REEF_DATABASE_PATH`) wins over the bare name, and lists such as `ALLOWED_ORIGINS` take comma separated values. `Reef__DatabasePath` style names still work and log a deprecation warning.
+
+Behind a reverse proxy, set `KNOWN_PROXIES` (addresses) or `KNOWN_NETWORKS` (CIDR, such as `172.16.0.0/12` for Docker networks) so Reef reads the client address from `X-Forwarded-For`. Without them the header is ignored, which keeps sign-in throttling from being bypassed with a spoofed header.
+
 Access at **http://localhost:8085**
 
-Upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. After you log in, follow the steps to change your password right away.
+The first start creates an admin account `admin-<random>@reef.local` with a one-time password (printed to the logs).
 
 <summary>
 <details>How to install on Windows</details>
@@ -88,7 +92,7 @@ Download the latest release from Releases.
 
 4. Open browser → **http://localhost:8085**
 
-As mentioned hereabove, upon starting the first time, you can login with the default credentials `admin@reef.local` / `admin123`. You will be prompted to change them immediately.
+Sign in with the admin account from the first-start log. Reef asks for a new password at the first sign-in.
 
 </summary>
 
@@ -200,7 +204,7 @@ After creating a job, you can schedule it using various methods such as:
 
 ## License
 
-Free for open source projects and personal use under the **AGPL 3.0** license. For more information, please see the [license](LICENSE) file.
+Please see the [license](LICENSE) file.
 
 ## Contributing
 

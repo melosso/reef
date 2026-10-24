@@ -10,7 +10,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class SmtpEmailProvider : IEmailProvider
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<SmtpEmailProvider>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<SmtpEmailProvider>();
 
     /// <summary>
     /// Convert security mode string to SecureSocketOptions
@@ -22,6 +22,7 @@ public class SmtpEmailProvider : IEmailProvider
             "none" => SecureSocketOptions.None,
             "auto" => SecureSocketOptions.Auto,
             "starttls" => SecureSocketOptions.StartTls,
+            "ssl" or "sslonconnect" => SecureSocketOptions.SslOnConnect,
             _ => SecureSocketOptions.StartTls // Default to StartTls
         };
     }
@@ -48,28 +49,7 @@ public class SmtpEmailProvider : IEmailProvider
             Log.Information("Sending email via SMTP to {Recipients} using {SmtpHost}:{SmtpPort}",
                 maskedRecipients, smtpHost, config.SmtpPort);
 
-            using var client = new SmtpClient();
-
-            // Set timeout
-            if (config.TimeoutSeconds > 0)
-            {
-                client.Timeout = config.TimeoutSeconds * 1000;
-            }
-
-            // Connect to SMTP server with security mode from configuration
-            var secureSocketOptions = GetSecureSocketOptions(config.SecurityMode);
-            await client.ConnectAsync(smtpHost, config.SmtpPort, secureSocketOptions);
-
-            // Get username and password (check both SmtpUsername/Username and SmtpPassword/Password for backward compatibility)
-            var username = !string.IsNullOrEmpty(config.SmtpUsername) ? config.SmtpUsername : config.Username;
-            var password = !string.IsNullOrEmpty(config.SmtpPassword) ? config.SmtpPassword : config.Password;
-
-            // Authenticate if credentials provided
-            if (!string.IsNullOrEmpty(username))
-            {
-                ArgumentNullException.ThrowIfNull(password);
-                await client.AuthenticateAsync(username, password);
-            }
+            using var client = await ConnectAsync(smtpHost, config, CancellationToken.None);
 
             // Send message
             var response = await client.SendAsync(message);
@@ -91,6 +71,63 @@ public class SmtpEmailProvider : IEmailProvider
     /// <summary>
     /// Partially mask email address for logging (e.g., "user@example.com" -> "u*@example.com")
     /// </summary>
+    public async Task<string?> VerifyAsync(EmailDestinationConfiguration config, CancellationToken ct)
+    {
+        var smtpHost = !string.IsNullOrEmpty(config.SmtpHost) ? config.SmtpHost : config.SmtpServer;
+        if (string.IsNullOrEmpty(smtpHost))
+            return "SMTP host is required";
+
+        try
+        {
+            using var client = await ConnectAsync(smtpHost, config, ct);
+            await client.DisconnectAsync(true, ct);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return $"SMTP check failed: {ex.Message}";
+        }
+    }
+
+    private static async Task<SmtpClient> ConnectAsync(string smtpHost, EmailDestinationConfiguration config, CancellationToken ct)
+    {
+        var client = new SmtpClient();
+        try
+        {
+            if (config.TimeoutSeconds > 0)
+                client.Timeout = config.TimeoutSeconds * 1000;
+            if (!config.ValidateCertificate)
+                client.ServerCertificateValidationCallback = (_, _, _, _) => true;
+
+            await client.ConnectAsync(smtpHost, config.SmtpPort, GetSecureSocketOptions(config.SecurityMode), ct);
+
+            // SmtpUsername and SmtpPassword win over the legacy Username and Password keys
+            var username = !string.IsNullOrEmpty(config.SmtpUsername) ? config.SmtpUsername : config.Username;
+            var password = !string.IsNullOrEmpty(config.SmtpPassword) ? config.SmtpPassword : config.Password;
+
+            switch ((config.AuthType ?? config.SmtpAuthType)?.ToLowerInvariant())
+            {
+                case "none":
+                    break;
+                case "oauth2":
+                    if (string.IsNullOrEmpty(config.OauthToken))
+                        throw new InvalidOperationException("OAuth2 access token is required");
+                    await client.AuthenticateAsync(new SaslMechanismOAuth2(config.OauthUsername ?? username ?? config.FromAddress, config.OauthToken), ct);
+                    break;
+                default:
+                    if (!string.IsNullOrEmpty(username))
+                        await client.AuthenticateAsync(username, password ?? "", ct);
+                    break;
+            }
+            return client;
+        }
+        catch
+        {
+            client.Dispose();
+            throw;
+        }
+    }
+
     private static string MaskEmailForLog(string email)
     {
         if (string.IsNullOrEmpty(email) || !email.Contains("@"))

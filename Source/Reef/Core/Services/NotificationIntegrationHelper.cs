@@ -12,7 +12,7 @@ namespace Reef.Core.Services;
 /// </summary>
 public static class NotificationIntegrationHelper
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<NotificationService>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<NotificationService>();
 
     /// <summary>
     /// Send profile execution completion notification (called from ExecutionService)

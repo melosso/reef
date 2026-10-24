@@ -11,7 +11,7 @@ namespace Reef.Core.Destinations;
 /// </summary>
 public class EmailDestination : IDestination
 {
-    private static readonly Serilog.ILogger Log = Serilog.Log.ForContext<EmailDestination>();
+    private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailDestination>();
 
     /// <summary>
     /// Partially mask email address for logging (e.g., "user@example.com" -> "u*@example.com")
@@ -270,15 +270,7 @@ This is an automated message from Reef.";
             builder.Attachments.Add(sourcePath);
             message.Body = builder.ToMessageBody();
 
-            // Route to appropriate provider
-            IEmailProvider emailProvider = provider switch
-            {
-                "resend" => new ResendEmailProvider(),
-                "sendgrid" => new SendGridEmailProvider(),
-                _ => new SmtpEmailProvider() // Default to SMTP
-            };
-
-            return await emailProvider.SendEmailAsync(message, config);
+            return await ProviderFor(provider).SendEmailAsync(message, config);
         }
         catch (Exception ex)
         {
@@ -286,6 +278,13 @@ This is an automated message from Reef.";
             return (false, null, $"Email send failed: {ex.Message}");
         }
     }
+
+    public static IEmailProvider ProviderFor(string? provider) => provider?.ToLowerInvariant() switch
+    {
+        "resend" => new ResendEmailProvider(),
+        "sendgrid" => new SendGridEmailProvider(),
+        _ => new SmtpEmailProvider()
+    };
 }
 
 /// <summary>
@@ -305,6 +304,7 @@ public class EmailDestinationConfiguration
 
     // Authentication (SMTP)
     public string? SmtpAuthType { get; set; } = "Basic"; // Basic, OAuth2, None
+    public string? AuthType { get; set; } // Key sent by the web ui, wins over SmtpAuthType
     public string? SmtpUsername { get; set; }
     public string? Username { get; set; } // Alias for backward compatibility
     public string? SmtpPassword { get; set; }
