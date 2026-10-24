@@ -350,7 +350,7 @@ public class QueryExecutor
         await using var connection = new SqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -367,7 +367,7 @@ public class QueryExecutor
         await using var connection = new MySqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -384,7 +384,7 @@ public class QueryExecutor
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -397,7 +397,7 @@ public class QueryExecutor
         await using var connection = new SqliteConnection(connectionString);
         await connection.OpenAsync();
 
-        object? paramObject = parameters != null && parameters.Count > 0 ? new DynamicParameters(parameters) : null;
+        var paramObject = Bind(parameters);
         return await connection.ExecuteAsync(command, paramObject, commandTimeout: commandTimeout);
     }
 
@@ -461,17 +461,17 @@ public class QueryExecutor
         return await ExecuteQueryWithDapper(connection, query, parameters, commandTimeout, ct);
     }
 
+    // Dapper reads a dictionary only as IEnumerable<KeyValuePair<string, object>>, any other dictionary is read as a property template
+    private static DynamicParameters? Bind(Dictionary<string, string>? parameters) =>
+        parameters is { Count: > 0 } ? new DynamicParameters(parameters.ToDictionary(p => p.Key, p => (object)p.Value)) : null;
+
     /// <summary>
     /// Execute query using Dapper with native parameterization and convert results to dictionary list
     /// </summary>
     private async Task<List<Dictionary<string, object>>> ExecuteQueryWithDapper(
         IDbConnection connection, string query, Dictionary<string, string>? parameters, int commandTimeout, CancellationToken ct)
     {
-        object? paramObject = null;
-        if (parameters != null && parameters.Count > 0)
-        {
-            paramObject = new DynamicParameters(parameters);
-        }
+        var paramObject = Bind(parameters);
 
         var result = await connection.QueryAsync(new CommandDefinition(query, paramObject, commandTimeout: commandTimeout, cancellationToken: ct));
 
