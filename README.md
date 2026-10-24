@@ -6,7 +6,7 @@
 
 **Reef** is a low-code web platform built to orchestrate your data workflows. Query databases, transform payloads, and deliver files to any destination from a single dashboard. Effortlessly manage connections, export profiles, and automated schedules with zero scripting required.
 
-![Screenshot of Reef](https://github.com/melosso/reef/blob/main/.github/images/screenshot.webp?raw=true)
+![Reef profile canvas with a query, transform and destination step](.github/images/screenshot.webp)
 
 ## What is Reef?
 
