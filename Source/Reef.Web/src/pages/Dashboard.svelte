@@ -35,7 +35,7 @@
     navigate(href);
   }
 
-  const runHref = (kind: string, id: number) => `/executions/${kind}/${id}`;
+  const runHref = (kind: string, id: string) => `/executions/${kind}/${id}`;
   const describe = (a: AttentionAnomaly) =>
     a.reason === 'rows'
       ? `${formatNumber(a.value)} rows, usually ${formatNumber(a.median)}`

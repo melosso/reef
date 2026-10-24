@@ -11,7 +11,8 @@
   import { tooltip } from '../../lib/tooltip';
 
   interface Form {
-    id?: number;
+    id?: string;
+    isFirstAdmin?: boolean;
     username: string;
     newUsername: string;
     displayName: string;
@@ -38,6 +39,7 @@
   function edit(u: User) {
     form = {
       id: u.id,
+      isFirstAdmin: u.isFirstAdmin,
       username: u.username,
       newUsername: u.username,
       displayName: u.displayName ?? '',
@@ -128,7 +130,7 @@
             <button type="button" class="btn ghost icon" aria-label="Edit {u.username}" use:tooltip={'Edit'} onclick={() => edit(u)}
               ><Pencil size={15} /></button
             >
-            {#if u.id !== 1 && u.username !== session.username}<button
+            {#if !u.isFirstAdmin && u.username !== session.username}<button
                 type="button"
                 class="btn ghost icon danger"
                 aria-label="Delete {u.username}"
@@ -160,10 +162,10 @@
       <div class="field">
         <label
           for="u-role"
-          use:tooltip={form.id === 1 ? 'The first administrator keeps the Admin role' : 'Admins manage users, API keys and settings'}
+          use:tooltip={form.isFirstAdmin ? 'The first administrator keeps the Admin role' : 'Admins manage users, API keys and settings'}
           >Role</label
         >
-        <select id="u-role" bind:value={form.role} disabled={form.id === 1}
+        <select id="u-role" bind:value={form.role} disabled={form.isFirstAdmin}
           ><option value="User">User</option><option value="Admin">Admin</option></select
         >
       </div>

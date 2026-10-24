@@ -4,7 +4,7 @@ import type { Options } from './types';
 
 const SOURCES: Record<
   string,
-  { url: string; filter?: (x: OptionRecord) => boolean; map: (x: OptionRecord) => { value: number; label: string } }
+  { url: string; filter?: (x: OptionRecord) => boolean; map: (x: OptionRecord) => { value: string; label: string } }
 > = {
   connections: { url: '/api/connections', map: (c) => ({ value: c.id, label: c.name }) },
   destinations: {

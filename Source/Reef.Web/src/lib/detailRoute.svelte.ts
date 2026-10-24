@@ -2,7 +2,7 @@ import { match, navigate, route } from './router.svelte';
 
 interface Handlers {
   create: () => void;
-  edit: (id: number) => void;
+  edit: (id: string) => void;
   dismiss: () => void;
 }
 
@@ -16,12 +16,12 @@ export function detailRoute(base: string, handlers: Handlers) {
     const previous = last;
     last = selected;
     if (selected === 'new') handlers.create();
-    else if (selected) handlers.edit(Number(selected));
+    else if (selected) handlers.edit(selected);
     else if (previous) handlers.dismiss();
   });
 
   return {
-    open: (id: number | 'new') => navigate(`${base}/${id}${location.search}`),
+    open: (id: string) => navigate(`${base}/${id}${location.search}`),
     close: () => navigate(`${base}${location.search}`),
   };
 }

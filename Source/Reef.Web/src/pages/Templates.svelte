@@ -63,7 +63,7 @@
     watermark: string;
   }
   interface Form {
-    id?: number;
+    id?: string;
     name: string;
     type: string;
     description: string;
@@ -159,7 +159,7 @@
     preview = null;
   }
 
-  async function edit(id: number) {
+  async function edit(id: string) {
     try {
       const t = await api.get<QueryTemplate>(`/api/templates/${id}`);
       form = {

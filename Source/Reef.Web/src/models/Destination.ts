@@ -1,5 +1,5 @@
 export interface Destination {
-  id: number;
+  id: string;
   name: string;
   description: string;
   type: string;

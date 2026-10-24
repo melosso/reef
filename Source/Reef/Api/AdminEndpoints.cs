@@ -8,6 +8,7 @@ using Reef.Core.Security;
 using Reef.Core.Destinations;
 using Serilog;
 using System.Security.Claims;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -25,13 +26,13 @@ public static class AdminEndpoints
         group.MapGet("/audit-logs", GetAuditLogs);
         group.MapGet("/users", GetUsers);
         group.MapPost("/users", CreateUser);
-        group.MapPut("/users/{id:int}", UpdateUser);
-        group.MapPut("/users/{id:int}/username", ChangeUsername);
+        group.MapPut("/users/{id:ulid(Users)}", UpdateUser);
+        group.MapPut("/users/{id:ulid(Users)}/username", ChangeUsername);
         group.MapGet("/users/count-active-admins", CountActiveAdmins);
-        group.MapDelete("/users/{id:int}", DeleteUser);
+        group.MapDelete("/users/{id:ulid(Users)}", DeleteUser);
         group.MapGet("/api-keys", GetApiKeys);
         group.MapPost("/api-keys", CreateApiKey);
-        group.MapDelete("/api-keys/{id:int}", RevokeApiKey);
+        group.MapDelete("/api-keys/{id:ulid(ApiKeys)}", RevokeApiKey);
         group.MapGet("/notifications", GetNotificationSettings);
         group.MapPost("/notifications", UpdateNotificationSettings);
         group.MapGet("/oidc-settings", GetOidcSettings);
@@ -646,7 +647,8 @@ public static class AdminEndpoints
     private static async Task<IResult> CreateNotificationTemplate(
         HttpContext context,
         [FromBody] NotificationEmailTemplate template,
-        [FromServices] NotificationTemplateService service)
+        [FromServices] NotificationTemplateService service,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -679,7 +681,7 @@ public static class AdminEndpoints
             Log.Information("Created notification template {Type} (ID: {Id})", template.TemplateType, id);
 
             return Results.Created($"/api/admin/notification-templates/{template.TemplateType}",
-                new { id, templateType = template.TemplateType });
+                new { id = ids.ToUlid("NotificationEmailTemplate", id), templateType = template.TemplateType });
         }
         catch (Exception ex)
         {
@@ -894,7 +896,8 @@ public static class AdminEndpoints
     /// </summary>
     private static async Task<IResult> GetUsers(
         HttpContext context,
-        [FromServices] AdminService service)
+        [FromServices] AdminService service,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -910,7 +913,8 @@ public static class AdminEndpoints
             // Don't return password hashes
             var sanitizedUsers = users.Select(u => new
             {
-                u.Id,
+                Id = ids.ToUlid("Users", u.Id),
+                IsFirstAdmin = u.Id == 1,
                 u.Username,
                 u.Role,
                 u.IsActive,
@@ -936,7 +940,8 @@ public static class AdminEndpoints
         HttpContext context,
         [FromBody] CreateUserRequest request,
         [FromServices] AdminService service,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -973,7 +978,7 @@ public static class AdminEndpoints
             var changes = System.Text.Json.JsonSerializer.Serialize(new { request.Username, request.Role });
             await auditService.LogAsync("User", userId, "Created", createdBy, changes, context);
 
-            return Results.Ok(new { id = userId, message = "User created successfully" });
+            return Results.Ok(new { id = ids.ToUlid("Users", userId), message = "User created successfully" });
         }
         catch (InvalidOperationException ex)
         {
@@ -1258,7 +1263,8 @@ public static class AdminEndpoints
     /// </summary>
     private static async Task<IResult> GetApiKeys(
         HttpContext context,
-        [FromServices] AdminService service)
+        [FromServices] AdminService service,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -1274,7 +1280,7 @@ public static class AdminEndpoints
             // Don't return key hashes
             var sanitizedKeys = keys.Select(k => new
             {
-                k.Id,
+                Id = ids.ToUlid("ApiKeys", k.Id),
                 k.Name,
                 k.Permissions,
                 k.ExpiresAt,
@@ -1300,7 +1306,8 @@ public static class AdminEndpoints
         HttpContext context,
         [FromBody] CreateApiKeyRequest request,
         [FromServices] AdminService service,
-        [FromServices] AuditService auditService)
+        [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -1329,7 +1336,7 @@ public static class AdminEndpoints
 
             return Results.Ok(new
             {
-                id = keyId,
+                id = ids.ToUlid("ApiKeys", keyId),
                 apiKey = apiKeyValue,
                 message = "API key created successfully. Save the key - it won't be shown again!"
             });

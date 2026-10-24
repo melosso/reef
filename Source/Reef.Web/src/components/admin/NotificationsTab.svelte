@@ -60,12 +60,11 @@
     if (!s) return;
     busy = 'save';
     try {
-      const destinationId = Number(s.destinationId);
-      const dest = destinations.find((d) => d.id === destinationId);
+      const dest = destinations.find((d) => d.id === s!.destinationId);
       await api.post('/api/admin/notifications', {
         ...s,
-        id: s.id ?? 0,
-        destinationId: s.destinationId ? Number(s.destinationId) : null,
+        id: s.id ?? null,
+        destinationId: s.destinationId || null,
         destinationName: dest?.name ?? null,
         recipientEmails: s.recipientEmails?.trim() || null,
         ctaUrl: s.ctaUrl?.trim() || null,
@@ -87,7 +86,7 @@
     busy = 'test';
     try {
       const r = await api.post<CheckResult>('/api/admin/notifications/test', {
-        destinationId: s.destinationId ? Number(s.destinationId) : null,
+        destinationId: s.destinationId || null,
         recipientEmails: s.recipientEmails?.trim() || null,
       });
       if (r?.success === false) throw new Error(r.message || 'Test email failed.');

@@ -1,12 +1,12 @@
 export interface Job {
-  id: number;
+  id: string;
   name: string;
   description: string;
   type: string;
-  profileId?: number | null;
-  importProfileId?: number | null;
+  profileId?: string | null;
+  importProfileId?: string | null;
   profileName?: string | null;
-  destinationId?: number | null;
+  destinationId?: string | null;
   scheduleType: string | number;
   cronExpression?: string | null;
   intervalMinutes?: number | null;

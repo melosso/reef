@@ -1,15 +1,15 @@
 export interface ImportProfile {
-  id: number;
+  id: string;
   code: string;
   name: string;
-  groupId?: number | null;
+  groupId?: string | null;
   groupName?: string | null;
   sourceType: string;
   sourceFormat: string;
-  sourceDestinationId?: number | null;
+  sourceDestinationId?: string | null;
   sourceDestinationName?: string | null;
   targetType: string;
-  targetConnectionId?: number | null;
+  targetConnectionId?: string | null;
   targetConnectionName?: string | null;
   targetTable: string;
   localTargetFormat?: string | null;

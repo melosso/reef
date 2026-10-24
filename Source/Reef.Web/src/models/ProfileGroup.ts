@@ -1,7 +1,7 @@
 export interface ProfileGroup {
-  id: number;
+  id: string;
   name: string;
-  parentId?: number | null;
+  parentId?: string | null;
   description?: string | null;
   sortOrder: number;
 }

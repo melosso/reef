@@ -1,5 +1,5 @@
 export interface ApiKey {
-  id: number;
+  id: string;
   name: string;
   permissions: string;
   createdAt: string;

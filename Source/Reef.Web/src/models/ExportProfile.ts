@@ -1,20 +1,20 @@
 export interface ExportProfile {
-  id: number;
+  id: string;
   code: string;
   name: string;
-  connectionId: number;
+  connectionId: string;
   connectionName?: string | null;
   connectionIsActive?: boolean | null;
-  groupId?: number | null;
+  groupId?: string | null;
   groupName?: string | null;
   query: string;
   scheduleType?: string | null;
   outputFormat: string;
   outputDestinationType: string;
-  outputDestinationId?: number | null;
-  templateId?: number | null;
+  outputDestinationId?: string | null;
+  templateId?: string | null;
   isEmailExport: boolean;
-  emailTemplateId?: number | null;
+  emailTemplateId?: string | null;
   emailApprovalRequired: boolean;
   deltaSyncEnabled: boolean;
   splitEnabled: boolean;

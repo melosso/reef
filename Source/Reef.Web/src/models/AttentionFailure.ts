@@ -1,8 +1,8 @@
 export interface AttentionFailure {
   kind: 'export' | 'import';
-  profileId: number;
+  profileId: string;
   profileName: string;
-  executionId: number;
+  executionId: string;
   error: string;
   startedAt: string;
 }

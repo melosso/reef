@@ -21,7 +21,7 @@
   import { statusKind, statusLabel } from '../lib/status';
   import { tooltip } from '../lib/tooltip';
 
-  const FILTERS_KEY = 'executions_filters';
+  const FILTERS_KEY = 'executions_filters_v2';
 
   interface Filters {
     profileId: string;
@@ -142,7 +142,7 @@
 
   const rows = $derived.by(() => {
     const term = filters.searchTerm.trim().toLowerCase();
-    const importOnly = filters.profileId.startsWith('import:') ? Number(filters.profileId.split(':')[1]) : null;
+    const importOnly = filters.profileId.startsWith('import:') ? filters.profileId.split(':')[1] : null;
     const exportFiltered = (!!filters.profileId && !importOnly) || !!filters.jobId;
     let imports = importOnly !== null ? importsList.filter((e) => e.importProfileId === importOnly) : exportFiltered ? [] : importsList;
     if (term) imports = imports.filter((e) => `${e._name} ${e._code ?? ''}`.toLowerCase().includes(term));
@@ -181,10 +181,10 @@
   const filtered = $derived(Object.values(filters).some(Boolean));
   const detail = $derived.by(() => {
     const params = match('/executions/:kind/:id', route.path);
-    return params && (params.kind === 'export' || params.kind === 'import') ? { kind: params.kind, id: Number(params.id) } : null;
+    return params && (params.kind === 'export' || params.kind === 'import') ? { kind: params.kind, id: params.id } : null;
   });
 
-  function open(row: { kind: string; id: number }) {
+  function open(row: { kind: string; id: string }) {
     navigate(`/executions/${row.kind}/${row.id}${location.search}`);
   }
 

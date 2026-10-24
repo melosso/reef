@@ -25,7 +25,7 @@
   const TYPE_LABEL = Object.fromEntries(DESTINATION_TYPES);
 
   interface Form {
-    id?: number;
+    id?: string;
     name: string;
     type: string;
     description: string;
@@ -34,7 +34,7 @@
     config: DestinationConfig;
   }
   interface Endpoint {
-    id: number;
+    id: string;
     name: string;
     pathSuffix?: string | null;
     method?: string | null;
@@ -99,7 +99,7 @@
     if (type === 'Sftp') form.config._auth = 'password';
   }
 
-  async function edit(id: number) {
+  async function edit(id: string) {
     try {
       const d = await api.get<Destination>(`/api/destinations/${id}`);
       form = {
@@ -200,7 +200,7 @@
     }
   }
 
-  async function remove(d: { id: number; name: string }) {
+  async function remove(d: { id: string; name: string }) {
     if (
       !(await confirm({
         title: `Delete ${d.name}?`,
@@ -224,7 +224,7 @@
     if (!form?.id || !endpointForm) return;
     const ep = endpointForm;
     const body = {
-      id: ep.id || 0,
+      id: ep.id || null,
       destinationId: form.id,
       name: ep.name.trim(),
       pathSuffix: ep.pathSuffix?.trim() || null,
@@ -480,7 +480,7 @@
           </div>
         {:else}
           <div>
-            <button type="button" class="btn" onclick={() => (endpointForm = { id: 0, name: '' })}><Plus size={14} />Add endpoint</button>
+            <button type="button" class="btn" onclick={() => (endpointForm = { id: '', name: '' })}><Plus size={14} />Add endpoint</button>
           </div>
         {/if}
       </section>

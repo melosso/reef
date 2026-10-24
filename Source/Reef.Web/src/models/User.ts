@@ -1,5 +1,6 @@
 export interface User {
-  id: number;
+  id: string;
+  isFirstAdmin?: boolean;
   username: string;
   displayName?: string | null;
   email?: string | null;

@@ -28,7 +28,7 @@ export function runOutcome(kind: ProfileKind, result: RunResult): { level: 'succ
   return { level: 'success', message: `Run succeeded. ${counts}`.trim() };
 }
 
-export async function runProfile(kind: ProfileKind, id: number, name: string): Promise<RunResult> {
+export async function runProfile(kind: ProfileKind, id: string, name: string): Promise<RunResult> {
   const result =
     kind === 'import'
       ? await api.post<RunResult>(`/api/profiles/${id}/execute?type=import`)

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Reef.Core.Models;
 using Reef.Core.Services;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -27,7 +28,7 @@ public static class QueryTemplatesEndpoints
         .Produces<IEnumerable<QueryTemplate>>(200);
 
         // GET: Get template by ID
-        group.MapGet("/{id:int}", async (
+        group.MapGet("/{id:ulid(QueryTemplates)}", async (
             int id,
             [FromServices] QueryTemplateService service) =>
         {
@@ -43,12 +44,13 @@ public static class QueryTemplatesEndpoints
         // POST: Create new template
         group.MapPost("/", async (
             [FromBody] QueryTemplate template,
-            [FromServices] QueryTemplateService service) =>
+            [FromServices] QueryTemplateService service,
+            [FromServices] PublicIdMap ids) =>
         {
             try
             {
                 var created = await service.CreateAsync(template);
-                return Results.Created($"/api/templates/{created.Id}", created);
+                return Results.Created($"/api/templates/{ids.ToUlid("QueryTemplates", created.Id)}", created);
             }
             catch (Exception ex)
             {
@@ -60,7 +62,7 @@ public static class QueryTemplatesEndpoints
         .Produces(400);
 
         // PUT: Update template
-        group.MapPut("/{id:int}", async (
+        group.MapPut("/{id:ulid(QueryTemplates)}", async (
             int id,
             [FromBody] QueryTemplate template,
             [FromServices] QueryTemplateService service) =>
@@ -88,7 +90,7 @@ public static class QueryTemplatesEndpoints
         .Produces(404);
 
         // DELETE: Delete template
-        group.MapDelete("/{id:int}", async (
+        group.MapDelete("/{id:ulid(QueryTemplates)}", async (
             int id,
             [FromServices] QueryTemplateService service) =>
         {
@@ -593,7 +595,7 @@ public static class QueryTemplatesEndpoints
             case QueryTemplateType.ForXmlRaw:
                 parts.Add("FOR XML RAW");
                 if (!string.IsNullOrEmpty(request.RowElement))
-                    parts.Add($"('{request.RowElement}')");
+                    parts.Add($"('{request.RowElement.Replace("'", "''")}')");
                 break;
 
             case QueryTemplateType.ForXmlAuto:
@@ -603,7 +605,7 @@ public static class QueryTemplatesEndpoints
             case QueryTemplateType.ForXmlPath:
                 parts.Add("FOR XML PATH");
                 if (!string.IsNullOrEmpty(request.RowElement))
-                    parts.Add($"('{request.RowElement}')");
+                    parts.Add($"('{request.RowElement.Replace("'", "''")}')");
                 break;
         }
 
@@ -611,7 +613,7 @@ public static class QueryTemplatesEndpoints
             parts.Add("ELEMENTS");
 
         if (!string.IsNullOrEmpty(request.RootElement))
-            parts.Add($"ROOT('{request.RootElement}')");
+            parts.Add($"ROOT('{request.RootElement.Replace("'", "''")}')");
 
         var forXmlClause = string.Join(", ", parts);
         return $"{request.BaseQuery.TrimEnd().TrimEnd(';')} {forXmlClause}";
@@ -625,7 +627,7 @@ public static class QueryTemplatesEndpoints
         {
             parts.Add("FOR JSON PATH");
             if (!string.IsNullOrEmpty(request.RootElement))
-                parts.Add($"ROOT('{request.RootElement}')");
+                parts.Add($"ROOT('{request.RootElement.Replace("'", "''")}')");
         }
         else
         {

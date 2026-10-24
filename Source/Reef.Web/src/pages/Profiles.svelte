@@ -25,19 +25,19 @@
     AzureBlob: 'Azure Blob',
     NetworkShare: 'Network share',
   };
-  const FILTERS_KEY = 'reef_profiles_filters';
+  const FILTERS_KEY = 'reef_profiles_filters_v2';
   const SORT_KEY = 'reef_profiles_sort';
 
   interface Row {
     kind: ProfileKind;
-    id: number;
+    id: string;
     name: string;
     code?: string;
     enabled: boolean;
     lastRun?: string | null;
-    groupId?: number | null;
+    groupId?: string | null;
     group: string;
-    connectionId?: number | null;
+    connectionId?: string | null;
     source: string;
     sourceSub: string;
     sourceWarn?: boolean;
@@ -50,17 +50,18 @@
 
   type SortColumn = 'name' | 'source' | 'group' | 'format' | 'destination' | 'status' | 'lastrun';
 
-  function stored<T>(key: string, fallback: T): T {
+  function stored<T extends object>(key: string, fallback: T): T {
     try {
-      return JSON.parse(localStorage.getItem(key) ?? 'null') ?? fallback;
+      const saved = JSON.parse(localStorage.getItem(key) ?? 'null');
+      return saved && typeof saved === 'object' ? { ...fallback, ...saved } : fallback;
     } catch {
       return fallback;
     }
   }
 
   let rows = $state<Row[]>([]);
-  let connections = $state<{ id: number; name: string }[]>([]);
-  let groups = $state<{ id: number; name: string }[]>([]);
+  let connections = $state<{ id: string; name: string }[]>([]);
+  let groups = $state<{ id: string; name: string }[]>([]);
   let loaded = $state(false);
   let busy = $state<string | null>(null);
   let filters = $state(stored(FILTERS_KEY, { search: '', kind: '', status: '', connection: '', group: '' }));

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -15,11 +16,11 @@ public static class ConnectionsEndpoints
         var group = app.MapGroup("/api/connections").RequireAuthorization();
 
         group.MapGet("/", GetAllConnections);
-        group.MapGet("/{id:int}", GetConnectionById);
         group.MapPost("/", CreateConnection);
-        group.MapPut("/{id:int}", UpdateConnection);
-        group.MapDelete("/{id:int}", DeleteConnection);
         group.MapPost("/test", TestConnection);
+        group.MapGet("/{id:ulid(Connections)}", GetConnectionById);
+        group.MapPut("/{id:ulid(Connections)}", UpdateConnection);
+        group.MapDelete("/{id:ulid(Connections)}", DeleteConnection);
     }
 
     private static async Task<IResult> GetAllConnections([FromServices] ConnectionService service)
@@ -54,6 +55,7 @@ public static class ConnectionsEndpoints
         [FromBody] Connection connection,
         [FromServices] ConnectionService service,
         [FromServices] AuditService auditService,
+        [FromServices] PublicIdMap ids,
         HttpContext context)
     {
         try
@@ -66,7 +68,8 @@ public static class ConnectionsEndpoints
 
             await auditService.LogAsync("Connection", id, "Created", username, null, null);
 
-            return Results.Created($"/api/connections/{id}", new { id });
+            var ulid = ids.ToUlid("Connections", id);
+            return Results.Created($"/api/connections/{ulid}", new { id = ulid });
         }
         catch (Exception ex)
         {

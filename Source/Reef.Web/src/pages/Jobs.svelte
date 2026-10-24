@@ -25,7 +25,7 @@
   import type { QueueMetrics } from '../models/QueueMetrics';
   import type { Webhook } from '../models/Webhook';
 
-  const STATUS: Record<number, [string, StatusKind]> = {
+  const STATUS: Record<string, [string, StatusKind]> = {
     0: ['Idle', 'idle'],
     1: ['Queued', 'run'],
     2: ['Running', 'run'],
@@ -39,10 +39,10 @@
   const PRIORITIES = ['Low', 'Normal', 'High', 'Critical'];
   const PRIORITY_NAMES: Record<string, number> = { Low: 0, Normal: 1, High: 2, Critical: 3 };
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const FILTERS_KEY = 'reef_jobs_filters';
+  const FILTERS_KEY = 'reef_jobs_filters_v2';
 
   interface Form {
-    id?: number;
+    id?: string;
     name: string;
     description: string;
     type: string;
@@ -218,7 +218,7 @@
     tab = 'settings';
   }
 
-  async function edit(id: number) {
+  async function edit(id: string) {
     try {
       const j = await api.get<Job>(`/api/jobs/${id}`);
       form = {
@@ -263,7 +263,7 @@
   }
 
   const selectedProfile = $derived(
-    form?.profile.startsWith('export:') ? profiles.find((p) => p.id === Number(form!.profile.split(':')[1])) : null,
+    form?.profile.startsWith('export:') ? profiles.find((p) => p.id === form!.profile.split(':')[1]) : null,
   );
   const emailProfile = $derived(!!selectedProfile?.isEmailExport);
 
@@ -278,9 +278,9 @@
       name: form.name,
       description: form.description,
       type: form.type,
-      profileId: kind === 'export' ? Number(idText) : null,
-      importProfileId: kind === 'import' ? Number(idText) : null,
-      destinationId: !emailProfile && form.destinationId ? Number(form.destinationId) : null,
+      profileId: kind === 'export' ? idText : null,
+      importProfileId: kind === 'import' ? idText : null,
+      destinationId: !emailProfile && form.destinationId ? form.destinationId : null,
       scheduleType: t,
       cronExpression: t === 1 ? form.cronExpression || null : null,
       intervalMinutes: t === 2 ? Number(form.intervalMinutes) || null : null,
@@ -313,14 +313,14 @@
     partial: 'Completed with errors',
     failed: 'Failed',
   };
-  let outcomes = $state<Record<number, Exclude<JobOutcome, 'running'>>>({});
+  let outcomes = $state<Record<string, Exclude<JobOutcome, 'running'>>>({});
 
-  const latestExecution = (id: number) => api.get<JobExecution>(`/api/jobs/${id}/executions/latest`).catch(() => null);
+  const latestExecution = (id: string) => api.get<JobExecution>(`/api/jobs/${id}/executions/latest`).catch(() => null);
 
   async function outcomeOf(j: Job, execution: JobExecution): Promise<JobOutcome> {
     const outcome = jobOutcome(execution);
     if (outcome !== 'success' || !j.profileId) return outcome;
-    let executionId: number | undefined;
+    let executionId: string | undefined;
     try {
       executionId = JSON.parse(execution.outputData ?? '{}').executionId;
     } catch {}
@@ -332,7 +332,7 @@
     const key = `job-run-${j.id}`;
     busy = `run-${j.id}`;
     try {
-      const before = (await latestExecution(j.id))?.id ?? 0;
+      const before = (await latestExecution(j.id))?.id ?? '';
       await api.post(`/api/jobs/${j.id}/trigger`);
       let execution: JobExecution | null = null;
       let outcome: JobOutcome = 'running';

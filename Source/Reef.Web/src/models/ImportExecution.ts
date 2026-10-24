@@ -1,6 +1,6 @@
 export interface ImportExecution {
-  id: number;
-  importProfileId: number;
+  id: string;
+  importProfileId: string;
   status: string;
   triggeredBy?: string | null;
   startedAt: string;

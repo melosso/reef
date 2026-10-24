@@ -467,7 +467,7 @@ public class ImportExecutionService(
                 await TimedPhaseAsync("ApplyDeletes", exec, phaseTimings, async () =>
                 {
                     var deleted = await target.ApplyDeletesAsync(
-                        deletedIds, profile.DeltaSyncReefIdColumn!, profile, ct);
+                        deletedIds, profile.DeltaSyncReefIdColumn!, profile, writeContext, ct);
                     exec.RowsDeleted += deleted;
                     exec.DeltaSyncDeletedRows += deleted;
                     await MarkDeltaDeletedAsync(profile.Id, exec.Id, deletedIds, ct);

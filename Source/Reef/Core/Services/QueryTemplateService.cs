@@ -306,7 +306,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
-            parts.Add($"('{options.RowElement}')");
+            parts.Add($"('{options.RowElement.Replace("'", "''")}')");
         }
 
         if (options?.ElementsMode == true)
@@ -316,7 +316,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -333,7 +333,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -345,12 +345,12 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RowElement))
         {
-            parts.Add($"('{options.RowElement}')");
+            parts.Add($"('{options.RowElement.Replace("'", "''")}')");
         }
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         return string.Join(", ", parts);
@@ -445,7 +445,7 @@ public class QueryTemplateService
 
         if (!string.IsNullOrEmpty(options?.RootElement))
         {
-            parts.Add($"ROOT('{options.RootElement}')");
+            parts.Add($"ROOT('{options.RootElement.Replace("'", "''")}')");
         }
 
         if (options?.IncludeNullValues == true)

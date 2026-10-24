@@ -5,6 +5,7 @@ using Reef.Core.ProfileDocuments.Catalogs;
 using Reef.Core.ProfileDocuments.Exceptions;
 using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Services;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -16,34 +17,40 @@ public static class ProfileDocumentsEndpoints
 
         group.MapGet("/{kind}/catalog", GetCatalog);
         group.MapGet("/{kind}/new", GetNew);
-        group.MapGet("/{kind}/{id:int}", Get);
+        group.MapGet("/{kind}/{id:ulid(kind)}", Get);
         group.MapPost("/{kind}", Create);
-        group.MapPut("/{kind}/{id:int}", Update);
+        group.MapPut("/{kind}/{id:ulid(kind)}", Update);
         group.MapPost("/{kind}/flatten", Flatten);
     }
 
     private static IResult GetCatalog(string kind) =>
         ProfileCatalogs.Find(kind) is { } catalog ? Results.Ok(catalog) : Results.NotFound();
 
-    private static IResult GetNew(string kind, [FromServices] ProfileDocumentService service) =>
-        ProfileCatalogs.Find(kind) is { } catalog ? Results.Ok(service.New(catalog)) : Results.NotFound();
+    private static IResult GetNew(string kind, [FromServices] ProfileDocumentService service, [FromServices] ProfileDocumentIds documentIds) =>
+        ProfileCatalogs.Find(kind) is { } catalog ? Results.Ok(documentIds.ToPublic(catalog, service.New(catalog))) : Results.NotFound();
 
-    private static async Task<IResult> Get(string kind, int id, [FromServices] ProfileDocumentService service, CancellationToken ct)
+    private static async Task<IResult> Get(string kind, int id, [FromServices] ProfileDocumentService service,
+        [FromServices] ProfileDocumentIds documentIds, CancellationToken ct)
     {
         if (ProfileCatalogs.Find(kind) is not { } catalog)
             return Results.NotFound();
         var document = await service.GetAsync(catalog, id, ct);
-        return document is null ? Results.NotFound() : Results.Ok(document);
+        return document is null ? Results.NotFound() : Results.Ok(documentIds.ToPublic(catalog, document));
     }
 
-    private static async Task<IResult> Flatten(string kind, [FromQuery] int? id, ProfileDocument document,
-        [FromServices] ProfileDocumentService service, CancellationToken ct)
+    private static async Task<IResult> Flatten(string kind, [FromQuery] string? id, ProfileDocument document,
+        [FromServices] ProfileDocumentService service, [FromServices] ProfileDocumentIds documentIds, [FromServices] PublicIdMap ids, CancellationToken ct)
     {
         if (ProfileCatalogs.Find(kind) is not { } catalog)
             return Results.NotFound();
+        var table = catalog.Kind == ProfileKinds.Import ? PublicIdTables.ImportProfiles : PublicIdTables.Profiles;
+        long internalId = 0;
+        if (id is not null && !ids.TryToId(table, id, out internalId))
+            return Results.NotFound();
         try
         {
-            return Results.Ok(await service.FlattenAsync(catalog, id, document, ct));
+            var entity = await service.FlattenAsync(catalog, id is null ? null : (int)internalId, documentIds.ToInternal(catalog, document), ct);
+            return Results.Ok(documentIds.ToPublic(entity, table));
         }
         catch (KeyNotFoundException)
         {
@@ -52,15 +59,15 @@ public static class ProfileDocumentsEndpoints
     }
 
     private static Task<IResult> Create(string kind, ProfileDocument document, HttpContext context,
-        [FromServices] ProfileDocumentService service, [FromServices] AuditService audit, CancellationToken ct) =>
-        Save(kind, null, document, context, service, audit, ct);
+        [FromServices] ProfileDocumentService service, [FromServices] ProfileDocumentIds documentIds, [FromServices] AuditService audit, CancellationToken ct) =>
+        Save(kind, null, document, context, service, documentIds, audit, ct);
 
     private static Task<IResult> Update(string kind, int id, ProfileDocument document, HttpContext context,
-        [FromServices] ProfileDocumentService service, [FromServices] AuditService audit, CancellationToken ct) =>
-        Save(kind, id, document, context, service, audit, ct);
+        [FromServices] ProfileDocumentService service, [FromServices] ProfileDocumentIds documentIds, [FromServices] AuditService audit, CancellationToken ct) =>
+        Save(kind, id, document, context, service, documentIds, audit, ct);
 
     private static async Task<IResult> Save(string kind, int? id, ProfileDocument document, HttpContext context,
-        ProfileDocumentService service, AuditService audit, CancellationToken ct)
+        ProfileDocumentService service, ProfileDocumentIds documentIds, AuditService audit, CancellationToken ct)
     {
         if (ProfileCatalogs.Find(kind) is not { } catalog)
             return Results.NotFound();
@@ -68,10 +75,10 @@ public static class ProfileDocumentsEndpoints
         var userId = int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : (int?)null;
         try
         {
-            var saved = await service.SaveAsync(catalog, id, document, userId, ct);
+            var saved = documentIds.ToPublic(catalog, await service.SaveAsync(catalog, id, documentIds.ToInternal(catalog, document), userId, ct));
             await audit.LogAsync(catalog.Kind == ProfileKinds.Import ? "ImportProfile" : "Profile", saved.Id ?? 0,
                 id is null ? "Created" : "Updated", context.User.Identity?.Name ?? "Unknown", (string?)null, context);
-            return id is null ? Results.Created($"/api/profile-documents/{catalog.Kind}/{saved.Id}", saved) : Results.Ok(saved);
+            return id is null ? Results.Created($"/api/profile-documents/{catalog.Kind}", saved) : Results.Ok(saved);
         }
         catch (ProfileDocumentValidationException ex)
         {

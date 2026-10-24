@@ -1,5 +1,5 @@
 export interface ImportTargetResult {
-  destinationId: number;
+  destinationId: string;
   destinationName: string;
   status: string;
   finalPath?: string | null;

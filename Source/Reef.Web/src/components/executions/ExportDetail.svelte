@@ -15,7 +15,7 @@
   import type { ExportProfile } from '../../models/ExportProfile';
   import type { Job } from '../../models/Job';
 
-  let { id, profiles, jobs }: { id: number; profiles: ExportProfile[]; jobs: Job[] } = $props();
+  let { id, profiles, jobs }: { id: string; profiles: ExportProfile[]; jobs: Job[] } = $props();
 
   let exec = $state<ExportExecution | null>(null);
   let connection = $state<Connection | null>(null);
@@ -27,7 +27,7 @@
     load(id);
   });
 
-  async function load(executionId: number) {
+  async function load(executionId: string) {
     exec = null;
     connection = null;
     destination = null;

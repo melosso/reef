@@ -1,7 +1,7 @@
 export interface ExportExecution {
-  id: number;
-  profileId: number;
-  jobId?: number | null;
+  id: string;
+  profileId: string;
+  jobId?: string | null;
   profileName?: string | null;
   profileCode?: string | null;
   startedAt: string;

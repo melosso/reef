@@ -1,7 +1,7 @@
 export interface NotificationSettings {
-  id?: number;
+  id?: string;
   isEnabled: boolean;
-  destinationId: number | string | null;
+  destinationId: string | null;
   recipientEmails?: string | null;
   notifyOnProfileFailure: boolean;
   notifyOnProfileSuccess: boolean;

@@ -1,5 +1,5 @@
 export interface OptionRecord {
-  id: number;
+  id: string;
   name: string;
   type?: string;
   outputFormat?: string;

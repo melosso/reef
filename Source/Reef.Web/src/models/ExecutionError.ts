@@ -1,6 +1,6 @@
 export interface ExecutionError {
-  id: number;
-  executionId: number;
+  id: string;
+  executionId: string;
   errorType: string;
   phase?: string | null;
   detail?: string | null;

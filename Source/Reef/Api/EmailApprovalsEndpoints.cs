@@ -19,7 +19,7 @@ public static class EmailApprovalsEndpoints
         group.MapGet("/", GetPendingApprovals);
         group.MapGet("/count", GetPendingCount);
         group.MapGet("/{guid:guid}", GetApprovalByGuid);
-        group.MapGet("/profile/{profileId:int}", GetApprovalsByProfile);
+        group.MapGet("/profile/{profileId:ulid(Profiles)}", GetApprovalsByProfile);
         group.MapGet("/statistics", GetApprovalStatistics);
         group.MapGet("/{guid:guid}/preview", PreviewApprovedEmail);
 

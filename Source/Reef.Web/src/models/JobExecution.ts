@@ -1,6 +1,6 @@
 export interface JobExecution {
-  id: number;
-  jobId: number;
+  id: string;
+  jobId: string;
   startedAt: string;
   completedAt?: string | null;
   status: string | number;

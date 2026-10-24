@@ -32,6 +32,7 @@ public interface IImportTarget
         IReadOnlyList<string> deletedReefIds,
         string reefIdColumn,
         ImportProfile profile,
+        ImportWriteContext context,
         CancellationToken ct = default);
 
     /// <summary>

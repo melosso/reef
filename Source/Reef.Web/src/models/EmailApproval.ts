@@ -1,8 +1,8 @@
 export interface EmailApproval {
-  id: number;
+  id: string;
   guid: string;
-  profileId: number;
-  profileExecutionId: number;
+  profileId: string;
+  profileExecutionId: string;
   recipients: string;
   ccAddresses?: string | null;
   subject: string;

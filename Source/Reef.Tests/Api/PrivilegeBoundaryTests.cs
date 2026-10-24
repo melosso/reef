@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Xunit;
@@ -13,14 +14,14 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     private const string Password = "Secret-Pass-123";
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
 
-    private async Task<(HttpClient Client, int Id)> CreateUserAsync(string role = "User")
+    private async Task<(HttpClient Client, string Id)> CreateUserAsync(string role = "User")
     {
         var admin = await factory.CreateAdminClientAsync();
         var name = $"user{Guid.NewGuid():N}"[..16];
         var created = await admin.PostAsJsonAsync("/api/admin/users", new { username = name, password = Password, role }, _ct);
         created.EnsureSuccessStatusCode();
         var users = await admin.GetFromJsonAsync<JsonArray>("/api/admin/users", _ct);
-        var id = users!.First(u => u!["username"]!.GetValue<string>() == name)!["id"]!.GetValue<int>();
+        var id = users!.First(u => u!["username"]!.GetValue<string>() == name)!["id"]!.GetValue<string>();
 
         var client = factory.CreateClient();
         var login = await client.PostAsJsonAsync("/api/auth/login", new { username = name, password = Password }, _ct);
@@ -38,9 +39,9 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
         var created = await admin.PostAsJsonAsync("/api/connections",
             new { name = $"Shop {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={Path.Combine(factory.DataFolder, "shop.db")}", isActive = true, hash = "" }, _ct);
         created.EnsureSuccessStatusCode();
-        var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        destinationConfig["OutputDestinationId"] = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<int>();
+        destinationConfig["OutputDestinationId"] = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
         destinationConfig["OutputFormat"] = "CSV";
         var nodes = new JsonArray(
             Node("source", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" }),
@@ -96,7 +97,7 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     {
         var (user, _) = await CreateUserAsync();
         var admin = await factory.CreateAdminClientAsync();
-        object Destination() => new { name = $"Disk {Guid.NewGuid():N}", type = "Local", configurationJson = "{\"BasePath\":\"/tmp\"}", isActive = true, tags = "", description = "" };
+        object Destination() => new { name = $"Disk {Guid.NewGuid():N}", type = "Local", configurationJson = JsonSerializer.Serialize(new { BasePath = factory.DataFolder }), isActive = true, tags = "", description = "" };
 
         (await user.PostAsJsonAsync("/api/destinations", Destination(), _ct)).IsSuccessStatusCode.Should().BeFalse();
         (await admin.PostAsJsonAsync("/api/destinations", Destination(), _ct)).IsSuccessStatusCode.Should().BeTrue();
@@ -139,7 +140,7 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
         {
             await db.OpenAsync(_ct);
             await using var cmd = db.CreateCommand();
-            cmd.CommandText = $"UPDATE Users SET Role = 'User' WHERE Id = {id}";
+            cmd.CommandText = $"UPDATE Users SET Role = 'User' WHERE Ulid = '{id}'";
             await cmd.ExecuteNonQueryAsync(_ct);
         }
 
@@ -159,14 +160,14 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
 
     [Theory]
     [InlineData("POST", "/api/admin/users")]
-    [InlineData("PUT", "/api/admin/users/1")]
+    [InlineData("PUT", "/api/admin/users/{self}")]
     [InlineData("POST", "/api/admin/danger/reset-database")]
     [InlineData("GET", "/api/profiles/interpreters")]
     public async Task UsersAreRefusedBeforeTheRequestIsRead(string method, string path)
     {
-        var (user, _) = await CreateUserAsync();
+        var (user, id) = await CreateUserAsync();
 
-        var response = await user.SendAsync(new HttpRequestMessage(new HttpMethod(method), path) { Content = JsonContent.Create(new { }) }, _ct);
+        var response = await user.SendAsync(new HttpRequestMessage(new HttpMethod(method), path.Replace("{self}", id)) { Content = JsonContent.Create(new { }) }, _ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }

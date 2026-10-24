@@ -12,9 +12,9 @@
   import { detailRoute } from '../lib/detailRoute.svelte';
 
   let groups = $state<ProfileGroup[]>([]);
-  let counts = $state<Record<number, number>>({});
+  let counts = $state<Record<string, number>>({});
   let loaded = $state(false);
-  let form = $state<{ id?: number; name: string; description: string } | null>(null);
+  let form = $state<{ id?: string; name: string; description: string } | null>(null);
   let busy = $state(false);
 
   const records = detailRoute('/groups', {
@@ -23,7 +23,7 @@
     dismiss: () => (form = null),
   });
 
-  async function edit(id: number) {
+  async function edit(id: string) {
     try {
       const g = await api.get<ProfileGroup>(`/api/groups/${id}`);
       form = { id: g.id, name: g.name, description: g.description ?? '' };
@@ -47,7 +47,7 @@
       api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
     ]);
     groups = g ?? [];
-    const next: Record<number, number> = {};
+    const next: Record<string, number> = {};
     [...(exports ?? []), ...(imports ?? [])].forEach((p) => {
       if (p.groupId) next[p.groupId] = (next[p.groupId] ?? 0) + 1;
     });

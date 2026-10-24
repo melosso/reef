@@ -65,7 +65,7 @@
   const allOnPage = $derived(pageItems.length > 0 && pageItems.every((a) => selected.has(a.guid)));
   const someOnPage = $derived(pageItems.some((a) => selected.has(a.guid)));
 
-  const profileName = (id: number) => profiles.find((p) => p.id === id)?.name ?? `Profile ${id}`;
+  const profileName = (id: string) => profiles.find((p) => p.id === id)?.name ?? `Profile ${id}`;
   const redacted = (v: string | null | undefined) => v === '[REDACTED]';
 
   function attachments(config: string | null | undefined): ApprovalAttachment[] {

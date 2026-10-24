@@ -9,11 +9,18 @@ namespace Reef.Core.Security;
 /// </summary>
 public static class EncryptionKeyLoader
 {
-    private const string FallbackKey = "$REEF2.0_FallbackEncryptionKey_ChangeInProduction_MinLength32Chars#";
+    internal const string FallbackKey = "$REEF2.0_FallbackEncryptionKey_ChangeInProduction_MinLength32Chars#";
 
     private static readonly Lazy<string> Loaded = new(Load);
 
     public static string Key => Loaded.Value;
+
+    // The fallback key is public. Secrets it protects are readable by anyone with the database and .core folder.
+    public static void EnsureConfigured(bool isDevelopment, string resolvedKey)
+    {
+        if (!isDevelopment && resolvedKey == FallbackKey)
+            throw new InvalidOperationException("ENCRYPTION_KEY is not set. Set it before starting Reef outside Development.");
+    }
 
     private static string Load()
     {

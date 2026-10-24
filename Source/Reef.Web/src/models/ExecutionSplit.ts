@@ -1,6 +1,6 @@
 export interface ExecutionSplit {
-  id: number;
-  executionId: number;
+  id: string;
+  executionId: string;
   splitKey: string;
   rowCount: number;
   status: string;

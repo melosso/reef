@@ -1,5 +1,5 @@
 export interface Connection {
-  id: number;
+  id: string;
   name: string;
   type: string;
   connectionString: string;

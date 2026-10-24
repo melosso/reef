@@ -23,7 +23,7 @@
   let dialog: HTMLDialogElement;
   let query = $state('');
   let index = $state(0);
-  let profiles = $state<{ kind: 'export' | 'import'; id: number; name: string }[]>([]);
+  let profiles = $state<{ kind: 'export' | 'import'; id: string; name: string }[]>([]);
 
   async function loadProfiles() {
     const [exports, imports] = await Promise.all([

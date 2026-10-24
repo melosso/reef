@@ -6,6 +6,7 @@ using Reef.Core.Services;
 using Reef.Core.Sources;
 using Reef.Core.Targets;
 using Serilog;
+using Reef.Core.PublicIds;
 
 namespace Reef.Api;
 
@@ -21,19 +22,19 @@ public static class ImportProfilesEndpoints
 
         // CRUD
         g.MapGet("/", GetAll);
-        g.MapGet("/{id:int}", GetById);
+        g.MapGet("/{id:ulid(ImportProfiles)}", GetById);
         g.MapPost("/", Create);
-        g.MapPut("/{id:int}", Update);
-        g.MapDelete("/{id:int}", Delete);
-        g.MapPost("/{id:int}/enable", Enable);
-        g.MapPost("/{id:int}/disable", Disable);
-        g.MapGet("/by-group/{groupId:int}", GetByGroup);
+        g.MapPut("/{id:ulid(ImportProfiles)}", Update);
+        g.MapDelete("/{id:ulid(ImportProfiles)}", Delete);
+        g.MapPost("/{id:ulid(ImportProfiles)}/enable", Enable);
+        g.MapPost("/{id:ulid(ImportProfiles)}/disable", Disable);
+        g.MapGet("/by-group/{groupId:ulid(ProfileGroups)}", GetByGroup);
 
         // Execution
-        g.MapPost("/{id:int}/execute", Execute);
-        g.MapGet("/{id:int}/executions", GetExecutions);
-        g.MapGet("/executions/{execId:int}", GetExecution);
-        g.MapGet("/executions/{execId:int}/errors", GetExecutionErrors);
+        g.MapPost("/{id:ulid(ImportProfiles)}/execute", Execute);
+        g.MapGet("/{id:ulid(ImportProfiles)}/executions", GetExecutions);
+        g.MapGet("/executions/{execId:ulid(ImportProfileExecutions)}", GetExecution);
+        g.MapGet("/executions/{execId:ulid(ImportProfileExecutions)}/errors", GetExecutionErrors);
 
         // Source Operations
         g.MapPost("/test-source", TestSource);
@@ -45,15 +46,15 @@ public static class ImportProfilesEndpoints
         g.MapPost("/test-target", TestTarget);
 
         // Delta Sync
-        g.MapGet("/{id:int}/delta-sync/stats", GetDeltaSyncStats);
-        g.MapDelete("/{id:int}/delta-sync/reset", ResetDeltaSync);
+        g.MapGet("/{id:ulid(ImportProfiles)}/delta-sync/stats", GetDeltaSyncStats);
+        g.MapDelete("/{id:ulid(ImportProfiles)}/delta-sync/reset", ResetDeltaSync);
 
         // Output Targets
-        g.MapGet("/{id:int}/output-targets", GetOutputTargets);
-        g.MapPost("/{id:int}/output-targets", AddOutputTarget);
-        g.MapPut("/{id:int}/output-targets/{tid:int}", UpdateOutputTarget);
-        g.MapDelete("/{id:int}/output-targets/{tid:int}", DeleteOutputTarget);
-        g.MapPost("/{id:int}/output-targets/reorder", ReorderOutputTargets);
+        g.MapGet("/{id:ulid(ImportProfiles)}/output-targets", GetOutputTargets);
+        g.MapPost("/{id:ulid(ImportProfiles)}/output-targets", AddOutputTarget);
+        g.MapPut("/{id:ulid(ImportProfiles)}/output-targets/{tid:ulid(ImportOutputTargets)}", UpdateOutputTarget);
+        g.MapDelete("/{id:ulid(ImportProfiles)}/output-targets/{tid:ulid(ImportOutputTargets)}", DeleteOutputTarget);
+        g.MapPost("/{id:ulid(ImportProfiles)}/output-targets/reorder", ReorderOutputTargets);
     }
 
     // CRUD Handlers
@@ -80,6 +81,7 @@ public static class ImportProfilesEndpoints
     private static async Task<IResult> Create(
         [FromBody] ImportProfile profile,
         [FromServices] ImportProfileService svc,
+        [FromServices] PublicIdMap ids,
         HttpContext ctx)
     {
         try
@@ -102,7 +104,7 @@ public static class ImportProfilesEndpoints
             var userId = GetUserId(ctx);
             var id = await svc.CreateAsync(profile, userId);
             var created = await svc.GetByIdAsync(id);
-            return Results.Created($"/api/import-profiles/{id}", created);
+            return Results.Created($"/api/import-profiles/{ids.ToUlid(PublicIdTables.ImportProfiles, id)}", created);
         }
         catch (InvalidOperationException ex)
         {
@@ -499,7 +501,8 @@ public static class ImportProfilesEndpoints
     private static async Task<IResult> AddOutputTarget(
         int id,
         [FromBody] ImportOutputTarget target,
-        [FromServices] ImportProfileService svc)
+        [FromServices] ImportProfileService svc,
+        [FromServices] PublicIdMap ids)
     {
         try
         {
@@ -507,7 +510,7 @@ public static class ImportProfilesEndpoints
             var newId = await svc.AddOutputTargetAsync(target);
             var targets = await svc.GetOutputTargetsAsync(id);
             var created = targets.FirstOrDefault(t => t.Id == newId);
-            return Results.Created($"/api/import-profiles/{id}/output-targets/{newId}", created);
+            return Results.Created($"/api/import-profiles/{ids.ToUlid(PublicIdTables.ImportProfiles, id)}/output-targets/{ids.ToUlid("ImportOutputTargets", newId)}", created);
         }
         catch (Exception ex) { return ServerError($"adding output target to profile {id}", ex); }
     }

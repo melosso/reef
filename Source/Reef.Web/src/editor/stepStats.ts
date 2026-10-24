@@ -13,7 +13,7 @@ export interface StepStat {
 
 export type LastRun = { kind: 'export'; run: ExportExecution } | { kind: 'import'; run: ImportExecution };
 
-export async function loadLastRun(kind: 'export' | 'import', id: number): Promise<LastRun | null> {
+export async function loadLastRun(kind: 'export' | 'import', id: string): Promise<LastRun | null> {
   if (kind === 'import') {
     const list = await api.get<ImportExecution[]>(`/api/profiles/${id}/executions?type=import&limit=1`).catch(() => []);
     return list?.[0] ? { kind, run: list[0] } : null;

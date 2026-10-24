@@ -11,7 +11,7 @@
   import type { ImportProfile } from '../../models/ImportProfile';
   import type { ImportTargetResult } from '../../models/ImportTargetResult';
 
-  let { id, profiles }: { id: number; profiles: ImportProfile[] } = $props();
+  let { id, profiles }: { id: string; profiles: ImportProfile[] } = $props();
 
   let exec = $state<ImportExecution | null>(null);
   let errors = $state<ImportExecutionError[]>([]);
@@ -20,7 +20,7 @@
     load(id);
   });
 
-  async function load(executionId: number) {
+  async function load(executionId: string) {
     exec = null;
     errors = [];
     try {

@@ -1,8 +1,8 @@
 export interface AttentionAnomaly {
   kind: 'export' | 'import';
-  profileId: number;
+  profileId: string;
   profileName: string;
-  executionId: number;
+  executionId: string;
   reason: 'rows' | 'duration';
   value: number;
   median: number;

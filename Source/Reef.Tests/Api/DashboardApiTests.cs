@@ -22,13 +22,13 @@ public class DashboardApiTests(ReefApiFactory factory)
         await cmd.ExecuteNonQueryAsync(_ct);
     }
 
-    private async Task<int> CreateProfileAsync(HttpClient client, string shopDb, string query)
+    private async Task<string> CreateProfileAsync(HttpClient client, string shopDb, string query)
     {
         var connection = await client.PostAsJsonAsync("/api/connections", new { name = $"Shop {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={shopDb}", isActive = true, hash = "" }, _ct);
         connection.EnsureSuccessStatusCode();
-        var connectionId = (await connection.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        var connectionId = (await connection.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<int>();
+        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
         var document = new JsonObject
         {
             ["kind"] = "export",
@@ -39,10 +39,10 @@ public class DashboardApiTests(ReefApiFactory factory)
         };
         var created = await client.PostAsJsonAsync("/api/profile-documents/export", document, _ct);
         created.EnsureSuccessStatusCode();
-        return (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<int>();
+        return (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
     }
 
-    private async Task RunAsync(HttpClient client, int profileId) =>
+    private async Task RunAsync(HttpClient client, string profileId) =>
         await client.PostAsJsonAsync($"/api/executions/execute/{profileId}", new { }, _ct);
 
     private async Task<HttpClient> CreateUserClientAsync(HttpClient admin)
@@ -55,8 +55,8 @@ public class DashboardApiTests(ReefApiFactory factory)
         return user;
     }
 
-    private static IEnumerable<int> ProfileIds(JsonObject attention, string section) =>
-        attention[section]!.AsArray().Select(i => i!["profileId"]!.GetValue<int>());
+    private static IEnumerable<string> ProfileIds(JsonObject attention, string section) =>
+        attention[section]!.AsArray().Select(i => i!["profileId"]!.GetValue<string>());
 
     [Fact]
     public async Task AttentionListsFailedProfilesAndRowCountDropsForAnySignedInUser()
@@ -78,7 +78,7 @@ public class DashboardApiTests(ReefApiFactory factory)
         await ExecAsync(shopDb, "DELETE FROM Orders;");
         await RunAsync(admin, dropping);
         await RunAsync(admin, delta);
-        await ExecAsync(Path.Combine(factory.DataFolder, "Reef.db"), $"UPDATE Profiles SET DeltaSyncEnabled = 1 WHERE Id = {delta};");
+        await ExecAsync(Path.Combine(factory.DataFolder, "Reef.db"), $"UPDATE Profiles SET DeltaSyncEnabled = 1 WHERE Ulid = '{delta}';");
 
         var user = await CreateUserClientAsync(admin);
         var response = await user.GetAsync("/api/dashboard/attention", _ct);
@@ -87,7 +87,7 @@ public class DashboardApiTests(ReefApiFactory factory)
         var attention = (await response.Content.ReadFromJsonAsync<JsonObject>(_ct))!;
         ProfileIds(attention, "failed").Should().Contain(failing).And.NotContain(dropping);
         ProfileIds(attention, "anomalies").Should().Contain(dropping).And.NotContain(delta);
-        attention["anomalies"]!.AsArray().First(a => a!["profileId"]!.GetValue<int>() == dropping)!["reason"]!.GetValue<string>().Should().Be("rows");
+        attention["anomalies"]!.AsArray().First(a => a!["profileId"]!.GetValue<string>() == dropping)!["reason"]!.GetValue<string>().Should().Be("rows");
         attention["last24h"]!["failed"]!.GetValue<int>().Should().BeGreaterThan(0);
         attention["upNext"].Should().NotBeNull();
     }

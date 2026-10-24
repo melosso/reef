@@ -20,11 +20,11 @@ public static class ExecutionsEndpoints
         var group = app.MapGroup("/api/executions").RequireAuthorization();
 
         group.MapGet("/", GetAllExecutions);
-        group.MapGet("/{id:int}", GetExecutionById);
-        group.MapGet("/{id:int}/test", GetExecutionById);
-        group.MapGet("/{id:int}/errors", GetExecutionErrors);
-        group.MapPost("/execute/{profileId:int}", ExecuteProfile);
-        group.MapGet("/by-profile/{profileId:int}", GetExecutionsByProfile);
+        group.MapGet("/{id:ulid(ProfileExecutions)}", GetExecutionById);
+        group.MapGet("/{id:ulid(ProfileExecutions)}/test", GetExecutionById);
+        group.MapGet("/{id:ulid(ProfileExecutions)}/errors", GetExecutionErrors);
+        group.MapPost("/execute/{profileId:ulid(Profiles)}", ExecuteProfile);
+        group.MapGet("/by-profile/{profileId:ulid(Profiles)}", GetExecutionsByProfile);
         group.MapGet("/recent", GetRecentExecutions);
         group.MapGet("/download/{token}", DownloadExecutionFile);
     }

@@ -1,5 +1,5 @@
 export interface AttentionJob {
-  id: number;
+  id: string;
   name: string;
   nextRunTime: string;
 }

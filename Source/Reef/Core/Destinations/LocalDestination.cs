@@ -83,7 +83,11 @@ public class LocalDestination : IDestination
                     Log.Debug("Created directory: {Directory}", directory);
                 }
 
-                // Copy file to destination
+                if (string.Equals(Path.GetFullPath(sourcePath), Path.GetFullPath(destinationPath), StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, null, $"Destination folder {Path.GetDirectoryName(Path.GetFullPath(destinationPath))} is the temporary folder Reef exports into. Choose another folder.");
+                }
+
                 File.Copy(sourcePath, destinationPath, overwrite: true);
 
                 // Get absolute path

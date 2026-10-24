@@ -25,7 +25,7 @@
     flatten,
   }: {
     kind: 'export' | 'import';
-    id: number | null | undefined;
+    id: string | null | undefined;
     step: string;
     config: Config;
     dirty: boolean;
@@ -66,7 +66,7 @@
   const previewRows = () =>
     act('preview', async () => {
       const result = await api.post<QueryPreviewResult>('/api/profiles/test-query-preview', {
-        connectionId: config.ConnectionId || 0,
+        connectionId: config.ConnectionId || null,
         query: config.Query || '',
       });
       if (!result.success) throw new Error(result.error || 'Query failed.');

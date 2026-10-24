@@ -1,8 +1,8 @@
 export interface Webhook {
-  id: number;
-  profileId?: number | null;
-  jobId?: number | null;
-  importProfileId?: number | null;
+  id: string;
+  profileId?: string | null;
+  jobId?: string | null;
+  importProfileId?: string | null;
   token: string;
   url?: string;
   isActive: boolean;

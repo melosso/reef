@@ -145,7 +145,7 @@ public class AdminService
     /// <summary>
     /// Get audit logs with optional filtering and pagination
     /// </summary>
-    public async Task<(IEnumerable<dynamic> Logs, int TotalCount)> GetAuditLogsAsync(
+    public async Task<(IEnumerable<AuditLogEntry> Logs, int TotalCount)> GetAuditLogsAsync(
         int page = 1,
         int pageSize = 50,
         string? entityType = null,
@@ -219,7 +219,7 @@ public class AdminService
             parameters.Add("PageSize", pageSize);
             parameters.Add("Offset", offset);
 
-            var logs = await conn.QueryAsync<dynamic>(sql, parameters);
+            var logs = await conn.QueryAsync<AuditLogEntry>(sql, parameters);
             return (logs, totalCount);
         }
         catch (Exception ex)

@@ -73,7 +73,7 @@
         value={textOf(value)}
         onchange={(e) => {
           const raw = e.currentTarget.value;
-          commit(raw === '' && !hasEmpty ? undefined : field.optionsSource ? Number(raw) : raw, true);
+          commit(raw === '' && !hasEmpty ? undefined : raw, true);
         }}
       >
         {#if !hasEmpty}<option value="">{emptyLabel()}</option>{/if}
@@ -172,7 +172,7 @@
                         value={textOf(row[column.key])}
                         onchange={(e) => {
                           const raw = e.currentTarget.value;
-                          if (raw) row[column.key] = column.optionsSource ? Number(raw) : raw;
+                          if (raw) row[column.key] = raw;
                           else delete row[column.key];
                           updateRows(rows());
                         }}

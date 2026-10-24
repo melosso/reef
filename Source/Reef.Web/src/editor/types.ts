@@ -45,7 +45,7 @@ export interface DocNode {
 
 export interface ProfileDoc {
   kind: 'export' | 'import';
-  id?: number | null;
+  id?: string | null;
   code?: string | null;
   settings: Config;
   nodes: DocNode[];

@@ -1,13 +1,13 @@
 export interface RecentProfile {
   kind: 'export' | 'import';
-  id: number;
+  id: string;
   name: string;
   status?: 'ok' | 'err' | 'idle';
 }
 
 function load(): RecentProfile[] {
   try {
-    return JSON.parse(localStorage.getItem('reef_recent') ?? '[]');
+    return (JSON.parse(localStorage.getItem('reef_recent') ?? '[]') as RecentProfile[]).filter((r) => typeof r.id === 'string');
   } catch {
     return [];
   }
@@ -22,7 +22,7 @@ export function remember(item: RecentProfile): void {
   } catch {}
 }
 
-export function forget(kind: string, id: number): void {
+export function forget(kind: string, id: string): void {
   recent.items = recent.items.filter((r) => !(r.kind === kind && r.id === id));
   try {
     localStorage.setItem('reef_recent', JSON.stringify(recent.items));

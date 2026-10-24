@@ -21,7 +21,7 @@
   };
 
   interface Form {
-    id?: number;
+    id?: string;
     name: string;
     type: string;
     connectionString: string;
@@ -82,7 +82,7 @@
     form = { name: '', type: 'SqlServer', connectionString: '', tags: '', isActive: true };
   }
 
-  async function edit(id: number) {
+  async function edit(id: string) {
     try {
       const c = await api.get<Connection>(`/api/connections/${id}`);
       form = { id: c.id, name: c.name, type: c.type, connectionString: c.connectionString ?? '', tags: c.tags ?? '', isActive: c.isActive };
@@ -176,7 +176,7 @@
     }
   }
 
-  async function remove(c: { id: number; name: string }) {
+  async function remove(c: { id: string; name: string }) {
     if (
       !(await confirm({
         title: `Delete ${c.name}?`,

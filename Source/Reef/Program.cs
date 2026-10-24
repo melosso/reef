@@ -10,6 +10,8 @@ using Reef.Core.TemplateEngines;
 using Reef.Api;
 using Reef.Helpers;
 using Reef.Core.Middleware;
+using Reef.Core.PublicIds;
+using System.Text.Json.Serialization.Metadata;
 using Serilog;
 using Serilog.Sinks.EventLog;
 using System.Text;
@@ -102,6 +104,7 @@ public partial class Program
         {
             var builder = WebApplication.CreateBuilder(args);
             EnvAliases.ApplyConfigAliases(builder.Configuration);
+            EncryptionKeyLoader.EnsureConfigured(builder.Environment.IsDevelopment(), EncryptionKeyLoader.Key);
             builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
             builder.Configuration["Reef:Jwt:SecretKey"] = JwtSecretResolver.Resolve(
                 builder.Configuration["Reef:Jwt:SecretKey"], Path.Combine(EncryptionService.FindProjectRoot(AppContext.BaseDirectory), ".core"));
@@ -148,16 +151,21 @@ public partial class Program
 
             builder.Services.AddTrustedProxies();
 
-            // Add controllers with JSON string enum converter for enums
+            var publicIds = new PublicIdMap(connectionString);
+            var publicIdJson = new PublicIdJsonModifier(publicIds);
+            builder.Services.AddSingleton(publicIds);
+            builder.Services.AddRouting(options => options.ConstraintMap["ulid"] = typeof(UlidRouteConstraint));
+
             builder.Services.AddControllers().AddJsonOptions(options =>
             {
                 options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                options.JsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { publicIdJson.Apply } };
             });
 
-            // Also configure minimal API JSON options for string enums
             builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
             {
                 options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                options.SerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { publicIdJson.Apply } };
             });
 
             // Configure JWT Authentication
@@ -235,6 +243,8 @@ public partial class Program
 
             var scriptingStats = await scriptingMigration.GetStatsAsync();
             Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
+
+            await new UlidMigration(connectionString).ApplyAsync();
 
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
@@ -357,6 +367,7 @@ public partial class Program
         // Import Profile services
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
+        services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
@@ -495,8 +506,9 @@ public partial class Program
             }
         });
 
-        var shell = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"), "app", "index.html");
-        var contentSecurityPolicy = ContentSecurityPolicy.Build(File.Exists(shell) ? await File.ReadAllTextAsync(shell) : null);
+        var shell = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");
+        using var shellReader = shell.Exists ? new StreamReader(shell.CreateReadStream()) : null;
+        var contentSecurityPolicy = ContentSecurityPolicy.Build(shellReader is null ? null : await shellReader.ReadToEndAsync());
 
         // Security headers
         app.Use(async (context, next) =>
@@ -560,6 +572,7 @@ public partial class Program
         app.UseAuthentication();
         app.UseMiddleware<LastSeenMiddleware>();
         app.UseAuthorization();
+        app.UseMiddleware<PublicIdMiddleware>();
 
         Log.Debug("Middleware configured");
     }
@@ -593,10 +606,10 @@ public partial class Program
         ProfileDocumentsEndpoints.Map(app);
         DashboardEndpoints.Map(app);
 
-        var spaIndex = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(AppContext.BaseDirectory, "wwwroot"), "app", "index.html");
+        var spaIndex = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");
         app.MapFallback(async context =>
         {
-            if (!HttpMethods.IsGet(context.Request.Method) || context.Request.Path.StartsWithSegments("/api") || !File.Exists(spaIndex))
+            if (!HttpMethods.IsGet(context.Request.Method) || context.Request.Path.StartsWithSegments("/api") || !spaIndex.Exists)
             {
                 context.Response.StatusCode = 404;
                 await context.Response.WriteAsJsonAsync(new { error = "Not found" });

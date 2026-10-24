@@ -1,6 +1,6 @@
 export interface ImportExecutionError {
-  id: number;
-  executionId: number;
+  id: string;
+  executionId: string;
   rowNumber?: number | null;
   reefId?: string | null;
   errorType: string;

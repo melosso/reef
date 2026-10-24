@@ -95,42 +95,37 @@ public class DatabaseImportTarget : IImportTarget
         IReadOnlyList<string> deletedReefIds,
         string reefIdColumn,
         ImportProfile profile,
+        ImportWriteContext context,
         CancellationToken ct = default)
     {
         if (!deletedReefIds.Any()) return 0;
 
-        using var db = OpenConnection(await GetTargetConnectionAsync(profile));
+        var connType = context.TargetConnection!.Type;
+        var table = QuoteTable(connType, context.TargetTable);
+        var idColumn = QuoteIdentifier(connType, reefIdColumn);
+
+        string? sql = profile.DeltaSyncDeleteStrategy?.ToUpperInvariant() switch
+        {
+            "NONE" => null,
+            "HARDDELETE" => $"DELETE FROM {table} WHERE {idColumn} IN @Ids",
+            _ when !string.IsNullOrWhiteSpace(profile.DeltaSyncDeleteColumn) =>
+                $"UPDATE {table} SET {QuoteIdentifier(connType, profile.DeltaSyncDeleteColumn)} = @DeleteValue WHERE {idColumn} IN @Ids",
+            _ => null
+        };
+        if (sql is null) return 0;
+
+        var deleteValue = profile.DeltaSyncDeleteValue ?? "1";
+        object typedDeleteValue = long.TryParse(deleteValue, out var number) ? number
+            : bool.TryParse(deleteValue, out var flag) ? flag
+            : deleteValue;
+
+        using var db = OpenConnection(context.TargetConnection);
         await db.OpenAsync(ct);
 
         int affected = 0;
-
-        switch (profile.DeltaSyncDeleteStrategy?.ToUpperInvariant())
-        {
-            case "HARDDELETE":
-                foreach (var batch in deletedReefIds.Chunk(500))
-                {
-                    var ids = string.Join(",", batch.Select(id => $"'{EscapeString(id)}'"));
-                    var sql = $"DELETE FROM {profile.TargetTable} WHERE {reefIdColumn} IN ({ids})";
-                    affected += await db.ExecuteAsync(new CommandDefinition(sql,
-                        commandTimeout: profile.CommandTimeoutSeconds, cancellationToken: ct));
-                }
-                break;
-
-            case "SOFTDELETE":
-            default:
-                if (!string.IsNullOrWhiteSpace(profile.DeltaSyncDeleteColumn))
-                {
-                    var deleteValue = profile.DeltaSyncDeleteValue ?? "1";
-                    foreach (var batch in deletedReefIds.Chunk(500))
-                    {
-                        var ids = string.Join(",", batch.Select(id => $"'{EscapeString(id)}'"));
-                        var sql = $"UPDATE {profile.TargetTable} SET {profile.DeltaSyncDeleteColumn} = {deleteValue} WHERE {reefIdColumn} IN ({ids})";
-                        affected += await db.ExecuteAsync(new CommandDefinition(sql,
-                            commandTimeout: profile.CommandTimeoutSeconds, cancellationToken: ct));
-                    }
-                }
-                break;
-        }
+        foreach (var batch in deletedReefIds.Chunk(500))
+            affected += await db.ExecuteAsync(new CommandDefinition(sql, new { Ids = batch, DeleteValue = typedDeleteValue },
+                commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
 
         Log.Information("ApplyDeletes: {Count} rows deleted/marked from {Table}", affected, profile.TargetTable);
         return affected;
@@ -275,11 +270,10 @@ public class DatabaseImportTarget : IImportTarget
             try
             {
                 var cols = string.Join(", ", mappedRow.Keys.Select(c => QuoteIdentifier(connType, c)));
-                var parms = string.Join(", ", mappedRow.Keys.Select(c => $"@{c}"));
+                var parms = string.Join(", ", mappedRow.Keys.Select(c => Param(mappedRow, c)));
                 var sql = $"INSERT INTO {QuoteTable(connType, table)} ({cols}) VALUES ({parms})";
 
-                var dynParams = new DynamicParameters();
-                foreach (var kvp in mappedRow) dynParams.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+                var dynParams = Params(mappedRow);
 
                 await db.ExecuteAsync(new CommandDefinition(sql, dynParams, tx,
                     commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
@@ -389,10 +383,9 @@ public class DatabaseImportTarget : IImportTarget
         {
             // No key defined → fall back to plain insert
             var cols = string.Join(", ", row.Keys.Select(c => QuoteIdentifier(connType, c)));
-            var parms = string.Join(", ", row.Keys.Select(c => $"@{c}"));
+            var parms = string.Join(", ", row.Keys.Select(c => Param(row, c)));
             var insertSql = $"INSERT INTO {QuoteTable(connType, table)} ({cols}) VALUES ({parms})";
-            var dp = new DynamicParameters();
-            foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+            var dp = Params(row);
             await db.ExecuteAsync(new CommandDefinition(insertSql, dp, tx,
                 commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
             return (1, 0);
@@ -413,28 +406,28 @@ public class DatabaseImportTarget : IImportTarget
         Dictionary<string, object?> row, List<string> keys,
         ImportWriteContext context, CancellationToken ct)
     {
+        static string Q(string c) => QuoteIdentifier("SQLSERVER", c);
         var allCols = row.Keys.ToList();
         var valueCols = allCols.Except(keys).ToList();
 
         var onMatch = valueCols.Any()
-            ? "WHEN MATCHED THEN UPDATE SET " + string.Join(", ", valueCols.Select(c => $"t.[{c}] = s.[{c}]"))
+            ? "WHEN MATCHED THEN UPDATE SET " + string.Join(", ", valueCols.Select(c => $"t.{Q(c)} = s.{Q(c)}"))
             : "WHEN MATCHED THEN UPDATE SET t.[__noop__] = 0"; // forces MERGE to compile; real logic: do nothing
 
         if (!valueCols.Any()) onMatch = ""; // skip update if only key columns
 
-        var colList = string.Join(", ", allCols.Select(c => $"[{c}]"));
-        var valList = string.Join(", ", allCols.Select(c => $"s.[{c}]"));
-        var onClause = string.Join(" AND ", keys.Select(k => $"t.[{k}] = s.[{k}]"));
+        var colList = string.Join(", ", allCols.Select(Q));
+        var valList = string.Join(", ", allCols.Select(c => $"s.{Q(c)}"));
+        var onClause = string.Join(" AND ", keys.Select(k => $"t.{Q(k)} = s.{Q(k)}"));
 
-        var sql = $@"MERGE INTO [{table}] AS t
-USING (SELECT {string.Join(", ", allCols.Select(c => $"@{c} AS [{c}]"))}) AS s
+        var sql = $@"MERGE INTO {QuoteTable("SQLSERVER", table)} AS t
+USING (SELECT {string.Join(", ", allCols.Select(c => $"{Param(row, c)} AS {Q(c)}"))}) AS s
 ON ({onClause})
 {(valueCols.Any() ? onMatch : "")}
 WHEN NOT MATCHED THEN INSERT ({colList}) VALUES ({valList})
 OUTPUT $action;";
 
-        var dp = new DynamicParameters();
-        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+        var dp = Params(row);
 
         var action = await db.QueryFirstOrDefaultAsync<string>(
             new CommandDefinition(sql, dp, tx, commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
@@ -450,16 +443,16 @@ OUTPUT $action;";
         var allCols = row.Keys.ToList();
         var valueCols = allCols.Except(keys).ToList();
 
-        var colList = string.Join(", ", allCols.Select(c => $"`{c}`"));
-        var parmList = string.Join(", ", allCols.Select(c => $"@{c}"));
+        static string Q(string c) => QuoteIdentifier("MYSQL", c);
+        var colList = string.Join(", ", allCols.Select(Q));
+        var parmList = string.Join(", ", allCols.Select(c => Param(row, c)));
         var updateSet = valueCols.Any()
-            ? "ON DUPLICATE KEY UPDATE " + string.Join(", ", valueCols.Select(c => $"`{c}` = VALUES(`{c}`)"))
-            : "ON DUPLICATE KEY UPDATE `{keys[0]}` = `{keys[0]}`"; // no-op
+            ? "ON DUPLICATE KEY UPDATE " + string.Join(", ", valueCols.Select(c => $"{Q(c)} = VALUES({Q(c)})"))
+            : $"ON DUPLICATE KEY UPDATE {Q(keys[0])} = {Q(keys[0])}";
 
-        var sql = $"INSERT INTO `{table}` ({colList}) VALUES ({parmList}) {updateSet}";
+        var sql = $"INSERT INTO {QuoteTable("MYSQL", table)} ({colList}) VALUES ({parmList}) {updateSet}";
 
-        var dp = new DynamicParameters();
-        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+        var dp = Params(row);
 
         var rowsAffected = await db.ExecuteAsync(
             new CommandDefinition(sql, dp, tx, commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
@@ -476,26 +469,26 @@ OUTPUT $action;";
         var allCols = row.Keys.ToList();
         var valueCols = allCols.Except(keys).ToList();
 
-        var colList = string.Join(", ", allCols.Select(c => $"\"{c}\""));
-        var parmList = string.Join(", ", allCols.Select(c => $"@{c}"));
-        var keyList = string.Join(", ", keys.Select(k => $"\"{k}\""));
+        static string Q(string c) => QuoteIdentifier("POSTGRESQL", c);
+        var colList = string.Join(", ", allCols.Select(Q));
+        var parmList = string.Join(", ", allCols.Select(c => Param(row, c)));
+        var keyList = string.Join(", ", keys.Select(Q));
 
         string conflictAction;
         if (valueCols.Any())
         {
-            conflictAction = "DO UPDATE SET " + string.Join(", ", valueCols.Select(c => $"\"{c}\" = EXCLUDED.\"{c}\""));
+            conflictAction = "DO UPDATE SET " + string.Join(", ", valueCols.Select(c => $"{Q(c)} = EXCLUDED.{Q(c)}"));
         }
         else
         {
             conflictAction = "DO NOTHING";
         }
 
-        var sql = $@"INSERT INTO ""{table}"" ({colList}) VALUES ({parmList})
+        var sql = $@"INSERT INTO {QuoteTable("POSTGRESQL", table)} ({colList}) VALUES ({parmList})
 ON CONFLICT ({keyList}) {conflictAction}
 RETURNING xmax";
 
-        var dp = new DynamicParameters();
-        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+        var dp = Params(row);
 
         var xmax = await db.QueryFirstOrDefaultAsync<long?>(
             new CommandDefinition(sql, dp, tx, commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
@@ -512,33 +505,33 @@ RETURNING xmax";
         var allCols = row.Keys.ToList();
         var valueCols = allCols.Except(keys).ToList();
 
-        var colList = string.Join(", ", allCols.Select(c => $"\"{c}\""));
-        var parmList = string.Join(", ", allCols.Select(c => $"@{c}"));
-        var keyList = string.Join(", ", keys.Select(k => $"\"{k}\""));
+        static string Q(string c) => QuoteIdentifier("SQLITE", c);
+        var colList = string.Join(", ", allCols.Select(Q));
+        var parmList = string.Join(", ", allCols.Select(c => Param(row, c)));
+        var keyList = string.Join(", ", keys.Select(Q));
 
         string conflictAction;
         if (valueCols.Any())
         {
-            conflictAction = "DO UPDATE SET " + string.Join(", ", valueCols.Select(c => $"\"{c}\" = excluded.\"{c}\""));
+            conflictAction = "DO UPDATE SET " + string.Join(", ", valueCols.Select(c => $"{Q(c)} = excluded.{Q(c)}"));
         }
         else
         {
             conflictAction = "DO NOTHING";
         }
 
-        var dp = new DynamicParameters();
-        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+        var dp = Params(row);
 
         // SQLite has no built-in way to distinguish insert vs update from an
         // INSERT...ON CONFLICT statement, so check existence first under the same transaction.
-        var whereClause = string.Join(" AND ", keys.Select(k => $"\"{k}\" = @{k}"));
-        var existsSql = $@"SELECT COUNT(*) FROM ""{table}"" WHERE {whereClause}";
+        var whereClause = string.Join(" AND ", keys.Select(k => $"{Q(k)} = {Param(row, k)}"));
+        var existsSql = $"SELECT COUNT(*) FROM {QuoteTable("SQLITE", table)} WHERE {whereClause}";
         var existedBefore = await db.ExecuteScalarAsync<long>(new CommandDefinition(existsSql, dp, tx,
             commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct)) > 0;
 
         // SQLite (3.24+, bundled with Microsoft.Data.Sqlite) supports upsert via
         // INSERT ... ON CONFLICT ... DO UPDATE.
-        var sql = $@"INSERT INTO ""{table}"" ({colList}) VALUES ({parmList})
+        var sql = $@"INSERT INTO {QuoteTable("SQLITE", table)} ({colList}) VALUES ({parmList})
 ON CONFLICT ({keyList}) {conflictAction}";
 
         await db.ExecuteAsync(new CommandDefinition(sql, dp, tx,
@@ -648,10 +641,6 @@ ON CONFLICT ({keyList}) {conflictAction}";
         };
     }
 
-    // Placeholder: the actual connection object must be loaded via ConnectionService by the caller
-    private Task<Connection> GetTargetConnectionAsync(ImportProfile profile)
-        => throw new InvalidOperationException("Use the overload that accepts a Connection object");
-
     private static async Task<bool> TryUpdateAsync(
         IDbConnection db, IDbTransaction tx, string table, string connType,
         Dictionary<string, object?> row, ImportWriteContext context, CancellationToken ct)
@@ -662,12 +651,11 @@ ON CONFLICT ({keyList}) {conflictAction}";
         var valueCols = row.Keys.Except(keys).ToList();
         if (!valueCols.Any()) return false;
 
-        var setClause = string.Join(", ", valueCols.Select(c => $"{QuoteIdentifier(connType, c)} = @{c}"));
-        var whereClause = string.Join(" AND ", keys.Select(k => $"{QuoteIdentifier(connType, k)} = @{k}"));
+        var setClause = string.Join(", ", valueCols.Select(c => $"{QuoteIdentifier(connType, c)} = {Param(row, c)}"));
+        var whereClause = string.Join(" AND ", keys.Select(k => $"{QuoteIdentifier(connType, k)} = {Param(row, k)}"));
         var sql = $"UPDATE {QuoteTable(connType, table)} SET {setClause} WHERE {whereClause}";
 
-        var dp = new DynamicParameters();
-        foreach (var kvp in row) dp.Add($"@{kvp.Key}", kvp.Value ?? DBNull.Value);
+        var dp = Params(row);
 
         var affected = await db.ExecuteAsync(new CommandDefinition(sql, dp, tx,
             commandTimeout: context.CommandTimeoutSeconds, cancellationToken: ct));
@@ -733,12 +721,23 @@ ON CONFLICT ({keyList}) {conflictAction}";
         _ => "Unknown"
     };
 
+    // column names can hold characters a parameter name cannot, so parameters are numbered by column position
+    private static string Param(Dictionary<string, object?> row, string column) =>
+        $"@p{row.Keys.Select((key, index) => (key, index)).First(k => string.Equals(k.key, column, StringComparison.OrdinalIgnoreCase)).index}";
+
+    private static DynamicParameters Params(Dictionary<string, object?> row)
+    {
+        var parameters = new DynamicParameters();
+        foreach (var (value, index) in row.Values.Select((value, index) => (value, index)))
+            parameters.Add($"p{index}", value ?? DBNull.Value);
+        return parameters;
+    }
+
     private static string QuoteIdentifier(string connType, string name) => connType.ToUpperInvariant() switch
     {
-        "MYSQL" or "MARIADB" => $"`{name}`",
-        "POSTGRESQL" or "POSTGRES" => $"\"{name}\"",
-        "SQLITE" => $"\"{name}\"",
-        _ => $"[{name}]"
+        "MYSQL" or "MARIADB" => $"`{name.Replace("`", "``")}`",
+        "POSTGRESQL" or "POSTGRES" or "SQLITE" => $"\"{name.Replace("\"", "\"\"")}\"",
+        _ => $"[{name.Replace("]", "]]")}]"
     };
 
     private static string QuoteTable(string connType, string tableName)

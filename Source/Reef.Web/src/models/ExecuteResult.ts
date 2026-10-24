@@ -1,3 +1,3 @@
 export interface ExecuteResult {
-  executionId?: number | null;
+  executionId?: string | null;
 }
