@@ -58,7 +58,7 @@ public static class SystemInfoEndpoints
                 },
                 license = new
                 {
-                    type = "AGPL 3.0",
+                    type = "EUPL 1.2",
                     description = "Open source with copyleft provisions"
                 }
             });

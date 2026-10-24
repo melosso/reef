@@ -1,6 +1,6 @@
 # 〰️ Reef
 
-[![License](https://img.shields.io/badge/license-AGPL%203.0-blue)](LICENSE)
+[![License](https://img.shields.io/badge/license-EUPL%201.2-blue)](LICENSE)
 [![Latest Release](https://img.shields.io/github/v/release/melosso/reef)](https://github.com/melosso/reef/releases/latest)
 [![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
 
@@ -204,7 +204,7 @@ After creating a job, you can schedule it using various methods such as:
 
 ## License
 
-Free for open source projects and personal use under the **AGPL 3.0** license. For more information, please see the [license](LICENSE) file.
+Please see the [license](LICENSE) file.
 
 ## Contributing
 
