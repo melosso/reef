@@ -297,7 +297,21 @@
 
 <svelte:window {onkeydown} />
 
-<Page crumbs={[{ label: 'Profiles', href: '/profiles' }, { label: name }]}>
+<Page
+  crumbs={[
+    { label: 'Profiles', href: '/profiles' },
+    {
+      label: name,
+      value: textOf(doc?.settings.Name),
+      onrename: doc
+        ? (value) => {
+            doc!.settings.Name = value;
+            onfieldchange(null, 'Name');
+          }
+        : undefined,
+    },
+  ]}
+>
   {#snippet status()}
     <span class="state">
       <svg viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="3" class:dashed={dirty} /></svg>

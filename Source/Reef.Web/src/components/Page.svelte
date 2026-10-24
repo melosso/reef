@@ -3,10 +3,13 @@
   import { Search } from '@lucide/svelte';
   import { openCommandBar } from '../lib/command.svelte';
   import AccountMenu from './AccountMenu.svelte';
+  import { tooltip } from '../lib/tooltip';
 
   interface Crumb {
     label: string;
     href?: string;
+    value?: string;
+    onrename?: (name: string) => void;
   }
 
   let {
@@ -20,6 +23,19 @@
     actions?: Snippet;
     children: Snippet;
   } = $props();
+
+  let renaming = $state(false);
+
+  function commit(crumb: Crumb, input: HTMLInputElement) {
+    if (!renaming) return;
+    renaming = false;
+    if (input.value !== (crumb.value ?? crumb.label)) crumb.onrename?.(input.value);
+  }
+
+  function autofocus(input: HTMLInputElement) {
+    input.focus();
+    input.select();
+  }
 
   $effect(() => {
     document.title = `${crumbs
@@ -35,6 +51,29 @@
       {#each crumbs as crumb, i (i)}
         {#if i > 0}<span aria-hidden="true">/</span>{/if}
         {#if crumb.href && i < crumbs.length - 1}<a href={crumb.href}>{crumb.label}</a>
+        {:else if crumb.onrename && renaming}<input
+            class="rename"
+            aria-label="Name"
+            value={crumb.value ?? crumb.label}
+            use:autofocus
+            onblur={(e) => commit(crumb, e.currentTarget)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') commit(crumb, e.currentTarget);
+              else if (e.key === 'Escape') renaming = false;
+            }}
+          />
+        {:else if crumb.onrename}<span
+            class="current editable"
+            role="button"
+            tabindex="0"
+            aria-current="page"
+            aria-keyshortcuts="F2"
+            use:tooltip={'Double-click to rename'}
+            ondblclick={() => (renaming = true)}
+            onkeydown={(e) => {
+              if (e.key === 'F2') renaming = true;
+            }}>{crumb.label}</span
+          >
         {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}
       {/each}
     </nav>
@@ -84,6 +123,14 @@
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .editable {
+    cursor: text;
+  }
+  .rename {
+    font: inherit;
+    font-weight: 600;
+    min-width: 240px;
   }
   .status {
     font-size: 13px;
