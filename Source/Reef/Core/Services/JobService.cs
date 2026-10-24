@@ -1263,6 +1263,18 @@ public class JobService
 
     #region Cleanup
 
+    // Call before the host starts: a run that is Running at that point belongs to a stopped process.
+    public async Task ResetInterruptedRunsAsync()
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        var args = new { Running = JobStatus.Running, Failed = JobStatus.Failed, Idle = JobStatus.Idle, Now = DateTime.UtcNow };
+        var executions = await conn.ExecuteAsync(
+            "UPDATE JobExecutions SET Status = @Failed, CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = @Running", args);
+        var jobs = await conn.ExecuteAsync("UPDATE Jobs SET Status = @Idle, ModifiedAt = @Now WHERE Status = @Running", args);
+        if (executions + jobs > 0)
+            Log.Warning("Reset {Jobs} jobs and {Executions} executions interrupted by restart", jobs, executions);
+    }
+
     /// <summary>
     /// Startup cleanup: Fix any jobs with NextRunTime in the past
     /// Call this on application startup

@@ -249,6 +249,7 @@ public partial class Program
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
             var jobService = new JobService(new DatabaseConfig { ConnectionString = connectionString }, builder.Configuration);
+            await jobService.ResetInterruptedRunsAsync();
             await jobService.FixCorruptedNextRunTimesAsync();
             Log.Debug("Done! Job cleanup completed");
 
