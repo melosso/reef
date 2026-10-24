@@ -3,7 +3,7 @@
   import StatusMark from '../StatusMark.svelte';
   import Facts from './Facts.svelte';
   import ScriptOutput from './ScriptOutput.svelte';
-  import { api } from '../../lib/api';
+  import { api, download } from '../../lib/api';
   import { formatBytes, formatDateTime, formatDuration, formatNumber } from '../../lib/format';
   import { copyText, notify } from '../../lib/notify';
   import { statusKind, statusLabel } from '../../lib/status';
@@ -81,7 +81,11 @@
         ]
       : [],
   );
-  const token = $derived(exec?.outputPath ? /exports\/[\d-]+\/([^/]+)\//.exec(exec.outputPath)?.[1] : null);
+  const fileName = $derived(exec?.outputPath?.split('/').pop() ?? '');
+
+  function downloadOutput() {
+    if (exec) download(`/api/executions/${exec.id}/download`, fileName).catch(notify.fail);
+  }
 
   function downloadLog() {
     if (!exec) return;
@@ -131,9 +135,7 @@
   {#if exec.outputPath}
     <section class="block">
       <h4>Output file</h4>
-      {#if token}<a href="/api/executions/download/{token}" download>{exec.outputPath.split('/').pop()}</a>{:else}<span
-          >{exec.outputPath.split('/').pop()}</span
-        >{/if}
+      <div><button type="button" class="btn" onclick={downloadOutput}><Download size={14} />{fileName}</button></div>
     </section>
   {/if}
 
