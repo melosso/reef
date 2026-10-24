@@ -12,7 +12,7 @@ public sealed class ApiKeyAuthenticationHandler(
     UrlEncoder encoder,
     ApiKeyValidator validator) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string Scheme = "ApiKey";
+    public const string SchemeName = "ApiKey";
     public const string Header = "X-Api-Key";
     private const string WriteClaim = "reef:write";
 
@@ -31,12 +31,12 @@ public sealed class ApiKeyAuthenticationHandler(
             new Claim(ClaimTypes.Name, $"apikey:{key.Name}"),
             new Claim(ClaimTypes.Role, "User"),
             new Claim(WriteClaim, ApiKeyValidator.CanWrite(key.Permissions) ? "true" : "false")
-        ], Scheme);
-        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), Scheme));
+        ], SchemeName);
+        return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }
 
     public static bool MayCall(AuthorizationHandlerContext context) =>
-        context.User.Identity?.AuthenticationType != Scheme
+        context.User.Identity?.AuthenticationType != SchemeName
         || context.User.HasClaim(WriteClaim, "true")
         || context.Resource is HttpContext http && (HttpMethods.IsGet(http.Request.Method) || HttpMethods.IsHead(http.Request.Method));
 }

@@ -438,8 +438,8 @@ public partial class Program
             options.DefaultScheme = "Reef";
         })
         .AddPolicyScheme("Reef", "JWT or API key", options => options.ForwardDefaultSelector = context =>
-            context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.Header) ? ApiKeyAuthenticationHandler.Scheme : JwtBearerDefaults.AuthenticationScheme)
-        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.Scheme, null)
+            context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.Header) ? ApiKeyAuthenticationHandler.SchemeName : JwtBearerDefaults.AuthenticationScheme)
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.SchemeName, null)
         .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
