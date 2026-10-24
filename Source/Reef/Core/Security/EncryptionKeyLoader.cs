@@ -64,8 +64,7 @@ public static class EncryptionKeyLoader
             }
         }
 
-        Log.Warning("ENCRYPTION_KEY is not set in the environment or .env file. The fallback key is in use.");
-        Log.Warning("Set ENCRYPTION_KEY for production use.");
+        Log.Warning("No ENCRYPTION_KEY variable found. Make sure to set it before using in production.");
 
         return FallbackKey;
     }
