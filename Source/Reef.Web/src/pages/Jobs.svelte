@@ -262,9 +262,7 @@
     records.close();
   }
 
-  const selectedProfile = $derived(
-    form?.profile.startsWith('export:') ? profiles.find((p) => p.id === form!.profile.split(':')[1]) : null,
-  );
+  const selectedProfile = $derived(form?.profile.startsWith('export:') ? profiles.find((p) => p.id === form!.profile.split(':')[1]) : null);
   const emailProfile = $derived(!!selectedProfile?.isEmailExport);
 
   async function save(e: SubmitEvent) {

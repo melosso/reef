@@ -5,7 +5,10 @@ const FINAL_OK = new Set(['Completed', '3']);
 const FINAL_FAILED = new Set(['Failed', 'Cancelled', '4', '5']);
 
 // Completed jobs are partial when the import reports PartialSuccess or the export has failed split files.
-export function jobOutcome(execution: JobExecution, exportRun?: { status?: string | null; splitFailureCount?: number | null } | null): JobOutcome {
+export function jobOutcome(
+  execution: JobExecution,
+  exportRun?: { status?: string | null; splitFailureCount?: number | null } | null,
+): JobOutcome {
   const status = String(execution.status);
   if (FINAL_FAILED.has(status)) return 'failed';
   if (!FINAL_OK.has(status)) return 'running';
