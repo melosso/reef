@@ -203,6 +203,7 @@ export const DESTINATION_FIELDS: Record<string, DestField[]> = {
       when: smtp,
       options: [
         ['StartTls', 'STARTTLS'],
+        ['SslOnConnect', 'SSL/TLS on connect'],
         ['None', 'None'],
         ['Auto', 'Automatic'],
       ],
