@@ -115,7 +115,7 @@
 {/if}
 
 <ConfirmDialog />
-<Toaster position="bottom-right" theme={toasterTheme} closeButton={false} visibleToasts={4} toastOptions={{ class: 'reef-toast' }} />
+<Toaster position="bottom-right" theme={toasterTheme} closeButton visibleToasts={4} toastOptions={{ class: 'reef-toast' }} />
 
 <style>
   .shell {
