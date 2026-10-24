@@ -174,7 +174,7 @@
       </div>
     {/if}
   </div>
-  <footer class="muted"><a href="https://github.com/melosso/reef" target="_blank" rel="noopener noreferrer">Reef</a> · AGPL-3.0</footer>
+  <footer class="muted">Licensed under the EUPL 1.2</footer>
 </div>
 
 <style>
