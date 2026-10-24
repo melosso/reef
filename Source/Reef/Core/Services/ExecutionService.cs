@@ -83,7 +83,8 @@ public class ExecutionService
             Dictionary<string, string>? parameters = null,
             string triggeredBy = "Manual",
             int? jobId = null,
-            int? destinationOverrideId = null)
+            int? destinationOverrideId = null,
+            CancellationToken ct = default)
     {
         var stopwatch = Stopwatch.StartNew();
         int executionId = 0;
@@ -181,7 +182,7 @@ public class ExecutionService
             // Execute query
             Log.Debug("Executing query for profile {ProfileId}", profileId);
             var (querySuccess, rows, queryError, queryTime) = await _queryExecutor.ExecuteQueryAsync(
-                connection, profile.Query, parameters);
+                connection, profile.Query, parameters, ct: ct);
 
             if (!querySuccess)
             {

@@ -18,6 +18,8 @@ public class JobExecutorService
     private readonly ImportExecutionService _importExecutionService;
     private readonly NotificationService _notificationService;
     private readonly DatabaseConfig _database;
+    private readonly IServiceScopeFactory _scopes;
+    private readonly IHostApplicationLifetime _lifetime;
 
     public JobExecutorService(
         JobService jobService,
@@ -25,7 +27,9 @@ public class JobExecutorService
         ProfileService profileService,
         ImportExecutionService importExecutionService,
         NotificationService notificationService,
-        DatabaseConfig database)
+        DatabaseConfig database,
+        IServiceScopeFactory scopes,
+        IHostApplicationLifetime lifetime)
     {
         _jobService = jobService;
         _executionService = executionService;
@@ -33,6 +37,8 @@ public class JobExecutorService
         _importExecutionService = importExecutionService;
         _notificationService = notificationService;
         _database = database;
+        _scopes = scopes;
+        _lifetime = lifetime;
     }
 
     /// <summary>
@@ -43,6 +49,27 @@ public class JobExecutorService
     /// <param name="parameters">Optional parameters for job execution</param>
     /// <returns>Execution ID</returns>
     public async Task<long> TriggerJobAsync(
+        Job job,
+        bool ignoreDependencies,
+        Dictionary<string, object>? parameters)
+    {
+        var execution = await StartAsync(job, ignoreDependencies, parameters);
+
+        // The caller scope ends with the request, so the run resolves its services from a scope of its own
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopes.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<JobExecutorService>().RunAsync(job, execution, parameters, _lifetime.ApplicationStopping);
+            }
+            catch (Exception ex) { Log.Error(ex, "Unhandled error in background execution of job {JobId}", job.Id); }
+        });
+
+        return execution.Id;
+    }
+
+    public async Task<JobExecution> StartAsync(
         Job job,
         bool ignoreDependencies,
         Dictionary<string, object>? parameters)
@@ -90,17 +117,8 @@ public class JobExecutorService
                 : null
         };
 
-        var executionId = await _jobService.CreateExecutionAsync(execution);
-        execution.Id = executionId;
-
-        // Execute the job asynchronously (fire and forget)
-        _ = Task.Run(async () =>
-        {
-            try { await ExecuteJobInternalAsync(job, execution, parameters); }
-            catch (Exception ex) { Log.Error(ex, "Unhandled error in background execution of job {JobId}", job.Id); }
-        });
-
-        return executionId;
+        execution.Id = await _jobService.CreateExecutionAsync(execution);
+        return execution;
     }
 
     /// <summary>
@@ -108,10 +126,11 @@ public class JobExecutorService
     /// MaxRetries applies per-cycle: retries happen within one scheduled execution
     /// Only after ALL retries fail does it count as 1 failure for the circuit breaker
     /// </summary>
-    private async Task ExecuteJobInternalAsync(
+    public async Task RunAsync(
         Job job,
         JobExecution execution,
-        Dictionary<string, object>? parameters)
+        Dictionary<string, object>? parameters,
+        CancellationToken ct)
     {
         bool success = false;
         string? outputData = null;
@@ -136,12 +155,12 @@ public class JobExecutorService
                         var delaySeconds = Math.Pow(2, attemptNumber - 2); // 1s, 2s, 4s, 8s...
                         Log.Information("Job {JobId} execution {ExecutionId} retry attempt {Attempt}/{Max} after {Delay}s delay",
                             job.Id, execution.Id, attemptNumber, maxAttempts, delaySeconds);
-                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                        await Task.Delay(TimeSpan.FromSeconds(delaySeconds), ct);
                     }
 
                     // Execute based on job type
                     (success, outputData, errorMessage, rowsProcessed) = await ExecuteJobByTypeAsync(
-                        job, parameters);
+                        job, parameters, ct);
 
                     if (success)
                     {
@@ -153,6 +172,12 @@ public class JobExecutorService
                     {
                         Log.Warning("Job execution {ExecutionId} attempt {Attempt}/{Max} failed: {Error}",
                             execution.Id, attemptNumber, maxAttempts, errorMessage);
+
+                        if (ct.IsCancellationRequested)
+                        {
+                            errorMessage = "Job cancelled or timed out";
+                            break;
+                        }
 
                         // If this was the last attempt, it's a final failure
                         if (attemptNumber == maxAttempts)
@@ -168,9 +193,9 @@ public class JobExecutorService
                     Log.Error(ex, "Job execution {ExecutionId} attempt {Attempt}/{Max} threw exception",
                         execution.Id, attemptNumber, maxAttempts);
 
-                    if (attemptNumber == maxAttempts)
+                    if (attemptNumber == maxAttempts || ct.IsCancellationRequested)
                     {
-                        throw; // Re-throw on final attempt to be caught by outer catch
+                        throw;
                     }
                 }
             }
@@ -185,29 +210,25 @@ public class JobExecutorService
 
             await _jobService.UpdateExecutionAsync(execution);
 
-            // Send job notification (fire and forget)
-            _ = Task.Run(async () =>
+            try
             {
-                try
+                if (success)
                 {
-                    if (success)
-                    {
-                        await _notificationService.SendJobSuccessAsync(
-                            job.Id,
-                            job.Name,
-                            new Dictionary<string, object>
-                            {
-                                { "RowsProcessed", rowsProcessed ?? 0 },
-                                { "Duration", execution.CompletedAt.HasValue ? (execution.CompletedAt.Value - execution.StartedAt).TotalSeconds : 0 }
-                            });
-                    }
-                    else
-                    {
-                        await _notificationService.SendJobFailureAsync(job.Id, job.Name, errorMessage ?? "Unknown error");
-                    }
+                    await _notificationService.SendJobSuccessAsync(
+                        job.Id,
+                        job.Name,
+                        new Dictionary<string, object>
+                        {
+                            { "RowsProcessed", rowsProcessed ?? 0 },
+                            { "Duration", execution.CompletedAt.HasValue ? (execution.CompletedAt.Value - execution.StartedAt).TotalSeconds : 0 }
+                        });
                 }
-                catch (Exception notifEx) { Log.Error(notifEx, "Failed to send job notification"); }
-            });
+                else
+                {
+                    await _notificationService.SendJobFailureAsync(job.Id, job.Name, errorMessage ?? "Unknown error");
+                }
+            }
+            catch (Exception notifEx) { Log.Error(notifEx, "Failed to send job notification"); }
         }
         catch (Exception ex)
         {
@@ -222,15 +243,11 @@ public class JobExecutorService
 
             await _jobService.UpdateExecutionAsync(execution);
 
-            // Send job failure notification (fire and forget)
-            _ = Task.Run(async () =>
+            try
             {
-                try
-                {
-                    await _notificationService.SendJobFailureAsync(job.Id, job.Name, ex.Message);
-                }
-                catch (Exception notifEx) { Log.Error(notifEx, "Failed to send job failure notification"); }
-            });
+                await _notificationService.SendJobFailureAsync(job.Id, job.Name, ex.Message);
+            }
+            catch (Exception notifEx) { Log.Error(notifEx, "Failed to send job failure notification"); }
         }
     }
 
@@ -238,14 +255,14 @@ public class JobExecutorService
     /// Execute job based on its type
     /// </summary>
     private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
-        ExecuteJobByTypeAsync(Job job, Dictionary<string, object>? parameters)
+        ExecuteJobByTypeAsync(Job job, Dictionary<string, object>? parameters, CancellationToken ct)
     {
         try
         {
             switch (job.Type)
             {
                 case JobType.ProfileExecution:
-                    return await ExecuteProfileJobAsync(job, parameters);
+                    return await ExecuteProfileJobAsync(job, parameters, ct);
 
                 case JobType.HealthCheck:
                     return await ExecuteHealthCheckJobAsync();
@@ -271,7 +288,7 @@ public class JobExecutorService
     /// Execute a profile-based job (export or import profile)
     /// </summary>
     private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
-        ExecuteProfileJobAsync(Job job, Dictionary<string, object>? parameters)
+        ExecuteProfileJobAsync(Job job, Dictionary<string, object>? parameters, CancellationToken ct)
     {
         // Import profile path
         if (job.ImportProfileId.HasValue)
@@ -280,7 +297,8 @@ public class JobExecutorService
                 job.Name, job.Id, job.ImportProfileId.Value);
             var execution = await _importExecutionService.ExecuteAsync(
                 job.ImportProfileId.Value,
-                $"Job-{job.Id}");
+                $"Job-{job.Id}",
+                ct);
 
             var success = execution.Status is "Success" or "PartialSuccess";
             var outputData = JsonSerializer.Serialize(new { executionId = execution.Id, status = execution.Status });
@@ -314,8 +332,9 @@ public class JobExecutorService
                 job.ProfileId.Value,
                 stringParams,
                 $"Job-{job.Id}",
-                job.Id,              // Pass job ID for tracking
-                job.DestinationId);  // Pass the job's destination override
+                job.Id,
+                job.DestinationId,
+                ct);
 
         var exportOutputData = exportSuccess && outputPath != null
             ? JsonSerializer.Serialize(new { executionId, outputPath })

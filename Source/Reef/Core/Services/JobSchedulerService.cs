@@ -294,11 +294,9 @@ public class JobScheduler : BackgroundService
 
             try
             {
-                // Execute the job (this is the actual work)
-                await jobExecutor.TriggerJobAsync(
-                    job,
-                    ignoreDependencies: false,
-                    parameters: null);
+                // Execute the job 
+                var execution = await jobExecutor.StartAsync(job, ignoreDependencies: false, parameters: null);
+                await jobExecutor.RunAsync(job, execution, parameters: null, jobCts.Token);
 
                 Log.Information("Job {JobId} ({JobName}) execution completed", job.Id, job.Name);
             }
