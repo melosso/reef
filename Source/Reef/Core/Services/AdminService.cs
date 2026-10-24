@@ -18,15 +18,13 @@ namespace Reef.Core.Services;
 public class AdminService
 {
     private readonly string _connectionString;
-    private readonly PasswordHasher _passwordHasher;
     private readonly UserPasswordHasher _userPasswordHasher;
     private readonly EncryptionService _encryptionService;
     private readonly NotificationService _notificationService;
 
-    public AdminService(DatabaseConfig config, PasswordHasher passwordHasher, UserPasswordHasher userPasswordHasher, EncryptionService encryptionService, NotificationService notificationService)
+    public AdminService(DatabaseConfig config, UserPasswordHasher userPasswordHasher, EncryptionService encryptionService, NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
-        _passwordHasher = passwordHasher;
         _userPasswordHasher = userPasswordHasher;
         _encryptionService = encryptionService;
         _notificationService = notificationService;
@@ -663,18 +661,17 @@ public class AdminService
             using var conn = new SqliteConnection(_connectionString);
             await conn.OpenAsync();
 
-            // Generate random API key
-            var apiKeyValue = GenerateApiKey();
-            var keyHash = _passwordHasher.HashPassword(apiKeyValue);
+            var (apiKeyValue, keyPrefix, keyHash) = ApiKeyValidator.Generate();
 
             // Insert API key
             var keyId = await conn.QuerySingleAsync<int>(
-                @"INSERT INTO ApiKeys (Name, KeyHash, Permissions, ExpiresAt, IsActive, CreatedAt) 
-                  VALUES (@Name, @KeyHash, @Permissions, @ExpiresAt, 1, @CreatedAt)
+                @"INSERT INTO ApiKeys (Name, KeyPrefix, KeyHash, Permissions, ExpiresAt, IsActive, CreatedAt) 
+                  VALUES (@Name, @KeyPrefix, @KeyHash, @Permissions, @ExpiresAt, 1, @CreatedAt)
                   RETURNING Id",
                 new
                 {
                     Name = name,
+                    KeyPrefix = keyPrefix,
                     KeyHash = keyHash,
                     Permissions = permissions,
                     ExpiresAt = expiresAt,
@@ -723,19 +720,6 @@ public class AdminService
         }
     }
 
-    /// <summary>
-    /// Generate a random API key
-    /// Format: reef_live_32randomcharacters
-    /// </summary>
-    private string GenerateApiKey()
-    {
-        const string chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-        var random = new Random();
-        var randomPart = new string(Enumerable.Repeat(chars, 32)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
-
-        return $"reef_live_{randomPart}";
-    }
 
     /// <summary>
     /// Generate a random confirmation string for dangerous operations

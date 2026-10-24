@@ -245,6 +245,7 @@ public partial class Program
             Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
 
             await new UlidMigration(connectionString).ApplyAsync();
+            await new ApiKeyPrefixMigration(connectionString).ApplyAsync();
 
             // Resolve any corrupted/stuck jobs on startup
             Log.Debug("Checking for corrupted jobs...");
@@ -321,7 +322,6 @@ public partial class Program
         services.AddSingleton<DatabaseInitializer>(sp =>
             new DatabaseInitializer(connectionString, encryptionService));
         services.AddSingleton<HashValidator>();
-        services.AddSingleton<PasswordHasher>();
         services.AddSingleton(new UserPasswordHasher(EncryptionKeyLoader.Key));
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<LoginThrottle>();
@@ -435,9 +435,11 @@ public partial class Program
 
         services.AddAuthentication(options =>
         {
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = "Reef";
         })
+        .AddPolicyScheme("Reef", "JWT or API key", options => options.ForwardDefaultSelector = context =>
+            context.Request.Headers.ContainsKey(ApiKeyAuthenticationHandler.Header) ? ApiKeyAuthenticationHandler.Scheme : JwtBearerDefaults.AuthenticationScheme)
+        .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(ApiKeyAuthenticationHandler.Scheme, null)
         .AddJwtBearer(options =>
         {
             options.TokenValidationParameters = new TokenValidationParameters
@@ -474,7 +476,10 @@ public partial class Program
             };
         });
 
-        services.AddAuthorization();
+        services.AddAuthorization(options => options.DefaultPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .RequireAssertion(ApiKeyAuthenticationHandler.MayCall)
+            .Build());
 
         Log.Debug("Authentication configured");
     }

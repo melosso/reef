@@ -34,6 +34,7 @@ public class ApiKey
 {
     public int Id { get; set; }
     public required string Name { get; set; }
+    public string? KeyPrefix { get; set; }
     public required string KeyHash { get; set; }
     public required string Permissions { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
