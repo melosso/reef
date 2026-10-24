@@ -2,7 +2,8 @@ using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
+using Dapper;
+using Microsoft.Data.Sqlite;
 
 namespace Reef.Api;
 
@@ -16,7 +17,7 @@ public class JobExecutorService
     private readonly ProfileService _profileService;
     private readonly ImportExecutionService _importExecutionService;
     private readonly NotificationService _notificationService;
-    private readonly IConfiguration _configuration;
+    private readonly DatabaseConfig _database;
 
     public JobExecutorService(
         JobService jobService,
@@ -24,14 +25,14 @@ public class JobExecutorService
         ProfileService profileService,
         ImportExecutionService importExecutionService,
         NotificationService notificationService,
-        IConfiguration configuration)
+        DatabaseConfig database)
     {
         _jobService = jobService;
         _executionService = executionService;
         _profileService = profileService;
         _importExecutionService = importExecutionService;
         _notificationService = notificationService;
-        _configuration = configuration;
+        _database = database;
     }
 
     /// <summary>
@@ -361,21 +362,6 @@ public class JobExecutorService
     {
         try
         {
-            // Get database path from configuration
-            var configuredPath = _configuration["Reef:DatabasePath"] ?? "Reef.db";
-            var connectionString = _configuration.GetConnectionString("Reef") ?? $"Data Source={configuredPath}";
-
-            // Extract database path from connection string
-            var dbPath = configuredPath;
-            if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
-            {
-                var dataSourceStart = connectionString.IndexOf("Data Source=", StringComparison.OrdinalIgnoreCase) + "Data Source=".Length;
-                var semicolonIndex = connectionString.IndexOf(';', dataSourceStart);
-                dbPath = semicolonIndex > 0
-                    ? connectionString.Substring(dataSourceStart, semicolonIndex - dataSourceStart).Trim()
-                    : connectionString.Substring(dataSourceStart).Trim();
-            }
-
             var backupDir = "backups";
 
             if (!Directory.Exists(backupDir))
@@ -386,8 +372,9 @@ public class JobExecutorService
             var backupFileName = $"reef_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.db";
             var backupPath = Path.Combine(backupDir, backupFileName);
 
-            // Perform the backup on a background thread since File.Copy is synchronous
-            await Task.Run(() => File.Copy(dbPath, backupPath, overwrite: false));
+            // VACUUM INTO writes a consistent copy while other connections write
+            await using (var conn = new SqliteConnection(_database.ConnectionString))
+                await conn.ExecuteAsync("VACUUM INTO @Path", new { Path = Path.GetFullPath(backupPath) });
 
             var fileInfo = new FileInfo(backupPath);
             var outputData = JsonSerializer.Serialize(new
