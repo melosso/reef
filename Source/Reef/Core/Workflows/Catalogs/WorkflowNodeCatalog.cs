@@ -202,7 +202,9 @@ public static class WorkflowNodeCatalog
                     Tooltip = "Names of the variables passed to the script" },
                 new() { Key = "TimeoutSeconds", Label = "Timeout in seconds", Kind = NodeFieldKinds.Number, Default = 30 },
                 new() { Key = "ContinueOnError", Label = "Continue on error", Kind = NodeFieldKinds.Bool,
-                    Tooltip = "A failure is recorded on the step and the run goes on" }
+                    Tooltip = "A failure is recorded on the step and the run goes on" },
+                new() { Key = "SkipWhenEmpty", Label = "Skip when no rows arrive", Kind = NodeFieldKinds.Bool,
+                    Tooltip = "Other steps skip on empty input by default, commands run unless this is on" }
             ])
         ]
     };
@@ -277,10 +279,10 @@ public static class WorkflowNodeCatalog
     ];
 
     private static WorkflowNodeDefinition Trigger(string type, string label, string icon, string tooltip, List<NodeField> fields) =>
-        new() { Type = type, Label = label, Icon = icon, Tooltip = tooltip, Group = WorkflowNodeGroups.Triggers, Inputs = WorkflowPorts.None, Fields = fields };
+        new() { Type = type, Label = label, Icon = icon, Tooltip = tooltip, Group = WorkflowNodeGroups.Triggers, Inputs = WorkflowPorts.None, Fields = fields, RunsWhenEmpty = true };
 
     private static WorkflowNodeDefinition Node(string type, string label, string icon, string group, string tooltip, List<NodeField> fields) =>
-        new() { Type = type, Label = label, Icon = icon, Group = group, Tooltip = tooltip, Fields = fields };
+        new() { Type = type, Label = label, Icon = icon, Group = group, Tooltip = tooltip, Fields = fields, RunsWhenEmpty = group == WorkflowNodeGroups.Sources || type == "command" };
 
     private static string[] SwitchOutputs(JsonObject config) =>
         [.. (config["Cases"] as JsonArray ?? []).OfType<JsonObject>().Select(c => ConfigPath.ToText(c["Value"])).Where(v => v.Length > 0).Distinct(), Fallback];

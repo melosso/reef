@@ -35,16 +35,18 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                 var incoming = workflow.Edges.Where(e => e.To == node.Id && outputs.ContainsKey((e.From, e.FromPort))).ToList();
                 if (node.Id != trigger.Id && incoming.Count == 0)
                 {
-                    record.Status = WorkflowRunStatus.Skipped;
-                    record.CompletedAt = record.StartedAt;
-                    run.Nodes.Add(record);
-                    await runs.SaveNodeAsync(record);
+                    await SkipAsync(run, record);
                     continue;
                 }
 
                 var inputs = node.Id == trigger.Id
                     ? new Dictionary<string, WorkflowItems> { [WorkflowPorts.Main] = triggerItems ?? new WorkflowItems() }
                     : incoming.GroupBy(e => e.ToPort).ToDictionary(g => g.Key, g => Combine(g.Select(e => outputs[(e.From, e.FromPort)])));
+                if (node.Id != trigger.Id && inputs.Values.All(i => i.Items.Count == 0 && i.Files.Count == 0) && SkipsWhenEmpty(node))
+                {
+                    await SkipAsync(run, record);
+                    continue;
+                }
                 try
                 {
                     if (!_executors.TryGetValue(node.Type, out var executor))
@@ -151,6 +153,17 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         }
         return order;
     }
+
+    private async Task SkipAsync(WorkflowExecution run, NodeRun record)
+    {
+        record.Status = WorkflowRunStatus.Skipped;
+        record.CompletedAt = record.StartedAt;
+        run.Nodes.Add(record);
+        await runs.SaveNodeAsync(record);
+    }
+
+    private static bool SkipsWhenEmpty(WorkflowNode node) =>
+        WorkflowNodeCatalog.Catalog.Find(node.Type) is not { RunsWhenEmpty: true } || NodeConfig.Flag(node.Config ?? new(), "SkipWhenEmpty");
 
     private static WorkflowItems Combine(IEnumerable<WorkflowItems> parts)
     {

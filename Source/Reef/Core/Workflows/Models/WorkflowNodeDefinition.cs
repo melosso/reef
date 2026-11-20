@@ -16,6 +16,7 @@ public class WorkflowNodeDefinition
     public string[] Inputs { get; init; } = WorkflowPorts.Single;
     public string[] Outputs { get; init; } = WorkflowPorts.Single;
     public List<NodeField> Fields { get; init; } = new();
+    public bool RunsWhenEmpty { get; init; }
 
     [JsonIgnore]
     public Func<JsonObject, string[]>? OutputsFor { get; init; }

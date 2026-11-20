@@ -317,4 +317,24 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         var file = Output(run, "file")["files"]![0]!["path"]!.GetValue<string>();
         File.Exists(file).Should().BeFalse();
     }
+    [Fact]
+    public async Task EmptyQuerySkipsTheStepsAfterIt()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("pre", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('pre')" }),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders WHERE 1 = 0" }),
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" }),
+                Node("post", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('post')", ["SkipWhenEmpty"] = true })
+            ],
+            [Edge("start", "pre"), Edge("pre", "orders"), Edge("orders", "file"), Edge("orders", "post")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        NodeRun(run, "pre")["status"]!.GetValue<string>().Should().Be("Success");
+        NodeRun(run, "file")["status"]!.GetValue<string>().Should().Be("Skipped");
+        NodeRun(run, "post")["status"]!.GetValue<string>().Should().Be("Skipped");
+    }
 }
