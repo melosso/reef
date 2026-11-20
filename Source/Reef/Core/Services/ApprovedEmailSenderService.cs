@@ -106,22 +106,22 @@ public class ApprovedEmailSenderService : BackgroundService
                 LIMIT 10
             ";
 
-            var approvedEmails = await connection.QueryAsync<PendingEmailApproval>(sql);
-            var emailList = approvedEmails.ToList();
-
-            if (emailList.Count == 0)
+            // drain the queue in batches, ids already tried stop a batch that never leaves the approved state
+            var tried = new HashSet<int>();
+            while (!cancellationToken.IsCancellationRequested)
             {
-                return; // No approved emails to send
-            }
-
-            Log.Information("Found {Count} approved emails ready to send", emailList.Count);
-
-            foreach (var approval in emailList)
-            {
-                if (cancellationToken.IsCancellationRequested)
+                var emailList = (await connection.QueryAsync<PendingEmailApproval>(sql)).Where(a => tried.Add(a.Id)).ToList();
+                if (emailList.Count == 0)
                     break;
 
-                await SendApprovedEmailAsync(approval, connection, destinationService, auditService, deltaSyncService, cancellationToken);
+                Log.Information("Found {Count} approved emails ready to send", emailList.Count);
+                foreach (var approval in emailList)
+                {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    await SendApprovedEmailAsync(approval, connection, destinationService, auditService, deltaSyncService, cancellationToken);
+                }
             }
         }
         catch (Exception ex)

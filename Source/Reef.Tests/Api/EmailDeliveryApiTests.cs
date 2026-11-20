@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Net;
 using System.Net.Sockets;
 using FluentAssertions;
@@ -87,6 +88,28 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
 
         smtp.Messages.Should().HaveCount(50);
         smtp.Connections.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ApprovedQueueIsSentWithinOnePollCycle()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailApprovalRequired"] = true, ["EmailApprovalRoles"] = "[\"Admin\"]" };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(25), mail);
+        await EmailProfiles.RunAsync(admin, profileId);
+        var pending = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/email-approvals/profile/{profileId}", ct);
+        var guids = pending!["data"]!.AsArray().Select(a => a!["guid"]!.GetValue<string>()).ToList();
+        guids.Should().HaveCount(25);
+
+        foreach (var guid in guids)
+            (await admin.PostAsJsonAsync($"/api/email-approvals/{guid}/approve", new { notes = "ok" }, ct)).EnsureSuccessStatusCode();
+
+        var clock = Stopwatch.StartNew();
+        while (smtp.Messages.Count < 25 && clock.Elapsed < TimeSpan.FromSeconds(45))
+            await Task.Delay(250, ct);
+        smtp.Messages.Should().HaveCount(25);
     }
 
     [Fact]
