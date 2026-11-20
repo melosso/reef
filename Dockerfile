@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 
-FROM node:24-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /src/Reef.Web
 COPY Source/Reef.Web/package.json Source/Reef.Web/package-lock.json ./
 RUN --mount=type=cache,id=npm,target=/root/.npm npm ci --no-audit --no-fund
