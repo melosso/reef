@@ -26,7 +26,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         var outputs = new Dictionary<(string Node, string Port), WorkflowItems>();
         var commits = new List<Func<Task>>();
         var undos = new List<Func<Task>>();
-        var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "reef-workflows", run.Id.ToString())).FullName;
+        var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Reef.Helpers.TempPaths.WorkflowRoot, run.Id.ToString())).FullName;
         try
         {
             foreach (var node in Order(workflow, trigger.Id))
@@ -74,10 +74,18 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                 catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
                 {
                     Log.Warning(ex, "Workflow {WorkflowId} node {NodeId} failed", workflowId, node.Id);
-                    record.Status = WorkflowRunStatus.Failed;
                     record.ErrorMessage = ex is NodeExecutionException ? ex.Message : $"{ex.GetType().Name}: {ex.Message}";
-                    run.Status = WorkflowRunStatus.Failed;
-                    run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
+                    if (NodeConfig.Flag(node.Config ?? new(), "ContinueOnError"))
+                    {
+                        record.Status = WorkflowRunStatus.Success;
+                        outputs[(node.Id, WorkflowPorts.Main)] = inputs.Values.First();
+                    }
+                    else
+                    {
+                        record.Status = WorkflowRunStatus.Failed;
+                        run.Status = WorkflowRunStatus.Failed;
+                        run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
+                    }
                 }
                 finally
                 {

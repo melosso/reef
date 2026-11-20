@@ -107,7 +107,7 @@ public class DestinationService
                 return (false, null, "Invalid destination configuration");
 
             // Extract relative path from source (preserves subdirectories from filename template)
-            var fileRelativePath = ExtractRelativePathFromTemp(sourceFilePath);
+            var fileRelativePath = Reef.Helpers.TempPaths.Relative(sourceFilePath);
             Log.Debug("DestinationService: Extracted relative path from temp: {RelativePath}", fileRelativePath);
 
             var fileName = Path.GetFileName(sourceFilePath);
@@ -334,52 +334,6 @@ public class DestinationService
         _encryption = encryption;
         _guard = guard;
         _configEncryption = new DestinationConfigEncryption(encryption);
-    }
-
-    /// <summary>
-    /// Extract relative path from temp file path
-    /// E.g., "C:\Temp\1\csv\file.csv" -> "csv\file.csv" (strips process folder)
-    /// E.g., "C:\Temp\reef_splits\orders\order_A.csv" -> "orders\order_A.csv"
-    /// </summary>
-    private string ExtractRelativePathFromTemp(string sourcePath)
-    {
-        try
-        {
-            var tempPath = Path.GetTempPath();
-            var tempPathNormalized = Path.GetFullPath(tempPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            // Handle reef_splits subdirectory
-            var reefSplitsPath = Path.Combine(tempPath, "reef_splits");
-            if (sourcePath.StartsWith(reefSplitsPath, StringComparison.OrdinalIgnoreCase))
-            {
-                return sourcePath.Substring(reefSplitsPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            }
-
-            // Handle regular temp files
-            if (sourcePath.StartsWith(tempPathNormalized, StringComparison.OrdinalIgnoreCase))
-            {
-                var relativePath = sourcePath.Substring(tempPathNormalized.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                // Windows .NET temp path often has process-specific folders like "\1\", "\2\", etc.
-                // Strip the first folder if it's a single digit (process isolation folder)
-                var parts = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 1 && parts[0].Length <= 2 && int.TryParse(parts[0], out _))
-                {
-                    // Skip the first part (process folder) and rejoin
-                    return string.Join(Path.DirectorySeparatorChar.ToString(), parts.Skip(1));
-                }
-
-                return relativePath;
-            }
-
-            // Fallback: just return the filename
-            return Path.GetFileName(sourcePath);
-        }
-        catch
-        {
-            // If anything goes wrong, fall back to just the filename
-            return Path.GetFileName(sourcePath);
-        }
     }
 
     /// <summary>
