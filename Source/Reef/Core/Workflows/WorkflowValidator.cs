@@ -1,15 +1,16 @@
 using System.Text.Json.Nodes;
-using Reef.Core.ProfileDocuments;
-using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Workflows.Models;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
+using Reef.Core.Nodes.Exceptions;
 
 namespace Reef.Core.Workflows;
 
 public static class WorkflowValidator
 {
-    public static List<ProfileDocumentError> Validate(WorkflowCatalog catalog, WorkflowDocument document)
+    public static List<NodeError> Validate(WorkflowCatalog catalog, WorkflowDocument document)
     {
-        var errors = new List<ProfileDocumentError>();
+        var errors = new List<NodeError>();
         if (string.IsNullOrWhiteSpace(document.Name))
             errors.Add(new("Workflow: Name is required", null, "Name"));
 
@@ -27,7 +28,7 @@ public static class WorkflowValidator
                 continue;
             }
             nodes[node.Id] = (node, definition);
-            ProfileDocumentValidator.ValidateFields(definition.Fields, node.Config ?? new JsonObject(), node.Id, node.Name ?? definition.Label, errors);
+            NodeFieldValidator.Validate(definition.Fields, node.Config ?? new JsonObject(), node.Id, node.Name ?? definition.Label, errors);
         }
 
         if (!nodes.Values.Any(n => n.Definition.Group == WorkflowNodeGroups.Triggers))

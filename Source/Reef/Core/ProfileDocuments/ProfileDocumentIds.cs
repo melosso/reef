@@ -1,27 +1,16 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
 using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.PublicIds;
 
 namespace Reef.Core.ProfileDocuments;
 
-// Swaps the integer ids behind list fields in a document for Ulids on the way out and back on the way in.
-public sealed class ProfileDocumentIds(PublicIdMap ids)
+public sealed class ProfileDocumentIds(PublicIdMap ids, NodeFieldIds fieldIds)
 {
-    private readonly EmbeddedIds _embedded = new(ids);
-
-    private static readonly Dictionary<string, string> Sources = new()
-    {
-        ["connections"] = "Connections",
-        ["destinations"] = "Destinations",
-        ["email-destinations"] = "Destinations",
-        ["groups"] = "ProfileGroups",
-        ["templates"] = "QueryTemplates"
-    };
-
     public ProfileDocument ToPublic(ProfileCatalog catalog, ProfileDocument document) => Rewrite(catalog, document, toPublic: true);
 
-    // unknown ids stay as sent, so validation reports them on the field
     public ProfileDocument ToInternal(ProfileCatalog catalog, ProfileDocument document) => Rewrite(catalog, document, toPublic: false);
 
     public JsonObject ToPublic(JsonObject entity, string table)
@@ -46,32 +35,15 @@ public sealed class ProfileDocumentIds(PublicIdMap ids)
         return document;
     }
 
-    public void Rewrite(IEnumerable<NodeField> fields, JsonObject config, bool toPublic)
+    private void Rewrite(IEnumerable<NodeField> fields, JsonObject config, bool toPublic)
     {
-        foreach (var field in fields)
+        fieldIds.Rewrite(fields, config, toPublic);
+        foreach (var field in fields.Where(f => f.Key == ProfileDocumentService.OutputTargetsKey))
         {
-            var value = ConfigPath.Get(config, field.Key);
-            if (field.Columns is { } columns && value is JsonArray rows)
+            foreach (var row in (ConfigPath.Get(config, field.Key) as JsonArray ?? []).OfType<JsonObject>())
             {
-                foreach (var row in rows.OfType<JsonObject>())
-                {
-                    Rewrite(columns, row, toPublic);
-                    if (field.Key == ProfileDocumentService.OutputTargetsKey && row["Id"] is JsonValue rowId)
-                        row["Id"] = toPublic ? Public("ImportOutputTargets", rowId) : Internal("ImportOutputTargets", rowId);
-                }
-            }
-            else if (EmbeddedIds.Handles(field.Key) && value is JsonObject embedded)
-            {
-                _embedded.Rewrite(field.Key, embedded, toPublic);
-            }
-            else if (EmbeddedIds.Handles(field.Key) && value is JsonValue text && text.GetValueKind() == JsonValueKind.String)
-            {
-                var raw = text.GetValue<string>();
-                ConfigPath.Set(config, field.Key, (toPublic ? _embedded.ToPublic(field.Key, raw) : _embedded.ToInternal(field.Key, raw)) ?? raw);
-            }
-            else if (field.OptionsSource is { } source && Sources.TryGetValue(source, out var table) && value is JsonValue single)
-            {
-                ConfigPath.Set(config, field.Key, toPublic ? Public(table, single) : Internal(table, single));
+                if (row["Id"] is JsonValue rowId)
+                    row["Id"] = toPublic ? Public("ImportOutputTargets", rowId) : Internal("ImportOutputTargets", rowId);
             }
         }
     }

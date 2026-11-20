@@ -1,3 +1,6 @@
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
+using Reef.Core.Nodes.Exceptions;
 namespace Reef.Core.ProfileDocuments.Models;
 
 public class ProfileCatalog

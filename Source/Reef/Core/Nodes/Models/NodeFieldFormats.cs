@@ -1,4 +1,4 @@
-namespace Reef.Core.ProfileDocuments.Models;
+namespace Reef.Core.Nodes.Models;
 
 public static class NodeFieldFormats
 {

@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
-using Reef.Core.ProfileDocuments.Models;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
+using Reef.Core.Nodes.Exceptions;
 
 namespace Reef.Core.Workflows.Models;
 

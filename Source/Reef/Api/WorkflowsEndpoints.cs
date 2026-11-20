@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Reef.Core.ProfileDocuments.Exceptions;
+using Reef.Core.Nodes.Exceptions;
 using Reef.Core.Services;
 using Reef.Core.Workflows;
 using Reef.Core.Workflows.Catalogs;
@@ -78,7 +78,7 @@ public static class WorkflowsEndpoints
             await audit.LogAsync("Workflow", saved.Id ?? 0, id is null ? "Created" : "Updated", context.User.Identity?.Name ?? "Unknown", (string?)null, context);
             return id is null ? Results.Created("/api/workflows", ids.ToPublic(saved)) : Results.Ok(ids.ToPublic(saved));
         }
-        catch (ProfileDocumentValidationException ex)
+        catch (NodeValidationException ex)
         {
             return Results.BadRequest(new { error = ex.Message, errors = ex.Errors });
         }

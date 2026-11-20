@@ -1,10 +1,10 @@
-using Reef.Core.ProfileDocuments;
+using Reef.Core.Nodes;
 using Reef.Core.Workflows.Catalogs;
 using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows;
 
-public sealed class WorkflowIds(ProfileDocumentIds ids)
+public sealed class WorkflowIds(NodeFieldIds ids)
 {
     public WorkflowDocument ToPublic(WorkflowDocument document) => Rewrite(document, toPublic: true);
 

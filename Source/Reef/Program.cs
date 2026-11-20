@@ -369,6 +369,7 @@ public partial class Program
         // Import Profile services
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
+        services.AddSingleton<Reef.Core.Nodes.NodeFieldIds>();
         services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowService>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();

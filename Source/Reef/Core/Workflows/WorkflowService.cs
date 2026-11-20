@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Dapper;
 using Microsoft.Data.Sqlite;
-using Reef.Core.ProfileDocuments.Exceptions;
+using Reef.Core.Nodes.Exceptions;
 using Reef.Core.Workflows.Catalogs;
 using Reef.Core.Workflows.Models;
 
@@ -32,7 +32,7 @@ public class WorkflowService(DatabaseConfig config)
     {
         var errors = WorkflowValidator.Validate(WorkflowNodeCatalog.Catalog, document);
         if (errors.Count > 0)
-            throw new ProfileDocumentValidationException(errors);
+            throw new NodeValidationException(errors);
 
         var json = JsonSerializer.Serialize(new { document.Nodes, document.Edges }, Json);
         var values = new { id, Name = document.Name.Trim(), DocumentJson = json, Hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))),
