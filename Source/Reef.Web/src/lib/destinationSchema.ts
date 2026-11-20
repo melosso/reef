@@ -303,6 +303,12 @@ export function fromStored(type: string, json: string | null | undefined): Desti
     stored = json ? JSON.parse(json) : {};
   } catch {}
   const config = { ...defaultsFor(type), ...stored } as DestinationConfig;
+  for (const f of DESTINATION_FIELDS[type] ?? []) {
+    const value = config[f.key];
+    const option = typeof value === 'string' ? f.options?.find(([key]) => key.toLowerCase() === value.toLowerCase()) : undefined;
+    if (option) config[f.key] = option[0];
+  }
+  if (type === 'Email' && !stored.SmtpServer && typeof stored.SmtpHost === 'string') config.SmtpServer = stored.SmtpHost;
   if (type === 'Email' && !stored.EmailProvider)
     config.EmailProvider = stored.ResendApiKey ? 'Resend' : stored.SendGridApiKey ? 'SendGrid' : 'Smtp';
   if (type === 'Sftp') config._auth = stored.PrivateKey ? 'privatekey' : 'password';
