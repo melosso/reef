@@ -1277,8 +1277,12 @@ public class JobService
         var executions = await conn.ExecuteAsync(
             "UPDATE JobExecutions SET Status = @Failed, CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = @Running", args);
         var jobs = await conn.ExecuteAsync("UPDATE Jobs SET Status = @Idle, ModifiedAt = @Now WHERE Status = @Running", args);
-        if (executions + jobs > 0)
-            Log.Warning("Reset {Jobs} jobs and {Executions} executions interrupted by restart", jobs, executions);
+        var runs = await conn.ExecuteAsync(
+            "UPDATE ProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
+        runs += await conn.ExecuteAsync(
+            "UPDATE ImportProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
+        if (executions + jobs + runs > 0)
+            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} profile runs interrupted by restart", jobs, executions, runs);
     }
 
     /// <summary>
