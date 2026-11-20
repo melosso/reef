@@ -153,7 +153,8 @@ public static class WorkflowNodeCatalog
                     Options = [new("JSON", "JSON"), new("XML", "XML"), new("CSV", "CSV"), new("YAML", "YAML"), new(FilesFormat, "Files from input")] },
                 new() { Key = "FileName", Label = "File name", Placeholder = "{workflow}_{timestamp}.{format}" },
                 new() { Key = "RemoveOnFailure", Label = "Remove the files when the run fails", Kind = NodeFieldKinds.Bool,
-                    Tooltip = "Deletes the uploaded files if a later step fails, so no half finished output is left behind" }
+                    Tooltip = "Deletes the uploaded files if a later step fails, so no half finished output is left behind" },
+                ContinueOnError()
             ]),
             Node("email", "Send email", "mail", WorkflowNodeGroups.Deliver, "Sends each row, or each group of rows, as an email",
             [
@@ -209,13 +210,15 @@ public static class WorkflowNodeCatalog
                 new() { Key = "EnvironmentVariables", Label = "Environment variables", Kind = NodeFieldKinds.List, ShowWhen = new("Runs", Script),
                     Tooltip = "Names of the variables passed to the script" },
                 new() { Key = "TimeoutSeconds", Label = "Timeout in seconds", Kind = NodeFieldKinds.Number, Default = 30 },
-                new() { Key = "ContinueOnError", Label = "Continue on error", Kind = NodeFieldKinds.Bool,
-                    Tooltip = "A failure is recorded on the step and the run goes on" },
+                ContinueOnError(),
                 new() { Key = "SkipWhenEmpty", Label = "Skip when no rows arrive", Kind = NodeFieldKinds.Bool,
                     Tooltip = "Other steps skip on empty input by default, commands run unless this is on" }
             ])
         ]
     };
+
+    private static NodeField ContinueOnError() =>
+        new() { Key = "ContinueOnError", Label = "Continue on error", Kind = NodeFieldKinds.Bool, Tooltip = "A failure is recorded on the step and the run goes on" };
 
     private static NodeField Connection() =>
         new() { Key = "ConnectionId", Label = "Connection", Kind = NodeFieldKinds.Select, OptionsSource = "connections", Required = true };

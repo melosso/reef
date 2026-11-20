@@ -20,7 +20,6 @@ public class CommandNodeExecutor(ConnectionService connections, QueryExecutor qu
             Type = NodeConfig.Text(settings, "Runs"),
             Command = NodeConfig.Text(settings, "Command"),
             Timeout = int.TryParse(NodeConfig.Text(settings, "TimeoutSeconds"), out var timeout) && timeout > 0 ? timeout : 30,
-            ContinueOnError = NodeConfig.Flag(settings, "ContinueOnError"),
             Interpreter = NodeConfig.Text(settings, "Interpreter"),
             ScriptPathOrInline = NodeConfig.Text(settings, "Script"),
             ScriptIsInline = settings["InlineScript"]?.GetValueKind() != JsonValueKind.False,
@@ -37,11 +36,7 @@ public class CommandNodeExecutor(ConnectionService connections, QueryExecutor qu
         };
 
         var error = config.Type == "Script" ? await RunScriptAsync(config, processing, ct) : await RunCommandAsync(context, config, processing);
-        if (error is null)
-            return NodeResult.Main(input);
-        if (!config.ContinueOnError)
-            throw new NodeExecutionException(error);
-        return new NodeResult { Outputs = { [WorkflowPorts.Main] = input }, Warning = error };
+        return error is null ? NodeResult.Main(input) : throw new NodeExecutionException(error);
     }
 
     private async Task<string?> RunCommandAsync(NodeContext context, ProcessingConfig config, ProcessingContext processing)
