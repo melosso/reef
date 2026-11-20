@@ -375,6 +375,7 @@ public partial class Program
         services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();
         services.AddSingleton<Reef.Core.Workflows.Engine.WorkflowRunStore>();
         services.AddScoped<Reef.Core.Workflows.Engine.WorkflowEngine>();
+        services.AddScoped<Reef.Core.Workflows.Conversion.WorkflowConversionService>();
         foreach (var executor in typeof(Reef.Core.Workflows.Engine.INodeExecutor).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(Reef.Core.Workflows.Engine.INodeExecutor).IsAssignableFrom(t)))
             services.AddScoped(typeof(Reef.Core.Workflows.Engine.INodeExecutor), executor);
