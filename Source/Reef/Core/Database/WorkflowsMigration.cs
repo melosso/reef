@@ -48,6 +48,51 @@ public class WorkflowsMigration(string connectionString)
             );
             CREATE INDEX IF NOT EXISTS IX_NodeRuns_Execution ON NodeRuns (WorkflowExecutionId);
             """);
+        var deltaColumns = (await conn.QueryAsync("PRAGMA table_info(DeltaSyncState)")).Select(r => (string)r.name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (deltaColumns.Count > 0 && !deltaColumns.Contains("Scope"))
+            await ScopeDeltaSyncStateAsync(conn, deltaColumns.Contains("Ulid"));
         Log.Debug("Workflows migration completed");
+    }
+
+    // Workflow rows have no profile
+    private static async Task ScopeDeltaSyncStateAsync(SqliteConnection conn, bool hasUlid)
+    {
+        var columns = "Id, ProfileId, ReefId, RowHash, LastSeenExecutionId, FirstSeenAt, LastSeenAt, IsDeleted, DeletedAt" + (hasUlid ? ", Ulid" : "");
+        await conn.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            using var tx = conn.BeginTransaction();
+            await conn.ExecuteAsync($"""
+                CREATE TABLE DeltaSyncState_new (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ProfileId INTEGER NULL,
+                    Scope TEXT NULL,
+                    ReefId TEXT NOT NULL,
+                    RowHash TEXT NOT NULL,
+                    LastSeenExecutionId INTEGER NULL,
+                    FirstSeenAt TEXT NOT NULL DEFAULT (datetime('now')),
+                    LastSeenAt TEXT NOT NULL DEFAULT (datetime('now')),
+                    IsDeleted INTEGER NOT NULL DEFAULT 0,
+                    DeletedAt TEXT NULL,
+                    Ulid TEXT NULL,
+                    FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
+                    FOREIGN KEY (LastSeenExecutionId) REFERENCES ProfileExecutions(Id)
+                );
+                INSERT INTO DeltaSyncState_new ({columns}) SELECT {columns} FROM DeltaSyncState;
+                DROP TABLE DeltaSyncState;
+                ALTER TABLE DeltaSyncState_new RENAME TO DeltaSyncState;
+                CREATE INDEX IF NOT EXISTS idx_deltasync_profile_reefid ON DeltaSyncState(ProfileId, ReefId);
+                CREATE INDEX IF NOT EXISTS idx_deltasync_profile_hash ON DeltaSyncState(ProfileId, RowHash);
+                CREATE INDEX IF NOT EXISTS idx_deltasync_execution ON DeltaSyncState(LastSeenExecutionId);
+                CREATE INDEX IF NOT EXISTS idx_deltasync_deleted ON DeltaSyncState(ProfileId, IsDeleted);
+                CREATE INDEX IF NOT EXISTS idx_deltasync_scope_reefid ON DeltaSyncState(Scope, ReefId);
+                """, transaction: tx);
+            tx.Commit();
+        }
+        finally
+        {
+            await conn.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+        Log.Information("DeltaSyncState now accepts workflow scopes");
     }
 }

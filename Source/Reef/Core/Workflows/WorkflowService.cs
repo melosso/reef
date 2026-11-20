@@ -60,6 +60,7 @@ public class WorkflowService(DatabaseConfig config)
         return await db.ExecuteAsync(new CommandDefinition("""
             DELETE FROM NodeRuns WHERE WorkflowExecutionId IN (SELECT Id FROM WorkflowExecutions WHERE WorkflowId = @id);
             DELETE FROM WorkflowExecutions WHERE WorkflowId = @id;
+            DELETE FROM DeltaSyncState WHERE Scope LIKE 'workflow:' || @id || ':%';
             DELETE FROM Workflows WHERE Id = @id;
             """, new { id }, cancellationToken: ct)) > 0;
     }

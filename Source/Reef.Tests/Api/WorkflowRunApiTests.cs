@@ -45,11 +45,18 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         return (client, connectionId, destinationId);
     }
 
-    private async Task<JsonObject> RunAsync(HttpClient client, JsonArray nodes, JsonArray edges)
+    private async Task<JsonObject> RunAsync(HttpClient client, JsonArray nodes, JsonArray edges) =>
+        await RunAgainAsync(client, await CreateAsync(client, nodes, edges));
+
+    private async Task<string> CreateAsync(HttpClient client, JsonArray nodes, JsonArray edges)
     {
         var created = await client.PostAsJsonAsync("/api/workflows", new JsonObject { ["name"] = $"Run {Guid.NewGuid():N}", ["nodes"] = nodes, ["edges"] = edges }, _ct);
         created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(_ct));
-        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
+        return (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
+    }
+
+    private async Task<JsonObject> RunAgainAsync(HttpClient client, string id)
+    {
         var run = await client.PostAsync($"/api/workflows/{id}/run", null, _ct);
         run.StatusCode.Should().Be(HttpStatusCode.OK, await run.Content.ReadAsStringAsync(_ct));
         var runId = (await run.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
@@ -201,5 +208,41 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         var north = await File.ReadAllLinesAsync(files.Single(f => f.EndsWith("orders_North.csv")), _ct);
         north[0].Should().NotContain("Region");
         north.Skip(1).Count(l => l.Length > 0).Should().Be(2);
+    }
+    [Fact]
+    public async Task SmartSyncPassesChangedRowsAndSavesStateOnlyAfterSuccess()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        JsonArray Nodes(string after) =>
+        [
+            Node("start", "manual"),
+            Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Total FROM Orders" }),
+            Node("sync", "deltasync", new JsonObject { ["DeltaSyncReefIdColumn"] = "OrderId" }),
+            Node("after", "postprocess", new JsonObject
+            {
+                ["ConnectionId"] = connectionId, ["PostProcessType"] = "Query",
+                ["PostProcessConfig"] = new JsonObject { ["Command"] = after, ["Timeout"] = 30 }
+            })
+        ];
+        JsonArray Edges() => [Edge("start", "orders"), Edge("orders", "sync"), Edge("sync", "after")];
+
+        var failing = await CreateAsync(client, Nodes("INSERT INTO Nowhere VALUES (1)"), Edges());
+        (await RunAgainAsync(client, failing))["status"]!.GetValue<string>().Should().Be("Failed");
+        NodeRun(await RunAgainAsync(client, failing), "sync")["rowCount"]!.GetValue<int>().Should().Be(4);
+
+        var working = await CreateAsync(client, Nodes("SELECT 1"), Edges());
+        NodeRun(await RunAgainAsync(client, working), "sync")["rowCount"]!.GetValue<int>().Should().Be(4);
+        await using (var db = new SqliteConnection($"Data Source={_shopDb}"))
+        {
+            await db.OpenAsync(_ct);
+            await using var cmd = db.CreateCommand();
+            cmd.CommandText = "UPDATE Orders SET Total = 999 WHERE OrderId = 2";
+            await cmd.ExecuteNonQueryAsync(_ct);
+        }
+        var second = await RunAgainAsync(client, working);
+
+        second["status"]!.GetValue<string>().Should().Be("Success", second.ToJsonString());
+        NodeRun(second, "sync")["rowCount"]!.GetValue<int>().Should().Be(1);
+        Output(second, "sync")["items"]![0]!["OrderId"]!.GetValue<long>().Should().Be(2);
     }
 }

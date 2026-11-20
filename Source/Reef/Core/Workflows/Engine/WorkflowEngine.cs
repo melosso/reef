@@ -24,6 +24,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         run.Id = await runs.StartAsync(run, ct);
 
         var outputs = new Dictionary<(string Node, string Port), WorkflowItems>();
+        var commits = new List<Func<Task>>();
         var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "reef-workflows", run.Id.ToString())).FullName;
         try
         {
@@ -52,6 +53,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                         outputs[(node.Id, port)] = items;
                     record.Status = WorkflowRunStatus.Success;
                     record.ErrorMessage = result.Warning;
+                    if (result.OnRunSuccess is { } commit)
+                        commits.Add(commit);
                     record.RowCount = result.Outputs.Values.Sum(o => o.Items.Count);
                     record.OutputSampleJson = JsonSerializer.Serialize(result.Outputs.ToDictionary(o => o.Key, o => new
                     {
@@ -85,7 +88,20 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         }
 
         if (run.Status != WorkflowRunStatus.Failed)
+        {
             run.Status = WorkflowRunStatus.Success;
+            try
+            {
+                foreach (var commit in commits)
+                    await commit();
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Workflow {WorkflowId} could not save its run state", workflowId);
+                run.Status = WorkflowRunStatus.Failed;
+                run.ErrorMessage = $"Output was written but the Smart Sync state was not saved: {ex.Message}";
+            }
+        }
         run.CompletedAt = DateTime.UtcNow;
         await runs.CompleteAsync(run);
         return run;
