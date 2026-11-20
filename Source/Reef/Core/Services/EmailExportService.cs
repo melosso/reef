@@ -1122,6 +1122,14 @@ public class EmailExportService
     /// Generates document template attachments for approval flow and returns them as base64-encoded PreGeneratedAttachment objects
     /// This is called during approval creation so documents can be stored with the approval record
     /// </summary>
+    // held emails are sent later without the query rows, every attachment is stored with the approval
+    private List<PreGeneratedAttachment> PreGenerateAttachments(List<Dictionary<string, object>> rows, AttachmentConfig attachmentConfig, EmailExportConfig profile) =>
+        attachmentConfig.Mode == "Binary"
+            ? ResolveAttachmentsForBatch(rows, attachmentConfig, profile)
+                .Select(a => new PreGeneratedAttachment { Filename = a.Filename, ContentType = a.ContentType, ContentBase64 = Convert.ToBase64String(a.Content) })
+                .ToList()
+            : GenerateDocumentTemplateAttachmentsForApproval(rows, attachmentConfig, profile);
+
     private List<PreGeneratedAttachment> GenerateDocumentTemplateAttachmentsForApproval(
         List<Dictionary<string, object>> rows,
         AttachmentConfig attachmentConfig,
@@ -1493,9 +1501,9 @@ public class EmailExportService
                         var htmlBody = await _templateEngine.TransformAsync(groupRows, emailTemplate.Template);
 
                         // Generate document template attachments if configured (for approval flow)
-                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary")
                         {
-                            var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(groupRows, attachmentConfig, profile);
+                            var preGeneratedAttachments = PreGenerateAttachments(groupRows, attachmentConfig, profile);
                             attachmentConfig.GeneratedAttachments = preGeneratedAttachments;
 
                             // Check failsafe: if enabled and no attachments were generated, skip this email
@@ -1606,13 +1614,14 @@ public class EmailExportService
 
                         // Generate document template attachments if configured (for approval flow)
                         AttachmentConfig? rowAttachmentConfig = null;
-                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode == "DocumentTemplate")
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary")
                         {
                             // Clone the attachment config for this row
                             rowAttachmentConfig = new AttachmentConfig
                             {
                                 Enabled = attachmentConfig.Enabled,
                                 Mode = attachmentConfig.Mode,
+                                Binary = attachmentConfig.Binary,
                                 DocumentTemplate = attachmentConfig.DocumentTemplate,
                                 Deduplication = attachmentConfig.Deduplication,
                                 Failsafe = attachmentConfig.Failsafe,
@@ -1620,7 +1629,7 @@ public class EmailExportService
                                 MissingFileStrategy = attachmentConfig.MissingFileStrategy
                             };
 
-                            var preGeneratedAttachments = GenerateDocumentTemplateAttachmentsForApproval(
+                            var preGeneratedAttachments = PreGenerateAttachments(
                                 new List<Dictionary<string, object>> { row },
                                 rowAttachmentConfig,
                                 profile);
