@@ -223,21 +223,7 @@ public class EmailExportService
             var splits = new List<ProfileExecutionSplit>();
             var failures = new List<(string Recipient, string Error)>();
 
-            // Parse attachment configuration if present
-            AttachmentConfig? attachmentConfig = null;
-            if (!string.IsNullOrEmpty(profile.EmailAttachmentConfig))
-            {
-                try
-                {
-                    attachmentConfig = JsonSerializer.Deserialize<AttachmentConfig>(profile.EmailAttachmentConfig);
-                    Log.Debug("Parsed attachment configuration for profile {ProfileId}: enabled={Enabled}, mode={Mode}",
-                        profile.Id, attachmentConfig?.Enabled, attachmentConfig?.Mode);
-                }
-                catch (Exception ex)
-                {
-                    Log.Warning("Failed to parse attachment configuration for profile {ProfileId}: {Error}", profile.Id, ex.Message);
-                }
-            }
+            var attachmentConfig = AttachmentConfig.Parse(profile.EmailAttachmentConfig);
 
             // For email exports with EmailGroupBySplitKey: group by split key and send one email per group
             // For email exports without EmailGroupBySplitKey: use default behavior (check if same recipient)

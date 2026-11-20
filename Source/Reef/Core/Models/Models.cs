@@ -728,6 +728,19 @@ public class AttachmentConfig
     /// Pre-generated attachments for approval flow (documents generated before approval, stored as base64)
     /// </summary>
     public List<PreGeneratedAttachment>? GeneratedAttachments { get; set; }
+
+    public static AttachmentConfig? Parse(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<AttachmentConfig>(json);
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            throw new InvalidOperationException($"Attachment configuration is invalid: {ex.Message}", ex);
+        }
+    }
 }
 
 /// <summary>

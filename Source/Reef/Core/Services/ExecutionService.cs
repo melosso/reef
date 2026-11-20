@@ -396,19 +396,7 @@ public class ExecutionService
 
                         try
                         {
-                            // Parse attachment configuration if present
-                            AttachmentConfig? attachmentConfig = null;
-                            if (!string.IsNullOrEmpty(profile.EmailAttachmentConfig))
-                            {
-                                try
-                                {
-                                    attachmentConfig = System.Text.Json.JsonSerializer.Deserialize<AttachmentConfig>(profile.EmailAttachmentConfig);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Log.Warning("Failed to parse attachment configuration for profile {ProfileId}: {Error}", profile.Id, ex.Message);
-                                }
-                            }
+                            var attachmentConfig = AttachmentConfig.Parse(profile.EmailAttachmentConfig);
 
                             // Render emails without sending
                             var (renderedEmails, renderErrors) = await _emailExportService.RenderEmailsForApprovalAsync(
@@ -560,6 +548,9 @@ public class ExecutionService
                         emailTemplate,
                         rows);
 
+                    if (!emailSuccess && successCount + failureCount == 0)
+                        throw new InvalidOperationException(emailMessage ?? "Email export sent nothing");
+
                     stopwatch.Stop();
 
                     // Update execution with split summary (email sends = splits)
@@ -667,7 +658,8 @@ public class ExecutionService
                         1,
                         rows.Count,
                         stopwatch.ElapsedMilliseconds,
-                        "HTML");
+                        "HTML",
+                        ex.Message);
                     return (executionId, false, null, $"Email export error: {ex.Message}");
                 }
             }
@@ -2664,7 +2656,8 @@ public class ExecutionService
         int failureCount,
         int totalRowCount,
         long elapsedMs,
-        string? outputFormat = null)
+        string? outputFormat = null,
+        string? failureReason = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -2673,7 +2666,7 @@ public class ExecutionService
                        successCount == 0 ? "Failed" : "Partial";
 
         string? errorMessage = failureCount > 0
-            ? $"{failureCount} of {splitCount} splits failed"
+            ? failureReason ?? $"{failureCount} of {splitCount} splits failed"
             : null;
 
         const string sql = @"
