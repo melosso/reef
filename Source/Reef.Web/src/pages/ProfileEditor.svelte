@@ -9,7 +9,6 @@
   import { remember } from '../lib/recent.svelte';
   import { match, navigate, route, setLeaveGuard } from '../lib/router.svelte';
   import { confirm } from '../lib/confirm.svelte';
-  import { theme } from '../lib/theme.svelte';
   import { tooltip } from '../lib/tooltip';
   import CanvasToolbar from '../editor/CanvasToolbar.svelte';
   import FieldControl from '../editor/FieldControl.svelte';
@@ -352,7 +351,6 @@
           bind:nodes
           bind:edges
           {nodeTypes}
-          colorMode={theme.choice}
           nodesConnectable={false}
           deleteKey={null}
           minZoom={0.3}
