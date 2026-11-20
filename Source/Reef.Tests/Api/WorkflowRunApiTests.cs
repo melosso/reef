@@ -81,8 +81,8 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
                 Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Customer, Total FROM Orders ORDER BY OrderId" }),
                 Node("big", "if", new JsonObject { ["Column"] = "Total", ["Operator"] = "greaterThan", ["Value"] = "1000" }),
                 Node("small", "if", new JsonObject { ["Column"] = "Total", ["Operator"] = "lessThan", ["Value"] = "100" }),
-                Node("bigfile", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" }),
-                Node("smallfile", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" })
+                Node("bigfile", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" }),
+                Node("smallfile", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" })
             ],
             [Edge("start", "orders"), Edge("orders", "big"), Edge("orders", "small"), Edge("big", "bigfile", "true"), Edge("small", "smallfile", "true")]);
 
@@ -127,7 +127,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
             [
                 Node("start", "manual"),
                 Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT * FROM Missing" }),
-                Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "JSON" })
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "JSON" })
             ],
             [Edge("start", "orders"), Edge("orders", "file")]);
 
@@ -150,7 +150,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
                 Node("start", "manual"),
                 Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Customer FROM Orders ORDER BY OrderId" }),
                 Node("render", "template", new JsonObject { ["TemplateId"] = templateId }),
-                Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "Files" })
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "Files" })
             ],
             [Edge("start", "orders"), Edge("orders", "render"), Edge("render", "file")]);
 
@@ -164,19 +164,18 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
     public async Task ProcessNodesRunStatementsAroundTheQuery()
     {
         var (client, connectionId, _) = await SetupAsync();
-        JsonObject Hook(string prefix, string command, bool continueOnError = false) => new()
+        JsonObject Hook(string command, bool continueOnError = false) => new()
         {
-            ["ConnectionId"] = connectionId, [$"{prefix}Type"] = "Query",
-            [$"{prefix}Config"] = new JsonObject { ["Command"] = command, ["Timeout"] = 30, ["ContinueOnError"] = continueOnError }
+            ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = command, ["ContinueOnError"] = continueOnError
         };
 
         var run = await RunAsync(client,
             [
                 Node("start", "manual"),
-                Node("pre", "preprocess", Hook("PreProcess", "INSERT INTO RunLog VALUES ('pre')")),
+                Node("pre", "command", Hook("INSERT INTO RunLog VALUES ('pre')")),
                 Node("log", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Entry FROM RunLog" }),
-                Node("post", "postprocess", Hook("PostProcess", "INSERT INTO RunLog VALUES ('post {rowcount}')")),
-                Node("broken", "postprocess", Hook("PostProcess", "INSERT INTO Nowhere VALUES (1)", continueOnError: true))
+                Node("post", "command", Hook("INSERT INTO RunLog VALUES ('post {rowcount}')")),
+                Node("broken", "command", Hook("INSERT INTO Nowhere VALUES (1)", continueOnError: true))
             ],
             [Edge("start", "pre"), Edge("pre", "log"), Edge("log", "post"), Edge("post", "broken")]);
 
@@ -198,8 +197,8 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
             [
                 Node("start", "manual"),
                 Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Region FROM Orders" }),
-                Node("split", "split", new JsonObject { ["SplitKeyColumn"] = "Region", ["SplitFilenameTemplate"] = "orders_{splitkey}.{format}", ["ExcludeSplitKeyFromOutput"] = true }),
-                Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" })
+                Node("split", "split", new JsonObject { ["Column"] = "Region", ["FileName"] = "orders_{splitkey}.{format}", ["ExcludeColumn"] = true }),
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" })
             ],
             [Edge("start", "orders"), Edge("orders", "split"), Edge("split", "file")]);
 
@@ -218,12 +217,8 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         [
             Node("start", "manual"),
             Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Total FROM Orders" }),
-            Node("sync", "deltasync", new JsonObject { ["DeltaSyncReefIdColumn"] = "OrderId" }),
-            Node("after", "postprocess", new JsonObject
-            {
-                ["ConnectionId"] = connectionId, ["PostProcessType"] = "Query",
-                ["PostProcessConfig"] = new JsonObject { ["Command"] = after, ["Timeout"] = 30 }
-            })
+            Node("sync", "deltasync", new JsonObject { ["IdColumn"] = "OrderId" }),
+            Node("after", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = after })
         ];
         JsonArray Edges() => [Edge("start", "orders"), Edge("orders", "sync"), Edge("sync", "after")];
 
@@ -256,13 +251,13 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         var run = await RunAsync(client,
             [
                 Node("start", "manual"),
-                Node("fetch", "fetch", new JsonObject { ["SourceType"] = "Local", ["SourceFilePath"] = inbox, ["SourceFilePattern"] = "*.csv" }),
-                Node("parse", "parse", new JsonObject { ["SourceFormat"] = "CSV" }),
-                Node("map", "mapping", new JsonObject { ["ColumnMappingsJson"] = new JsonArray(
+                Node("fetch", "fetch", new JsonObject { ["From"] = "Local", ["Path"] = inbox, ["Pattern"] = "*.csv" }),
+                Node("parse", "parse", new JsonObject { ["Format"] = "CSV" }),
+                Node("map", "mapping", new JsonObject { ["Columns"] = new JsonArray(
                     new JsonObject { ["sourceColumn"] = "order_id", ["targetColumn"] = "OrderId", ["dataType"] = "int", ["isKeyColumn"] = true },
                     new JsonObject { ["sourceColumn"] = "customer_name", ["targetColumn"] = "CustomerName" }) }),
-                Node("write", "write", new JsonObject { ["TargetType"] = "Database", ["TargetConnectionId"] = connectionId, ["TargetTable"] = "ImportedOrders",
-                    ["LoadStrategy"] = "Upsert", ["UpsertKeyColumns"] = "OrderId" })
+                Node("write", "write", new JsonObject { ["To"] = "Database", ["ConnectionId"] = connectionId, ["Table"] = "ImportedOrders",
+                    ["Load"] = "Upsert", ["KeyColumns"] = "OrderId" })
             ],
             [Edge("start", "fetch"), Edge("fetch", "parse"), Edge("parse", "map"), Edge("map", "write")]);
 

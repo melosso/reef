@@ -8,18 +8,24 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows.Engine.Executors;
 
-public class ProcessNodeExecutor(ConnectionService connections, QueryExecutor queries, IScriptRunner scripts) : INodeExecutor
+public class CommandNodeExecutor(ConnectionService connections, QueryExecutor queries, IScriptRunner scripts) : INodeExecutor
 {
-    private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true };
-
-    public IReadOnlyCollection<string> Types { get; } = ["preprocess", "postprocess"];
+    public IReadOnlyCollection<string> Types { get; } = ["command"];
 
     public async Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var prefix = context.Node.Type == "preprocess" ? "PreProcess" : "PostProcess";
-        var settings = (context.Config[$"{prefix}Config"] as JsonObject)?.DeepClone().AsObject() ?? new JsonObject();
-        settings["Type"] = NodeConfig.Text(context.Config, $"{prefix}Type");
-        var config = settings.Deserialize<ProcessingConfig>(Json) ?? throw new NodeExecutionException("Processing settings are missing");
+        var settings = context.Config;
+        var config = new ProcessingConfig
+        {
+            Type = NodeConfig.Text(settings, "Runs"),
+            Command = NodeConfig.Text(settings, "Command"),
+            Timeout = int.TryParse(NodeConfig.Text(settings, "TimeoutSeconds"), out var timeout) && timeout > 0 ? timeout : 30,
+            ContinueOnError = NodeConfig.Flag(settings, "ContinueOnError"),
+            Interpreter = NodeConfig.Text(settings, "Interpreter"),
+            ScriptPathOrInline = NodeConfig.Text(settings, "Script"),
+            ScriptIsInline = settings["InlineScript"]?.GetValueKind() != JsonValueKind.False,
+            EnvAllowlist = (settings["EnvironmentVariables"] as JsonArray)?.Select(v => v?.ToString() ?? "").Where(v => v.Length > 0).ToList()
+        };
 
         var input = context.Input;
         var processing = new ProcessingContext
@@ -30,9 +36,7 @@ public class ProcessNodeExecutor(ConnectionService connections, QueryExecutor qu
             FileSizeBytes = input.Files.LastOrDefault()?.Size
         };
 
-        var error = config.Type.Equals("Script", StringComparison.OrdinalIgnoreCase)
-            ? await RunScriptAsync(config, processing, ct)
-            : await RunCommandAsync(context, config, processing);
+        var error = config.Type == "Script" ? await RunScriptAsync(config, processing, ct) : await RunCommandAsync(context, config, processing);
         if (error is null)
             return NodeResult.Main(input);
         if (!config.ContinueOnError)

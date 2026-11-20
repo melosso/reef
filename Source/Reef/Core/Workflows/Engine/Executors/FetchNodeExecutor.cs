@@ -1,3 +1,4 @@
+using Reef.Core.Models;
 using Reef.Core.Sources;
 using Reef.Core.Workflows.Models;
 using Reef.Helpers;
@@ -10,9 +11,23 @@ public class FetchNodeExecutor(DestinationSourceAdapter sourceAdapter) : INodeEx
 
     public async Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var profile = ImportNodeProfile.From("source", context.Config, context.Workflow.Name);
-        if (profile.SourceDestinationId.HasValue)
-            profile = await sourceAdapter.ResolveSourceConfigAsync(profile, ct);
+        var config = context.Config;
+        var profile = await sourceAdapter.ResolveSourceConfigAsync(new ImportSourceOptions
+        {
+            Name = context.Workflow.Name,
+            SourceType = NodeConfig.Text(config, "From"),
+            SourceConfig = config["Settings"]?.ToJsonString(),
+            SourceFilePath = NodeConfig.Text(config, "Path"),
+            SourceFilePattern = NodeConfig.Text(config, "Pattern") is { Length: > 0 } pattern ? pattern : null,
+            SourceFileSelection = NodeConfig.Text(config, "Pick") is { Length: > 0 } pick ? pick : "Latest",
+            ArchiveAfterImport = NodeConfig.Flag(config, "Archive"),
+            ArchivePath = NodeConfig.Text(config, "ArchiveFolder"),
+            HttpMethod = NodeConfig.Text(config, "Method") is { Length: > 0 } method ? method : "GET",
+            HttpBodyTemplate = NodeConfig.Text(config, "Body"),
+            HttpPaginationEnabled = NodeConfig.Flag(config, "Paginate"),
+            HttpPaginationConfig = NodeConfig.Text(config, "Pagination") is { Length: > 0 } pagination ? pagination : null,
+            HttpDataRootPath = NodeConfig.Text(config, "RecordsPath")
+        }, ct);
         var source = ImportSourceFactory.Create(profile.SourceType);
 
         var files = new List<WorkflowFile>();
@@ -36,7 +51,7 @@ public class FetchNodeExecutor(DestinationSourceAdapter sourceAdapter) : INodeEx
         };
     }
 
-    private static async Task ArchiveAsync(IImportSource source, Reef.Core.Models.ImportProfile profile, List<string> identifiers)
+    private static async Task ArchiveAsync(IImportSource source, ImportSourceOptions profile, List<string> identifiers)
     {
         foreach (var identifier in identifiers)
             await source.ArchiveAsync(profile, identifier);

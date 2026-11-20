@@ -12,24 +12,24 @@ public class WriteNodeExecutor(ConnectionService connections, DatabaseImportTarg
 
     public async Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var profile = ImportNodeProfile.From("target", context.Config, context.Workflow.Name);
-        var isLocal = string.Equals(profile.TargetType, "LocalFile", StringComparison.OrdinalIgnoreCase);
-        var connection = isLocal ? null : await connections.GetByIdAsync(profile.TargetConnectionId ?? 0)
+        var config = context.Config;
+        var isLocal = NodeConfig.Text(config, "To") == "LocalFile";
+        var connection = isLocal ? null : await connections.GetByIdAsync(NodeConfig.Id(config, "ConnectionId"))
             ?? throw new NodeExecutionException("Target connection not found");
-        var format = profile.LocalTargetFormat ?? "CSV";
+        var format = NodeConfig.Text(config, "FileFormat") is { Length: > 0 } fileFormat ? fileFormat : "CSV";
+        var filePath = NodeConfig.Text(config, "FilePath");
         var write = new ImportWriteContext
         {
-            TargetType = profile.TargetType ?? "Database",
+            TargetType = isLocal ? "LocalFile" : "Database",
             TargetConnection = connection,
-            TargetTable = profile.TargetTable ?? "",
-            LoadStrategy = profile.LoadStrategy,
-            UpsertKeyColumns = [.. (profile.UpsertKeyColumns ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
-            CommandTimeoutSeconds = profile.CommandTimeoutSeconds,
-            BatchSize = profile.BatchSize,
-            TargetFilePath = string.IsNullOrWhiteSpace(profile.LocalTargetPath) ? null
-                : FileNames.Generate(profile.LocalTargetPath, context.Workflow.Name, format.ToLowerInvariant(), context.ExecutionId),
+            TargetTable = NodeConfig.Text(config, "Table"),
+            LoadStrategy = NodeConfig.Text(config, "Load") is { Length: > 0 } load ? load : "Upsert",
+            UpsertKeyColumns = [.. NodeConfig.Text(config, "KeyColumns").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)],
+            CommandTimeoutSeconds = Number(config, "TimeoutSeconds", 120),
+            BatchSize = Number(config, "BatchSize", 500),
+            TargetFilePath = filePath.Length == 0 ? null : FileNames.Generate(filePath, context.Workflow.Name, format.ToLowerInvariant(), context.ExecutionId),
             TargetFormat = format,
-            TargetWriteMode = profile.LocalTargetWriteMode ?? "Overwrite"
+            TargetWriteMode = NodeConfig.Text(config, "ExistingFile") is { Length: > 0 } mode ? mode : "Overwrite"
         };
         IImportTarget target = isLocal ? localFile : database;
 
@@ -49,4 +49,7 @@ public class WriteNodeExecutor(ConnectionService connections, DatabaseImportTarg
             Warning = failed == 0 ? null : $"{failed} rows were not written, first: {firstError}"
         };
     }
+
+    private static int Number(System.Text.Json.Nodes.JsonObject config, string key, int fallback) =>
+        int.TryParse(NodeConfig.Text(config, key), out var value) && value > 0 ? value : fallback;
 }

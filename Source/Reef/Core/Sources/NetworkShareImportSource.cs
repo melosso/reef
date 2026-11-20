@@ -14,13 +14,13 @@ namespace Reef.Core.Sources;
 public class NetworkShareImportSource : IImportSource
 {
     public async Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
-        var basePath = GetBasePath(cfg, profile);
+        var cfg = ParseConfig(options);
+        var basePath = GetBasePath(cfg, options);
 
-        var files = ResolveFiles(basePath, profile.SourceFilePath, profile.SourceFilePattern, profile.SourceFileSelection);
+        var files = ResolveFiles(basePath, options.SourceFilePath, options.SourceFilePattern, options.SourceFileSelection);
         var result = new List<ImportSourceFile>();
 
         foreach (var path in files)
@@ -56,16 +56,16 @@ public class NetworkShareImportSource : IImportSource
     }
 
     public Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
-        var basePath = GetBasePath(cfg, profile);
+        var cfg = ParseConfig(options);
+        var basePath = GetBasePath(cfg, options);
 
         if (!Directory.Exists(basePath))
             return Task.FromResult(new List<SourceFileInfo>());
 
-        var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
+        var pattern = string.IsNullOrWhiteSpace(options.SourceFilePattern) ? "*" : options.SourceFilePattern;
         var infos = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly)
             .Select(p =>
             {
@@ -85,13 +85,13 @@ public class NetworkShareImportSource : IImportSource
     }
 
     public async Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default)
     {
         if (!File.Exists(fileIdentifier)) return false;
 
-        var archivePath = profile.ArchivePath;
+        var archivePath = options.ArchivePath;
         if (string.IsNullOrWhiteSpace(archivePath))
             archivePath = Path.Combine(Path.GetDirectoryName(fileIdentifier)!, "archive");
 
@@ -109,21 +109,21 @@ public class NetworkShareImportSource : IImportSource
     }
 
     public Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
-        var basePath = GetBasePath(cfg, profile);
+        var cfg = ParseConfig(options);
+        var basePath = GetBasePath(cfg, options);
 
         if (string.IsNullOrWhiteSpace(basePath))
             return Task.FromResult<(bool, string?)>((false, "No UNC path configured"));
 
-        if (!string.IsNullOrWhiteSpace(profile.SourceFilePath) && File.Exists(profile.SourceFilePath))
-            return Task.FromResult<(bool, string?)>((true, $"File exists: {profile.SourceFilePath}"));
+        if (!string.IsNullOrWhiteSpace(options.SourceFilePath) && File.Exists(options.SourceFilePath))
+            return Task.FromResult<(bool, string?)>((true, $"File exists: {options.SourceFilePath}"));
 
         if (Directory.Exists(basePath))
         {
-            var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
+            var pattern = string.IsNullOrWhiteSpace(options.SourceFilePattern) ? "*" : options.SourceFilePattern;
             var count = Directory.GetFiles(basePath, pattern, SearchOption.TopDirectoryOnly).Length;
             return Task.FromResult<(bool, string?)>((true, $"Share path accessible. {count} matching file(s) found."));
         }
@@ -157,12 +157,12 @@ public class NetworkShareImportSource : IImportSource
         };
     }
 
-    private static string GetBasePath(NetworkShareSourceConfig cfg, ImportProfile profile)
+    private static string GetBasePath(NetworkShareSourceConfig cfg, ImportSourceOptions options)
     {
-        if (!string.IsNullOrWhiteSpace(profile.SourceFilePath))
+        if (!string.IsNullOrWhiteSpace(options.SourceFilePath))
         {
-            var fi = new FileInfo(profile.SourceFilePath);
-            return fi.DirectoryName ?? profile.SourceFilePath;
+            var fi = new FileInfo(options.SourceFilePath);
+            return fi.DirectoryName ?? options.SourceFilePath;
         }
 
         var base_ = cfg.UncPath ?? cfg.BasePath ?? "";
@@ -173,9 +173,9 @@ public class NetworkShareImportSource : IImportSource
         return base_;
     }
 
-    private NetworkShareSourceConfig ParseConfig(ImportProfile profile)
+    private NetworkShareSourceConfig ParseConfig(ImportSourceOptions options)
     {
-        var json = profile.SourceConfig ?? "{}";
+        var json = options.SourceConfig ?? "{}";
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 

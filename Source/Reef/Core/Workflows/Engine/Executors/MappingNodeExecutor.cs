@@ -9,12 +9,21 @@ public class MappingNodeExecutor : INodeExecutor
 
     public Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var profile = ImportNodeProfile.From("mapping", context.Config, context.Workflow.Name);
-        var mappings = ImportRows.ParseColumnMappings(profile.ColumnMappingsJson);
-        var rows = context.Input.Items.Select(r => ImportRows.ApplyColumnMapping(r, mappings, profile, [])).OfType<Dictionary<string, object?>>().ToList();
-        var columns = mappings.Count == 0 ? null
-            : mappings.Where(m => !string.IsNullOrWhiteSpace(m.TargetColumn)).Select(m => new WorkflowColumn(m.TargetColumn,
-                string.IsNullOrWhiteSpace(m.DataType) ? "string" : m.DataType)).DistinctBy(c => c.Name).ToList();
+        var mappings = ImportRows.ParseColumnMappings(context.Config["Columns"]?.ToJsonString());
+        var keepOthers = NodeConfig.Flag(context.Config, "AutoMap");
+        var mapped = mappings.Select(m => m.SourceColumn).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rows = context.Input.Items.Select(row =>
+        {
+            var result = ImportRows.ApplyColumnMapping(row, mappings, false, false, []) ?? [];
+            if (keepOthers)
+                foreach (var (column, value) in row.Where(c => !mapped.Contains(c.Key)))
+                    result.TryAdd(column, value);
+            return result;
+        }).Where(r => r.Count > 0).ToList();
+
+        var columns = mappings.Select(m => new WorkflowColumn(m.TargetColumn, string.IsNullOrWhiteSpace(m.DataType) ? "string" : m.DataType)).DistinctBy(c => c.Name).ToList();
+        if (keepOthers)
+            columns.AddRange(context.Input.Columns.Where(c => !mapped.Contains(c.Name)));
         return Task.FromResult(NodeResult.Main(WorkflowItems.FromRows(rows, columns)));
     }
 }

@@ -172,23 +172,18 @@ public class ImportExecutionService(
         }
 
         // Phase 3: Fetch source files 
-        // Resolve SourceDestinationId → source config if needed
-        ImportProfile resolvedProfile = profile;
-        if (profile.SourceDestinationId.HasValue)
-        {
-            resolvedProfile = await sourceAdapter.ResolveSourceConfigAsync(profile, ct);
-        }
+        var sourceOptions = await sourceAdapter.ResolveSourceConfigAsync(ImportSourceOptions.From(profile), ct);
 
         List<ImportSourceFile> sourceFiles = null!;
         await TimedPhaseAsync("FetchSource", exec, phaseTimings, async () =>
         {
-            sourceFiles = await FetchWithRetryAsync(resolvedProfile, exec, ct);
+            sourceFiles = await FetchWithRetryAsync(profile, sourceOptions, exec, ct);
         }, ct);
 
         // Binary passthrough: skip all parse/map/write phases 
         if (profile.SourceFormat.Equals("Binary", StringComparison.OrdinalIgnoreCase))
         {
-            await ExecuteBinaryPassthroughAsync(profile, exec, resolvedProfile,
+            await ExecuteBinaryPassthroughAsync(profile, exec, sourceOptions,
                 sourceFiles, phaseTimings, ct);
             return;
         }
@@ -284,7 +279,7 @@ public class ImportExecutionService(
                     if (row.IsSkipped) { exec.RowsSkipped++; continue; }
 
                     // Apply column mapping
-                    var mapped = ImportRows.ApplyColumnMapping(row.Columns, columnMappings, profile, tableSchema);
+                    var mapped = ImportRows.ApplyColumnMapping(row.Columns, columnMappings, profile.AutoMapColumns, profile.SkipUnmappedColumns, tableSchema);
 
                     if (mapped is null) { exec.RowsSkipped++; continue; }
 
@@ -434,12 +429,12 @@ public class ImportExecutionService(
         {
             await TimedPhaseAsync("Archive", exec, phaseTimings, async () =>
             {
-                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
+                var source = ImportSourceFactory.Create(sourceOptions.SourceType);
                 foreach (var file in sourceFiles)
                 {
                     try
                     {
-                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
+                        await source.ArchiveAsync(sourceOptions, file.Identifier, ct);
                     }
                     catch (Exception ex)
                     {
@@ -507,7 +502,7 @@ public class ImportExecutionService(
     private async Task ExecuteBinaryPassthroughAsync(
         ImportProfileWithNames profile,
         ImportProfileExecution exec,
-        ImportProfile resolvedProfile,
+        ImportSourceOptions sourceOptions,
         List<ImportSourceFile> sourceFiles,
         Dictionary<string, long> phaseTimings,
         CancellationToken ct)
@@ -558,12 +553,12 @@ public class ImportExecutionService(
         {
             await TimedPhaseAsync("Archive", exec, phaseTimings, async () =>
             {
-                var source = ImportSourceFactory.Create(resolvedProfile.SourceType);
+                var source = ImportSourceFactory.Create(sourceOptions.SourceType);
                 foreach (var file in sourceFiles)
                 {
                     try
                     {
-                        await source.ArchiveAsync(resolvedProfile, file.Identifier, ct);
+                        await source.ArchiveAsync(sourceOptions, file.Identifier, ct);
                     }
                     catch (Exception ex)
                     {
@@ -578,10 +573,11 @@ public class ImportExecutionService(
 
     private async Task<List<ImportSourceFile>> FetchWithRetryAsync(
         ImportProfile profile,
+        ImportSourceOptions sourceOptions,
         ImportProfileExecution exec,
         CancellationToken ct)
     {
-        var source = ImportSourceFactory.Create(profile.SourceType);
+        var source = ImportSourceFactory.Create(sourceOptions.SourceType);
         var maxAttempts = Math.Max(1, profile.RetryCount);
         Exception? lastEx = null;
 
@@ -590,7 +586,7 @@ public class ImportExecutionService(
             ct.ThrowIfCancellationRequested();
             try
             {
-                var files = await source.FetchAsync(profile, ct);
+                var files = await source.FetchAsync(sourceOptions, ct);
                 return files;
             }
             catch (Exception ex)

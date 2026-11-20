@@ -8,18 +8,18 @@ namespace Reef.Core.Sources;
 
 /// <summary>
 /// Reads files from an Azure Blob Storage container.
-/// Configuration is read from profile.SourceConfig JSON using the same shape as AzureBlobConfig.
+/// Configuration is read from options.SourceConfig JSON using the same shape as AzureBlobConfig.
 /// </summary>
 public class AzureBlobImportSource : IImportSource
 {
     public async Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
+        var cfg = ParseConfig(options);
         var container = new BlobContainerClient(cfg.ConnectionString, cfg.ContainerName);
 
-        var keys = await ResolveKeysAsync(container, cfg, profile.SourceFileSelection, profile.SourceFilePattern, ct);
+        var keys = await ResolveKeysAsync(container, cfg, options.SourceFileSelection, options.SourceFilePattern, ct);
         var result = new List<ImportSourceFile>();
 
         foreach (var key in keys)
@@ -48,12 +48,12 @@ public class AzureBlobImportSource : IImportSource
     }
 
     public async Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
+        var cfg = ParseConfig(options);
         var container = new BlobContainerClient(cfg.ConnectionString, cfg.ContainerName);
-        var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
+        var pattern = string.IsNullOrWhiteSpace(options.SourceFilePattern) ? "*" : options.SourceFilePattern;
         var prefix = cfg.Prefix ?? "";
 
         var infos = new List<SourceFileInfo>();
@@ -76,17 +76,17 @@ public class AzureBlobImportSource : IImportSource
     }
 
     public Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default) => Task.FromResult(false);
 
     public async Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
         try
         {
-            var cfg = ParseConfig(profile);
+            var cfg = ParseConfig(options);
             if (string.IsNullOrWhiteSpace(cfg.ConnectionString))
                 return (false, "ConnectionString is not configured");
 
@@ -134,9 +134,9 @@ public class AzureBlobImportSource : IImportSource
         };
     }
 
-    private AzureBlobSourceConfig ParseConfig(ImportProfile profile)
+    private AzureBlobSourceConfig ParseConfig(ImportSourceOptions options)
     {
-        var json = profile.SourceConfig ?? "{}";
+        var json = options.SourceConfig ?? "{}";
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
@@ -152,7 +152,7 @@ public class AzureBlobImportSource : IImportSource
             ConnectionString = Get("connectionString", "ConnectionString") ?? "",
             ContainerName = Get("container", "Container", "containerName", "ContainerName") ?? "",
             Prefix = Get("path", "Path", "blobPrefix", "BlobPrefix") ?? "",
-            ExactKey = profile.SourceFilePath
+            ExactKey = options.SourceFilePath
         };
     }
 

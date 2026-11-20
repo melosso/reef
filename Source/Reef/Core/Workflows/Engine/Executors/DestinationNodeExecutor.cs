@@ -14,14 +14,14 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
 
     public async Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var destination = await destinations.GetByIdForExecutionAsync(NodeConfig.Id(context.Config, "OutputDestinationId"), ct)
+        var destination = await destinations.GetByIdForExecutionAsync(NodeConfig.Id(context.Config, "DestinationId"), ct)
             ?? throw new NodeExecutionException("Destination not found");
         if (!destination.IsActive)
             throw new NodeExecutionException($"Destination {destination.Name} is not active");
 
         var input = context.Input;
-        var format = NodeConfig.Text(context.Config, "OutputFormat");
-        var template = NodeConfig.Text(context.Config, "FilenameTemplate");
+        var format = NodeConfig.Text(context.Config, "Format");
+        var template = NodeConfig.Text(context.Config, "FileName");
         var uploads = new List<WorkflowFile>();
         if (format == WorkflowNodeCatalog.FilesFormat)
         {

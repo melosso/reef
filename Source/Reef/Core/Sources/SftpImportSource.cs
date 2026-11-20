@@ -11,11 +11,11 @@ namespace Reef.Core.Sources;
 public class SftpImportSource : IImportSource
 {
     public async Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
-        var files = await ResolveRemoteFilesAsync(config, profile.SourceFileSelection, profile.SourceFilePattern, ct);
+        var config = ParseConfig(options);
+        var files = await ResolveRemoteFilesAsync(config, options.SourceFileSelection, options.SourceFilePattern, ct);
         var result = new List<ImportSourceFile>();
 
         foreach (var remotePath in files)
@@ -42,10 +42,10 @@ public class SftpImportSource : IImportSource
     }
 
     public async Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
+        var config = ParseConfig(options);
         var remotePath = config.RemotePath ?? "/";
 
         return await Task.Run(() =>
@@ -56,7 +56,7 @@ public class SftpImportSource : IImportSource
             {
                 if (!client.Exists(remotePath)) return new List<SourceFileInfo>();
 
-                var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
+                var pattern = string.IsNullOrWhiteSpace(options.SourceFilePattern) ? "*" : options.SourceFilePattern;
                 return client.ListDirectory(remotePath)
                     .Where(f => !f.IsDirectory && MatchesPattern(f.Name, pattern))
                     .Select(f => new SourceFileInfo
@@ -77,14 +77,14 @@ public class SftpImportSource : IImportSource
     }
 
     public async Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
-        var archivePath = string.IsNullOrWhiteSpace(profile.ArchivePath)
+        var config = ParseConfig(options);
+        var archivePath = string.IsNullOrWhiteSpace(options.ArchivePath)
             ? Path.Combine(Path.GetDirectoryName(fileIdentifier)!, "archive").Replace('\\', '/')
-            : profile.ArchivePath.Replace('\\', '/');
+            : options.ArchivePath.Replace('\\', '/');
 
         var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
         var newName = Path.GetFileNameWithoutExtension(fileIdentifier)
@@ -118,10 +118,10 @@ public class SftpImportSource : IImportSource
     }
 
     public async Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
+        var config = ParseConfig(options);
 
         return await Task.Run(() =>
         {
@@ -234,10 +234,10 @@ public class SftpImportSource : IImportSource
         return new SftpClient(connectionInfo);
     }
 
-    private SftpConfig ParseConfig(ImportProfile profile)
+    private SftpConfig ParseConfig(ImportSourceOptions options)
     {
         // Try inline SourceConfig first, then fall back to stored destination config
-        var json = profile.SourceConfig ?? "{}";
+        var json = options.SourceConfig ?? "{}";
         using var doc = System.Text.Json.JsonDocument.Parse(json);
         var root = doc.RootElement;
 
@@ -256,7 +256,7 @@ public class SftpImportSource : IImportSource
             PrivateKey = Get("privateKey"),
             PrivateKeyPassphrase = Get("privateKeyPassphrase"),
             RemotePath = Get("path") ?? Get("remotePath"),
-            ExactFile = profile.SourceFilePath
+            ExactFile = options.SourceFilePath
         };
     }
 

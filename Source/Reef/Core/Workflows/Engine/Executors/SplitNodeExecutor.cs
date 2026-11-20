@@ -9,12 +9,12 @@ public class SplitNodeExecutor : INodeExecutor
 
     public Task<NodeResult> ExecuteAsync(NodeContext context, CancellationToken ct)
     {
-        var column = NodeConfig.Text(context.Config, "SplitKeyColumn");
+        var column = NodeConfig.Text(context.Config, "Column");
         var input = context.Input;
         if (input.Items.Count > 0 && !input.Items[0].ContainsKey(column))
             throw new NodeExecutionException($"Split column {column} is not in the rows, found {string.Join(", ", input.Items[0].Keys)}");
-        var split = new WorkflowSplit(column, NodeConfig.Text(context.Config, "SplitFilenameTemplate") is { Length: > 0 } name ? name : null,
-            NodeConfig.Flag(context.Config, "ExcludeSplitKeyFromOutput"));
+        var split = new WorkflowSplit(column, NodeConfig.Text(context.Config, "FileName") is { Length: > 0 } name ? name : null,
+            NodeConfig.Flag(context.Config, "ExcludeColumn"));
         return Task.FromResult(NodeResult.Main(new WorkflowItems { Columns = input.Columns, Items = input.Items, Files = input.Files, Split = split }));
     }
 }

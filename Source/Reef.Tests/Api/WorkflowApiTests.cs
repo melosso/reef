@@ -36,7 +36,7 @@ public class WorkflowApiTests(ReefApiFactory factory)
             Node("start", "manual"),
             Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT * FROM Orders" }, 200),
             Node("big", "if", new JsonObject { ["Column"] = "Total", ["Operator"] = "greaterThan", ["Value"] = "100" }, 400),
-            Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" }, 600)),
+            Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" }, 600)),
         ["edges"] = new JsonArray(Edge("start", "orders"), Edge("orders", "big"), Edge("big", "file", fromPort: "true"))
     };
 

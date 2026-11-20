@@ -8,7 +8,8 @@ public static class ImportRows
     public static Dictionary<string, object?>? ApplyColumnMapping(
         Dictionary<string, object?> sourceColumns,
         List<ImportColumnMapping> mappings,
-        ImportProfile profile,
+        bool autoMapColumns,
+        bool skipUnmappedColumns,
         List<TargetColumnInfo> schema)
     {
         var result = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -33,12 +34,12 @@ public static class ImportRows
                 result[m.TargetColumn] = CastValue(value, m.DataType);
             }
         }
-        else if (profile.AutoMapColumns)
+        else if (autoMapColumns)
         {
             var schemaNames = schema.Select(s => s.ColumnName).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var (col, val) in sourceColumns)
             {
-                if (schemaNames.Contains(col) || !profile.SkipUnmappedColumns)
+                if (schemaNames.Contains(col) || !skipUnmappedColumns)
                     result[col] = val;
             }
 
