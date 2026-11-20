@@ -618,7 +618,7 @@ public class EmailExportService
                 }
 
                 // SMTP provider with multiple HTML documents
-                using var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
+                var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
 
                 try
                 {
@@ -685,16 +685,30 @@ public class EmailExportService
                         AttachFilesToMessage(builder, attachments);
                         message.Body = builder.ToMessageBody();
 
-                        await client.SendAsync(message);
-                        sendCount++;
-
-                        Log.Information("Email {Number} sent to {Recipient} from profile {ProfileId}",
-                            i + 1, MaskEmailForLog(recipient), profile.Id);
+                        try
+                        {
+                            await client.SendAsync(message);
+                            sendCount++;
+                            Log.Information("Email {Number} sent to {Recipient} from profile {ProfileId}",
+                                i + 1, MaskEmailForLog(recipient), profile.Id);
+                        }
+                        catch (SmtpCommandException ex)
+                        {
+                            Log.Warning("Email {Number} to {Recipient} was rejected: {Error}", i + 1, MaskEmailForLog(recipient), ex.Message);
+                        }
+                        catch (Exception ex) when (ex is ServiceNotConnectedException or SmtpProtocolException or IOException)
+                        {
+                            Log.Warning("Email {Number} to {Recipient} failed, reconnecting: {Error}", i + 1, MaskEmailForLog(recipient), ex.Message);
+                            client.Dispose();
+                            client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
+                        }
                     }
                 }
                 finally
                 {
-                    await client.DisconnectAsync(true);
+                    if (client.IsConnected)
+                        await client.DisconnectAsync(true);
+                    client.Dispose();
                 }
 
                 Log.Information("{Count} email(s) sent successfully from split HTML rendering", sendCount);

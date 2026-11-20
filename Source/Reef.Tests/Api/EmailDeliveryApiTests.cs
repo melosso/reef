@@ -48,6 +48,21 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task RejectedRecipientDoesNotStopOtherDocuments()
+    {
+        var recipients = 0;
+        await using var smtp = new FakeSmtpServer(line => line.StartsWith("RCPT", StringComparison.OrdinalIgnoreCase) && Interlocked.Increment(ref recipients) == 2 ? "550 5.1.1 mailbox unavailable" : null);
+        var admin = await factory.CreateAdminClientAsync();
+        var mail = new System.Text.Json.Nodes.JsonObject { ["UseHardcodedRecipients"] = true, ["EmailRecipientsHardcoded"] = "ops@example.com" };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(5), mail,
+            "{{ for row in rows }}<!doctype html><html><body>{{ row.Id }}</body></html>{{ end }}");
+
+        await EmailProfiles.RunAsync(admin, profileId);
+
+        smtp.Messages.Should().HaveCount(4);
+    }
+
+    [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {
         await using var smtp = new FakeSmtpServer();
