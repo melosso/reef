@@ -7,6 +7,8 @@ namespace Reef.Core.PublicIds;
 // Serializes integer id properties as Ulids and reads Ulids back, so the api never shows or accepts a guessable id.
 public sealed class PublicIdJsonModifier(PublicIdMap ids)
 {
+    private readonly EmbeddedIds _embedded = new(ids);
+
     public void Apply(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind != JsonTypeInfoKind.Object) return;
@@ -20,6 +22,12 @@ public sealed class PublicIdJsonModifier(PublicIdMap ids)
             if (declaringType == typeof(ReorderOutputTargetsRequest) && clrName == nameof(ReorderOutputTargetsRequest.Ids))
             {
                 typeInfo.Properties[i] = IdList(typeInfo, property, "ImportOutputTargets");
+                continue;
+            }
+
+            if (property.PropertyType == typeof(string) && EmbeddedIds.Handles(clrName))
+            {
+                typeInfo.Properties[i] = Embedded(typeInfo, property, clrName);
                 continue;
             }
 
@@ -54,6 +62,18 @@ public sealed class PublicIdJsonModifier(PublicIdMap ids)
                 set(owner, underlying == typeof(int) ? (object)checked((int)id) : id);
             };
 
+        return replacement;
+    }
+
+    private JsonPropertyInfo Embedded(JsonTypeInfo typeInfo, JsonPropertyInfo original, string clrName)
+    {
+        var replacement = typeInfo.CreateJsonPropertyInfo(typeof(string), original.Name);
+        replacement.Order = original.Order;
+        if (original.Get is { } get)
+            replacement.Get = owner => _embedded.ToPublic(clrName, (string?)get(owner));
+        if (original.Set is { } set)
+            replacement.Set = (owner, value) => set(owner, _embedded.ToInternal(clrName, (string?)value)
+                ?? (value is null ? null : throw new JsonException($"{original.Name} does not match a known id")));
         return replacement;
     }
 
