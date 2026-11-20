@@ -7,7 +7,7 @@ RUN --mount=type=cache,id=npm,target=/root/.npm npm ci --no-audit --no-fund
 COPY Source/Reef.Web/ ./
 RUN npx vite build --outDir /web/app --emptyOutDir
 
-FROM mcr.microsoft.com/dotnet/sdk:11.0.100-rc.2 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 
 # Copy solution and project files first to leverage layer caching
@@ -38,7 +38,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
     dotnet publish Reef.csproj -c Release -o /app/publish /p:UseAppHost=false /p:SkipWebBuild=true
 
 # Stage 2: Runtime
-FROM mcr.microsoft.com/dotnet/aspnet:11.0.0-rc.2 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 WORKDIR /app
 
 # Install sqlite3 and curl for runtime healthchecks and basic tools

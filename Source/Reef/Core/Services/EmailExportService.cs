@@ -1,5 +1,6 @@
 using System.Text.Json;
 using MimeKit;
+using MailKit;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Reef.Core.Models;
@@ -812,7 +813,7 @@ public class EmailExportService
                 await client.ConnectAsync(smtpHost, port, secureSocketOptions);
 
                 // Authenticate based on auth type (only if server advertises auth capability)
-                if (client.Capabilities.HasFlag(SmtpCapabilities.Authentication))
+                if (client.Capabilities.Contains(SmtpCapability.Authentication))
                 {
                     var authType = emailConfig.SmtpAuthType ?? "Basic";
                     if (authType == "OAuth2")
@@ -896,7 +897,7 @@ public class EmailExportService
     private static async Task AuthenticateSmtpAsync(SmtpClient client, EmailDestinationConfiguration emailConfig)
     {
         // Only authenticate if server advertises auth capability
-        if (!client.Capabilities.HasFlag(SmtpCapabilities.Authentication))
+        if (!client.Capabilities.Contains(SmtpCapability.Authentication))
         {
             Log.Debug("SMTP server does not advertise authentication capability");
             return;
