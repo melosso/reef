@@ -822,6 +822,10 @@ public class EmailExportService
         {
             return ValidateAttachmentLimits(ResolveDocumentTemplateAttachments(rows, attachmentConfig, profile), attachmentConfig);
         }
+        else if (attachmentConfig.Mode == "DirectPath" && attachmentConfig.DirectPath is { } directPath)
+        {
+            return ValidateAttachmentLimits(ResolveDirectPathAttachments(rows, directPath, attachmentConfig, profile), attachmentConfig);
+        }
         else if (attachmentConfig.Mode != "Binary" || attachmentConfig.Binary == null)
         {
             Log.Debug("Attachment mode '{Mode}' not supported yet", attachmentConfig.Mode);
@@ -1110,7 +1114,7 @@ public class EmailExportService
     /// </summary>
     // held emails are sent later without the query rows, every attachment is stored with the approval
     private List<PreGeneratedAttachment> PreGenerateAttachments(List<Dictionary<string, object>> rows, AttachmentConfig attachmentConfig, EmailExportConfig profile) =>
-        attachmentConfig.Mode == "Binary"
+        attachmentConfig.Mode != "DocumentTemplate"
             ? ResolveAttachmentsForBatch(rows, attachmentConfig, profile)
                 .Select(a => new PreGeneratedAttachment { Filename = a.Filename, ContentType = a.ContentType, ContentBase64 = Convert.ToBase64String(a.Content) })
                 .ToList()
@@ -1324,6 +1328,28 @@ public class EmailExportService
     /// <summary>
     /// Validates attachment limits (count and size)
     /// </summary>
+    // files are read from a subfolder of the exports folder only, profile editors cannot read other files
+    private List<EmailAttachment> ResolveDirectPathAttachments(List<Dictionary<string, object>> rows, DirectPathAttachmentMode mode, AttachmentConfig config, EmailExportConfig profile)
+    {
+        Reef.Helpers.SafePath.EnsureContainedRelative(mode.BaseDirectory, "Attachment folder");
+        var folder = Reef.Helpers.SafePath.Combine(Reef.Helpers.ExportRoot.Path, mode.BaseDirectory);
+        var attachments = new List<EmailAttachment>();
+        foreach (var row in rows)
+        {
+            var name = _variableResolver.ResolveTemplate(mode.FilenameTemplate, row, profile.Name, profile.Id.ToString());
+            var path = Reef.Helpers.SafePath.Combine(folder, name);
+            if (!File.Exists(path))
+            {
+                if (config.MissingFileStrategy == "Fail")
+                    throw new InvalidOperationException($"Attachment file '{name}' was not found.");
+                Log.Warning("Attachment file {File} was not found for profile {ProfileId}, sending without it", name, profile.Id);
+                continue;
+            }
+            attachments.Add(new EmailAttachment { Filename = name, Content = File.ReadAllBytes(path), ContentType = MimeTypes.GetMimeType(name) });
+        }
+        return attachments;
+    }
+
     private const long MaxAttachmentBytes = 25_000_000;
 
     private static List<EmailAttachment> ValidateAttachmentLimits(List<EmailAttachment> attachments, AttachmentConfig config)
@@ -1481,7 +1507,7 @@ public class EmailExportService
                         var htmlBody = await _templateEngine.TransformAsync(groupRows, emailTemplate.Template);
 
                         // Generate document template attachments if configured (for approval flow)
-                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary")
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary" or "DirectPath")
                         {
                             var preGeneratedAttachments = PreGenerateAttachments(groupRows, attachmentConfig, profile);
                             attachmentConfig.GeneratedAttachments = preGeneratedAttachments;
@@ -1594,7 +1620,7 @@ public class EmailExportService
 
                         // Generate document template attachments if configured (for approval flow)
                         AttachmentConfig? rowAttachmentConfig = null;
-                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary")
+                        if (attachmentConfig != null && attachmentConfig.Enabled && attachmentConfig.Mode is "DocumentTemplate" or "Binary" or "DirectPath")
                         {
                             // Clone the attachment config for this row
                             rowAttachmentConfig = new AttachmentConfig
@@ -1602,6 +1628,7 @@ public class EmailExportService
                                 Enabled = attachmentConfig.Enabled,
                                 Mode = attachmentConfig.Mode,
                                 Binary = attachmentConfig.Binary,
+                                DirectPath = attachmentConfig.DirectPath,
                                 DocumentTemplate = attachmentConfig.DocumentTemplate,
                                 Deduplication = attachmentConfig.Deduplication,
                                 Failsafe = attachmentConfig.Failsafe,

@@ -128,6 +128,40 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         execution["status"]!.GetValue<string>().Should().Be("Partial");
     }
 
+    private static System.Text.Json.Nodes.JsonObject DirectPath(string folder) => new()
+    {
+        ["EmailAttachmentConfig"] = $$$"""{"Enabled":true,"Mode":"DirectPath","DirectPath":{"BaseDirectory":"{{{folder}}}","FilenameTemplate":"invoice-{Id}.txt"}}"""
+    };
+
+    [Fact]
+    public async Task DirectPathAttachesFilesFromTheExportsFolder()
+    {
+        var folder = $"attach-{Guid.NewGuid():N}";
+        Directory.CreateDirectory(Path.Combine(Reef.Helpers.ExportRoot.Path, folder));
+        await File.WriteAllTextAsync(Path.Combine(Reef.Helpers.ExportRoot.Path, folder, "invoice-1.txt"), "invoice one", TestContext.Current.CancellationToken);
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(2), DirectPath(folder));
+
+        await EmailProfiles.RunAsync(admin, profileId);
+
+        smtp.Messages.Should().HaveCount(2);
+        smtp.Messages.Should().ContainSingle(m => m.Contains("invoice-1.txt"));
+    }
+
+    [Fact]
+    public async Task DirectPathOutsideTheExportsFolderFailsTheRun()
+    {
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(1), DirectPath("../.."));
+
+        var execution = await EmailProfiles.RunAsync(admin, profileId);
+
+        execution["status"]!.GetValue<string>().Should().Be("Failed");
+        smtp.Messages.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {

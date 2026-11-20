@@ -34,17 +34,7 @@ public static class ExecutionsEndpoints
         HttpContext context,
         [FromServices] ExecutionService service)
     {
-        var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Production";
-        string outputRoot;
-        if (environment == "Development")
-        {
-            var projectDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
-            outputRoot = Path.Combine(projectDir, "exports");
-        }
-        else
-        {
-            outputRoot = Path.Combine(AppContext.BaseDirectory, "exports");
-        }
+        var outputRoot = ExportRoot.Path;
 
         var execution = await service.GetExecutionByIdAsync(id);
         if (execution == null || string.IsNullOrWhiteSpace(execution.OutputPath))
