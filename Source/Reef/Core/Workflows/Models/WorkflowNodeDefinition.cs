@@ -15,7 +15,6 @@ public class WorkflowNodeDefinition
     public string[] Outputs { get; init; } = WorkflowPorts.Single;
     public List<NodeField> Fields { get; init; } = new();
 
-    // Output ports that follow the node config, such as one port per switch case.
     [JsonIgnore]
     public Func<JsonObject, string[]>? OutputsFor { get; init; }
 

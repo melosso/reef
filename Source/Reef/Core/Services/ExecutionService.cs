@@ -848,7 +848,7 @@ public class ExecutionService
             }
 
             // Determine file extension based on actual output format
-            var fileExtension = GetFileExtension(actualOutputFormat);
+            var fileExtension = OutputFormats.Extension(actualOutputFormat);
 
             var filename = GenerateFilename(profile, fileExtension, executionId);
 
@@ -988,7 +988,7 @@ public class ExecutionService
                 {
                     // No template - use standard formatter
                     Log.Debug("Formatting results as {OutputFormat} using standard formatter", actualOutputFormat);
-                    var formatter = GetFormatter(actualOutputFormat);
+                    var formatter = OutputFormats.Formatter(actualOutputFormat);
                     var (formatSuccess, formatterFileSize, formatError) = await formatter.FormatAsync(rows, tempFilePath);
 
                     if (!formatSuccess)
@@ -2255,7 +2255,7 @@ public class ExecutionService
             }
 
             // Generate filename for this split
-            var extension = GetFileExtension(actualOutputFormat);
+            var extension = OutputFormats.Extension(actualOutputFormat);
             var filename = GenerateSplitFilename(
                 profile.SplitFilenameTemplate!,
                 profile.Name,
@@ -2311,7 +2311,7 @@ public class ExecutionService
             else
             {
                 // Use standard formatter
-                var formatter = GetFormatter(actualOutputFormat);
+                var formatter = OutputFormats.Formatter(actualOutputFormat);
                 var (formatSuccess, fileSize, formatError) = await formatter.FormatAsync(filteredRows, tempFilePath);
 
                 if (!formatSuccess)
@@ -2713,39 +2713,6 @@ public class ExecutionService
 
         var splits = await connection.QueryAsync<ProfileExecutionSplit>(sql, new { ExecutionId = executionId });
         return splits.ToList();
-    }
-
-    /// <summary>
-    /// Get formatter instance based on output format
-    /// </summary>
-    private IFormatter GetFormatter(string outputFormat)
-    {
-        return outputFormat.ToUpperInvariant() switch
-        {
-            "JSON" => new JsonFormatter(),
-            "XML" => new XmlFormatter(),
-            "CSV" => new CsvFormatter(),
-            "YAML" => new YamlFormatter(),
-            _ => new JsonFormatter() // Default to JSON
-        };
-    }
-
-    /// <summary>
-    /// Get file extension based on output format
-    /// </summary>
-    private string GetFileExtension(string outputFormat)
-    {
-        return outputFormat.ToLowerInvariant() switch
-        {
-            "json" => "json",
-            "xml" => "xml",
-            "csv" => "csv",
-            "yaml" => "yaml",
-            "pdf" => "pdf",
-            "docx" => "docx",
-            "odt" => "odt",
-            _ => "txt"
-        };
     }
 
     /// <summary>

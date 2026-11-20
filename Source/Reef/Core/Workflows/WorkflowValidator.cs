@@ -58,7 +58,6 @@ public static class WorkflowValidator
         return errors;
     }
 
-    // Kahn's algorithm, the nodes it cannot order sit on a cycle or after one.
     private static List<string> Looped(IEnumerable<string> ids, List<WorkflowEdge> edges)
     {
         var incoming = ids.ToDictionary(id => id, id => edges.Count(e => e.To == id));

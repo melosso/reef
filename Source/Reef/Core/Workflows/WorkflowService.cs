@@ -28,7 +28,6 @@ public class WorkflowService(DatabaseConfig config)
         return row is null ? null : ToDocument(row);
     }
 
-    // Throws KeyNotFoundException for an unknown id and SqliteException on a duplicate name.
     public async Task<WorkflowDocument> SaveAsync(int? id, WorkflowDocument document, int? userId, CancellationToken ct = default)
     {
         var errors = WorkflowValidator.Validate(WorkflowNodeCatalog.Catalog, document);
@@ -58,7 +57,11 @@ public class WorkflowService(DatabaseConfig config)
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);
-        return await db.ExecuteAsync(new CommandDefinition("DELETE FROM Workflows WHERE Id = @id", new { id }, cancellationToken: ct)) > 0;
+        return await db.ExecuteAsync(new CommandDefinition("""
+            DELETE FROM NodeRuns WHERE WorkflowExecutionId IN (SELECT Id FROM WorkflowExecutions WHERE WorkflowId = @id);
+            DELETE FROM WorkflowExecutions WHERE WorkflowId = @id;
+            DELETE FROM Workflows WHERE Id = @id;
+            """, new { id }, cancellationToken: ct)) > 0;
     }
 
     private static WorkflowDocument ToDocument(WorkflowRow row)

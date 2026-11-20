@@ -372,6 +372,11 @@ public partial class Program
         services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowService>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();
+        services.AddSingleton<Reef.Core.Workflows.Engine.WorkflowRunStore>();
+        services.AddScoped<Reef.Core.Workflows.Engine.WorkflowEngine>();
+        foreach (var executor in typeof(Reef.Core.Workflows.Engine.INodeExecutor).Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(Reef.Core.Workflows.Engine.INodeExecutor).IsAssignableFrom(t)))
+            services.AddScoped(typeof(Reef.Core.Workflows.Engine.INodeExecutor), executor);
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();

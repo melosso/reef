@@ -4,6 +4,7 @@ using Reef.Core.ProfileDocuments.Exceptions;
 using Reef.Core.Services;
 using Reef.Core.Workflows;
 using Reef.Core.Workflows.Catalogs;
+using Reef.Core.Workflows.Engine;
 using Reef.Core.Workflows.Models;
 
 namespace Reef.Api;
@@ -20,6 +21,29 @@ public static class WorkflowsEndpoints
         group.MapPost("/", Create);
         group.MapPut("/{id:ulid(Workflows)}", Update);
         group.MapDelete("/{id:ulid(Workflows)}", Delete);
+        group.MapPost("/{id:ulid(Workflows)}/run", Run);
+        group.MapGet("/{id:ulid(Workflows)}/executions", (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) => runs.ListAsync(id, 50, ct));
+        app.MapGet("/api/workflow-executions/{id:ulid(WorkflowExecutions)}", async (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) =>
+            await runs.GetAsync(id, ct) is { } run ? Results.Ok(run) : Results.NotFound()).RequireAuthorization();
+    }
+
+    private static async Task<IResult> Run(int id, [FromQuery] string? trigger, HttpContext context, [FromServices] WorkflowEngine engine,
+        [FromServices] AuditService audit)
+    {
+        try
+        {
+            var run = await engine.RunAsync(id, trigger, ct: CancellationToken.None);
+            await audit.LogAsync("Workflow", id, "Run", context.User.Identity?.Name ?? "Unknown", (string?)null, context);
+            return Results.Ok(run);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Results.NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { message = ex.Message });
+        }
     }
 
     private static async Task<IResult> List([FromServices] WorkflowService service, [FromServices] WorkflowIds ids, CancellationToken ct) =>

@@ -7,7 +7,7 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows.Catalogs;
 
-// Workflow nodes reuse the profile step fields, so a linear profile maps onto a graph without renaming config keys.
+// Reuses profile step config keys
 public static class WorkflowNodeCatalog
 {
     public const string Fallback = "fallback";
