@@ -541,7 +541,7 @@ public class ExecutionService
                         }
                     }
 
-                    // Send emails directly (approval not required)
+                    // shortcut: every row and attachment blob is in memory during the send, about 1.4 times the blob total, stream rows when runs exceed a few gigabytes
                     var (emailSuccess, emailMessage, successCount, failureCount, splits, emailFailures) = await _emailExportService.ExportToEmailAsync(
                         EmailExportConfig.FromProfile(profile),
                         emailDestination,
