@@ -126,8 +126,7 @@ public class DestinationService
             switch (destinationType)
             {
                 case DestinationType.Local:
-                    // Use BasePath or default to "exports" if not set
-                    var basePath = config.BasePath ?? "exports";
+                    var basePath = config.BasePath ?? Reef.Helpers.ExportRoot.Path;
 
                     // Handle relative path resolution
                     if (config.UseRelativePath)
@@ -981,7 +980,7 @@ public class DestinationService
 
     private async Task<string> TestLocalDestination(DestinationConfiguration config, string fileName, byte[] content)
     {
-        var basePath = config.BasePath ?? "exports";
+        var basePath = config.BasePath ?? Reef.Helpers.ExportRoot.Path;
 
         // Handle relative path resolution
         if (config.UseRelativePath)

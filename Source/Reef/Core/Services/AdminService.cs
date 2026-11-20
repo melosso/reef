@@ -64,7 +64,7 @@ public class AdminService
 
             // Get exports directory size
             long exportsSize = 0;
-            var exportsPath = Path.Combine(AppContext.BaseDirectory, "exports");
+            var exportsPath = Reef.Helpers.ExportRoot.Path;
             if (Directory.Exists(exportsPath))
             {
                 exportsSize = Directory.GetFiles(exportsPath, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length);

@@ -251,7 +251,7 @@ public class HealthCheckService : BackgroundService
 
         try
         {
-            var exportsPath = Path.Combine(AppContext.BaseDirectory, "exports");
+            var exportsPath = Reef.Helpers.ExportRoot.Path;
 
             if (!Directory.Exists(exportsPath))
             {

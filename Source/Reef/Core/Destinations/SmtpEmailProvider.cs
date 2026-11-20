@@ -119,7 +119,15 @@ public class SmtpEmailProvider : IEmailProvider
                     var token = await OAuthTokenProvider.GetTokenAsync(config, ct);
                     if (string.IsNullOrEmpty(token))
                         throw new InvalidOperationException("OAuth2 access token is required");
-                    await client.AuthenticateAsync(new SaslMechanismOAuth2(config.OauthUsername ?? username ?? config.FromAddress, token), ct);
+                    try
+                    {
+                        await client.AuthenticateAsync(new SaslMechanismOAuth2(config.OauthUsername ?? username ?? config.FromAddress, token), ct);
+                    }
+                    catch (AuthenticationException)
+                    {
+                        OAuthTokenProvider.Forget(config);
+                        throw;
+                    }
                     break;
                 default:
                     // relays that advertise no auth accept mail without login

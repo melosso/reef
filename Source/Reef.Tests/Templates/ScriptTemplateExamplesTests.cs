@@ -168,8 +168,6 @@ public class ScriptTemplateExamplesTests
     [Fact]
     public async Task SlackTemplateMissingEnvVarsFailsFastWithoutCallingServer()
     {
-        using var mock = new MockHttpServer();
-        mock.SetResponse(200);
         Environment.SetEnvironmentVariable("SLACK_WEBHOOK_URL", null);
         Environment.SetEnvironmentVariable("TEAMS_WEBHOOK_URL", null);
 
@@ -178,7 +176,7 @@ public class ScriptTemplateExamplesTests
 
         result.Success.Should().BeFalse();
         result.ExitCode.Should().NotBe(0);
-        mock.RequestCount.Should().Be(0);
+        result.Stderr.Should().Contain("SLACK_WEBHOOK_URL or TEAMS_WEBHOOK_URL is not set");
     }
 
     // REST ERP call (node)

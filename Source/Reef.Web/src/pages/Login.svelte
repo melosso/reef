@@ -251,7 +251,4 @@
   footer {
     font-size: 12px;
   }
-  footer a {
-    color: var(--muted);
-  }
 </style>

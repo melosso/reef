@@ -4,7 +4,7 @@ using MimeKit;
 
 namespace Reef.Core.Destinations;
 
-// Sends the emails of a run over one smtp connection and retries temporary 4xx replies with backoff.
+// shortcut dropped reply retry can duplicate
 public sealed class SmtpSender(EmailDestinationConfiguration config) : IAsyncDisposable
 {
     private const int MessagesPerConnection = 100;
@@ -54,7 +54,7 @@ public sealed class SmtpSender(EmailDestinationConfiguration config) : IAsyncDis
         }
         catch (Exception ex) when (ex is IOException or SmtpProtocolException or ServiceNotConnectedException)
         {
-            // the server already dropped the connection
+            // Server already dropped the connection
         }
         _client.Dispose();
         _client = null;

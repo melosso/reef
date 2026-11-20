@@ -33,6 +33,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
     <PackageReference Include="MimeKit" />
     <PackageReference Include="MySqlConnector" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
     <PackageReference Include="NCrontab" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="Otp.NET" />
