@@ -2,12 +2,12 @@ import { Activity, CalendarClock, Database, FileCode, FolderTree, LayoutDashboar
 
 export const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/profiles', label: 'Profiles', icon: Workflow },
   { href: '/connections', label: 'Connections', icon: Database },
   { href: '/destinations', label: 'Destinations', icon: Send },
-  { href: '/templates', label: 'Templates', icon: FileCode },
-  { href: '/jobs', label: 'Jobs', icon: CalendarClock },
-  { href: '/executions', label: 'Executions', icon: Activity },
-  { href: '/approvals', label: 'Approvals', icon: MailCheck },
   { href: '/groups', label: 'Groups', icon: FolderTree },
+  { href: '/templates', label: 'Templates', icon: FileCode },
+  { href: '/profiles', label: 'Profiles', icon: Workflow },
+  { href: '/jobs', label: 'Jobs', icon: CalendarClock },
+  { href: '/approvals', label: 'Approvals', icon: MailCheck },
+  { href: '/executions', label: 'Executions', icon: Activity },
 ];
