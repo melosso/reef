@@ -113,6 +113,22 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task OversizedAttachmentFailsOnlyItsOwnEmail()
+    {
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        const string query = "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 3) " +
+            "SELECT i AS Id, 'user' || i || '@example.com' AS Email, randomblob(CASE WHEN i = 2 THEN 26214400 ELSE 16 END) AS Doc, 'file-' || i || '.bin' AS Fname FROM n";
+        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailAttachmentConfig"] = """{"Enabled":true,"Mode":"Binary","Binary":{"ContentColumnName":"Doc","FilenameColumnName":"Fname"}}""" };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), query, mail);
+
+        var execution = await EmailProfiles.RunAsync(admin, profileId);
+
+        smtp.Recipients.Should().BeEquivalentTo("user1@example.com", "user3@example.com");
+        execution["status"]!.GetValue<string>().Should().Be("Partial");
+    }
+
+    [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {
         await using var smtp = new FakeSmtpServer();

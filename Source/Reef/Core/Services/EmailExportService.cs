@@ -820,7 +820,7 @@ public class EmailExportService
 
         if (attachmentConfig.Mode == "DocumentTemplate")
         {
-            return ResolveDocumentTemplateAttachments(rows, attachmentConfig, profile);
+            return ValidateAttachmentLimits(ResolveDocumentTemplateAttachments(rows, attachmentConfig, profile), attachmentConfig);
         }
         else if (attachmentConfig.Mode != "Binary" || attachmentConfig.Binary == null)
         {
@@ -1324,22 +1324,16 @@ public class EmailExportService
     /// <summary>
     /// Validates attachment limits (count and size)
     /// </summary>
-    private void ValidateAttachmentLimits(List<EmailAttachment> attachments, AttachmentConfig config)
+    private const long MaxAttachmentBytes = 25_000_000;
+
+    private static List<EmailAttachment> ValidateAttachmentLimits(List<EmailAttachment> attachments, AttachmentConfig config)
     {
         if (attachments.Count > config.MaxAttachmentsPerEmail)
-        {
-            Log.Warning("Attachment count ({Count}) exceeds limit ({Max}). Truncating.",
-                attachments.Count, config.MaxAttachmentsPerEmail);
-            // In production, might want to fail or skip, but for now we'll keep first N
-        }
-
-        const long MAX_EMAIL_SIZE = 25_000_000; // 25 MB
-        long totalSize = attachments.Sum(a => (long)a.Content.Length);
-        if (totalSize > MAX_EMAIL_SIZE)
-        {
-            Log.Warning("Total attachment size ({Size} bytes) exceeds email limit ({Max} bytes)",
-                totalSize, MAX_EMAIL_SIZE);
-        }
+            throw new InvalidOperationException($"Email has {attachments.Count} attachments, the limit is {config.MaxAttachmentsPerEmail}.");
+        var totalSize = attachments.Sum(a => (long)a.Content.Length);
+        if (totalSize > MaxAttachmentBytes)
+            throw new InvalidOperationException($"Attachments total {totalSize / 1_000_000.0:F1} MB, the limit is {MaxAttachmentBytes / 1_000_000} MB.");
+        return attachments;
     }
 
     /// <summary>
