@@ -297,7 +297,14 @@
               >Insert example</button
             >{/if}
         </label>
-        <textarea id="c-string" rows="4" spellcheck="false" autocomplete="off" bind:value={form.connectionString}></textarea>
+        <textarea
+          id="c-string"
+          rows="4"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder={form.id ? 'Saved and encrypted. Type a new connection string to replace it.' : ''}
+          bind:value={form.connectionString}
+        ></textarea>
       </div>
       <div class="field">
         <label for="c-tags">Tags</label><input

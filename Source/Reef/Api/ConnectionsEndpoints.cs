@@ -28,7 +28,7 @@ public static class ConnectionsEndpoints
         try
         {
             var connections = await service.GetAllAsync();
-            return Results.Ok(connections);
+            return Results.Ok(connections.Select(Masked));
         }
         catch (Exception ex)
         {
@@ -42,7 +42,7 @@ public static class ConnectionsEndpoints
         try
         {
             var connection = await service.GetByIdAsync(id);
-            return connection != null ? Results.Ok(connection) : Results.NotFound();
+            return connection != null ? Results.Ok(Masked(connection)) : Results.NotFound();
         }
         catch (Exception ex)
         {
@@ -88,6 +88,11 @@ public static class ConnectionsEndpoints
         try
         {
             connection.Id = id;
+            if (string.IsNullOrEmpty(connection.ConnectionString))
+            {
+                if (await service.GetByIdAsync(id) is not { } stored) return Results.NotFound();
+                connection.ConnectionString = stored.ConnectionString;
+            }
             var success = await service.UpdateAsync(connection);
 
             if (success)
@@ -97,7 +102,7 @@ public static class ConnectionsEndpoints
 
                 // Retrieve and return the updated connection
                 var updatedConnection = await service.GetByIdAsync(id);
-                return Results.Ok(updatedConnection);
+                return updatedConnection is null ? Results.NotFound() : Results.Ok(Masked(updatedConnection));
             }
 
             return Results.NotFound();
@@ -141,7 +146,10 @@ public static class ConnectionsEndpoints
     {
         try
         {
-            var (success, message, responseTimeMs) = await service.TestConnectionAsync(request.Type, request.ConnectionString);
+            var connectionString = request.ConnectionString;
+            if (string.IsNullOrEmpty(connectionString) && request.ConnectionId is { } storedId && await service.GetByIdAsync(storedId) is { } stored)
+                connectionString = stored.ConnectionString;
+            var (success, message, responseTimeMs) = await service.TestConnectionAsync(request.Type, connectionString);
 
             // If a ConnectionId is provided, update LastTestedAt and LastTestResult
             if (request.ConnectionId.HasValue)
@@ -171,5 +179,12 @@ public static class ConnectionsEndpoints
                 ResponseTimeMs = 0
             });
         }
+    }
+
+    // stored connection strings contain credentials, the api never returns them
+    private static Connection Masked(Connection connection)
+    {
+        connection.ConnectionString = "";
+        return connection;
     }
 }
