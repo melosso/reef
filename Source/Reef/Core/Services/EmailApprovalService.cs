@@ -217,11 +217,7 @@ public class EmailApprovalService
             if (approval != null)
             {
                 // Update ProfileExecution approval status
-                const string updateExecutionSql = @"
-                    UPDATE ProfileExecutions
-                    SET ApprovalStatus = 'Approved', ApprovedAt = @ApprovedAt
-                    WHERE PendingEmailApprovalId = @ApprovalId
-                ";
+                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql + "; UPDATE ProfileExecutions SET ApprovedAt = @ApprovedAt WHERE Id = (SELECT ProfileExecutionId FROM PendingEmailApprovals WHERE Id = @ApprovalId)";
 
                 await connection.ExecuteAsync(updateExecutionSql, new
                 {
@@ -284,11 +280,7 @@ public class EmailApprovalService
             if (approval != null)
             {
                 // Update ProfileExecution approval status
-                const string updateExecutionSql = @"
-                    UPDATE ProfileExecutions
-                    SET ApprovalStatus = 'Rejected'
-                    WHERE PendingEmailApprovalId = @ApprovalId
-                ";
+                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
 
                 await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
 
@@ -393,11 +385,7 @@ public class EmailApprovalService
                 }
 
                 // Update ProfileExecution approval status
-                const string updateExecutionSql = @"
-                    UPDATE ProfileExecutions
-                    SET ApprovalStatus = 'Skipped'
-                    WHERE PendingEmailApprovalId = @ApprovalId
-                ";
+                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
 
                 await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
 

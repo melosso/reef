@@ -512,7 +512,7 @@ public class ExecutionService
                                 : $"All {duplicateCount} emails already pending approval (duplicates skipped)";
 
                             await UpdateExecutionRecordAsync(executionId, "Success", rows.Count, null, stopwatch.ElapsedMilliseconds,
-                                executionMessage);
+                                null, executionMessage);
 
                             // Update profile's last executed timestamp
                             await UpdateProfileLastExecutedAsync(profileId);

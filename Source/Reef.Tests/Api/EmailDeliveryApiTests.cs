@@ -191,6 +191,26 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task RunApprovalStatusReflectsAllItsEmails()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailApprovalRequired"] = true, ["EmailApprovalRoles"] = "[\"Admin\"]" };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(3), mail);
+        var execution = await EmailProfiles.RunAsync(admin, profileId);
+        var approvals = (await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/email-approvals/profile/{profileId}", ct))!["data"]!.AsArray();
+
+        foreach (var approval in approvals.Take(1))
+            (await admin.PostAsJsonAsync($"/api/email-approvals/{approval!["guid"]}/reject", new { reason = "wrong" }, ct)).EnsureSuccessStatusCode();
+        var after = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/executions/{execution["id"]}", ct);
+
+        execution["errorMessage"].Should().BeNull();
+        execution["outputMessage"]!.GetValue<string>().Should().Be("3 emails pending approval");
+        after!["approvalStatus"]!.GetValue<string>().Should().Be("Pending");
+    }
+
+    [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {
         await using var smtp = new FakeSmtpServer();
