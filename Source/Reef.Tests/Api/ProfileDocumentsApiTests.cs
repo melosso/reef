@@ -147,4 +147,38 @@ public class ProfileDocumentsApiTests(ReefApiFactory factory)
         var read = await client.GetFromJsonAsync<JsonObject>($"/api/profile-documents/import/{id}", _ct);
         read!["nodes"]!.AsArray().Single(n => n!["type"]!.GetValue<string>() == "target")!["x"]!.GetValue<double>().Should().Be(640);
     }
+    [Fact]
+    public async Task ProfileSmartSyncExportsOnlyChangedRowsOnTheSecondRun()
+    {
+        var (client, connectionId, shopDb) = await SetupAsync();
+        var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
+        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
+        var document = new JsonObject
+        {
+            ["kind"] = "export",
+            ["settings"] = new JsonObject { ["Name"] = $"Sync {Guid.NewGuid():N}", ["IsEnabled"] = true },
+            ["nodes"] = new JsonArray(
+                Node("source", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT * FROM Orders" }),
+                Node("deltasync", new JsonObject { ["DeltaSyncReefIdColumn"] = "OrderId" }),
+                Node("destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "JSON" }))
+        };
+        var created = await client.PostAsJsonAsync("/api/profile-documents/export", document, _ct);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(_ct));
+        var id = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
+
+        var first = await EmailProfiles.RunAsync(client, id);
+        await using (var db = new SqliteConnection($"Data Source={shopDb}"))
+        {
+            await db.OpenAsync(_ct);
+            await using var cmd = db.CreateCommand();
+            cmd.CommandText = "UPDATE Orders SET Customer = 'Bravo' WHERE OrderId = 2";
+            await cmd.ExecuteNonQueryAsync(_ct);
+        }
+        var second = await EmailProfiles.RunAsync(client, id);
+
+        first["status"]!.GetValue<string>().Should().Be("Success", first.ToJsonString());
+        first["rowCount"]!.GetValue<int>().Should().Be(2);
+        second["status"]!.GetValue<string>().Should().Be("Success", second.ToJsonString());
+        second["rowCount"]!.GetValue<int>().Should().Be(1);
+    }
 }
