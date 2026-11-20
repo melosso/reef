@@ -5,6 +5,7 @@ using Reef.Core.Services;
 using Reef.Core.TemplateEngines;
 using Reef.Core.Workflows.Exceptions;
 using Reef.Core.Workflows.Models;
+using Reef.Helpers;
 
 namespace Reef.Core.Workflows.Engine.Executors;
 
@@ -21,27 +22,31 @@ public class TemplateNodeExecutor(QueryTemplateService templates, ScribanTemplat
         if (!template.IsActive)
             return new NodeResult { Outputs = { [WorkflowPorts.Main] = input }, Warning = $"Template {template.Name} is not active" };
 
-        var rows = input.Items.Select(r => r.ToDictionary(c => c.Key, c => c.Value ?? DBNull.Value)).ToList();
         var extension = OutputFormats.Extension(template.OutputFormat);
-        string path;
-        if (template.Type == QueryTemplateType.DocumentTemplate)
+        var files = new List<WorkflowFile>();
+        foreach (var batch in input.Batches())
         {
-            var generated = await documents.TransformAsync(rows, template.Template,
-                new Dictionary<string, object> { ["profile_name"] = context.Workflow.Name, ["execution_id"] = context.ExecutionId.ToString() }, null, useTemporaryDirectory: true);
-            path = Path.Combine(context.WorkFolder, Path.GetFileName(generated));
-            File.Move(generated, path, overwrite: true);
+            var name = batch.SplitKey is null
+                ? $"{context.Node.Id}_{Guid.NewGuid():N}.{extension}"
+                : FileNames.Generate(input.Split!.FilenameTemplate, context.Workflow.Name, extension, context.ExecutionId, batch.SplitKey);
+            var path = SafePath.Combine(Path.Combine(context.WorkFolder, context.Node.Id), name);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (template.Type == QueryTemplateType.DocumentTemplate)
+            {
+                var generated = await documents.TransformAsync(batch.Rows, template.Template,
+                    new Dictionary<string, object> { ["profile_name"] = context.Workflow.Name, ["execution_id"] = context.ExecutionId.ToString() }, null, useTemporaryDirectory: true);
+                File.Move(generated, path, overwrite: true);
+            }
+            else
+            {
+                var content = template.Type is >= QueryTemplateType.ForXmlRaw and <= QueryTemplateType.ForJsonPath
+                    ? await NativeAsync(context, template)
+                    : await scriban.TransformAsync(batch.Rows, template.Template);
+                await File.WriteAllTextAsync(path, content, ct);
+            }
+            files.Add(new WorkflowFile(path, Path.GetFileName(path), OutputFormats.MimeType(extension), new FileInfo(path).Length));
         }
-        else
-        {
-            var content = template.Type is >= QueryTemplateType.ForXmlRaw and <= QueryTemplateType.ForJsonPath
-                ? await NativeAsync(context, template)
-                : await scriban.TransformAsync(rows, template.Template);
-            path = Path.Combine(context.WorkFolder, $"{context.Node.Id}_{Guid.NewGuid():N}.{extension}");
-            await File.WriteAllTextAsync(path, content, ct);
-        }
-
-        var file = new WorkflowFile(path, Path.GetFileName(path), OutputFormats.MimeType(extension), new FileInfo(path).Length);
-        return NodeResult.Main(new WorkflowItems { Columns = input.Columns, Items = input.Items, Files = [file] });
+        return NodeResult.Main(input.WithFiles(files));
     }
 
     // Native templates rerun the upstream query

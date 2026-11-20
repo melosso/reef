@@ -2,14 +2,15 @@ namespace Reef.Core.Workflows.Engine;
 
 public static class FileNames
 {
-    public static string Generate(string? template, string workflowName, string extension, int executionId)
+    public static string Generate(string? template, string workflowName, string extension, int executionId, string? splitKey = null)
     {
         if (string.IsNullOrWhiteSpace(template))
-            return $"reef_workflow_{executionId}_{Guid.NewGuid():N}.{extension}";
+            return splitKey is null ? $"reef_workflow_{executionId}_{Guid.NewGuid():N}.{extension}" : $"{Sanitize(workflowName)}_{Sanitize(splitKey)}.{extension}";
         var now = DateTime.UtcNow;
         return template
             .Replace("{profile}", Sanitize(workflowName), StringComparison.OrdinalIgnoreCase)
             .Replace("{workflow}", Sanitize(workflowName), StringComparison.OrdinalIgnoreCase)
+            .Replace("{splitkey}", Sanitize(splitKey ?? ""), StringComparison.OrdinalIgnoreCase)
             .Replace("{timestamp}", now.ToString("yyyyMMdd_HHmmss"), StringComparison.OrdinalIgnoreCase)
             .Replace("{date}", now.ToString("yyyyMMdd"), StringComparison.OrdinalIgnoreCase)
             .Replace("{time}", now.ToString("HHmmss"), StringComparison.OrdinalIgnoreCase)

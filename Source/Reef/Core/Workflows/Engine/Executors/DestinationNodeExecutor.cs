@@ -39,14 +39,18 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
         else
         {
             var extension = OutputFormats.Extension(format);
-            var staged = Stage(context, FileNames.Generate(template, context.Workflow.Name, extension, context.ExecutionId));
-            var rows = input.Items.Select(r => r.ToDictionary(c => c.Key, c => c.Value ?? DBNull.Value)).ToList();
-            var (formatted, _, formatError) = await OutputFormats.Formatter(format).FormatAsync(rows, staged);
-            if (!formatted)
-                throw new NodeExecutionException(formatError ?? "Formatting failed");
-            uploads.Add(await UploadAsync(destination, staged, OutputFormats.MimeType(extension)));
+            foreach (var batch in input.Batches())
+            {
+                var name = FileNames.Generate(batch.SplitKey is null ? template : input.Split!.FilenameTemplate ?? template,
+                    context.Workflow.Name, extension, context.ExecutionId, batch.SplitKey);
+                var staged = Stage(context, name);
+                var (formatted, _, formatError) = await OutputFormats.Formatter(format).FormatAsync(batch.Rows, staged);
+                if (!formatted)
+                    throw new NodeExecutionException(formatError ?? "Formatting failed");
+                uploads.Add(await UploadAsync(destination, staged, OutputFormats.MimeType(extension)));
+            }
         }
-        return NodeResult.Main(new WorkflowItems { Columns = input.Columns, Items = input.Items, Files = uploads });
+        return NodeResult.Main(input.WithFiles(uploads));
     }
 
     private static string Stage(NodeContext context, string name)

@@ -181,4 +181,25 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         cmd.CommandText = "SELECT Entry FROM RunLog WHERE Entry LIKE 'post%'";
         (await cmd.ExecuteScalarAsync(_ct)).Should().Be("post 1");
     }
+    [Fact]
+    public async Task SplitNodeWritesOneFilePerColumnValue()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Region FROM Orders" }),
+                Node("split", "split", new JsonObject { ["SplitKeyColumn"] = "Region", ["SplitFilenameTemplate"] = "orders_{splitkey}.{format}", ["ExcludeSplitKeyFromOutput"] = true }),
+                Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "split"), Edge("split", "file")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        var files = Output(run, "file")["files"]!.AsArray().Select(f => f!["path"]!.GetValue<string>()).ToList();
+        files.Select(Path.GetFileName).Should().BeEquivalentTo("orders_North.csv", "orders_South.csv", "orders_West.csv");
+        var north = await File.ReadAllLinesAsync(files.Single(f => f.EndsWith("orders_North.csv")), _ct);
+        north[0].Should().NotContain("Region");
+        north.Skip(1).Count(l => l.Length > 0).Should().Be(2);
+    }
 }
