@@ -82,7 +82,12 @@ public static class WorkflowNodeCatalog
                 new() { Key = "TrackDeletes", Label = "Pass deleted rows", Kind = NodeFieldKinds.Bool,
                     Tooltip = "Adds a row with _ReefDeleted for every id missing since the last run" },
                 new() { Key = "RetentionDays", Label = "Keep history for days", Kind = NodeFieldKinds.Number },
-                new() { Key = "ExcludeIdColumn", Label = "Leave the id column out", Kind = NodeFieldKinds.Bool }
+                new() { Key = "ExcludeIdColumn", Label = "Leave the id column out", Kind = NodeFieldKinds.Bool },
+                new() { Key = "IdNormalization", Label = "Compare ids", Kind = NodeFieldKinds.Select, Default = "Trim",
+                    Options = [new("Trim", "Ignore leading and trailing spaces"), new("Trim,Lowercase", "Ignore spaces and case"), new("RemoveWhitespace", "Ignore all spaces")] },
+                new() { Key = "RemoveNonPrintable", Label = "Ignore hidden characters", Kind = NodeFieldKinds.Bool },
+                new() { Key = "ResetOnSchemaChange", Label = "Start over when columns change", Kind = NodeFieldKinds.Bool,
+                    Tooltip = "Clears the saved history when the query returns different columns" }
             ]),
             Node("split", "Split", "split", WorkflowNodeGroups.Transform, "Groups rows by a column so the next steps write one file per value",
             [
@@ -92,7 +97,8 @@ public static class WorkflowNodeCatalog
             ]),
             Node("template", "Template", "file-code", WorkflowNodeGroups.Transform, "Renders the rows into a file with a template",
             [
-                new() { Key = "TemplateId", Label = "Template", Kind = NodeFieldKinds.Select, OptionsSource = "templates", Required = true }
+                new() { Key = "TemplateId", Label = "Template", Kind = NodeFieldKinds.Select, OptionsSource = "templates", Required = true },
+                new() { Key = "Options", Label = "Options", Kind = NodeFieldKinds.Json, Tooltip = "Options for SQL Server FOR XML and FOR JSON templates" }
             ]),
 
             new()
@@ -140,6 +146,8 @@ public static class WorkflowNodeCatalog
             Node("destination", "Destination", "hard-drive-upload", WorkflowNodeGroups.Deliver, "Writes the rows or the files from the previous step to a destination",
             [
                 new() { Key = "DestinationId", Label = "Destination", Kind = NodeFieldKinds.Select, OptionsSource = "destinations", Required = true },
+                new() { Key = "EndpointId", Label = "Endpoint", Kind = NodeFieldKinds.Select, OptionsSource = "destination-endpoints",
+                    Tooltip = "Sends to one of the endpoints saved on the destination" },
                 new() { Key = "Format", Label = "Format", Kind = NodeFieldKinds.Select, Required = true, Default = "JSON",
                     Tooltip = "Files from input uploads the files the previous step made",
                     Options = [new("JSON", "JSON"), new("XML", "XML"), new("CSV", "CSV"), new("YAML", "YAML"), new(FilesFormat, "Files from input")] },

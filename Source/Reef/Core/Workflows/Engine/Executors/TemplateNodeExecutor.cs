@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Reef.Core.DocumentGeneration;
 using Reef.Core.Formatters;
 using Reef.Core.Models;
@@ -58,7 +59,8 @@ public class TemplateNodeExecutor(QueryTemplateService templates, ScribanTemplat
         await db.OpenAsync();
         var result = await templates.ApplyTransformationAsync(db, new TransformationRequest
         {
-            Query = NodeConfig.Text(query.Config ?? new(), "Query"), TemplateId = template.Id, Type = template.Type
+            Query = NodeConfig.Text(query.Config ?? new(), "Query"), TemplateId = template.Id, Type = template.Type,
+            Options = NodeConfig.Text(context.Config, "Options") is { Length: > 0 } options ? JsonSerializer.Deserialize<Dictionary<string, object>>(options) : null
         });
         return result.Success ? result.Output ?? "" : throw new NodeExecutionException($"Native template failed: {result.ErrorMessage}");
     }

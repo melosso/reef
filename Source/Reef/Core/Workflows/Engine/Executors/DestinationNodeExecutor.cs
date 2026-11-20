@@ -19,6 +19,14 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
         if (!destination.IsActive)
             throw new NodeExecutionException($"Destination {destination.Name} is not active");
 
+        var settings = destination.ConfigurationJson;
+        if (NodeConfig.Text(context.Config, "EndpointId") is { Length: > 0 })
+        {
+            var endpoint = await destinations.GetEndpointByIdAsync(NodeConfig.Id(context.Config, "EndpointId"), ct)
+                ?? throw new NodeExecutionException("Endpoint not found");
+            settings = destinations.MergeWithEndpoint(destination, endpoint);
+        }
+
         var input = context.Input;
         var format = NodeConfig.Text(context.Config, "Format");
         var template = NodeConfig.Text(context.Config, "FileName");
@@ -33,7 +41,7 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
                 var name = template.Length == 0 ? file.Name : FileNames.Generate(template, context.Workflow.Name, extension, context.ExecutionId);
                 var staged = Stage(context, name);
                 File.Copy(file.Path, staged, overwrite: true);
-                uploads.Add(await UploadAsync(destination, staged, file.MimeType));
+                uploads.Add(await UploadAsync(destination, settings, staged, file.MimeType));
             }
         }
         else
@@ -47,21 +55,21 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
                 var (formatted, _, formatError) = await OutputFormats.Formatter(format).FormatAsync(batch.Rows, staged);
                 if (!formatted)
                     throw new NodeExecutionException(formatError ?? "Formatting failed");
-                uploads.Add(await UploadAsync(destination, staged, OutputFormats.MimeType(extension)));
+                uploads.Add(await UploadAsync(destination, settings, staged, OutputFormats.MimeType(extension)));
             }
         }
         return new NodeResult
         {
             Outputs = { [WorkflowPorts.Main] = input.WithFiles(uploads) },
-            OnRunFailure = NodeConfig.Flag(context.Config, "RemoveOnFailure") ? () => RemoveAsync(destination, uploads) : null
+            OnRunFailure = NodeConfig.Flag(context.Config, "RemoveOnFailure") ? () => RemoveAsync(destination, settings, uploads) : null
         };
     }
 
-    private async Task RemoveAsync(Destination destination, List<WorkflowFile> uploads)
+    private async Task RemoveAsync(Destination destination, string settings, List<WorkflowFile> uploads)
     {
         foreach (var file in uploads)
         {
-            var (removed, error) = await destinations.CompensateExportAsync(file.Path, destination.Type, destination.ConfigurationJson);
+            var (removed, error) = await destinations.CompensateExportAsync(file.Path, destination.Type, settings);
             if (!removed)
                 throw new NodeExecutionException($"Could not remove {file.Name}: {error}");
         }
@@ -74,10 +82,10 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
         return path;
     }
 
-    private async Task<WorkflowFile> UploadAsync(Destination destination, string staged, string mimeType)
+    private async Task<WorkflowFile> UploadAsync(Destination destination, string settings, string staged, string mimeType)
     {
         var size = new FileInfo(staged).Length;
-        var (saved, finalPath, error) = await destinations.SaveToDestinationAsync(staged, destination.Type, destination.ConfigurationJson);
+        var (saved, finalPath, error) = await destinations.SaveToDestinationAsync(staged, destination.Type, settings);
         if (!saved)
             throw new NodeExecutionException($"Destination upload failed: {error}");
         return new WorkflowFile(finalPath ?? staged, Path.GetFileName(staged), mimeType, size);

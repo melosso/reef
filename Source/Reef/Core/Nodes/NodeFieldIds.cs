@@ -15,6 +15,7 @@ public sealed class NodeFieldIds(PublicIdMap ids)
         ["connections"] = "Connections",
         ["destinations"] = "Destinations",
         ["email-destinations"] = "Destinations",
+        ["destination-endpoints"] = "DestinationEndpoints",
         ["groups"] = "ProfileGroups",
         ["templates"] = "QueryTemplates"
     };

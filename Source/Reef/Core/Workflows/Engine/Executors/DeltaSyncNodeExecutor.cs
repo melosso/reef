@@ -27,7 +27,10 @@ public class DeltaSyncNodeExecutor(DeltaSyncService deltas) : INodeExecutor
             IncludeDeleted = NodeConfig.Flag(config, "TrackDeletes"),
             DuplicateStrategy = Or(NodeConfig.Text(config, "DuplicateIds"), "Strict"),
             NullStrategy = Or(NodeConfig.Text(config, "EmptyIds"), "Strict"),
-            NumericPrecision = int.TryParse(NodeConfig.Text(config, "DecimalPlaces"), out var precision) ? precision : 6
+            NumericPrecision = int.TryParse(NodeConfig.Text(config, "DecimalPlaces"), out var precision) ? precision : 6,
+            ReefIdNormalization = Or(NodeConfig.Text(config, "IdNormalization"), "Trim"),
+            RemoveNonPrintable = NodeConfig.Flag(config, "RemoveNonPrintable"),
+            ResetOnSchemaChange = NodeConfig.Flag(config, "ResetOnSchemaChange")
         };
         var scope = Scope(context.Workflow.Id ?? 0, context.Node.Id);
         var rows = input.Items.Select(r => r.ToDictionary(c => c.Key, c => c.Value ?? DBNull.Value)).ToList();
