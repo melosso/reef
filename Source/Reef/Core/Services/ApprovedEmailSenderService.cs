@@ -130,7 +130,6 @@ public class ApprovedEmailSenderService : BackgroundService
         }
 
         // Also process skipped emails (commit delta sync without sending)
-        Log.Information("Now checking for skipped emails...");
         try
         {
             await ProcessSkippedEmailsAsync(connection, deltaSyncService, cancellationToken);
@@ -161,7 +160,6 @@ public class ApprovedEmailSenderService : BackgroundService
         var skippedEmails = await connection.QueryAsync<PendingEmailApproval>(sql);
         var emailList = skippedEmails.ToList();
 
-        Log.Information("Checking for skipped emails to process: found {Count}", emailList.Count);
 
         if (emailList.Count == 0)
         {
