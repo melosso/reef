@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Dapper;
 using FluentAssertions;
@@ -15,37 +14,9 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
 
     private SqliteConnection Db() => new($"Data Source={Path.Combine(factory.DataFolder, "Reef.db")};Pooling=False");
 
-    private static async Task<string> IdOfAsync(HttpResponseMessage response)
-    {
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<JsonObject>())!["id"]!.GetValue<string>();
-    }
-
-    private async Task<string> EmailProfileAsync(HttpClient admin, string attachmentConfig)
-    {
-        var shopDb = Path.Combine(factory.DataFolder, $"embedded-{Guid.NewGuid():N}.db");
-        var connectionId = await IdOfAsync(await admin.PostAsJsonAsync("/api/connections", new { name = $"Embedded {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={shopDb}", isActive = true, hash = "" }, _ct));
-        var templateId = await IdOfAsync(await admin.PostAsJsonAsync("/api/templates", new { name = $"Mail {Guid.NewGuid():N}", type = "ScribanTemplate", outputFormat = "HTML", template = "<p>{{ rows[0].Email }}</p>" }, _ct));
-        var smtp = JsonSerializer.Serialize(new { EmailProvider = "SMTP", SmtpServer = "127.0.0.1", SmtpPort = 1, SecurityMode = "None", FromAddress = "reef@example.com", TimeoutSeconds = 2 });
-        var destinationId = await IdOfAsync(await admin.PostAsJsonAsync("/api/destinations", new { name = $"Mail {Guid.NewGuid():N}", type = "Email", configurationJson = smtp }, _ct));
-        var document = new JsonObject
-        {
-            ["kind"] = "export",
-            ["settings"] = new JsonObject { ["Name"] = $"Embedded {Guid.NewGuid():N}", ["IsEnabled"] = true },
-            ["nodes"] = new JsonArray(
-                new JsonObject { ["id"] = "source", ["type"] = "source", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 'a@example.com' AS Email" } },
-                new JsonObject
-                {
-                    ["id"] = "mail", ["type"] = "emailexport", ["x"] = 300, ["y"] = 0,
-                    ["config"] = new JsonObject
-                    {
-                        ["OutputDestinationId"] = destinationId, ["EmailTemplateId"] = templateId, ["EmailRecipientsColumn"] = "Email",
-                        ["UseHardcodedSubject"] = true, ["EmailSubjectHardcoded"] = "Hi", ["EmailAttachmentConfig"] = attachmentConfig
-                    }
-                })
-        };
-        return await IdOfAsync(await admin.PostAsJsonAsync("/api/profile-documents/export", document, _ct));
-    }
+    private Task<string> EmailProfileAsync(HttpClient admin, string attachmentConfig) =>
+        EmailProfiles.CreateAsync(admin, factory.DataFolder, EmailProfiles.Smtp(1), "SELECT 'a@example.com' AS Email",
+            new JsonObject { ["EmailAttachmentConfig"] = attachmentConfig });
 
     private static string PdfAttachment(string templateId) =>
         $$$"""{"Enabled":true,"Mode":"DocumentTemplate","DocumentTemplate":{"TemplateId":"{{{templateId}}}","GeneratePerRow":true}}""";
@@ -54,7 +25,7 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
     public async Task AttachmentTemplateTravelsAsUlidAndIsStoredAsId()
     {
         var admin = await factory.CreateAdminClientAsync();
-        var pdfId = await IdOfAsync(await admin.PostAsJsonAsync("/api/templates", new { name = $"Pdf {Guid.NewGuid():N}", type = "DocumentTemplate", outputFormat = "PDF", template = "{{# content }}<p>x</p>{{/ content }}" }, _ct));
+        var pdfId = await EmailProfiles.IdOfAsync(await admin.PostAsJsonAsync("/api/templates", new { name = $"Pdf {Guid.NewGuid():N}", type = "DocumentTemplate", outputFormat = "PDF", template = "{{# content }}<p>x</p>{{/ content }}" }, _ct));
 
         var profileId = await EmailProfileAsync(admin, PdfAttachment(pdfId));
 
@@ -77,10 +48,8 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
         var admin = await factory.CreateAdminClientAsync();
         var profileId = await EmailProfileAsync(admin, PdfAttachment("01ARZ3NDEKTSV4RRFFQ69G5FAV"));
 
-        (await admin.PostAsJsonAsync($"/api/executions/execute/{profileId}", new { }, _ct)).EnsureSuccessStatusCode();
+        var latest = await EmailProfiles.RunAsync(admin, profileId);
 
-        var executions = await admin.GetFromJsonAsync<JsonArray>($"/api/executions/by-profile/{profileId}", _ct);
-        var latest = executions!.First()!;
         latest["status"]!.GetValue<string>().Should().Be("Failed");
         latest["errorMessage"]!.GetValue<string>().Should().ContainEquivalentOf("attachment configuration");
     }
@@ -89,10 +58,10 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
     public async Task JobDependenciesTravelAsUlids()
     {
         var admin = await factory.CreateAdminClientAsync();
-        var first = await IdOfAsync(await admin.PostAsJsonAsync("/api/jobs", new { name = $"First {Guid.NewGuid():N}", type = "Cleanup", scheduleType = "Manual", isEnabled = true }, _ct));
+        var first = await EmailProfiles.IdOfAsync(await admin.PostAsJsonAsync("/api/jobs", new { name = $"First {Guid.NewGuid():N}", type = "Cleanup", scheduleType = "Manual", isEnabled = true }, _ct));
 
         var second = await admin.PostAsJsonAsync("/api/jobs", new { name = $"Second {Guid.NewGuid():N}", type = "Cleanup", scheduleType = "Manual", isEnabled = true, dependsOnJobIds = first }, _ct);
-        var secondId = await IdOfAsync(second);
+        var secondId = await EmailProfiles.IdOfAsync(second);
 
         await using var db = Db();
         var firstInternal = await db.ExecuteScalarAsync<long>("SELECT Id FROM Jobs WHERE Ulid = @first", new { first });

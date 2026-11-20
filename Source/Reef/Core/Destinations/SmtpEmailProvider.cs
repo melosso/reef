@@ -90,6 +90,14 @@ public class SmtpEmailProvider : IEmailProvider
         }
     }
 
+    public static Task<SmtpClient> ConnectAsync(EmailDestinationConfiguration config, CancellationToken ct)
+    {
+        var smtpHost = !string.IsNullOrEmpty(config.SmtpHost) ? config.SmtpHost : config.SmtpServer;
+        return string.IsNullOrEmpty(smtpHost)
+            ? throw new InvalidOperationException("SMTP host is required")
+            : ConnectAsync(smtpHost, config, ct);
+    }
+
     private static async Task<SmtpClient> ConnectAsync(string smtpHost, EmailDestinationConfiguration config, CancellationToken ct)
     {
         var client = new SmtpClient();
@@ -116,7 +124,8 @@ public class SmtpEmailProvider : IEmailProvider
                     await client.AuthenticateAsync(new SaslMechanismOAuth2(config.OauthUsername ?? username ?? config.FromAddress, config.OauthToken), ct);
                     break;
                 default:
-                    if (!string.IsNullOrEmpty(username))
+                    // relays that advertise no auth accept mail without login
+                    if (!string.IsNullOrEmpty(username) && client.Capabilities.Contains(SmtpCapability.Authentication))
                         await client.AuthenticateAsync(username, password ?? "", ct);
                     break;
             }

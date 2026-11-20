@@ -62,20 +62,6 @@ public class EmailExportService
     }
 
     /// <summary>
-    /// Convert security mode string to SecureSocketOptions
-    /// </summary>
-    private static SecureSocketOptions GetSecureSocketOptions(string? securityMode)
-    {
-        return (securityMode?.ToLower()) switch
-        {
-            "none" => SecureSocketOptions.None,
-            "auto" => SecureSocketOptions.Auto,
-            "starttls" => SecureSocketOptions.StartTls,
-            _ => SecureSocketOptions.StartTls // Default to StartTls
-        };
-    }
-
-    /// <summary>
     /// Parse email address with optional display name using ";" separator
     /// Supports formats: "email@example.com" or "Display Name;email@example.com"
     /// </summary>
@@ -632,15 +618,7 @@ public class EmailExportService
                 }
 
                 // SMTP provider with multiple HTML documents
-                using var client = new SmtpClient();
-
-                var smtpHost = emailConfig.SmtpServer ?? emailConfig.SmtpHost ?? "localhost";
-                var port = emailConfig.SmtpPort > 0 ? emailConfig.SmtpPort : 587;
-                var secureSocketOptions = GetSecureSocketOptions(emailConfig.SecurityMode);
-                await client.ConnectAsync(smtpHost, port, secureSocketOptions);
-
-                // Authenticate once for all messages
-                await AuthenticateSmtpAsync(client, emailConfig);
+                using var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
 
                 try
                 {
@@ -791,57 +769,7 @@ public class EmailExportService
                 }
 
                 // SMTP provider
-                using var client = new SmtpClient();
-
-                var smtpHost = emailConfig.SmtpServer ?? emailConfig.SmtpHost ?? "localhost";
-                var port = emailConfig.SmtpPort > 0 ? emailConfig.SmtpPort : 587;
-                var secureSocketOptions = GetSecureSocketOptions(emailConfig.SecurityMode);
-                await client.ConnectAsync(smtpHost, port, secureSocketOptions);
-
-                // Authenticate based on auth type (only if server advertises auth capability)
-                if (client.Capabilities.Contains(SmtpCapability.Authentication))
-                {
-                    var authType = emailConfig.SmtpAuthType ?? "Basic";
-                    if (authType == "OAuth2")
-                    {
-                        // OAuth2 authentication
-                        if (!string.IsNullOrEmpty(emailConfig.OauthToken) && !string.IsNullOrEmpty(emailConfig.OauthUsername))
-                        {
-                            try
-                            {
-                                var oauth2 = new SaslMechanismOAuth2(emailConfig.OauthUsername, emailConfig.OauthToken);
-                                await client.AuthenticateAsync(oauth2);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error("OAuth2 authentication failed for {Server}: {Error}", smtpHost, ex.Message);
-                                throw;
-                            }
-                        }
-                    }
-                    else if (authType == "Basic")
-                    {
-                        // Basic authentication
-                        var username = emailConfig.SmtpUsername ?? emailConfig.Username;
-                        var password = emailConfig.SmtpPassword ?? emailConfig.Password;
-                        if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
-                        {
-                            try
-                            {
-                                await client.AuthenticateAsync(username, password);
-                            }
-                            catch (Exception ex)
-                            {
-                                Log.Error("Basic authentication failed for {Server}: {Error}", smtpHost, ex.Message);
-                                throw;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Debug("SMTP server {Server} does not require authentication", smtpHost);
-                }
+                using var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
 
                 await client.SendAsync(message);
                 await client.DisconnectAsync(true);
@@ -875,49 +803,6 @@ public class EmailExportService
             .ToList();
 
         return documents.Count > 0 ? documents : new List<string> { htmlOutput };
-    }
-
-    /// <summary>
-    /// Authenticate SMTP client based on email destination configuration
-    /// </summary>
-    private static async Task AuthenticateSmtpAsync(SmtpClient client, EmailDestinationConfiguration emailConfig)
-    {
-        // Only authenticate if server advertises auth capability
-        if (!client.Capabilities.Contains(SmtpCapability.Authentication))
-        {
-            Log.Debug("SMTP server does not advertise authentication capability");
-            return;
-        }
-
-        var authType = emailConfig.SmtpAuthType ?? "Basic";
-        if (authType == "OAuth2")
-        {
-            // OAuth2 authentication
-            if (!string.IsNullOrEmpty(emailConfig.OauthToken) && !string.IsNullOrEmpty(emailConfig.OauthUsername))
-            {
-                try
-                {
-                    var oauth2 = new SaslMechanismOAuth2(emailConfig.OauthUsername, emailConfig.OauthToken);
-                    await client.AuthenticateAsync(oauth2);
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("OAuth2 authentication failed: {Error}", ex.Message);
-                    throw;
-                }
-            }
-        }
-        else if (authType == "Basic")
-        {
-            // Basic authentication
-            var username = emailConfig.SmtpUsername ?? emailConfig.Username;
-            var password = emailConfig.SmtpPassword ?? emailConfig.Password;
-            if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(password))
-            {
-                await client.AuthenticateAsync(username, password);
-            }
-        }
-        // else: No authentication
     }
 
     /// <summary>
