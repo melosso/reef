@@ -44,6 +44,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                     : incoming.GroupBy(e => e.ToPort).ToDictionary(g => g.Key, g => Combine(g.Select(e => outputs[(e.From, e.FromPort)])));
                 if (node.Id != trigger.Id && inputs.Values.All(i => i.Items.Count == 0 && i.Files.Count == 0) && SkipsWhenEmpty(node))
                 {
+                    foreach (var port in WorkflowNodeCatalog.Catalog.Find(node.Type)?.Outputs ?? WorkflowPorts.Single)
+                        outputs[(node.Id, port)] = inputs.Values.First();
                     await SkipAsync(run, record);
                     continue;
                 }

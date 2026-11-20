@@ -328,13 +328,15 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
                 Node("pre", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('pre')" }),
                 Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders WHERE 1 = 0" }),
                 Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" }),
-                Node("post", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('post')", ["SkipWhenEmpty"] = true })
+                Node("post", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('post')", ["SkipWhenEmpty"] = true }),
+                Node("always", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ('always')" })
             ],
-            [Edge("start", "pre"), Edge("pre", "orders"), Edge("orders", "file"), Edge("orders", "post")]);
+            [Edge("start", "pre"), Edge("pre", "orders"), Edge("orders", "file"), Edge("orders", "post"), Edge("file", "always")]);
 
         run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
         NodeRun(run, "pre")["status"]!.GetValue<string>().Should().Be("Success");
         NodeRun(run, "file")["status"]!.GetValue<string>().Should().Be("Skipped");
         NodeRun(run, "post")["status"]!.GetValue<string>().Should().Be("Skipped");
+        NodeRun(run, "always")["status"]!.GetValue<string>().Should().Be("Success");
     }
 }
