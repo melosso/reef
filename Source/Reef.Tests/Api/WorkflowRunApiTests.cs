@@ -31,6 +31,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
                 INSERT INTO Orders VALUES (1, 'Alpha', 50, 'North'), (2, 'Beta', 150, 'South'), (3, 'Gamma', 250, 'North'), (4, 'Delta', 75, 'West');
                 CREATE TABLE Regions (Region TEXT, Manager TEXT);
                 CREATE TABLE RunLog (Entry TEXT);
+                CREATE TABLE ImportedOrders (OrderId INTEGER PRIMARY KEY, CustomerName TEXT);
                 INSERT INTO Regions VALUES ('North', 'Noor'), ('South', 'Sam');
                 """;
             await cmd.ExecuteNonQueryAsync(_ct);
@@ -244,5 +245,35 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         second["status"]!.GetValue<string>().Should().Be("Success", second.ToJsonString());
         NodeRun(second, "sync")["rowCount"]!.GetValue<int>().Should().Be(1);
         Output(second, "sync")["items"]![0]!["OrderId"]!.GetValue<long>().Should().Be(2);
+    }
+    [Fact]
+    public async Task ImportNodesFetchParseMapAndWriteRows()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        var inbox = Directory.CreateDirectory(Path.Combine(factory.DataFolder, $"inbox-{Guid.NewGuid():N}")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(inbox, "orders.csv"), "order_id,customer_name\n10,Gamma\n11,Delta\n", _ct);
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("fetch", "fetch", new JsonObject { ["SourceType"] = "Local", ["SourceFilePath"] = inbox, ["SourceFilePattern"] = "*.csv" }),
+                Node("parse", "parse", new JsonObject { ["SourceFormat"] = "CSV" }),
+                Node("map", "mapping", new JsonObject { ["ColumnMappingsJson"] = new JsonArray(
+                    new JsonObject { ["sourceColumn"] = "order_id", ["targetColumn"] = "OrderId", ["dataType"] = "int", ["isKeyColumn"] = true },
+                    new JsonObject { ["sourceColumn"] = "customer_name", ["targetColumn"] = "CustomerName" }) }),
+                Node("write", "write", new JsonObject { ["TargetType"] = "Database", ["TargetConnectionId"] = connectionId, ["TargetTable"] = "ImportedOrders",
+                    ["LoadStrategy"] = "Upsert", ["UpsertKeyColumns"] = "OrderId" })
+            ],
+            [Edge("start", "fetch"), Edge("fetch", "parse"), Edge("parse", "map"), Edge("map", "write")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        Output(run, "fetch")["files"]!.AsArray().Should().ContainSingle();
+        Output(run, "map")["columns"]!.AsArray().Select(c => c!["name"]!.GetValue<string>()).Should().Equal("OrderId", "CustomerName");
+        NodeRun(run, "write")["rowCount"]!.GetValue<int>().Should().Be(2);
+        await using var db = new SqliteConnection($"Data Source={_shopDb}");
+        await db.OpenAsync(_ct);
+        await using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT CustomerName FROM ImportedOrders WHERE OrderId = 11";
+        (await cmd.ExecuteScalarAsync(_ct)).Should().Be("Delta");
     }
 }
