@@ -49,6 +49,10 @@ public static class JobsEndpoints
                 var created = await service.CreateAsync(job);
                 return Results.Created($"/api/jobs/{ids.ToUlid("Jobs", created.Id)}", created);
             }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
+            }
             catch (Exception ex)
             {
                 return Results.BadRequest(new { message = ex.Message });
@@ -75,6 +79,10 @@ public static class JobsEndpoints
                 return success
                     ? Results.Ok(job)
                     : Results.NotFound(new { message = "Job not found" });
+            }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
             }
             catch (Exception ex)
             {

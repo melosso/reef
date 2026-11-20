@@ -150,6 +150,10 @@ public static class GroupsEndpoints
 
             return Results.Ok(new { id = ids.ToUlid("ProfileGroups", groupId), message = "Group created successfully" });
         }
+        catch (Exception ex) when (UniqueName.Violated(ex))
+        {
+            return UniqueName.Conflict(ex);
+        }
         catch (InvalidOperationException ex)
         {
             Log.Warning(ex, "Invalid group creation request");
@@ -210,6 +214,10 @@ public static class GroupsEndpoints
 
             return Results.NotFound();
         }
+        catch (Exception ex) when (UniqueName.Violated(ex))
+        {
+            return UniqueName.Conflict(ex);
+        }
         catch (InvalidOperationException ex)
         {
             Log.Warning(ex, "Invalid group update request for {Id}", id);
@@ -247,6 +255,10 @@ public static class GroupsEndpoints
             }
 
             return Results.NotFound();
+        }
+        catch (Exception ex) when (UniqueName.Violated(ex))
+        {
+            return UniqueName.Conflict(ex);
         }
         catch (InvalidOperationException ex)
         {

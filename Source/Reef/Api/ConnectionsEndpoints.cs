@@ -71,6 +71,10 @@ public static class ConnectionsEndpoints
             var ulid = ids.ToUlid("Connections", id);
             return Results.Created($"/api/connections/{ulid}", new { id = ulid });
         }
+        catch (Exception ex) when (UniqueName.Violated(ex))
+        {
+            return UniqueName.Conflict(ex);
+        }
         catch (Exception ex)
         {
             Log.Error(ex, "Error creating connection");
@@ -106,6 +110,10 @@ public static class ConnectionsEndpoints
             }
 
             return Results.NotFound();
+        }
+        catch (Exception ex) when (UniqueName.Violated(ex))
+        {
+            return UniqueName.Conflict(ex);
         }
         catch (Exception ex)
         {

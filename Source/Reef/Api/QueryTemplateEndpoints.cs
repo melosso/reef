@@ -52,6 +52,10 @@ public static class QueryTemplatesEndpoints
                 var created = await service.CreateAsync(template);
                 return Results.Created($"/api/templates/{ids.ToUlid("QueryTemplates", created.Id)}", created);
             }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
+            }
             catch (Exception ex)
             {
                 return Results.BadRequest(new { message = ex.Message });
@@ -78,6 +82,10 @@ public static class QueryTemplatesEndpoints
                 return success
                     ? Results.Ok(template)
                     : Results.NotFound(new { message = "Template not found" });
+            }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
             }
             catch (Exception ex)
             {

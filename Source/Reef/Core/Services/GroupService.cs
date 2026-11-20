@@ -203,7 +203,7 @@ public class GroupService
             var existing = await GetByNameAsync(group.Name);
             if (existing != null)
             {
-                throw new InvalidOperationException($"Group with name '{group.Name}' already exists");
+                throw new Reef.Core.Exceptions.DuplicateNameException($"A group named '{group.Name}' already exists.");
             }
 
             await using var connection = new SqliteConnection(_connectionString);
@@ -262,7 +262,7 @@ public class GroupService
             var existing = await GetByNameAsync(group.Name);
             if (existing != null && existing.Id != group.Id)
             {
-                throw new InvalidOperationException($"Group with name '{group.Name}' already exists");
+                throw new Reef.Core.Exceptions.DuplicateNameException($"A group named '{group.Name}' already exists.");
             }
 
             await using var connection = new SqliteConnection(_connectionString);

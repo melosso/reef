@@ -204,6 +204,10 @@ public static class DestinationsEndpoints
 
                 return Results.Created($"/api/destinations/{ids.ToUlid("Destinations", created.Id)}", masked);
             }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
+            }
             catch (Exception ex)
             {
                 return Results.BadRequest(new { message = ex.Message });
@@ -235,6 +239,10 @@ public static class DestinationsEndpoints
                 // Reload from DB to get masked version (never return plaintext to client)
                 var masked = await service.GetByIdAsync(id);
                 return Results.Ok(masked);
+            }
+            catch (Exception ex) when (UniqueName.Violated(ex))
+            {
+                return UniqueName.Conflict(ex);
             }
             catch (Exception ex)
             {
