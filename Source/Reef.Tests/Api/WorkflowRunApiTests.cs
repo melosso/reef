@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
+using Reef.Tests.Destinations;
 using Xunit;
 
 namespace Reef.Tests.Api;
@@ -270,5 +271,32 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         await using var cmd = db.CreateCommand();
         cmd.CommandText = "SELECT CustomerName FROM ImportedOrders WHERE OrderId = 11";
         (await cmd.ExecuteScalarAsync(_ct)).Should().Be("Delta");
+    }
+    [Theory]
+    [InlineData(100, "Failed")]
+    [InlineData(50, "Success")]
+    public async Task EmailNodeSendsOneMailPerRowAndAppliesTheThreshold(int threshold, string status)
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        var recipients = 0;
+        await using var smtp = new FakeSmtpServer(line => line.StartsWith("RCPT", StringComparison.OrdinalIgnoreCase) && Interlocked.Increment(ref recipients) == 2 ? "550 5.1.1 mailbox unavailable" : null);
+        var templateId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync("/api/templates", new { name = $"Mail {Guid.NewGuid():N}", type = "ScribanTemplate", outputFormat = "HTML", template = "<p>{{ rows[0].Email }}</p>" }, _ct));
+        var mailServerId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync("/api/destinations", new { name = $"Mail {Guid.NewGuid():N}", type = "Email", configurationJson = System.Text.Json.JsonSerializer.Serialize(EmailProfiles.Smtp(smtp.Port)) }, _ct));
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("people", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = EmailProfiles.Rows(3) }),
+                Node("mail", "email", new JsonObject
+                {
+                    ["DestinationId"] = mailServerId, ["TemplateId"] = templateId, ["RecipientsFrom"] = "Column", ["RecipientsColumn"] = "Email",
+                    ["Subject"] = "Hi", ["SuccessPercent"] = threshold
+                })
+            ],
+            [Edge("start", "people"), Edge("people", "mail")]);
+
+        run["status"]!.GetValue<string>().Should().Be(status, run.ToJsonString());
+        smtp.Messages.Should().HaveCount(2);
+        NodeRun(run, "mail")["errorMessage"]!.GetValue<string>().Should().Contain("user2@example.com");
     }
 }
