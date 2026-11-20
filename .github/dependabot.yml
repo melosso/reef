@@ -12,6 +12,10 @@ updates:
     directory: "/Source/Reef.Web"
     schedule:
       interval: "weekly"
+    # svelte-check and typescript-eslint do not accept typescript 7 yet
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor:
         update-types: ["minor", "patch"]
