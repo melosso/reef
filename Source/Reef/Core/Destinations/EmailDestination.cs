@@ -311,6 +311,10 @@ public class EmailDestinationConfiguration
     public string? Password { get; set; } // Alias for backward compatibility
     public string? OauthToken { get; set; }
     public string? OauthUsername { get; set; }
+    public string? OauthTokenEndpoint { get; set; }
+    public string? OauthClientId { get; set; }
+    public string? OauthClientSecret { get; set; }
+    public string? OauthScope { get; set; }
 
     // Resend configuration
     public string? ResendApiKey { get; set; }

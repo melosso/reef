@@ -163,6 +163,34 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task OAuthClientCredentialsFetchAccessTokenForSmtpLogin()
+    {
+        using var tokens = new Reef.Tests.Templates.MockHttpServer();
+        tokens.SetResponse(200, """{"access_token":"fresh-token","token_type":"Bearer","expires_in":3600}""");
+        var logins = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        await using var smtp = new FakeSmtpServer(line =>
+        {
+            if (line.StartsWith("EHLO", StringComparison.OrdinalIgnoreCase)) return "250-fake\r\n250 AUTH XOAUTH2";
+            if (!line.StartsWith("AUTH", StringComparison.OrdinalIgnoreCase)) return null;
+            logins.Enqueue(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(line.Split(' ')[^1])));
+            return "235 2.7.0 accepted";
+        });
+        var admin = await factory.CreateAdminClientAsync();
+        var oauth = new
+        {
+            SmtpServer = "127.0.0.1", AuthType = "OAuth2", SmtpAuthType = "OAuth2", OauthUsername = "reef@example.com",
+            OauthTokenEndpoint = tokens.BaseUrl + "token", OauthClientId = "reef-app", OauthClientSecret = "app-secret", OauthScope = "https://outlook.office365.com/.default"
+        };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, oauth), EmailProfiles.Rows(2));
+
+        var execution = await EmailProfiles.RunAsync(admin, profileId);
+
+        execution["status"]!.GetValue<string>().Should().Be("Success");
+        logins.Should().ContainSingle().Which.Should().Contain("auth=Bearer fresh-token");
+        tokens.LastRequestBody.Should().Contain("grant_type=client_credentials").And.Contain("client_id=reef-app");
+    }
+
+    [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {
         await using var smtp = new FakeSmtpServer();

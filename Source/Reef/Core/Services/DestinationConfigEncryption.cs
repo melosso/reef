@@ -23,7 +23,7 @@ public class DestinationConfigEncryption
         [DestinationType.AzureBlob] = new() { "connectionstring" },
         [DestinationType.Ftp] = new() { "password", "username" },
         [DestinationType.Sftp] = new() { "password", "username", "privatekeypath" },
-        [DestinationType.Email] = new() { "smtppassword", "smtpusername", "password", "resendapikey", "sendgridapikey", "oauthtoken" },
+        [DestinationType.Email] = new() { "smtppassword", "smtpusername", "password", "resendapikey", "sendgridapikey", "oauthtoken", "oauthclientsecret" },
         [DestinationType.NetworkShare] = new() { "password", "username" },
         [DestinationType.Local] = new() { }, // No secrets for local
         [DestinationType.WebDav] = new() { "password", "username" }
