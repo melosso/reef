@@ -73,6 +73,8 @@ public class ConnectionService
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct);
 
+        conn.Tags ??= "";
+
         // Encrypt connection string if not already encrypted
         if (!_encryptionService.IsEncrypted(conn.ConnectionString))
         {
@@ -110,6 +112,8 @@ public class ConnectionService
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(ct);
+
+        conn.Tags ??= "";
 
         // Encrypt connection string if not already encrypted
         if (!_encryptionService.IsEncrypted(conn.ConnectionString))
