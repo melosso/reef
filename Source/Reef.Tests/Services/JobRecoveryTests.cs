@@ -57,6 +57,28 @@ public class JobRecoveryTests : IDisposable
         (await check.QuerySingleAsync<(string Status, string? ErrorMessage)>("SELECT Status, ErrorMessage FROM ImportProfileExecutions")).Should().Be(("Failed", "Interrupted by restart"));
     }
 
+    [Fact]
+    public async Task InterruptedWorkflowRunsFailOnStartup()
+    {
+        await new Reef.Core.Data.DatabaseInitializer(ConnectionString).InitializeAsync();
+        await new Reef.Core.Database.WorkflowsMigration(ConnectionString).ApplyAsync();
+        await using (var db = new SqliteConnection(ConnectionString))
+        {
+            await db.OpenAsync();
+            await db.ExecuteAsync("PRAGMA foreign_keys = OFF;");
+            await db.ExecuteAsync("""
+                INSERT INTO WorkflowExecutions (WorkflowId, WorkflowVersion, TriggerNodeId, Status, StartedAt) VALUES (1, 1, 'start', 'Running', @Now);
+                INSERT INTO NodeRuns (WorkflowExecutionId, NodeId, Status, StartedAt) VALUES (last_insert_rowid(), 'orders', 'Running', @Now);
+                """, new { Now = DateTime.UtcNow });
+        }
+
+        await new JobService(new DatabaseConfig { ConnectionString = ConnectionString }, new ConfigurationBuilder().Build()).ResetInterruptedRunsAsync();
+
+        await using var check = new SqliteConnection(ConnectionString);
+        (await check.QuerySingleAsync<(string Status, string? ErrorMessage)>("SELECT Status, ErrorMessage FROM WorkflowExecutions")).Should().Be(("Failed", "Interrupted by restart"));
+        (await check.QuerySingleAsync<(string Status, string? ErrorMessage)>("SELECT Status, ErrorMessage FROM NodeRuns")).Should().Be(("Failed", "Interrupted by restart"));
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();
