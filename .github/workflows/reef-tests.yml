@@ -5,7 +5,7 @@ on:
     branches: [main, "v*"]
     paths: ["Source/**", ".github/workflows/reef-tests.yml"]
   pull_request:
-    paths: ["Source/**", ".github/workflows/reef-tests.yml"]
+    paths: ["Source/**", ".github/workflows/**", "global.json", "Dockerfile"]
 
 jobs:
   test:

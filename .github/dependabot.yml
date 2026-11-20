@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      nuget-minor:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/Source/Reef.Web"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm-minor:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: "docker"
+    directories: ["/", "/Source/Reef"]
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "dotnet-sdk"
+    directory: "/"
+    schedule:
+      interval: "weekly"
