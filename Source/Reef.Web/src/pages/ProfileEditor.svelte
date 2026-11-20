@@ -244,7 +244,8 @@
     if (!doc?.id) return;
     running = true;
     try {
-      const result = await runProfile(kind, doc.id, name);
+      const result = await runProfile(kind, doc.id, name, { sendsEmail: doc.nodes.some((n) => n.type === 'emailexport') });
+      if (!result) return;
       lastRun = await loadLastRun(kind, doc.id);
       const failed = /fail/i.test(result.status ?? '') || result.success === false;
       remember({ kind, id: doc.id, name, status: failed ? 'err' : 'ok' });

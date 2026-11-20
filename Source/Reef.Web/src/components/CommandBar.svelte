@@ -23,7 +23,7 @@
   let dialog: HTMLDialogElement;
   let query = $state('');
   let index = $state(0);
-  let profiles = $state<{ kind: 'export' | 'import'; id: string; name: string }[]>([]);
+  let profiles = $state<{ kind: 'export' | 'import'; id: string; name: string; sendsEmail?: boolean }[]>([]);
 
   async function loadProfiles() {
     const [exports, imports] = await Promise.all([
@@ -31,7 +31,7 @@
       api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
     ]);
     profiles = [
-      ...(exports ?? []).map((p) => ({ kind: 'export' as const, id: p.id, name: p.name })),
+      ...(exports ?? []).map((p) => ({ kind: 'export' as const, id: p.id, name: p.name, sendsEmail: p.isEmailExport })),
       ...(imports ?? []).map((p) => ({ kind: 'import' as const, id: p.id, name: p.name })),
     ];
   }
@@ -54,7 +54,7 @@
       label: `Run ${p.name}`,
       group: 'Run',
       icon: Play,
-      run: () => runProfile(p.kind, p.id, p.name).catch((e) => notify.fail(e)),
+      run: () => void runProfile(p.kind, p.id, p.name, { sendsEmail: p.sendsEmail }).catch((e) => notify.fail(e)),
     })),
     { id: 'theme-light', label: 'Use light theme', group: 'Theme', icon: Sun, run: () => setTheme('light') },
     { id: 'theme-dark', label: 'Use dark theme', group: 'Theme', icon: Moon, run: () => setTheme('dark') },

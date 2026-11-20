@@ -200,18 +200,8 @@
   }
 
   async function run(row: Row) {
-    if (
-      row.isEmail &&
-      !(await confirm({
-        title: `Send emails for ${row.name}?`,
-        message: 'The profile sends one email per row, or per group, to the recipients in the query result.',
-        confirm: 'Send emails',
-        danger: true,
-      }))
-    )
-      return;
     await act(row, 'run', async () => {
-      await runProfile(row.kind, row.id, row.name);
+      if (!(await runProfile(row.kind, row.id, row.name, { sendsEmail: row.isEmail }))) return;
       await load();
     });
   }

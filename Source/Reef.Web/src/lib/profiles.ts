@@ -1,4 +1,5 @@
 import { api } from './api';
+import { confirm } from './confirm.svelte';
 import { notify } from './notify';
 
 export type ProfileKind = 'export' | 'import';
@@ -28,7 +29,22 @@ export function runOutcome(kind: ProfileKind, result: RunResult): { level: 'succ
   return { level: 'success', message: `Run succeeded. ${counts}`.trim() };
 }
 
-export async function runProfile(kind: ProfileKind, id: string, name: string): Promise<RunResult> {
+export async function runProfile(
+  kind: ProfileKind,
+  id: string,
+  name: string,
+  options: { sendsEmail?: boolean } = {},
+): Promise<RunResult | null> {
+  if (
+    options.sendsEmail &&
+    !(await confirm({
+      title: `Send emails for ${name}?`,
+      message: 'The profile sends one email per row, or per group, to the recipients in the query result.',
+      confirm: 'Send emails',
+      danger: true,
+    }))
+  )
+    return null;
   const result =
     kind === 'import'
       ? await api.post<RunResult>(`/api/profiles/${id}/execute?type=import`)
