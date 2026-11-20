@@ -25,6 +25,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
 
         var outputs = new Dictionary<(string Node, string Port), WorkflowItems>();
         var commits = new List<Func<Task>>();
+        var undos = new List<Func<Task>>();
         var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "reef-workflows", run.Id.ToString())).FullName;
         try
         {
@@ -55,6 +56,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                     record.ErrorMessage = result.Warning;
                     if (result.OnRunSuccess is { } commit)
                         commits.Add(commit);
+                    if (result.OnRunFailure is { } undo)
+                        undos.Insert(0, undo);
                     record.RowCount = result.Outputs.Values.Sum(o => o.Items.Count);
                     record.OutputSampleJson = JsonSerializer.Serialize(result.Outputs.ToDictionary(o => o.Key, o => new
                     {
@@ -100,6 +103,21 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                 Log.Error(ex, "Workflow {WorkflowId} could not save its run state", workflowId);
                 run.Status = WorkflowRunStatus.Failed;
                 run.ErrorMessage = $"Output was written but the Smart Sync state was not saved: {ex.Message}";
+            }
+        }
+        if (run.Status == WorkflowRunStatus.Failed)
+        {
+            foreach (var undo in undos)
+            {
+                try
+                {
+                    await undo();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "Workflow {WorkflowId} could not undo a step", workflowId);
+                    run.ErrorMessage += $" Undo failed: {ex.Message}";
+                }
             }
         }
         run.CompletedAt = DateTime.UtcNow;

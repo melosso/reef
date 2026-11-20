@@ -50,7 +50,21 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
                 uploads.Add(await UploadAsync(destination, staged, OutputFormats.MimeType(extension)));
             }
         }
-        return NodeResult.Main(input.WithFiles(uploads));
+        return new NodeResult
+        {
+            Outputs = { [WorkflowPorts.Main] = input.WithFiles(uploads) },
+            OnRunFailure = NodeConfig.Flag(context.Config, "RemoveOnFailure") ? () => RemoveAsync(destination, uploads) : null
+        };
+    }
+
+    private async Task RemoveAsync(Destination destination, List<WorkflowFile> uploads)
+    {
+        foreach (var file in uploads)
+        {
+            var (removed, error) = await destinations.CompensateExportAsync(file.Path, destination.Type, destination.ConfigurationJson);
+            if (!removed)
+                throw new NodeExecutionException($"Could not remove {file.Name}: {error}");
+        }
     }
 
     private static string Stage(NodeContext context, string name)

@@ -143,7 +143,9 @@ public static class WorkflowNodeCatalog
                 new() { Key = "Format", Label = "Format", Kind = NodeFieldKinds.Select, Required = true, Default = "JSON",
                     Tooltip = "Files from input uploads the files the previous step made",
                     Options = [new("JSON", "JSON"), new("XML", "XML"), new("CSV", "CSV"), new("YAML", "YAML"), new(FilesFormat, "Files from input")] },
-                new() { Key = "FileName", Label = "File name", Placeholder = "{workflow}_{timestamp}.{format}" }
+                new() { Key = "FileName", Label = "File name", Placeholder = "{workflow}_{timestamp}.{format}" },
+                new() { Key = "RemoveOnFailure", Label = "Remove the files when the run fails", Kind = NodeFieldKinds.Bool,
+                    Tooltip = "Deletes the uploaded files if a later step fails, so no half finished output is left behind" }
             ]),
             Node("email", "Send email", "mail", WorkflowNodeGroups.Deliver, "Sends each row, or each group of rows, as an email",
             [

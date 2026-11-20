@@ -299,4 +299,22 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         smtp.Messages.Should().HaveCount(2);
         NodeRun(run, "mail")["errorMessage"]!.GetValue<string>().Should().Contain("user2@example.com");
     }
+    [Fact]
+    public async Task DestinationRemovesItsFilesWhenALaterStepFails()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders" }),
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV", ["RemoveOnFailure"] = true }),
+                Node("after", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO Nowhere VALUES (1)" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "file"), Edge("file", "after")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Failed");
+        var file = Output(run, "file")["files"]![0]!["path"]!.GetValue<string>();
+        File.Exists(file).Should().BeFalse();
+    }
 }
