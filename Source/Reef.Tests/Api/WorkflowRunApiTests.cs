@@ -11,6 +11,7 @@ namespace Reef.Tests.Api;
 public class WorkflowRunApiTests(ReefApiFactory factory)
 {
     private readonly CancellationToken _ct = TestContext.Current.CancellationToken;
+    private string _shopDb = "";
 
     private static JsonObject Node(string id, string type, JsonObject? config = null) =>
         new() { ["id"] = id, ["type"] = type, ["x"] = 0, ["y"] = 0, ["config"] = config ?? new JsonObject() };
@@ -29,6 +30,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
                 CREATE TABLE Orders (OrderId INTEGER PRIMARY KEY, Customer TEXT, Total REAL, Region TEXT);
                 INSERT INTO Orders VALUES (1, 'Alpha', 50, 'North'), (2, 'Beta', 150, 'South'), (3, 'Gamma', 250, 'North'), (4, 'Delta', 75, 'West');
                 CREATE TABLE Regions (Region TEXT, Manager TEXT);
+                CREATE TABLE RunLog (Entry TEXT);
                 INSERT INTO Regions VALUES ('North', 'Noor'), ('South', 'Sam');
                 """;
             await cmd.ExecuteNonQueryAsync(_ct);
@@ -39,6 +41,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
         var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
         var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
+        _shopDb = shopDb;
         return (client, connectionId, destinationId);
     }
 
@@ -124,5 +127,58 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         run["errorMessage"]!.GetValue<string>().Should().Contain("orders").And.Contain("Missing");
         NodeRun(run, "orders")["status"]!.GetValue<string>().Should().Be("Failed");
         run["nodes"]!.AsArray().Should().NotContain(n => n!["nodeId"]!.GetValue<string>() == "file");
+    }
+    [Fact]
+    public async Task TemplateNodeRendersRowsAndDestinationUploadsTheFile()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+        var template = await client.PostAsJsonAsync("/api/templates", new { name = $"Lines {Guid.NewGuid():N}", type = "ScribanTemplate", outputFormat = "CSV",
+            template = "{{ for row in data }}{{ row.Customer }};{{ end }}" }, _ct);
+        template.EnsureSuccessStatusCode();
+        var templateId = (await template.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Customer FROM Orders ORDER BY OrderId" }),
+                Node("render", "template", new JsonObject { ["TemplateId"] = templateId }),
+                Node("file", "destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "Files" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "render"), Edge("render", "file")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        var files = Output(run, "file")["files"]!.AsArray();
+        files.Should().HaveCount(1);
+        (await File.ReadAllTextAsync(files[0]!["path"]!.GetValue<string>(), _ct)).Should().Be("Alpha;Beta;Gamma;Delta;");
+    }
+
+    [Fact]
+    public async Task ProcessNodesRunStatementsAroundTheQuery()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        JsonObject Hook(string prefix, string command, bool continueOnError = false) => new()
+        {
+            ["ConnectionId"] = connectionId, [$"{prefix}Type"] = "Query",
+            [$"{prefix}Config"] = new JsonObject { ["Command"] = command, ["Timeout"] = 30, ["ContinueOnError"] = continueOnError }
+        };
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("pre", "preprocess", Hook("PreProcess", "INSERT INTO RunLog VALUES ('pre')")),
+                Node("log", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Entry FROM RunLog" }),
+                Node("post", "postprocess", Hook("PostProcess", "INSERT INTO RunLog VALUES ('post {rowcount}')")),
+                Node("broken", "postprocess", Hook("PostProcess", "INSERT INTO Nowhere VALUES (1)", continueOnError: true))
+            ],
+            [Edge("start", "pre"), Edge("pre", "log"), Edge("log", "post"), Edge("post", "broken")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        Output(run, "log")["items"]![0]!["Entry"]!.GetValue<string>().Should().Be("pre");
+        NodeRun(run, "broken")["errorMessage"]!.GetValue<string>().Should().Contain("Nowhere");
+        await using var db = new SqliteConnection($"Data Source={_shopDb}");
+        await db.OpenAsync(_ct);
+        await using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT Entry FROM RunLog WHERE Entry LIKE 'post%'";
+        (await cmd.ExecuteScalarAsync(_ct)).Should().Be("post 1");
     }
 }

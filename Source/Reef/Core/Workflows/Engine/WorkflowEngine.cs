@@ -24,52 +24,64 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         run.Id = await runs.StartAsync(run, ct);
 
         var outputs = new Dictionary<(string Node, string Port), WorkflowItems>();
-        foreach (var node in Order(workflow, trigger.Id))
+        var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "reef-workflows", run.Id.ToString())).FullName;
+        try
         {
-            var record = new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, StartedAt = DateTime.UtcNow };
-            var incoming = workflow.Edges.Where(e => e.To == node.Id && outputs.ContainsKey((e.From, e.FromPort))).ToList();
-            if (node.Id != trigger.Id && incoming.Count == 0)
+            foreach (var node in Order(workflow, trigger.Id))
             {
-                record.Status = WorkflowRunStatus.Skipped;
-                record.CompletedAt = record.StartedAt;
-                run.Nodes.Add(record);
-                await runs.SaveNodeAsync(record);
-                continue;
-            }
-
-            var inputs = node.Id == trigger.Id
-                ? new Dictionary<string, WorkflowItems> { [WorkflowPorts.Main] = triggerItems ?? new WorkflowItems() }
-                : incoming.GroupBy(e => e.ToPort).ToDictionary(g => g.Key, g => Combine(g.Select(e => outputs[(e.From, e.FromPort)])));
-            try
-            {
-                if (!_executors.TryGetValue(node.Type, out var executor))
-                    throw new NodeExecutionException($"Node type '{node.Type}' cannot run yet");
-                var result = await executor.ExecuteAsync(new NodeContext { Workflow = workflow, Node = node, ExecutionId = run.Id, Inputs = inputs }, ct);
-                foreach (var (port, items) in result.Outputs)
-                    outputs[(node.Id, port)] = items;
-                record.Status = WorkflowRunStatus.Success;
-                record.RowCount = result.Outputs.Values.Sum(o => o.Items.Count);
-                record.OutputSampleJson = JsonSerializer.Serialize(result.Outputs.ToDictionary(o => o.Key, o => new
+                var record = new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, StartedAt = DateTime.UtcNow };
+                var incoming = workflow.Edges.Where(e => e.To == node.Id && outputs.ContainsKey((e.From, e.FromPort))).ToList();
+                if (node.Id != trigger.Id && incoming.Count == 0)
                 {
-                    o.Value.Columns, Items = o.Value.Items.Take(SampleRows), o.Value.Files, Total = o.Value.Items.Count
-                }), Json);
+                    record.Status = WorkflowRunStatus.Skipped;
+                    record.CompletedAt = record.StartedAt;
+                    run.Nodes.Add(record);
+                    await runs.SaveNodeAsync(record);
+                    continue;
+                }
+
+                var inputs = node.Id == trigger.Id
+                    ? new Dictionary<string, WorkflowItems> { [WorkflowPorts.Main] = triggerItems ?? new WorkflowItems() }
+                    : incoming.GroupBy(e => e.ToPort).ToDictionary(g => g.Key, g => Combine(g.Select(e => outputs[(e.From, e.FromPort)])));
+                try
+                {
+                    if (!_executors.TryGetValue(node.Type, out var executor))
+                        throw new NodeExecutionException($"Node type '{node.Type}' cannot run yet");
+                    var result = await executor.ExecuteAsync(new NodeContext { Workflow = workflow, Node = node, ExecutionId = run.Id, Inputs = inputs, WorkFolder = workFolder }, ct);
+                    foreach (var (port, items) in result.Outputs)
+                        outputs[(node.Id, port)] = items;
+                    record.Status = WorkflowRunStatus.Success;
+                    record.ErrorMessage = result.Warning;
+                    record.RowCount = result.Outputs.Values.Sum(o => o.Items.Count);
+                    record.OutputSampleJson = JsonSerializer.Serialize(result.Outputs.ToDictionary(o => o.Key, o => new
+                    {
+                        o.Value.Columns,
+                        Items = o.Value.Items.Take(SampleRows),
+                        o.Value.Files,
+                        Total = o.Value.Items.Count
+                    }), Json);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                {
+                    Log.Warning(ex, "Workflow {WorkflowId} node {NodeId} failed", workflowId, node.Id);
+                    record.Status = WorkflowRunStatus.Failed;
+                    record.ErrorMessage = ex is NodeExecutionException ? ex.Message : $"{ex.GetType().Name}: {ex.Message}";
+                    run.Status = WorkflowRunStatus.Failed;
+                    run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
+                }
+                finally
+                {
+                    record.CompletedAt = DateTime.UtcNow;
+                    run.Nodes.Add(record);
+                    await runs.SaveNodeAsync(record);
+                }
+                if (run.Status == WorkflowRunStatus.Failed)
+                    break;
             }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                Log.Warning(ex, "Workflow {WorkflowId} node {NodeId} failed", workflowId, node.Id);
-                record.Status = WorkflowRunStatus.Failed;
-                record.ErrorMessage = ex is NodeExecutionException ? ex.Message : $"{ex.GetType().Name}: {ex.Message}";
-                run.Status = WorkflowRunStatus.Failed;
-                run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
-            }
-            finally
-            {
-                record.CompletedAt = DateTime.UtcNow;
-                run.Nodes.Add(record);
-                await runs.SaveNodeAsync(record);
-            }
-            if (run.Status == WorkflowRunStatus.Failed)
-                break;
+        }
+        finally
+        {
+            Directory.Delete(workFolder, recursive: true);
         }
 
         if (run.Status != WorkflowRunStatus.Failed)

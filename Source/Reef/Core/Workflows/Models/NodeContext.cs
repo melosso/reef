@@ -8,6 +8,7 @@ public class NodeContext
     public required WorkflowNode Node { get; init; }
     public required int ExecutionId { get; init; }
     public required Dictionary<string, WorkflowItems> Inputs { get; init; }
+    public required string WorkFolder { get; init; }
     public JsonObject Config => Node.Config ?? new JsonObject();
 
     public WorkflowItems Input => Inputs.GetValueOrDefault(WorkflowPorts.Main) ?? new WorkflowItems();

@@ -11,10 +11,12 @@ namespace Reef.Core.Workflows.Catalogs;
 public static class WorkflowNodeCatalog
 {
     public const string Fallback = "fallback";
+    public const string FilesFormat = "Files";
 
     private static readonly string[] Cron = [nameof(ScheduleType.Cron)];
     private static readonly string[] Interval = [nameof(ScheduleType.Interval)];
     private static readonly string[] Join = ["join"];
+    private static readonly string[] Sql = ["Query", "StoredProcedure"];
     private static readonly string[] WithValue = ["equals", "notEquals", "contains", "greaterThan", "lessThan"];
 
     public static readonly WorkflowCatalog Catalog = Build();
@@ -89,12 +91,12 @@ public static class WorkflowNodeCatalog
                     ]
                 },
 
-                From(export, "destination", "destination", WorkflowNodeGroups.Deliver),
+                Destination(From(export, "destination", "destination", WorkflowNodeGroups.Deliver)),
                 From(export, "emailexport", "email", WorkflowNodeGroups.Deliver),
                 From(import, "target", "write", WorkflowNodeGroups.Deliver),
 
-                Union(export, import, "preprocess", WorkflowNodeGroups.Hooks),
-                Union(export, import, "postprocess", WorkflowNodeGroups.Hooks)
+                Hook(Union(export, import, "preprocess", WorkflowNodeGroups.Hooks), "PreProcess"),
+                Hook(Union(export, import, "postprocess", WorkflowNodeGroups.Hooks), "PostProcess")
             ]
         };
     }
@@ -103,7 +105,7 @@ public static class WorkflowNodeCatalog
         new() { Type = type, Label = label, Icon = icon, Tooltip = tooltip, Group = WorkflowNodeGroups.Triggers, Inputs = WorkflowPorts.None, Fields = fields };
 
     private static WorkflowNodeDefinition From(ProfileCatalog catalog, string step, string type, string group) =>
-        From(catalog.Nodes.Single(n => n.Type == step), type, group, catalog.Nodes.Single(n => n.Type == step).Fields);
+        From(catalog.Nodes.Single(n => n.Type == step), type, group, [.. catalog.Nodes.Single(n => n.Type == step).Fields]);
 
     private static WorkflowNodeDefinition Union(ProfileCatalog first, ProfileCatalog second, string step, string group)
     {
@@ -114,6 +116,26 @@ public static class WorkflowNodeCatalog
 
     private static WorkflowNodeDefinition From(NodeDefinition step, string type, string group, List<NodeField> fields) =>
         new() { Type = type, Label = step.Label, Icon = step.Icon, Tooltip = step.Tooltip, Group = group, Fields = fields };
+
+    private static WorkflowNodeDefinition Hook(WorkflowNodeDefinition hook, string prefix)
+    {
+        hook.Fields.Insert(0, new() { Key = "ConnectionId", Label = "Connection", Kind = NodeFieldKinds.Select, OptionsSource = "connections", Required = true,
+            ShowWhen = new($"{prefix}Type", Sql) });
+        return hook;
+    }
+
+    private static WorkflowNodeDefinition Destination(WorkflowNodeDefinition destination)
+    {
+        var index = destination.Fields.FindIndex(f => f.Key == "OutputFormat");
+        var format = destination.Fields[index];
+        destination.Fields[index] = new()
+        {
+            Key = format.Key, Label = format.Label, Kind = format.Kind, Required = true, Default = format.Default,
+            Tooltip = "Files from input uploads the files the previous step made",
+            Options = [.. format.Options!, new(FilesFormat, "Files from input")]
+        };
+        return destination;
+    }
 
     private static string[] SwitchOutputs(JsonObject config) =>
         [.. (config["Cases"] as JsonArray ?? []).OfType<JsonObject>().Select(c => ConfigPath.ToText(c["Value"])).Where(v => v.Length > 0).Distinct(), Fallback];
