@@ -46,7 +46,7 @@ public sealed class ProfileDocumentIds(PublicIdMap ids)
         return document;
     }
 
-    private void Rewrite(IEnumerable<NodeField> fields, JsonObject config, bool toPublic)
+    public void Rewrite(IEnumerable<NodeField> fields, JsonObject config, bool toPublic)
     {
         foreach (var field in fields)
         {

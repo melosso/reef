@@ -57,7 +57,7 @@ public static partial class ProfileDocumentValidator
         return errors;
     }
 
-    private static void ValidateFields(IEnumerable<NodeField> fields, JsonObject config, string? nodeId, string owner, List<ProfileDocumentError> errors)
+    internal static void ValidateFields(IEnumerable<NodeField> fields, JsonObject config, string? nodeId, string owner, List<ProfileDocumentError> errors)
     {
         foreach (var field in fields)
         {

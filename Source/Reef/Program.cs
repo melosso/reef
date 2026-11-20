@@ -244,6 +244,7 @@ public partial class Program
             var scriptingStats = await scriptingMigration.GetStatsAsync();
             Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
 
+            await new WorkflowsMigration(connectionString).ApplyAsync();
             await new UlidMigration(connectionString).ApplyAsync();
             await new ApiKeyPrefixMigration(connectionString).ApplyAsync();
 
@@ -369,6 +370,8 @@ public partial class Program
         services.AddScoped<ImportProfileService>();
         services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
         services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
+        services.AddSingleton<Reef.Core.Workflows.WorkflowService>();
+        services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
@@ -611,6 +614,7 @@ public partial class Program
         app.MapQueryTemplatesEndpoints();
         ImportProfilesEndpoints.Map(app);
         ProfileDocumentsEndpoints.Map(app);
+        WorkflowsEndpoints.Map(app);
         DashboardEndpoints.Map(app);
 
         var spaIndex = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");
