@@ -19,7 +19,7 @@
     "@fontsource/geist-mono": "5.3.0",
     "@lezer/highlight": "1.2.5",
     "@lucide/svelte": "1.74.0",
-    "@xyflow/svelte": "1.7.0",
+    "@xyflow/svelte": "2.0.1",
     "codemirror": "6.0.2",
     "svelte": "5.57.3",
     "svelte-sonner": "1.2.3"
