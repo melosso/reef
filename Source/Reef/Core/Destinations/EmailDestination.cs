@@ -329,6 +329,7 @@ public class EmailDestinationConfiguration
 
     // Connection settings
     public int TimeoutSeconds { get; set; } = 30;
+    public int RetryDelaySeconds { get; set; } = 2;
     public int RetryCount { get; set; } = 3;
     public bool ValidateCertificate { get; set; } = true;
     public string? SecurityMode { get; set; } = "StartTls"; // StartTls, None, Auto

@@ -63,6 +63,33 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task RateLimitedServerReceivesEveryMailOnce()
+    {
+        var senders = 0;
+        await using var smtp = new FakeSmtpServer(line => line.StartsWith("MAIL", StringComparison.OrdinalIgnoreCase) && Interlocked.Increment(ref senders) <= 2 ? "421 4.7.0 rate limited, try later" : null);
+        var admin = await factory.CreateAdminClientAsync();
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1", RetryDelaySeconds = 0 }), EmailProfiles.Rows(3));
+
+        var execution = await EmailProfiles.RunAsync(admin, profileId);
+
+        execution["status"]!.GetValue<string>().Should().Be("Success");
+        smtp.Recipients.Should().BeEquivalentTo("user1@example.com", "user2@example.com", "user3@example.com");
+    }
+
+    [Fact]
+    public async Task RunSendsEveryRowOverOneConnection()
+    {
+        await using var smtp = new FakeSmtpServer();
+        var admin = await factory.CreateAdminClientAsync();
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(50));
+
+        await EmailProfiles.RunAsync(admin, profileId);
+
+        smtp.Messages.Should().HaveCount(50);
+        smtp.Connections.Should().Be(1);
+    }
+
+    [Fact]
     public async Task OAuthWithoutTokenFailsBeforeSending()
     {
         await using var smtp = new FakeSmtpServer();

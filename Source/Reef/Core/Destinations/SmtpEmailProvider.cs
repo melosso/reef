@@ -50,11 +50,8 @@ public class SmtpEmailProvider : IEmailProvider
             Log.Information("Sending email via SMTP to {Recipients} using {SmtpHost}:{SmtpPort}",
                 maskedRecipients, smtpHost, config.SmtpPort);
 
-            using var client = await ConnectAsync(smtpHost, config, CancellationToken.None);
-
-            // Send message
-            var response = await client.SendAsync(message);
-            await client.DisconnectAsync(true);
+            await using (var sender = new SmtpSender(config))
+                await sender.SendAsync(message);
 
             var recipients = string.Join(", ", config.ToAddresses);
             var maskedRecipientsForLog = string.Join(", ", config.ToAddresses.Select(MaskEmailForLog));

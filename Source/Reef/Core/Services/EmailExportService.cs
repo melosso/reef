@@ -203,6 +203,7 @@ public class EmailExportService
                 return (false, "Email recipients column or hardcoded email not configured", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
+            await using var smtp = new SmtpSender(emailConfig);
             var successCount = 0;
             var failureCount = 0;
             var errors = new List<string>();
@@ -231,6 +232,7 @@ public class EmailExportService
                         emailConfig,
                         emailTemplate.Template,
                         group.ToList(),
+                        smtp,
                         attachmentConfig);
 
                     var splitKey = group.Key;
@@ -302,6 +304,7 @@ public class EmailExportService
                         emailConfig,
                         emailTemplate.Template,
                         queryResults,
+                        smtp,
                         attachmentConfig);
 
                     var recipient = useHardcodedRecipient
@@ -352,6 +355,7 @@ public class EmailExportService
                             emailConfig,
                             emailTemplate.Template,
                             new List<Dictionary<string, object>> { row },
+                            smtp,
                             attachmentConfig);
 
                         // Use row index or email address (masked) as split key when no split key column is set
@@ -415,6 +419,7 @@ public class EmailExportService
         EmailDestinationConfiguration emailConfig,
         string emailBodyTemplate,
         List<Dictionary<string, object>> rows,
+        SmtpSender smtp,
         AttachmentConfig? attachmentConfig = null)
     {
         try
@@ -618,9 +623,6 @@ public class EmailExportService
                 }
 
                 // SMTP provider with multiple HTML documents
-                var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
-
-                try
                 {
                     // Send one email per HTML document
                     for (int i = 0; i < htmlDocuments.Count && i < rows.Count; i++)
@@ -687,7 +689,7 @@ public class EmailExportService
 
                         try
                         {
-                            await client.SendAsync(message);
+                            await smtp.SendAsync(message);
                             sendCount++;
                             Log.Information("Email {Number} sent to {Recipient} from profile {ProfileId}",
                                 i + 1, MaskEmailForLog(recipient), profile.Id);
@@ -696,19 +698,7 @@ public class EmailExportService
                         {
                             Log.Warning("Email {Number} to {Recipient} was rejected: {Error}", i + 1, MaskEmailForLog(recipient), ex.Message);
                         }
-                        catch (Exception ex) when (ex is ServiceNotConnectedException or SmtpProtocolException or IOException)
-                        {
-                            Log.Warning("Email {Number} to {Recipient} failed, reconnecting: {Error}", i + 1, MaskEmailForLog(recipient), ex.Message);
-                            client.Dispose();
-                            client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
-                        }
                     }
-                }
-                finally
-                {
-                    if (client.IsConnected)
-                        await client.DisconnectAsync(true);
-                    client.Dispose();
                 }
 
                 Log.Information("{Count} email(s) sent successfully from split HTML rendering", sendCount);
@@ -782,11 +772,7 @@ public class EmailExportService
                     }
                 }
 
-                // SMTP provider
-                using var client = await SmtpEmailProvider.ConnectAsync(emailConfig, CancellationToken.None);
-
-                await client.SendAsync(message);
-                await client.DisconnectAsync(true);
+                await smtp.SendAsync(message);
 
                 Log.Information("Email sent successfully to {Recipient} from profile {ProfileId}",
                     MaskEmailForLog(toRecipient), profile.Id);

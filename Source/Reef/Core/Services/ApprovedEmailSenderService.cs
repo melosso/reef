@@ -19,7 +19,7 @@ public class ApprovedEmailSenderService : BackgroundService
     private static Serilog.ILogger Log => Serilog.Log.ForContext<ApprovedEmailSenderService>();
 
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(30); // Poll every 30 seconds
-    private readonly int _maxRetries = 3; // Retry failed sends 3 times
+    private readonly int _maxRetries = 1; // SmtpSender retries temporary smtp replies
     private readonly TimeSpan _retryDelay = TimeSpan.FromSeconds(5); // Wait 5 seconds between retries
 
     public ApprovedEmailSenderService(
@@ -359,7 +359,7 @@ public class ApprovedEmailSenderService : BackgroundService
         await connection.ExecuteAsync(failSql, new
         {
             Id = approval.Id,
-            ErrorMessage = $"Failed after {_maxRetries} attempts: {lastException?.Message}"
+            ErrorMessage = lastException?.Message
         });
 
         // Update ProfileExecution ApprovalStatus to reflect email send failure
@@ -375,8 +375,7 @@ public class ApprovedEmailSenderService : BackgroundService
             ApprovalId = approval.Id
         });
 
-        Log.Error("Failed to send approved email {ApprovalId} after {Retries} attempts: {Error}",
-            approval.Id, _maxRetries, lastException?.Message);
+        Log.Error("Failed to send approved email {ApprovalId}: {Error}", approval.Id, lastException?.Message);
 
         // Redact sensitive email content per security policy - keep only metadata
         const string redactFailedSql = @"
@@ -392,7 +391,7 @@ public class ApprovedEmailSenderService : BackgroundService
         try
         {
             await auditService.LogAsync("PendingEmailApproval", approval.Id, "FailedToSend",
-                "ApprovedEmailSenderService", $"Email failed to send after {_maxRetries} attempts: {lastException?.Message}");
+                "ApprovedEmailSenderService", $"Email failed to send: {lastException?.Message}");
         }
         catch { /* Audit logging failure should not block operation */ }
     }
