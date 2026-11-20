@@ -249,7 +249,7 @@ public static class ImportProfilesEndpoints
                 SourceFileSelection = req.SourceFileSelection
             };
 
-            var (success, message) = await source.TestAsync(profile, ct);
+            var (success, message) = await source.TestAsync(ImportSourceOptions.From(profile), ct);
             return Results.Ok(new { success, message });
         }
         catch (Exception ex)
@@ -280,7 +280,7 @@ public static class ImportProfilesEndpoints
                 SourceFileSelection = req.SourceFileSelection
             };
 
-            var files = await source.ListFilesAsync(profile, ct);
+            var files = await source.ListFilesAsync(ImportSourceOptions.From(profile), ct);
             return Results.Ok(new ListSourceFilesResponse { Success = true, Files = files });
         }
         catch (Exception ex)
@@ -329,7 +329,7 @@ public static class ImportProfilesEndpoints
             }
 
             var source = ImportSourceFactory.Create(profile.SourceType);
-            var files = await source.FetchAsync(profile, ct);
+            var files = await source.FetchAsync(ImportSourceOptions.From(profile), ct);
 
             if (!files.Any())
                 return Results.Ok(new PreviewImportResponse

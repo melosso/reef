@@ -1,4 +1,7 @@
 using Reef.Core.ProfileDocuments.Models;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
+using Reef.Core.Nodes.Exceptions;
 
 namespace Reef.Core.ProfileDocuments.Catalogs;
 

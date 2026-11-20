@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
-using Reef.Core.ProfileDocuments.Models;
+using Reef.Core.Nodes.Models;
 
-namespace Reef.Core.ProfileDocuments;
+namespace Reef.Core.Nodes;
 
 public static class NodeConditions
 {

@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace Reef.Core.ProfileDocuments.Models;
+namespace Reef.Core.Nodes.Models;
 
 public class NodeField
 {

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using FluentAssertions;
 using Reef.Core.Models;
 using Reef.Core.ProfileDocuments;
+using Reef.Core.Nodes;
 using Reef.Core.ProfileDocuments.Catalogs;
 using Reef.Core.ProfileDocuments.Models;
 using Xunit;

@@ -2,10 +2,12 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.ProfileDocuments;
 using Reef.Core.ProfileDocuments.Catalogs;
-using Reef.Core.ProfileDocuments.Exceptions;
+using Reef.Core.Nodes.Exceptions;
 using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Services;
 using Reef.Core.PublicIds;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
 
 namespace Reef.Api;
 
@@ -80,7 +82,7 @@ public static class ProfileDocumentsEndpoints
                 id is null ? "Created" : "Updated", context.User.Identity?.Name ?? "Unknown", (string?)null, context);
             return id is null ? Results.Created($"/api/profile-documents/{catalog.Kind}", saved) : Results.Ok(saved);
         }
-        catch (ProfileDocumentValidationException ex)
+        catch (NodeValidationException ex)
         {
             return Results.BadRequest(new { error = ex.Message, errors = ex.Errors });
         }
@@ -90,7 +92,7 @@ public static class ProfileDocumentsEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { error = ex.Message, errors = new[] { new ProfileDocumentError(ex.Message) } });
+            return Results.BadRequest(new { error = ex.Message, errors = new[] { new NodeError(ex.Message) } });
         }
     }
 }

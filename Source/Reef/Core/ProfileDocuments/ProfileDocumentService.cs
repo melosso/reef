@@ -3,9 +3,11 @@ using System.Text.Json.Nodes;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Models;
 using Reef.Core.ProfileDocuments.Catalogs;
-using Reef.Core.ProfileDocuments.Exceptions;
+using Reef.Core.Nodes.Exceptions;
 using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Services;
+using Reef.Core.Nodes;
+using Reef.Core.Nodes.Models;
 
 namespace Reef.Core.ProfileDocuments;
 
@@ -48,7 +50,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
     {
         var errors = ProfileDocumentValidator.Validate(catalog, document);
         if (errors.Count > 0)
-            throw new ProfileDocumentValidationException(errors);
+            throw new NodeValidationException(errors);
 
         var name = ConfigPath.ToText(document.Settings["Name"]).Trim();
         if (catalog.Kind == ProfileKinds.Import && (await imports.GetAllAsync()).Any(p => p.Id != id && string.Equals(p.Name.Trim(), name, StringComparison.OrdinalIgnoreCase)))
@@ -146,7 +148,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
             await imports.DeleteOutputTargetAsync(stale);
     }
 
-    private static ProfileDocumentValidationException DuplicateName(string name) =>
+    private static NodeValidationException DuplicateName(string name) =>
         new([new($"A profile named '{name}' already exists", null, "Name")]);
 
     private static async Task<JsonObject> LoadAsync<T>(Func<Task<T?>> load) where T : class =>
@@ -162,7 +164,7 @@ public class ProfileDocumentService(ProfileService profiles, ImportProfileServic
         }
         catch (JsonException ex)
         {
-            throw new ProfileDocumentValidationException([new($"A value has the wrong type: {ex.Path}")]);
+            throw new NodeValidationException([new($"A value has the wrong type: {ex.Path}")]);
         }
     }
 

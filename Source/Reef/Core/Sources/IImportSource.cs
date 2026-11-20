@@ -12,21 +12,21 @@ public interface IImportSource
     /// The caller is responsible for disposing each ImportSourceFile.Content stream.
     /// </summary>
     Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default);
 
     /// <summary>
     /// List files available at the source (for the UI "browse" button).
     /// </summary>
     Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default);
 
     /// <summary>
     /// Move or rename a processed file to the archive location.
     /// </summary>
     Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default);
 
@@ -34,6 +34,6 @@ public interface IImportSource
     /// Test connectivity and accessibility of the source.
     /// </summary>
     Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default);
 }

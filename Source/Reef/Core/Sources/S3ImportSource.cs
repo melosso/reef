@@ -8,18 +8,18 @@ namespace Reef.Core.Sources;
 
 /// <summary>
 /// Reads files from an AWS S3 bucket (or S3-compatible storage).
-/// Configuration is read from profile.SourceConfig JSON using the same shape as S3Config / DestinationConfiguration.
+/// Configuration is read from options.SourceConfig JSON using the same shape as S3Config / DestinationConfiguration.
 /// </summary>
 public class S3ImportSource : IImportSource
 {
     public async Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
+        var cfg = ParseConfig(options);
         var client = BuildClient(cfg);
 
-        var files = await ResolveKeysAsync(client, cfg, profile.SourceFileSelection, profile.SourceFilePattern, ct);
+        var files = await ResolveKeysAsync(client, cfg, options.SourceFileSelection, options.SourceFilePattern, ct);
         var result = new List<ImportSourceFile>();
 
         foreach (var key in files)
@@ -48,12 +48,12 @@ public class S3ImportSource : IImportSource
     }
 
     public async Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var cfg = ParseConfig(profile);
+        var cfg = ParseConfig(options);
         var client = BuildClient(cfg);
-        var pattern = string.IsNullOrWhiteSpace(profile.SourceFilePattern) ? "*" : profile.SourceFilePattern;
+        var pattern = string.IsNullOrWhiteSpace(options.SourceFilePattern) ? "*" : options.SourceFilePattern;
         var prefix = cfg.Prefix ?? "";
 
         var request = new ListObjectsV2Request { BucketName = cfg.BucketName, Prefix = prefix };
@@ -85,7 +85,7 @@ public class S3ImportSource : IImportSource
     }
 
     public Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default)
     {
@@ -94,12 +94,12 @@ public class S3ImportSource : IImportSource
     }
 
     public async Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
         try
         {
-            var cfg = ParseConfig(profile);
+            var cfg = ParseConfig(options);
             if (string.IsNullOrWhiteSpace(cfg.BucketName))
                 return (false, "BucketName is not configured");
 
@@ -171,9 +171,9 @@ public class S3ImportSource : IImportSource
         return new AmazonS3Client(s3Config);
     }
 
-    private S3SourceConfig ParseConfig(ImportProfile profile)
+    private S3SourceConfig ParseConfig(ImportSourceOptions options)
     {
-        var json = profile.SourceConfig ?? "{}";
+        var json = options.SourceConfig ?? "{}";
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
@@ -192,7 +192,7 @@ public class S3ImportSource : IImportSource
             SecretKey = Get("secretKey", "SecretKey"),
             Prefix = Get("prefix", "Prefix") ?? "",
             ServiceUrl = Get("serviceUrl", "ServiceUrl"),
-            ExactKey = profile.SourceFilePath
+            ExactKey = options.SourceFilePath
         };
     }
 

@@ -1281,8 +1281,13 @@ public class JobService
             "UPDATE ProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
         runs += await conn.ExecuteAsync(
             "UPDATE ImportProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
+        if (await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'WorkflowExecutions'") > 0)
+            runs += await conn.ExecuteAsync("""
+                UPDATE NodeRuns SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
+                UPDATE WorkflowExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
+                """, args);
         if (executions + jobs + runs > 0)
-            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} profile runs interrupted by restart", jobs, executions, runs);
+            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} profile and workflow runs interrupted by restart", jobs, executions, runs);
     }
 
     /// <summary>

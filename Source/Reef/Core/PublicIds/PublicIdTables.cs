@@ -2,6 +2,7 @@ using Reef.Core.Models;
 using Reef.Core.Models.Dashboard;
 using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Services;
+using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.PublicIds;
 
@@ -19,7 +20,7 @@ public static class PublicIdTables
         "ImportOutputTargets", ImportProfileExecutions, ImportProfiles, "JobDependencies", "JobExecutions", "Jobs",
         "NotificationEmailTemplate", "NotificationSettings", "OidcSettings", "PendingEmailApprovals", "ProfileDependencies",
         "ProfileExecutionErrors", "ProfileExecutionSplits", ProfileExecutions, "ProfileGroups", "ProfileParameters",
-        "ProfileTransformations", Profiles, "QueryTemplates", "ScheduledTasks", "UsernameHistory", "Users", "WebhookTriggers"
+        "ProfileTransformations", Profiles, "QueryTemplates", "ScheduledTasks", "UsernameHistory", "Users", "WebhookTriggers", "Workflows", "WorkflowExecutions", "NodeRuns"
     };
 
     private static readonly Dictionary<string, string> ByName = new(StringComparer.OrdinalIgnoreCase)
@@ -48,7 +49,9 @@ public static class PublicIdTables
         ["ApprovedByUserId"] = "Users",
         ["SkippedByUserId"] = "Users",
         ["ChangedByUserId"] = "Users",
-        ["CreatedBy"] = "Users"
+        ["CreatedBy"] = "Users",
+        ["WorkflowId"] = "Workflows",
+        ["WorkflowExecutionId"] = "WorkflowExecutions"
     };
 
     private static readonly Dictionary<Type, string> ById = new()
@@ -83,7 +86,10 @@ public static class PublicIdTables
         [typeof(JobExecution)] = "JobExecutions",
         [typeof(AttentionJob)] = "Jobs",
         [typeof(QueryTemplate)] = "QueryTemplates",
-        [typeof(ProfileTransformation)] = "ProfileTransformations"
+        [typeof(ProfileTransformation)] = "ProfileTransformations",
+        [typeof(WorkflowDocument)] = "Workflows",
+        [typeof(WorkflowExecution)] = "WorkflowExecutions",
+        [typeof(NodeRun)] = "NodeRuns"
     };
 
     private static readonly Dictionary<string, string> AuditEntities = new(StringComparer.OrdinalIgnoreCase)
@@ -101,7 +107,8 @@ public static class PublicIdTables
         ["Destination"] = "Destinations",
         ["Job"] = "Jobs",
         ["ImportProfile"] = ImportProfiles,
-        ["QueryTemplate"] = "QueryTemplates"
+        ["QueryTemplate"] = "QueryTemplates",
+        ["Workflow"] = "Workflows"
     };
 
     public static string Known(string table) =>

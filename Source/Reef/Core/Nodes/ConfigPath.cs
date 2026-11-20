@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace Reef.Core.ProfileDocuments;
+namespace Reef.Core.Nodes;
 
 public static class ConfigPath
 {
