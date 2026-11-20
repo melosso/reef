@@ -17,8 +17,8 @@ public class AttachmentVariableResolver
     // Valid variable names (alphanumeric and underscore only)
     private static readonly Regex ValidVariableName = new(@"^[a-zA-Z_][a-zA-Z0-9_]*$", RegexOptions.Compiled);
 
-    // Invalid filename characters to prevent directory traversal and OS issues
-    private static readonly Regex InvalidFilenameChars = new(@"[<>:""/\\|?*\.](?<!\.[\w]+$)|\.\.|\n|\r|\0", RegexOptions.Compiled);
+    // invalid characters and every dot before the extension are replaced to block path traversal
+    private static readonly Regex InvalidFilenameChars = new(@"[<>:""/\\|?*\n\r\0]|\.(?=[^.]*\.)", RegexOptions.Compiled);
 
     /// <summary>
     /// Predefined variables that are always available
