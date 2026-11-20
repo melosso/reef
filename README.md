@@ -74,7 +74,7 @@ The first start creates an admin account `admin-<random>@reef.local` with a one-
 
 Download the latest release from Releases.
 
-1. **Install .NET 10 Runtime:**
+1. **Install .NET 11 Runtime:**
 ```powershell
    winget install --id Microsoft.DotNet.Runtime.10 -e
 ```
