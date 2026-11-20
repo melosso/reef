@@ -1,3 +1,4 @@
+using Reef.Core.PublicIds;
 using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
@@ -22,6 +23,7 @@ public class JobExecutorService
     private readonly IConfiguration _configuration;
     private readonly IServiceScopeFactory _scopes;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly PublicIdMap _ids;
 
     public JobExecutorService(
         JobService jobService,
@@ -33,7 +35,8 @@ public class JobExecutorService
         AdminService adminService,
         IConfiguration configuration,
         IServiceScopeFactory scopes,
-        IHostApplicationLifetime lifetime)
+        IHostApplicationLifetime lifetime,
+        PublicIdMap ids)
     {
         _jobService = jobService;
         _executionService = executionService;
@@ -45,6 +48,7 @@ public class JobExecutorService
         _configuration = configuration;
         _scopes = scopes;
         _lifetime = lifetime;
+        _ids = ids;
     }
 
     /// <summary>
@@ -307,7 +311,7 @@ public class JobExecutorService
                 ct);
 
             var success = execution.Status is "Success" or "PartialSuccess";
-            var outputData = JsonSerializer.Serialize(new { executionId = execution.Id, status = execution.Status });
+            var outputData = JsonSerializer.Serialize(new { executionId = _ids.ToUlid(PublicIdTables.ImportProfileExecutions, execution.Id), status = execution.Status });
             var errorMessage = success ? null : execution.ErrorMessage;
             var rowsProcessed = execution.TotalRowsRead > 0 ? execution.TotalRowsRead : (int?)null;
 

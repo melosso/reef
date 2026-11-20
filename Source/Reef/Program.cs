@@ -387,7 +387,8 @@ public partial class Program
                 sp.GetRequiredService<EncryptionService>(),
                 sp.GetRequiredService<NotificationThrottler>(),
                 sp.GetRequiredService<NotificationTemplateService>(),
-                sp.GetRequiredService<ScribanTemplateEngine>()));
+                sp.GetRequiredService<ScribanTemplateEngine>(),
+                sp.GetRequiredService<PublicIdMap>()));
 
         // Destination services
         services.AddScoped<DestinationService>(sp =>

@@ -4,6 +4,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Destinations;
+using Reef.Core.PublicIds;
 using Reef.Core.Models;
 using Reef.Core.TemplateEngines;
 using Scriban;
@@ -26,6 +27,7 @@ public class NotificationService
     private readonly NotificationThrottler _throttler;
     private readonly NotificationTemplateService _templateService;
     private readonly ScribanTemplateEngine _scribanEngine;
+    private readonly PublicIdMap _ids;
 
     // Debouncing state for email approval notifications to prevent spam when multiple approvals are created rapidly
     private static readonly SemaphoreSlim _approvalNotificationLock = new SemaphoreSlim(1, 1);
@@ -37,8 +39,10 @@ public class NotificationService
         EncryptionService encryptionService,
         NotificationThrottler throttler,
         NotificationTemplateService templateService,
-        ScribanTemplateEngine scribanEngine)
+        ScribanTemplateEngine scribanEngine,
+        PublicIdMap ids)
     {
+        _ids = ids;
         _connectionString = connectionString;
         _encryptionService = encryptionService;
         _throttler = throttler;
@@ -1603,8 +1607,8 @@ public class NotificationService
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;
-        context["ProfileId"] = profile.Id;
-        context["ExecutionId"] = execution.Id;
+        context["ProfileId"] = _ids.ToUlid(PublicIdTables.Profiles, profile.Id);
+        context["ExecutionId"] = _ids.ToUlid(PublicIdTables.ProfileExecutions, execution.Id);
         context["StartedAt"] = execution.StartedAt;
         context["CompletedAt"] = execution.CompletedAt;
         context["ExecutionTime"] = execution.ExecutionTimeMs.HasValue
@@ -1623,8 +1627,8 @@ public class NotificationService
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;
-        context["ProfileId"] = profile.Id;
-        context["ExecutionId"] = execution.Id;
+        context["ProfileId"] = _ids.ToUlid(PublicIdTables.Profiles, profile.Id);
+        context["ExecutionId"] = _ids.ToUlid(PublicIdTables.ProfileExecutions, execution.Id);
         context["StartedAt"] = execution.StartedAt;
         context["CompletedAt"] = execution.CompletedAt;
         context["ErrorMessage"] = execution.ErrorMessage ?? "Unknown error";
@@ -1636,8 +1640,8 @@ public class NotificationService
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;
-        context["ProfileId"] = profile.Id;
-        context["ExecutionId"] = execution.Id;
+        context["ProfileId"] = _ids.ToUlid(PublicIdTables.ImportProfiles, profile.Id);
+        context["ExecutionId"] = _ids.ToUlid(PublicIdTables.ImportProfileExecutions, execution.Id);
         context["StartedAt"] = execution.StartedAt;
         context["CompletedAt"] = execution.CompletedAt;
         context["ExecutionTime"] = execution.CompletedAt.HasValue
@@ -1653,8 +1657,8 @@ public class NotificationService
     {
         var context = new ScriptObject();
         context["ProfileName"] = profile.Name;
-        context["ProfileId"] = profile.Id;
-        context["ExecutionId"] = execution.Id;
+        context["ProfileId"] = _ids.ToUlid(PublicIdTables.ImportProfiles, profile.Id);
+        context["ExecutionId"] = _ids.ToUlid(PublicIdTables.ImportProfileExecutions, execution.Id);
         context["StartedAt"] = execution.StartedAt;
         context["CompletedAt"] = execution.CompletedAt;
         context["ErrorMessage"] = execution.ErrorMessage ?? "Unknown error";
@@ -1665,7 +1669,7 @@ public class NotificationService
     private ScriptObject BuildJobSuccessContext(int jobId, string jobName, Dictionary<string, object> jobDetails, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
     {
         var context = new ScriptObject();
-        context["JobId"] = jobId;
+        context["JobId"] = _ids.ToUlid("Jobs", jobId);
         context["JobName"] = jobName;
         foreach (var kvp in jobDetails)
         {
@@ -1678,7 +1682,7 @@ public class NotificationService
     private ScriptObject BuildJobFailureContext(int jobId, string jobName, string errorMessage, NotificationSettings settings, string? ctaButtonText = null, string? ctaUrlOverride = null)
     {
         var context = new ScriptObject();
-        context["JobId"] = jobId;
+        context["JobId"] = _ids.ToUlid("Jobs", jobId);
         context["JobName"] = jobName;
         context["ErrorMessage"] = errorMessage;
         AddCTAToContext(context, settings, ctaButtonText, ctaUrlOverride);
