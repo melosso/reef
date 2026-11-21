@@ -145,4 +145,20 @@ public class WorkflowTriggerApiTests(ReefApiFactory factory)
 
         api.LastAuthorizationHeader.Should().Be("Bearer s3cret-token");
     }
+
+    [Fact]
+    public async Task RunListPagesAllWorkflowRunsWithTheWorkflowName()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        var id = await CreateAsync(client, false, [Node("start", "manual")]);
+        for (var i = 0; i < 3; i++)
+            (await client.PostAsync($"/api/workflows/{id}/run", null, _ct)).EnsureSuccessStatusCode();
+
+        var page = (await client.GetFromJsonAsync<JsonObject>($"/api/workflow-executions?workflowId={id}&status=Success&page=1&pageSize=2", _ct))!;
+
+        page["totalCount"]!.GetValue<int>().Should().Be(3);
+        page["totalPages"]!.GetValue<int>().Should().Be(2);
+        page["data"]!.AsArray().Should().HaveCount(2).And.OnlyContain(r => r!["workflowName"]!.GetValue<string>().StartsWith("Trigger ") && r["workflowId"]!.GetValue<string>() == id);
+        (await client.GetAsync("/api/workflow-executions?workflowId=1", _ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
 }

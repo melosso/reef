@@ -153,6 +153,7 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     [InlineData("POST", "/api/admin/users")]
     [InlineData("PUT", "/api/admin/users/{self}")]
     [InlineData("POST", "/api/admin/danger/reset-database")]
+    [InlineData("GET", "/api/admin/interpreters")]
     public async Task UsersAreRefusedBeforeTheRequestIsRead(string method, string path)
     {
         var (user, id) = await CreateUserAsync();

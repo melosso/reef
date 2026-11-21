@@ -28,6 +28,13 @@ public static class WorkflowsEndpoints
         group.MapPost("/{id:ulid(Workflows)}/run", Run);
         group.MapPost("/{id:ulid(Workflows)}/nodes/{node}/test", Test);
         group.MapGet("/{id:ulid(Workflows)}/executions", (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) => runs.ListAsync(id, 50, ct));
+        app.MapGet("/api/workflow-executions", async ([FromQuery] int? workflowId, [FromQuery] string? status, [FromServices] WorkflowRunStore runs, CancellationToken ct, [FromQuery] int page = 1, [FromQuery] int pageSize = 25) =>
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 200);
+            var (data, total) = await runs.PageAsync(page, pageSize, workflowId, string.IsNullOrWhiteSpace(status) ? null : status, ct);
+            return Results.Ok(new { data, totalCount = total, page, pageSize, totalPages = Math.Max(1, (total + pageSize - 1) / pageSize) });
+        }).RequireAuthorization();
         app.MapGet("/api/workflow-executions/{id:ulid(WorkflowExecutions)}", async (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) =>
             await runs.GetAsync(id, ct) is { } run ? Results.Ok(run) : Results.NotFound()).RequireAuthorization();
     }

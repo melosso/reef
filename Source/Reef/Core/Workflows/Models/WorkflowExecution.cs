@@ -10,5 +10,6 @@ public class WorkflowExecution
     public DateTime StartedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public string? ErrorMessage { get; set; }
+    public string? WorkflowName { get; set; }
     public List<NodeRun> Nodes { get; set; } = new();
 }

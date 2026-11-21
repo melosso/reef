@@ -53,6 +53,17 @@ public class WorkflowRunStore(DatabaseConfig config)
         return run;
     }
 
+    public async Task<(List<WorkflowExecution> Runs, int Total)> PageAsync(int page, int pageSize, int? workflowId, string? status, CancellationToken ct = default)
+    {
+        await using var db = new SqliteConnection(config.ConnectionString);
+        var filter = new { workflowId, status, pageSize, offset = (page - 1) * pageSize };
+        const string where = "WHERE (@workflowId IS NULL OR e.WorkflowId = @workflowId) AND (@status IS NULL OR e.Status = @status)";
+        var total = await db.ExecuteScalarAsync<int>(new CommandDefinition($"SELECT COUNT(*) FROM WorkflowExecutions e {where}", filter, cancellationToken: ct));
+        var runs = await db.QueryAsync<WorkflowExecution>(new CommandDefinition(
+            $"SELECT e.*, w.Name AS WorkflowName FROM WorkflowExecutions e LEFT JOIN Workflows w ON w.Id = e.WorkflowId {where} ORDER BY e.Id DESC LIMIT @pageSize OFFSET @offset", filter, cancellationToken: ct));
+        return ([.. runs], total);
+    }
+
     public async Task<List<WorkflowExecution>> ListAsync(int workflowId, int limit, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);
