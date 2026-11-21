@@ -28,7 +28,7 @@
   onMount(() =>
     register(
       (p) => flow.screenToFlowPosition(p),
-      () => flow.fitView({ padding: 0.25, maxZoom: 1, duration: 200 }),
+      () => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 }),
     ),
   );
 
@@ -43,7 +43,7 @@
     <button type="button" class="add" popovertarget="step-menu"><Plus size={14} />Add step</button>
     <button type="button" class="tb" use:tooltip={'Line the steps up in run order'} onclick={ontidy}>Tidy up</button>
     <span class="sep" aria-hidden="true"></span>
-    <button type="button" class="tb" onclick={() => flow.fitView({ padding: 0.25, maxZoom: 1, duration: 200 })}>Fit</button>
+    <button type="button" class="tb" onclick={() => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 })}>Fit</button>
     <button
       type="button"
       class="tb num"
