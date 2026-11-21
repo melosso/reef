@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChevronDown, ChevronsUpDown, ChevronUp, Download, Pause, Pencil, Play, Plus, Power, Trash2 } from '@lucide/svelte';
+  import { ChevronDown, ChevronsUpDown, ChevronUp, Download, GitFork, Pause, Pencil, Play, Plus, Power, Trash2 } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
@@ -9,6 +9,7 @@
   import type { ImportProfile } from '../models/ImportProfile';
   import type { ProfileGroup } from '../models/ProfileGroup';
   import type { QueryTemplate } from '../models/QueryTemplate';
+  import type { WorkflowConversion } from '../models/WorkflowConversion';
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatRelative, parseDate } from '../lib/format';
   import { notify } from '../lib/notify';
@@ -217,6 +218,17 @@
     });
   }
 
+  async function convert(row: Row) {
+    try {
+      const converted = await api.post<WorkflowConversion>(`/api/workflows/convert/${row.kind}/${row.id}`);
+      notify.success(`${converted.workflow.name} created`, { key: `convert-${row.id}` });
+      if (converted.notes.length) notify.warning('Some settings have no workflow step', { description: converted.notes.join(' ') });
+      navigate(`/workflows/${converted.workflow.id}`);
+    } catch (e) {
+      notify.fail(e, `convert-${row.id}`);
+    }
+  }
+
   async function toggle(row: Row) {
     await act(row, 'toggle', async () => {
       await api.post(`/api/${row.kind === 'import' ? 'import-profiles' : 'profiles'}/${row.id}/${row.enabled ? 'disable' : 'enable'}`);
@@ -343,6 +355,13 @@
                   aria-label="Download {row.name} as JSON"
                   use:tooltip={'Download JSON'}
                   onclick={() => downloadJson(row)}><Download size={15} /></button
+                >
+                <button
+                  type="button"
+                  class="btn ghost icon"
+                  aria-label="Convert {row.name} to a workflow"
+                  use:tooltip={'Copy to a new workflow. The profile stays unchanged.'}
+                  onclick={() => convert(row)}><GitFork size={15} /></button
                 >
                 <button
                   type="button"
