@@ -38,6 +38,7 @@ public class WorkflowsMigration(string connectionString)
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 WorkflowExecutionId INTEGER NOT NULL,
                 NodeId TEXT NOT NULL,
+                Iteration INTEGER NOT NULL DEFAULT 0,
                 Status TEXT NOT NULL,
                 StartedAt TEXT NOT NULL,
                 CompletedAt TEXT NULL,
@@ -48,6 +49,9 @@ public class WorkflowsMigration(string connectionString)
             );
             CREATE INDEX IF NOT EXISTS IX_NodeRuns_Execution ON NodeRuns (WorkflowExecutionId);
             """);
+        var nodeRunColumns = (await conn.QueryAsync("PRAGMA table_info(NodeRuns)")).Select(r => (string)r.name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (!nodeRunColumns.Contains("Iteration"))
+            await conn.ExecuteAsync("ALTER TABLE NodeRuns ADD COLUMN Iteration INTEGER NOT NULL DEFAULT 0");
         var deltaColumns = (await conn.QueryAsync("PRAGMA table_info(DeltaSyncState)")).Select(r => (string)r.name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (deltaColumns.Count > 0 && !deltaColumns.Contains("Scope"))
             await ScopeDeltaSyncStateAsync(conn, deltaColumns.Contains("Ulid"));

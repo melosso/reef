@@ -10,6 +10,9 @@ public static class WorkflowNodeCatalog
 {
     public const string Fallback = "fallback";
     public const string FilesFormat = "Files";
+    public const string Loop = "loop";
+    public const string LoopBatch = "loop";
+    public const string LoopDone = "done";
 
     private static readonly string[] True = ["true"];
     private static readonly string[] Cron = ["Cron"];
@@ -49,8 +52,10 @@ public static class WorkflowNodeCatalog
             Node("query", "Query", "database", WorkflowNodeGroups.Sources, "Reads rows from a database connection",
             [
                 Connection(),
-                new() { Key = "Query", Label = "SQL query", Kind = NodeFieldKinds.Code, Required = true, Placeholder = "SELECT * FROM Orders WHERE ..." }
-            ]),
+                new() { Key = "Query", Label = "SQL query", Kind = NodeFieldKinds.Code, Required = true, Placeholder = "SELECT * FROM Orders WHERE Id = {{ json.Id }}",
+                    Tooltip = "Values in {{ }} are sent as query parameters" },
+                RunPerRow()
+            ]) with { SqlFields = ["Query"] },
             Node("fetch", "Fetch", "download", WorkflowNodeGroups.Sources, "Downloads files or an API response for the next step to read", FetchFields()),
 
             Node("parse", "Parse", "file-text", WorkflowNodeGroups.Transform, "Reads rows out of the fetched files", ParseFields()),
@@ -132,6 +137,13 @@ public static class WorkflowNodeCatalog
             },
             new()
             {
+                Type = Loop, Label = "Loop", Icon = "repeat", Group = WorkflowNodeGroups.Flow, RunsWhenEmpty = true,
+                Tooltip = "Sends the rows to loop in batches. Connect the last step back to Loop. Done returns every row after the last batch",
+                Outputs = [LoopBatch, LoopDone],
+                Fields = [new() { Key = "BatchSize", Label = "Batch size", Kind = NodeFieldKinds.Number, Required = true, Default = 10 }]
+            },
+            new()
+            {
                 Type = "merge", Label = "Merge", Icon = "merge", Group = WorkflowNodeGroups.Flow,
                 Tooltip = "Combines two branches by appending rows or joining them on a column",
                 Inputs = ["input1", "input2"],
@@ -174,8 +186,9 @@ public static class WorkflowNodeCatalog
                 new() { Key = "RequireApproval", Label = "Hold for approval", Kind = NodeFieldKinds.Bool },
                 new() { Key = "ApproverRoles", Label = "Approver roles", Kind = NodeFieldKinds.Json, Placeholder = "[\"Admin\"]", ShowWhen = new("RequireApproval", True) },
                 new() { Key = "EmailAttachmentConfig", Label = "Attachments", Kind = NodeFieldKinds.Json,
-                    Tooltip = "Attachment settings as JSON, leave empty to send without attachments" }
-            ]),
+                    Tooltip = "Attachment settings as JSON, leave empty to send without attachments" },
+                RunPerRow()
+            ]) with { RawFields = ["Subject"] },
             Node("write", "Write", "database", WorkflowNodeGroups.Deliver, "Inserts or updates the rows in a table, or writes them to a local file",
             [
                 new() { Key = "To", Label = "To", Kind = NodeFieldKinds.Select, Required = true, Default = "Database",
@@ -201,7 +214,7 @@ public static class WorkflowNodeCatalog
                 new() { Key = "ConnectionId", Label = "Connection", Kind = NodeFieldKinds.Select, OptionsSource = "connections", Required = true, ShowWhen = new("Runs", Sql) },
                 new() { Key = "Command", Label = "Command", Kind = NodeFieldKinds.Code, Required = true, ShowWhen = new("Runs", Sql),
                     Placeholder = "UPDATE Items SET Status = 'Done' WHERE Id = {executionid}",
-                    Tooltip = "{executionid} and {rowcount} are replaced when the step runs" },
+                    Tooltip = "{executionid} and {rowcount} are replaced when the step runs. Values in {{ }} are sent as parameters" },
                 new() { Key = "Interpreter", Label = "Interpreter", Kind = NodeFieldKinds.Select, Required = true, ShowWhen = new("Runs", Script),
                     Options = [new("pwsh", "PowerShell"), new("python", "Python"), new("node", "Node.js"), new("bash", "Bash"), new("sh", "sh"), new("cmd", "cmd")] },
                 new() { Key = "InlineScript", Label = "Inline script", Kind = NodeFieldKinds.Bool, Default = true, ShowWhen = new("Runs", Script),
@@ -212,13 +225,17 @@ public static class WorkflowNodeCatalog
                 new() { Key = "TimeoutSeconds", Label = "Timeout in seconds", Kind = NodeFieldKinds.Number, Default = 30 },
                 ContinueOnError(),
                 new() { Key = "SkipWhenEmpty", Label = "Skip when no rows arrive", Kind = NodeFieldKinds.Bool,
-                    Tooltip = "Other steps skip on empty input by default, commands run unless this is on" }
-            ])
+                    Tooltip = "Other steps skip on empty input by default, commands run unless this is on" },
+                RunPerRow()
+            ]) with { SqlFields = ["Command"], RawFields = ["Script"] }
         ]
     };
 
     private static NodeField ContinueOnError() =>
         new() { Key = "ContinueOnError", Label = "Continue on error", Kind = NodeFieldKinds.Bool, Tooltip = "A failure is recorded on the step and the run goes on" };
+
+    private static NodeField RunPerRow() =>
+        new() { Key = "RunPerRow", Label = "Run once per row", Kind = NodeFieldKinds.Bool, Tooltip = "Runs the step for every incoming row, json is that row" };
 
     private static NodeField Connection() =>
         new() { Key = "ConnectionId", Label = "Connection", Kind = NodeFieldKinds.Select, OptionsSource = "connections", Required = true };

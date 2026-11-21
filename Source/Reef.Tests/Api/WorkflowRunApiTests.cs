@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Reef.Tests.Destinations;
+using Reef.Tests.Templates;
 using Xunit;
 
 namespace Reef.Tests.Api;
@@ -50,9 +51,9 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
     private async Task<JsonObject> RunAsync(HttpClient client, JsonArray nodes, JsonArray edges) =>
         await RunAgainAsync(client, await CreateAsync(client, nodes, edges));
 
-    private async Task<string> CreateAsync(HttpClient client, JsonArray nodes, JsonArray edges)
+    private async Task<string> CreateAsync(HttpClient client, JsonArray nodes, JsonArray edges, int maxPasses = 1000)
     {
-        var created = await client.PostAsJsonAsync("/api/workflows", new JsonObject { ["name"] = $"Run {Guid.NewGuid():N}", ["nodes"] = nodes, ["edges"] = edges }, _ct);
+        var created = await client.PostAsJsonAsync("/api/workflows", new JsonObject { ["name"] = $"Run {Guid.NewGuid():N}", ["nodes"] = nodes, ["edges"] = edges, ["maxPasses"] = maxPasses }, _ct);
         created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(_ct));
         return (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
     }
@@ -338,5 +339,128 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         NodeRun(run, "file")["status"]!.GetValue<string>().Should().Be("Skipped");
         NodeRun(run, "post")["status"]!.GetValue<string>().Should().Be("Skipped");
         NodeRun(run, "always")["status"]!.GetValue<string>().Should().Be("Success");
+    }
+
+    private static List<JsonObject> NodeRuns(JsonObject run, string nodeId) =>
+        [.. run["nodes"]!.AsArray().Select(n => n!.AsObject()).Where(n => n["nodeId"]!.GetValue<string>() == nodeId)];
+
+    private async Task<List<string>> RunLogAsync()
+    {
+        await using var db = new SqliteConnection($"Data Source={_shopDb}");
+        await db.OpenAsync(_ct);
+        await using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT Entry FROM RunLog ORDER BY rowid";
+        var entries = new List<string>();
+        await using var reader = await cmd.ExecuteReaderAsync(_ct);
+        while (await reader.ReadAsync(_ct))
+            entries.Add(reader.GetString(0));
+        return entries;
+    }
+
+    [Fact]
+    public async Task CycleFetchesPagesUntilAnEmptyPage()
+    {
+        var (client, _, _) = await SetupAsync();
+        using var api = new MockHttpServer();
+        api.Respond = url => int.Parse(url.Query.Split('=')[1]) is var page and <= 3 ? $"[{{\"id\":{page}0}},{{\"id\":{page}1}}]" : "[]";
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("page", "fetch", new JsonObject { ["From"] = "Http", ["Settings"] = new JsonObject { ["url"] = api.BaseUrl + "items?page={{ run_index + 1 }}" } }),
+                Node("parse", "parse", new JsonObject { ["Format"] = "JSON" }),
+                Node("more", "if", new JsonObject { ["Column"] = "id", ["Operator"] = "isNotEmpty" })
+            ],
+            [Edge("start", "page"), Edge("page", "parse"), Edge("parse", "more"), Edge("more", "page", "true")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        api.RequestCount.Should().Be(4);
+        NodeRuns(run, "page").Select(n => n["iteration"]!.GetValue<int>()).Should().Equal(0, 1, 2, 3);
+        NodeRuns(run, "parse").Sum(n => n["rowCount"]!.GetValue<int>()).Should().Be(6);
+    }
+
+    [Fact]
+    public async Task QueryReadsAValueFromAnEarlierQuery()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("top", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT MAX(OrderId) AS Top FROM Orders" }),
+                Node("customer", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Customer FROM Orders WHERE OrderId = {{ node.top.first.Top }}" })
+            ],
+            [Edge("start", "top"), Edge("top", "customer")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        Output(run, "customer")["items"]!.AsArray().Should().ContainSingle().Which!["Customer"]!.GetValue<string>().Should().Be("Delta");
+    }
+
+    [Fact]
+    public async Task LoopSendsRowsInBatchesAndDoneReturnsEveryRow()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders" }),
+                Node("batch", "loop", new JsonObject { ["BatchSize"] = 3 }),
+                Node("log", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ({{ run_index }} || ':{rowcount}')" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "batch"), Edge("batch", "log", "loop"), Edge("log", "batch")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        (await RunLogAsync()).Should().Equal("0:3", "1:1");
+        var passes = NodeRuns(run, "batch");
+        passes.Should().HaveCount(3);
+        JsonNode.Parse(passes[^1]["outputSampleJson"]!.GetValue<string>())!["done"]!["total"]!.GetValue<int>().Should().Be(4);
+    }
+
+    [Fact]
+    public async Task EndlessCycleStopsAtThePassLimit()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        JsonObject Select() => new() { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "SELECT 1" };
+
+        var id = await CreateAsync(client,
+            [Node("start", "manual"), Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders" }), Node("a", "command", Select()), Node("b", "command", Select())],
+            [Edge("start", "orders"), Edge("orders", "a"), Edge("a", "b"), Edge("b", "a")], maxPasses: 5);
+        var run = await RunAgainAsync(client, id);
+
+        run["status"]!.GetValue<string>().Should().Be("Failed");
+        run["errorMessage"]!.GetValue<string>().Should().Contain("5");
+        NodeRuns(run, "a").Should().HaveCount(5);
+    }
+
+    [Fact]
+    public async Task RunPerRowBindsExpressionsAsSqlParameters()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        const string attack = "x'); DROP TABLE Orders; --";
+        await using (var setup = new SqliteConnection($"Data Source={_shopDb}"))
+        {
+            await setup.OpenAsync(_ct);
+            await using var insert = setup.CreateCommand();
+            insert.CommandText = "INSERT INTO Regions VALUES ($name, 'Mallory')";
+            insert.Parameters.AddWithValue("$name", attack);
+            await insert.ExecuteNonQueryAsync(_ct);
+        }
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("names", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT Region AS Name FROM Regions ORDER BY rowid" }),
+                Node("log", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO RunLog VALUES ({{ json.Name }})", ["RunPerRow"] = true })
+            ],
+            [Edge("start", "names"), Edge("names", "log")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        (await RunLogAsync()).Should().Equal("North", "South", attack);
+        await using var db = new SqliteConnection($"Data Source={_shopDb}");
+        await db.OpenAsync(_ct);
+        await using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM Orders";
+        (await cmd.ExecuteScalarAsync(_ct)).Should().Be(4L);
     }
 }

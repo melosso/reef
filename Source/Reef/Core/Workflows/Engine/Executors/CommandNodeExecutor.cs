@@ -43,7 +43,11 @@ public class CommandNodeExecutor(ConnectionService connections, QueryExecutor qu
     {
         var connection = await connections.GetByIdAsync(NodeConfig.Id(context.Config, "ConnectionId"))
             ?? throw new NodeExecutionException("Connection not found");
+        var (sql, bound) = context.Sql("Command");
+        config.Command = sql;
         var (command, parameters) = ProcessingCommandBuilder.Build(connection.Type, config, processing);
+        foreach (var (name, value) in bound)
+            parameters[name] = value;
         var (success, _, error, _) = await queries.ExecuteCommandAsync(connection, command, parameters, config.Timeout);
         return success ? null : error ?? "Command failed";
     }

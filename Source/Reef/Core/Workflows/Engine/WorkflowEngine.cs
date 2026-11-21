@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Reef.Core.Workflows.Catalogs;
 using Reef.Core.Workflows.Exceptions;
 using Reef.Core.Workflows.Models;
@@ -6,11 +7,10 @@ using Serilog;
 
 namespace Reef.Core.Workflows.Engine;
 
-public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IEnumerable<INodeExecutor> executors)
+public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, NodeInvoker invoker)
 {
     private const int SampleRows = 20;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private readonly Dictionary<string, INodeExecutor> _executors = executors.SelectMany(e => e.Types.Select(t => (t, e))).ToDictionary(p => p.t, p => p.e);
 
     public async Task<WorkflowExecution> RunAsync(int workflowId, string? triggerNodeId, WorkflowItems? triggerItems = null, CancellationToken ct = default)
     {
@@ -23,47 +23,58 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         var run = new WorkflowExecution { WorkflowId = workflowId, WorkflowVersion = workflow.Version, TriggerNodeId = trigger.Id, StartedAt = DateTime.UtcNow };
         run.Id = await runs.StartAsync(run, ct);
 
-        var outputs = new Dictionary<(string Node, string Port), WorkflowItems>();
+        var graph = new WorkflowGraph(workflow, trigger.Id);
+        var pending = new LinkedList<PendingNode>([new PendingNode(trigger, new() { [WorkflowPorts.Main] = triggerItems ?? new WorkflowItems() })]);
+        var waiting = new List<PendingNode>();
+        var latest = new Dictionary<string, Dictionary<string, WorkflowItems>>();
+        var states = new Dictionary<string, Dictionary<string, object>>();
+        var passes = new Dictionary<string, int>();
         var commits = new List<Func<Task>>();
         var undos = new List<Func<Task>>();
         var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Reef.Helpers.TempPaths.WorkflowRoot, run.Id.ToString())).FullName;
         try
         {
-            foreach (var node in Order(workflow, trigger.Id))
+            while (Next(pending, waiting) is { } step)
             {
-                var record = new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, StartedAt = DateTime.UtcNow };
-                var incoming = workflow.Edges.Where(e => e.To == node.Id && outputs.ContainsKey((e.From, e.FromPort))).ToList();
-                if (node.Id != trigger.Id && incoming.Count == 0)
+                var (node, inputs) = step;
+                var pass = passes.GetValueOrDefault(node.Id);
+                if (pass >= workflow.MaxPasses)
+                {
+                    run.Status = WorkflowRunStatus.Failed;
+                    run.ErrorMessage = $"{node.Name ?? node.Id}: stopped after {workflow.MaxPasses} passes, the pass limit of this workflow";
+                    break;
+                }
+                passes[node.Id] = pass + 1;
+
+                var record = new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, Iteration = pass, StartedAt = DateTime.UtcNow };
+                if (node.Id != trigger.Id && inputs.Values.All(i => i.IsEmpty) && SkipsWhenEmpty(node))
                 {
                     await SkipAsync(run, record);
+                    var empty = inputs.Values.First();
+                    latest[node.Id] = (WorkflowNodeCatalog.Catalog.Find(node.Type)?.OutputPorts(node.Config ?? new JsonObject()) ?? WorkflowPorts.Single).ToDictionary(p => p, _ => empty);
+                    Push(pending, Deliver(graph, node.Id, latest[node.Id], waiting));
                     continue;
                 }
 
-                var inputs = node.Id == trigger.Id
-                    ? new Dictionary<string, WorkflowItems> { [WorkflowPorts.Main] = triggerItems ?? new WorkflowItems() }
-                    : incoming.GroupBy(e => e.ToPort).ToDictionary(g => g.Key, g => Combine(g.Select(e => outputs[(e.From, e.FromPort)])));
-                if (node.Id != trigger.Id && inputs.Values.All(i => i.Items.Count == 0 && i.Files.Count == 0) && SkipsWhenEmpty(node))
+                var context = new NodeContext
                 {
-                    foreach (var port in WorkflowNodeCatalog.Catalog.Find(node.Type)?.Outputs ?? WorkflowPorts.Single)
-                        outputs[(node.Id, port)] = inputs.Values.First();
-                    await SkipAsync(run, record);
-                    continue;
-                }
+                    Workflow = workflow, Node = node, ExecutionId = run.Id, Inputs = inputs, WorkFolder = workFolder, Config = node.Config ?? new JsonObject(),
+                    Scope = new ExpressionScope(workflow, run.Id, latest, pass),
+                    State = states.TryGetValue(node.Id, out var state) ? state : states[node.Id] = new()
+                };
+                Dictionary<string, WorkflowItems> outputs;
                 try
                 {
-                    if (!_executors.TryGetValue(node.Type, out var executor))
-                        throw new NodeExecutionException($"Node type '{node.Type}' cannot run yet");
-                    var result = await executor.ExecuteAsync(new NodeContext { Workflow = workflow, Node = node, ExecutionId = run.Id, Inputs = inputs, WorkFolder = workFolder }, ct);
-                    foreach (var (port, items) in result.Outputs)
-                        outputs[(node.Id, port)] = items;
+                    var result = await invoker.InvokeAsync(context, ct);
+                    outputs = result.Outputs;
                     record.Status = WorkflowRunStatus.Success;
                     record.ErrorMessage = result.Warning;
                     if (result.OnRunSuccess is { } commit)
                         commits.Add(commit);
                     if (result.OnRunFailure is { } undo)
                         undos.Insert(0, undo);
-                    record.RowCount = result.Outputs.Values.Sum(o => o.Items.Count);
-                    record.OutputSampleJson = JsonSerializer.Serialize(result.Outputs.ToDictionary(o => o.Key, o => new
+                    record.RowCount = outputs.Values.Sum(o => o.Items.Count);
+                    record.OutputSampleJson = JsonSerializer.Serialize(outputs.ToDictionary(o => o.Key, o => new
                     {
                         o.Value.Columns,
                         Items = o.Value.Items.Take(SampleRows),
@@ -75,11 +86,9 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                 {
                     Log.Warning(ex, "Workflow {WorkflowId} node {NodeId} failed", workflowId, node.Id);
                     record.ErrorMessage = ex is NodeExecutionException ? ex.Message : $"{ex.GetType().Name}: {ex.Message}";
-                    if (NodeConfig.Flag(node.Config ?? new(), "ContinueOnError"))
-                    {
+                    outputs = new() { [WorkflowPorts.Main] = inputs.Values.First() };
+                    if (NodeConfig.Flag(context.Config, "ContinueOnError"))
                         record.Status = WorkflowRunStatus.Success;
-                        outputs[(node.Id, WorkflowPorts.Main)] = inputs.Values.First();
-                    }
                     else
                     {
                         record.Status = WorkflowRunStatus.Failed;
@@ -95,6 +104,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
                 }
                 if (run.Status == WorkflowRunStatus.Failed)
                     break;
+                latest[node.Id] = outputs;
+                Push(pending, Deliver(graph, node.Id, outputs, waiting));
             }
         }
         finally
@@ -104,6 +115,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
 
         if (run.Status != WorkflowRunStatus.Failed)
         {
+            foreach (var node in workflow.Nodes.Where(n => graph.Reachable.Contains(n.Id) && !passes.ContainsKey(n.Id)))
+                await SkipAsync(run, new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, StartedAt = DateTime.UtcNow });
             run.Status = WorkflowRunStatus.Success;
             try
             {
@@ -137,31 +150,52 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
         return run;
     }
 
-    // shortcut nodes run sequentially
-    private static List<WorkflowNode> Order(WorkflowDocument workflow, string triggerId)
+    // Partial inputs run when idle
+    private static PendingNode? Next(LinkedList<PendingNode> pending, List<PendingNode> waiting)
     {
-        var reachable = new HashSet<string> { triggerId };
-        var queue = new Queue<string>(reachable);
-        while (queue.TryDequeue(out var id))
+        if (pending.First is { } first)
         {
-            foreach (var edge in workflow.Edges.Where(e => e.From == id && reachable.Add(e.To)))
-                queue.Enqueue(edge.To);
+            pending.RemoveFirst();
+            return first.Value;
         }
+        if (waiting.Count == 0)
+            return null;
+        var partial = waiting[0];
+        waiting.RemoveAt(0);
+        return partial;
+    }
 
-        var edges = workflow.Edges.Where(e => reachable.Contains(e.From) && reachable.Contains(e.To)).ToList();
-        var incoming = reachable.ToDictionary(id => id, id => edges.Count(e => e.To == id));
-        var ready = new Queue<string>([triggerId]);
-        var order = new List<WorkflowNode>();
-        while (ready.TryDequeue(out var id))
+    private static void Push(LinkedList<PendingNode> pending, List<PendingNode> children)
+    {
+        for (var i = children.Count - 1; i >= 0; i--)
+            pending.AddFirst(children[i]);
+    }
+
+    private static List<PendingNode> Deliver(WorkflowGraph graph, string nodeId, Dictionary<string, WorkflowItems> outputs, List<PendingNode> waiting)
+    {
+        var children = new List<PendingNode>();
+        foreach (var edge in graph.From(nodeId))
         {
-            order.Add(workflow.Nodes.First(n => n.Id == id));
-            foreach (var edge in edges.Where(e => e.From == id))
+            var target = graph.Nodes[edge.To];
+            if (!outputs.TryGetValue(edge.FromPort, out var items) || items.IsEmpty && graph.IsBackEdge(edge) && target.Type != WorkflowNodeCatalog.Loop)
+                continue;
+            var ports = graph.InputPorts(target.Id);
+            if (ports.Length <= 1)
             {
-                if (--incoming[edge.To] == 0)
-                    ready.Enqueue(edge.To);
+                children.Add(new PendingNode(target, new() { [edge.ToPort] = items }));
+                continue;
+            }
+            var slot = waiting.FirstOrDefault(w => w.Node.Id == target.Id && !w.Inputs.ContainsKey(edge.ToPort));
+            if (slot is null)
+                waiting.Add(slot = new PendingNode(target, new()));
+            slot.Inputs[edge.ToPort] = items;
+            if (ports.All(slot.Inputs.ContainsKey))
+            {
+                waiting.Remove(slot);
+                children.Add(slot);
             }
         }
-        return order;
+        return children;
     }
 
     private async Task SkipAsync(WorkflowExecution run, NodeRun record)
@@ -174,17 +208,4 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, IE
 
     private static bool SkipsWhenEmpty(WorkflowNode node) =>
         WorkflowNodeCatalog.Catalog.Find(node.Type) is not { RunsWhenEmpty: true } || NodeConfig.Flag(node.Config ?? new(), "SkipWhenEmpty");
-
-    private static WorkflowItems Combine(IEnumerable<WorkflowItems> parts)
-    {
-        var list = parts.ToList();
-        if (list.Count == 1)
-            return list[0];
-        return new WorkflowItems
-        {
-            Columns = [.. list.SelectMany(p => p.Columns).DistinctBy(c => c.Name)],
-            Items = [.. list.SelectMany(p => p.Items)],
-            Files = [.. list.SelectMany(p => p.Files)]
-        };
-    }
 }

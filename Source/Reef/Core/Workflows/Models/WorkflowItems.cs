@@ -31,5 +31,20 @@ public class WorkflowItems
 
     private static string SplitKey(object? value) => value is null or DBNull ? "_NULL_" : value.ToString()?.Trim() is { Length: > 0 } text ? text : "_EMPTY_";
 
+    public bool IsEmpty => Items.Count == 0 && Files.Count == 0;
+
+    public static WorkflowItems Combine(IEnumerable<WorkflowItems> parts)
+    {
+        var list = parts.ToList();
+        if (list.Count == 1)
+            return list[0];
+        return new WorkflowItems
+        {
+            Columns = [.. list.SelectMany(p => p.Columns).DistinctBy(c => c.Name)],
+            Items = [.. list.SelectMany(p => p.Items)],
+            Files = [.. list.SelectMany(p => p.Files)]
+        };
+    }
+
     public WorkflowItems WithRows(IEnumerable<Dictionary<string, object?>> rows) => new() { Columns = Columns, Items = rows.ToList(), Files = Files, Split = Split };
 }

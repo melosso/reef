@@ -25,8 +25,8 @@ public class WorkflowRunStore(DatabaseConfig config)
     {
         await using var db = new SqliteConnection(config.ConnectionString);
         node.Id = await db.ExecuteScalarAsync<int>("""
-            INSERT INTO NodeRuns (WorkflowExecutionId, NodeId, Status, StartedAt, CompletedAt, RowCount, OutputSampleJson, ErrorMessage)
-            VALUES (@WorkflowExecutionId, @NodeId, @Status, @StartedAt, @CompletedAt, @RowCount, @OutputSampleJson, @ErrorMessage) RETURNING Id
+            INSERT INTO NodeRuns (WorkflowExecutionId, NodeId, Iteration, Status, StartedAt, CompletedAt, RowCount, OutputSampleJson, ErrorMessage)
+            VALUES (@WorkflowExecutionId, @NodeId, @Iteration, @Status, @StartedAt, @CompletedAt, @RowCount, @OutputSampleJson, @ErrorMessage) RETURNING Id
             """, node);
     }
 

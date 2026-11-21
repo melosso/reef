@@ -15,7 +15,8 @@ public class QueryNodeExecutor(ConnectionService connections, QueryExecutor quer
         if (!connection.IsActive)
             throw new NodeExecutionException($"Connection {connection.Name} is inactive");
 
-        var (success, rows, error, _) = await queries.ExecuteQueryAsync(connection, NodeConfig.Text(context.Config, "Query"), ct: ct);
+        var (sql, parameters) = context.Sql("Query");
+        var (success, rows, error, _) = await queries.ExecuteQueryAsync(connection, sql, parameters, ct: ct);
         if (!success)
             throw new NodeExecutionException(error ?? "Query failed");
         return NodeResult.Main(WorkflowItems.FromRows(rows.Select(r => r.ToDictionary(c => c.Key, c => (object?)c.Value))));

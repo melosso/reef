@@ -6,7 +6,7 @@ using Reef.Core.Nodes.Exceptions;
 
 namespace Reef.Core.Workflows.Models;
 
-public class WorkflowNodeDefinition
+public record WorkflowNodeDefinition
 {
     public required string Type { get; init; }
     public required string Label { get; init; }
@@ -17,6 +17,8 @@ public class WorkflowNodeDefinition
     public string[] Outputs { get; init; } = WorkflowPorts.Single;
     public List<NodeField> Fields { get; init; } = new();
     public bool RunsWhenEmpty { get; init; }
+    public string[] SqlFields { get; init; } = [];
+    public string[] RawFields { get; init; } = [];
 
     [JsonIgnore]
     public Func<JsonObject, string[]>? OutputsFor { get; init; }

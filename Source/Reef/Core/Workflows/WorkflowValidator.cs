@@ -14,6 +14,9 @@ public static class WorkflowValidator
         if (string.IsNullOrWhiteSpace(document.Name))
             errors.Add(new("Workflow: Name is required", null, "Name"));
 
+        if (document.MaxPasses is < 1 or > 100_000)
+            errors.Add(new("Workflow: Pass limit must be between 1 and 100000", null, "MaxPasses"));
+
         var nodes = new Dictionary<string, (WorkflowNode Node, WorkflowNodeDefinition Definition)>();
         foreach (var node in document.Nodes)
         {
@@ -53,25 +56,6 @@ public static class WorkflowValidator
                 valid.Add(edge);
         }
 
-        if (Looped(nodes.Keys, valid) is { Count: > 0 } looped)
-            errors.Add(new($"Connections form a loop through {string.Join(", ", looped)}", looped[0]));
-
         return errors;
-    }
-
-    private static List<string> Looped(IEnumerable<string> ids, List<WorkflowEdge> edges)
-    {
-        var incoming = ids.ToDictionary(id => id, id => edges.Count(e => e.To == id));
-        var ready = new Queue<string>(incoming.Where(p => p.Value == 0).Select(p => p.Key));
-        while (ready.TryDequeue(out var id))
-        {
-            incoming.Remove(id);
-            foreach (var edge in edges.Where(e => e.From == id))
-            {
-                if (--incoming[edge.To] == 0)
-                    ready.Enqueue(edge.To);
-            }
-        }
-        return [.. incoming.Keys];
     }
 }

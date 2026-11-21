@@ -77,6 +77,7 @@ public class WorkflowApiTests(ReefApiFactory factory)
         var workflow = new JsonObject
         {
             ["name"] = $"Broken {Guid.NewGuid():N}",
+            ["maxPasses"] = 0,
             ["nodes"] = new JsonArray(Node("a", "query"), Node("b", "if", new JsonObject { ["Column"] = "Total", ["Operator"] = "isEmpty" }), Node("c", "nope")),
             ["edges"] = new JsonArray(Edge("a", "b"), Edge("b", "a", fromPort: "true"), Edge("b", "a", fromPort: "maybe"), Edge("a", "ghost"))
         };
@@ -90,7 +91,8 @@ public class WorkflowApiTests(ReefApiFactory factory)
         errors.Should().Contain(e => e.Node == "c" && e.Message.Contains("Unknown node type"));
         errors.Should().Contain(e => e.Node == "b" && e.Message.Contains("maybe"));
         errors.Should().Contain(e => e.Message.Contains("ghost"));
-        errors.Should().Contain(e => e.Message.Contains("loop"));
+        errors.Should().NotContain(e => e.Message.Contains("loop"));
+        errors.Should().Contain(e => e.Field == "MaxPasses");
         errors.Should().Contain(e => e.Message.Contains("trigger"));
     }
 
