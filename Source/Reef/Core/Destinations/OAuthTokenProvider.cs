@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace Reef.Core.Destinations;
 
-// Fetches smtp access tokens with the client credentials grant and caches them until a minute before expiry.
+// Cached until a minute before expiry
 public static class OAuthTokenProvider
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(30) };
@@ -14,7 +14,7 @@ public static class OAuthTokenProvider
         if (string.IsNullOrEmpty(config.OauthTokenEndpoint) || string.IsNullOrEmpty(config.OauthClientId))
             return config.OauthToken;
 
-        var key = $"{config.OauthTokenEndpoint}|{config.OauthClientId}|{config.OauthScope}";
+        var key = Key(config);
         if (Cache.TryGetValue(key, out var cached) && cached.ExpiresAt > DateTime.UtcNow.AddMinutes(1))
             return cached.Token;
 
@@ -39,4 +39,8 @@ public static class OAuthTokenProvider
         Cache[key] = (token, DateTime.UtcNow.AddSeconds(lifetime));
         return token;
     }
+
+    public static void Forget(EmailDestinationConfiguration config) => Cache.TryRemove(Key(config), out _);
+
+    private static string Key(EmailDestinationConfiguration config) => $"{config.OauthTokenEndpoint}|{config.OauthClientId}|{config.OauthScope}";
 }

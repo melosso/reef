@@ -109,6 +109,7 @@ public partial class Program
             builder.Configuration["Reef:Jwt:SecretKey"] = JwtSecretResolver.Resolve(
                 builder.Configuration["Reef:Jwt:SecretKey"], Path.Combine(EncryptionService.FindProjectRoot(AppContext.BaseDirectory), ".core"));
             EnvAliases.WarnOnLegacyUsage();
+            ExportRoot.Configure(builder.Configuration);
 
             // Initialize Serilog globally
             builder.Host.UseSerilog();

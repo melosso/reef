@@ -25,9 +25,7 @@ public class DocumentTemplateEngine
     {
         _scribanEngine = scribanEngine;
         _generatorFactory = generatorFactory;
-        _exportsPath = configuration["ExportsPath"] ?? "exports";
-
-        // Ensure exports directory exists
+        _exportsPath = Reef.Helpers.ExportRoot.Path;
         Directory.CreateDirectory(_exportsPath);
     }
 

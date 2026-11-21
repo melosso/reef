@@ -26,11 +26,21 @@ public sealed class MockHttpServer : IDisposable
 
     public MockHttpServer()
     {
-        var port = GetFreePort();
-        BaseUrl = $"http://127.0.0.1:{port}/";
-        _listener = new HttpListener();
-        _listener.Prefixes.Add(BaseUrl);
-        _listener.Start();
+        for (var attempt = 1; ; attempt++)
+        {
+            BaseUrl = $"http://127.0.0.1:{GetFreePort()}/";
+            _listener = new HttpListener();
+            _listener.Prefixes.Add(BaseUrl);
+            try
+            {
+                _listener.Start();
+                break;
+            }
+            catch (HttpListenerException) when (attempt < 5)
+            {
+                _listener.Close();
+            }
+        }
         _acceptLoop = Task.Run(AcceptLoopAsync);
     }
 

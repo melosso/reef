@@ -100,31 +100,13 @@ public static class ConfigurationValidator
             Log.Warning("Reef:Jobs:MaxConcurrentJobs should be between 1 and 100");
         }
 
-        // Validate exports directory
-        var exportsPath = configuration.GetValue<string>("Reef:ExportsPath");
-        if (string.IsNullOrWhiteSpace(exportsPath))
+        try
         {
-            Log.Warning("Reef:ExportsPath is not configured - using default 'exports' directory");
+            Directory.CreateDirectory(ExportRoot.Path);
         }
-        else
+        catch (Exception ex)
         {
-            try
-            {
-                // Try to create exports directory if it doesn't exist
-                var fullPath = Path.IsPathRooted(exportsPath)
-                    ? exportsPath
-                    : Path.Combine(AppContext.BaseDirectory, exportsPath);
-
-                if (!Directory.Exists(fullPath))
-                {
-                    Directory.CreateDirectory(fullPath);
-                    Log.Information("Created exports directory: {Path}", fullPath);
-                }
-            }
-            catch (Exception ex)
-            {
-                errors.Add($"Cannot create exports directory '{exportsPath}': {ex.Message}");
-            }
+            errors.Add($"Cannot create exports directory '{ExportRoot.Path}': {ex.Message}");
         }
 
         // Validate log configuration

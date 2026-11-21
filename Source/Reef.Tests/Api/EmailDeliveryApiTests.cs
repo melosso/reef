@@ -222,4 +222,32 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         execution["status"]!.GetValue<string>().Should().Be("Failed");
         smtp.Messages.Should().BeEmpty();
     }
+    [Fact]
+    public async Task RejectedOAuthTokenIsFetchedAgainOnTheNextRun()
+    {
+        using var tokens = new Reef.Tests.Templates.MockHttpServer();
+        tokens.SetResponse(200, """{"access_token":"revoked-token","token_type":"Bearer","expires_in":3600}""");
+        await using var smtp = new FakeSmtpServer(line =>
+        {
+            if (line.StartsWith("EHLO", StringComparison.OrdinalIgnoreCase)) return "250-fake\r\n250 AUTH XOAUTH2";
+            if (!line.StartsWith("AUTH", StringComparison.OrdinalIgnoreCase)) return null;
+            var login = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(line.Split(' ')[^1]));
+            return login.Contains("revoked-token") ? "535 5.7.3 token revoked" : "235 2.7.0 accepted";
+        });
+        var admin = await factory.CreateAdminClientAsync();
+        var oauth = new
+        {
+            SmtpServer = "127.0.0.1", AuthType = "OAuth2", SmtpAuthType = "OAuth2", OauthUsername = "reef@example.com",
+            OauthTokenEndpoint = tokens.BaseUrl + "token", OauthClientId = $"reef-{Guid.NewGuid():N}", OauthClientSecret = "app-secret"
+        };
+        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, oauth), EmailProfiles.Rows(1));
+
+        var first = await EmailProfiles.RunAsync(admin, profileId);
+        tokens.SetResponse(200, """{"access_token":"fresh-token","token_type":"Bearer","expires_in":3600}""");
+        var second = await EmailProfiles.RunAsync(admin, profileId);
+
+        first["status"]!.GetValue<string>().Should().Be("Failed");
+        second["status"]!.GetValue<string>().Should().Be("Success", second.ToJsonString());
+        smtp.Messages.Should().ContainSingle();
+    }
 }

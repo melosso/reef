@@ -152,25 +152,12 @@ public class SendGridEmailProvider : IEmailProvider
                 };
             }
 
-            // Make API request
-            using (var httpClient = new HttpClient())
             {
-                // Set timeout
-                if (config.TimeoutSeconds > 0)
+                using var response = await EmailApiClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Post, SendGridApiUrl)
                 {
-                    httpClient.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
-                }
-
-                // Add authorization header with Bearer token
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.SendGridApiKey);
-
-                var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(sendGridRequest, SendGridJsonContext.Default.SendGridEmailRequest),
-                    Encoding.UTF8,
-                    "application/json");
-
-                var response = await httpClient.PostAsync(SendGridApiUrl, jsonContent);
+                    Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.SendGridApiKey) },
+                    Content = new StringContent(JsonSerializer.Serialize(sendGridRequest, SendGridJsonContext.Default.SendGridEmailRequest), Encoding.UTF8, "application/json")
+                }, config.TimeoutSeconds);
 
                 if (!response.IsSuccessStatusCode)
                 {

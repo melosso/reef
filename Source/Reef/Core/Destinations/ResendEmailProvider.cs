@@ -19,10 +19,6 @@ public class ResendEmailProvider : IEmailProvider
     // Rate limiter: 2 requests per second (Resend API limit)
     private static readonly RateLimiter RateLimiter = new RateLimiter(requestsPerSecond: 2.0, burstSize: 1);
 
-    // Retry configuration
-    private const int MaxRetries = 3;
-    private const int InitialRetryDelayMs = 100;
-
     /// <summary>
     /// Partially mask email address for logging
     /// </summary>
@@ -149,130 +145,43 @@ public class ResendEmailProvider : IEmailProvider
         }
     }
 
-    /// <summary>
-    /// Send email with exponential backoff retry logic and rate limiting
-    /// </summary>
-    private async Task<(bool Success, string? FinalPath, string? ErrorMessage)> SendWithRetryAsync(
+    private static async Task<(bool Success, string? FinalPath, string? ErrorMessage)> SendWithRetryAsync(
         ResendEmailRequest request,
         EmailDestinationConfiguration config,
-        MimeMessage message,
-        int attemptNumber = 0)
+        MimeMessage message)
     {
         try
         {
-            // Acquire rate limit token before making request
             await RateLimiter.AcquireAsync(tokensNeeded: 1);
-
-            using (var httpClient = new HttpClient())
+            using var response = await EmailApiClient.SendAsync(() => new HttpRequestMessage(HttpMethod.Post, ResendApiUrl)
             {
-                // Set timeout
-                if (config.TimeoutSeconds > 0)
-                {
-                    httpClient.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
-                }
+                Headers = { Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ResendApiKey) },
+                Content = new StringContent(JsonSerializer.Serialize(request, ResendJsonContext.Default.ResendEmailRequest), Encoding.UTF8, "application/json")
+            }, config.TimeoutSeconds);
 
-                // Add authorization header
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.ResendApiKey);
-
-                var jsonContent = new StringContent(
-                    JsonSerializer.Serialize(request, ResendJsonContext.Default.ResendEmailRequest),
-                    Encoding.UTF8,
-                    "application/json");
-
-                var response = await httpClient.PostAsync(ResendApiUrl, jsonContent);
-
-                // Handle rate limiting (429 Too Many Requests)
-                if ((int)response.StatusCode == 429)
-                {
-                    if (attemptNumber < MaxRetries)
-                    {
-                        // Calculate retry delay
-                        int retryDelayMs;
-
-                        // Check for Retry-After header
-                        if (response.Headers.RetryAfter != null)
-                        {
-                            if (response.Headers.RetryAfter.Delta.HasValue)
-                            {
-                                retryDelayMs = (int)response.Headers.RetryAfter.Delta.Value.TotalMilliseconds;
-                            }
-                            else if (response.Headers.RetryAfter.Date.HasValue)
-                            {
-                                retryDelayMs = Math.Max(100, (int)(response.Headers.RetryAfter.Date.Value - DateTimeOffset.UtcNow).TotalMilliseconds);
-                            }
-                            else
-                            {
-                                // Exponential backoff if Retry-After is unparseable
-                                retryDelayMs = InitialRetryDelayMs * (int)Math.Pow(2, attemptNumber);
-                            }
-                        }
-                        else
-                        {
-                            // Exponential backoff with jitter
-                            var baseDelay = InitialRetryDelayMs * (int)Math.Pow(2, attemptNumber);
-                            var jitter = new Random().Next(0, baseDelay / 2);
-                            retryDelayMs = baseDelay + jitter;
-                        }
-
-                        Log.Warning("Rate limit exceeded (429). Retrying in {RetryDelayMs}ms (attempt {AttemptNumber} of {MaxRetries})",
-                            retryDelayMs, attemptNumber + 1, MaxRetries);
-
-                        await Task.Delay(retryDelayMs);
-
-                        // Recursive retry
-                        return await SendWithRetryAsync(request, config, message, attemptNumber + 1);
-                    }
-                    else
-                    {
-                        var errorContent = await response.Content.ReadAsStringAsync();
-                        Log.Error("Resend API rate limit exceeded after {MaxRetries} retries: {Error}", MaxRetries, errorContent);
-                        return (false, null, $"Resend API rate limit exceeded (429) after {MaxRetries} retries - {errorContent}");
-                    }
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var errorContent = await response.Content.ReadAsStringAsync();
-                    Log.Error("Resend API error ({StatusCode}): {Error}", response.StatusCode, errorContent);
-                    return (false, null, $"Resend API error: {response.StatusCode} - {errorContent}");
-                }
-
-                var jsonString = await response.Content.ReadAsStringAsync();
-                var responseData = JsonSerializer.Deserialize(jsonString, ResendJsonContext.Default.ResendEmailResponse);
-                var recipients = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => r.Address));
-                var maskedRecipientsForLog = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => MaskEmailForLog(r.Address)));
-
-                Log.Information("Email sent successfully via Resend (MessageId: {MessageId}) to {Recipients}",
-                    responseData?.Id, maskedRecipientsForLog);
-
-                return (true, $"Email sent to {recipients} (ID: {responseData?.Id})", null);
-            }
-        }
-        catch (TaskCanceledException ex)
-        {
-            // Timeout occurred
-            if (attemptNumber < MaxRetries)
+            if (!response.IsSuccessStatusCode)
             {
-                var retryDelayMs = InitialRetryDelayMs * (int)Math.Pow(2, attemptNumber);
-                Log.Warning(ex, "Request timeout. Retrying in {RetryDelayMs}ms (attempt {AttemptNumber} of {MaxRetries})",
-                    retryDelayMs, attemptNumber + 1, MaxRetries);
-                await Task.Delay(retryDelayMs);
-                return await SendWithRetryAsync(request, config, message, attemptNumber + 1);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                Log.Error("Resend API error ({StatusCode}): {Error}", response.StatusCode, errorContent);
+                return (false, null, $"Resend API error: {response.StatusCode} - {errorContent}");
             }
-            else
-            {
-                Log.Error(ex, "Request timeout after {MaxRetries} retries", MaxRetries);
-                return (false, null, $"Request timeout after {MaxRetries} retries: {ex.Message}");
-            }
+
+            var jsonString = await response.Content.ReadAsStringAsync();
+            var responseData = JsonSerializer.Deserialize(jsonString, ResendJsonContext.Default.ResendEmailResponse);
+            var recipients = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => r.Address));
+            var maskedRecipientsForLog = string.Join(", ", message.To.OfType<MailboxAddress>().Select(r => MaskEmailForLog(r.Address)));
+
+            Log.Information("Email sent successfully via Resend (MessageId: {MessageId}) to {Recipients}",
+            responseData?.Id, maskedRecipientsForLog);
+
+            return (true, $"Email sent to {recipients} (ID: {responseData?.Id})", null);
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error sending email via Resend (attempt {AttemptNumber}): {Error}", attemptNumber + 1, ex.Message);
+            Log.Error(ex, "Error sending email via Resend: {Error}", ex.Message);
             return (false, null, $"Resend send failed: {ex.Message}");
         }
     }
-
 
     // A sending-only key cannot list domains: Resend answers restricted_api_key, which still proves the key is valid
     public async Task<string?> VerifyAsync(EmailDestinationConfiguration config, CancellationToken ct)
