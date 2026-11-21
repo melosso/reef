@@ -1,16 +1,15 @@
 <script lang="ts">
   import type { LucideIcon } from '@lucide/svelte';
-  import { LogOut, Moon, Play, Plus, SlidersHorizontal, Sun, User, Workflow } from '@lucide/svelte';
+  import { LogOut, Moon, Play, Plus, SlidersHorizontal, Sun, User, Workflow as WorkflowIcon } from '@lucide/svelte';
   import { commandBar } from '../lib/command.svelte';
   import { navItems } from '../lib/nav';
   import { navigate } from '../lib/router.svelte';
   import { isAdmin } from '../lib/session.svelte';
   import { setTheme } from '../lib/theme.svelte';
   import { api } from '../lib/api';
-  import type { ExportProfile } from '../models/ExportProfile';
-  import type { ImportProfile } from '../models/ImportProfile';
+  import type { Workflow } from '../models/Workflow';
   import { notify } from '../lib/notify';
-  import { runProfile } from '../lib/profiles';
+  import { runWorkflow } from '../lib/workflows';
 
   interface Command {
     id: string;
@@ -23,38 +22,30 @@
   let dialog: HTMLDialogElement;
   let query = $state('');
   let index = $state(0);
-  let profiles = $state<{ kind: 'export' | 'import'; id: string; name: string; sendsEmail?: boolean }[]>([]);
+  let workflows = $state<Workflow[]>([]);
 
-  async function loadProfiles() {
-    const [exports, imports] = await Promise.all([
-      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
-      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
-    ]);
-    profiles = [
-      ...(exports ?? []).map((p) => ({ kind: 'export' as const, id: p.id, name: p.name, sendsEmail: p.isEmailExport })),
-      ...(imports ?? []).map((p) => ({ kind: 'import' as const, id: p.id, name: p.name })),
-    ];
+  async function loadWorkflows() {
+    workflows = await api.get<Workflow[]>('/api/workflows').catch(() => []);
   }
 
   const commands = $derived<Command[]>([
     ...navItems.map((n) => ({ id: n.href, label: n.label, group: 'Go to', icon: n.icon, run: () => navigate(n.href) })),
     ...(isAdmin() ? [{ id: '/admin', label: 'Admin', group: 'Go to', icon: SlidersHorizontal, run: () => navigate('/admin') }] : []),
     { id: '/account', label: 'Account settings', group: 'Go to', icon: User, run: () => navigate('/account') },
-    { id: 'new-export', label: 'New export profile', group: 'Create', icon: Plus, run: () => navigate('/profiles/export/new') },
-    { id: 'new-import', label: 'New import profile', group: 'Create', icon: Plus, run: () => navigate('/profiles/import/new') },
-    ...profiles.map((p) => ({
-      id: `open-${p.kind}-${p.id}`,
-      label: p.name,
-      group: p.kind === 'export' ? 'Export profiles' : 'Import profiles',
-      icon: Workflow,
-      run: () => navigate(`/profiles/${p.kind}/${p.id}`),
+    { id: 'new-workflow', label: 'New workflow', group: 'Create', icon: Plus, run: () => navigate('/workflows/new') },
+    ...workflows.map((w) => ({
+      id: `open-${w.id}`,
+      label: w.name,
+      group: 'Workflows',
+      icon: WorkflowIcon,
+      run: () => navigate(`/workflows/${w.id}`),
     })),
-    ...profiles.map((p) => ({
-      id: `run-${p.kind}-${p.id}`,
-      label: `Run ${p.name}`,
+    ...workflows.map((w) => ({
+      id: `run-${w.id}`,
+      label: `Run ${w.name}`,
       group: 'Run',
       icon: Play,
-      run: () => void runProfile(p.kind, p.id, p.name, { sendsEmail: p.sendsEmail }).catch((e) => notify.fail(e)),
+      run: () => void runWorkflow(w).catch((e: unknown) => notify.fail(e)),
     })),
     { id: 'theme-light', label: 'Use light theme', group: 'Theme', icon: Sun, run: () => setTheme('light') },
     { id: 'theme-dark', label: 'Use dark theme', group: 'Theme', icon: Moon, run: () => setTheme('dark') },
@@ -74,7 +65,7 @@
       query = '';
       index = 0;
       dialog.showModal();
-      loadProfiles();
+      loadWorkflows();
     } else if (!commandBar.open && dialog.open) {
       dialog.close();
     }
@@ -120,8 +111,8 @@
 >
   <input
     type="search"
-    placeholder="Search pages, profiles and commands"
-    aria-label="Search pages, profiles and commands"
+    placeholder="Search pages, workflows and commands"
+    aria-label="Search pages, workflows and commands"
     role="combobox"
     aria-expanded="true"
     aria-controls="command-results"

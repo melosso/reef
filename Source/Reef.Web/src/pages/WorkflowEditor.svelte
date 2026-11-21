@@ -7,7 +7,9 @@
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
   import { match, navigate, route, setLeaveGuard } from '../lib/router.svelte';
+  import { remember } from '../lib/recent.svelte';
   import { tooltip } from '../lib/tooltip';
+  import { runWorkflow } from '../lib/workflows';
   import { defaultsFor, getPath, textOf, visible } from '../editor/config';
   import { loadOptions } from '../editor/options';
   import type { Options } from '../editor/types';
@@ -99,7 +101,10 @@
       if (isNew) {
         dirty = true;
         panel = 'settings';
-      } else await loadRun();
+      } else {
+        remember({ id: doc.id!, name: doc.name });
+        await loadRun();
+      }
     } catch (e) {
       notify.fail(e, 'workflow-load');
     }
@@ -274,6 +279,7 @@
       dirty = false;
       setLeaveGuard(null);
       notify.success(`${saved.name} saved`, { key: 'workflow-save' });
+      remember({ id: saved.id!, name: saved.name });
       if (!doc.id) {
         navigate(`/workflows/${saved.id}`, true);
         return true;
@@ -301,11 +307,11 @@
     if (!doc?.id) return;
     running = true;
     try {
-      const started = await api.post<WorkflowExecution>(`/api/workflows/${doc.id}/run`);
+      const started = await runWorkflow(doc);
+      if (!started) return;
       run = await api.get<WorkflowExecution>(`/api/workflow-executions/${started.id}`);
+      remember({ id: doc.id, name, status: run.status === 'Failed' ? 'err' : 'ok' });
       revision++;
-      if (run.status === 'Failed') notify.error(run.errorMessage ?? 'Run failed', { key: 'workflow-run' });
-      else notify.success(`${name} ran`, { key: 'workflow-run' });
     } catch (e) {
       notify.fail(e, 'workflow-run');
     } finally {

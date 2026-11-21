@@ -9,7 +9,8 @@
   import { navigate } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { Workflow } from '../models/Workflow';
-  import type { WorkflowExecution } from '../models/WorkflowExecution';
+  import { forget } from '../lib/recent.svelte';
+  import { runWorkflow } from '../lib/workflows';
 
   const TRIGGERS: Record<string, string> = { manual: 'Manual', schedule: 'Schedule', webhook: 'Webhook' };
 
@@ -39,9 +40,7 @@
   async function run(w: Workflow) {
     busy = w.id!;
     try {
-      const result = await api.post<WorkflowExecution>(`/api/workflows/${w.id}/run`);
-      if (result.status === 'Failed') notify.error(result.errorMessage ?? `${w.name} failed`, { key: `run-${w.id}` });
-      else notify.success(`${w.name} ran`, { key: `run-${w.id}` });
+      await runWorkflow(w);
     } catch (e) {
       notify.fail(e, `run-${w.id}`);
     } finally {
@@ -59,6 +58,7 @@
     if (!ok) return;
     try {
       await api.del(`/api/workflows/${w.id}`);
+      forget(w.id!);
       notify.success(`${w.name} deleted`);
       await load();
     } catch (e) {

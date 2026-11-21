@@ -9,5 +9,6 @@ export interface WorkflowExecution {
   startedAt: string;
   completedAt?: string | null;
   errorMessage?: string | null;
+  workflowName?: string | null;
   nodes: NodeRun[];
 }

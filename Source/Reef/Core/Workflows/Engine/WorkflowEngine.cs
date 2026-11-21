@@ -7,7 +7,7 @@ using Serilog;
 
 namespace Reef.Core.Workflows.Engine;
 
-public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, NodeInvoker invoker)
+public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, NodeInvoker invoker, Reef.Core.Services.NotificationService notifications)
 {
     private const int SampleRows = 20;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -152,6 +152,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
         }
         run.CompletedAt = DateTime.UtcNow;
         await runs.CompleteAsync(run);
+        await notifications.SendWorkflowRunAsync(run, workflow.Name, CancellationToken.None);
         return run;
     }
 

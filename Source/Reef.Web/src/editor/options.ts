@@ -14,7 +14,6 @@ const SOURCES: Record<
   },
   'email-destinations': { url: '/api/destinations', filter: (d) => d.type === 'Email', map: (d) => ({ value: d.id, label: d.name }) },
   templates: { url: '/api/templates', map: (t) => ({ value: t.id, label: t.outputFormat ? `${t.name} (${t.outputFormat})` : t.name }) },
-  groups: { url: '/api/groups', map: (g) => ({ value: g.id, label: g.name }) },
 };
 
 export async function loadOptions(): Promise<Options> {

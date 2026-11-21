@@ -9,10 +9,8 @@
   type Toggle = { [K in keyof NotificationSettings]-?: NotificationSettings[K] extends boolean ? K : never }[keyof NotificationSettings];
 
   const EVENTS: [Toggle, string][] = [
-    ['notifyOnProfileFailure', 'Export profile failed'],
-    ['notifyOnProfileSuccess', 'Export profile succeeded'],
-    ['notifyOnImportProfileFailure', 'Import profile failed'],
-    ['notifyOnImportProfileSuccess', 'Import profile succeeded'],
+    ['notifyOnProfileFailure', 'Workflow failed'],
+    ['notifyOnProfileSuccess', 'Workflow succeeded'],
     ['notifyOnJobFailure', 'Job failed'],
     ['notifyOnJobSuccess', 'Job succeeded'],
     ['notifyOnNewApiKey', 'API key created'],

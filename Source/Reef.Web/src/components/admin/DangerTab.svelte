@@ -37,7 +37,7 @@
         !(await confirm({
           title: reset ? 'Reset the database?' : 'Delete all executions?',
           message: reset
-            ? 'All profiles, connections, destinations, jobs, users and history are deleted.'
+            ? 'All workflows, connections, destinations, jobs, users and history are deleted.'
             : 'The full execution history is deleted.',
           confirm: reset ? 'Reset database' : 'Delete all executions',
           danger: true,

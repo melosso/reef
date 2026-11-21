@@ -47,7 +47,7 @@ public class WorkflowRunStore(DatabaseConfig config)
     public async Task<WorkflowExecution?> GetAsync(int id, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);
-        var run = await db.QuerySingleOrDefaultAsync<WorkflowExecution>(new CommandDefinition("SELECT * FROM WorkflowExecutions WHERE Id = @id", new { id }, cancellationToken: ct));
+        var run = await db.QuerySingleOrDefaultAsync<WorkflowExecution>(new CommandDefinition("SELECT e.*, w.Name AS WorkflowName FROM WorkflowExecutions e LEFT JOIN Workflows w ON w.Id = e.WorkflowId WHERE e.Id = @id", new { id }, cancellationToken: ct));
         if (run is not null)
             run.Nodes = [.. await db.QueryAsync<NodeRun>(new CommandDefinition("SELECT * FROM NodeRuns WHERE WorkflowExecutionId = @id ORDER BY Id", new { id }, cancellationToken: ct))];
         return run;

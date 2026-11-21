@@ -1,13 +1,14 @@
-export interface RecentProfile {
-  kind: 'export' | 'import';
+export interface RecentWorkflow {
   id: string;
   name: string;
   status?: 'ok' | 'err' | 'idle';
 }
 
-function load(): RecentProfile[] {
+const KEY = 'reef_recent_workflows';
+
+function load(): RecentWorkflow[] {
   try {
-    return (JSON.parse(localStorage.getItem('reef_recent') ?? '[]') as RecentProfile[]).filter((r) => typeof r.id === 'string');
+    return (JSON.parse(localStorage.getItem(KEY) ?? '[]') as RecentWorkflow[]).filter((r) => typeof r.id === 'string');
   } catch {
     return [];
   }
@@ -15,16 +16,18 @@ function load(): RecentProfile[] {
 
 export const recent = $state({ items: load() });
 
-export function remember(item: RecentProfile): void {
-  recent.items = [item, ...recent.items.filter((r) => !(r.kind === item.kind && r.id === item.id))].slice(0, 5);
+function store() {
   try {
-    localStorage.setItem('reef_recent', JSON.stringify(recent.items));
+    localStorage.setItem(KEY, JSON.stringify(recent.items));
   } catch {}
 }
 
-export function forget(kind: string, id: string): void {
-  recent.items = recent.items.filter((r) => !(r.kind === kind && r.id === id));
-  try {
-    localStorage.setItem('reef_recent', JSON.stringify(recent.items));
-  } catch {}
+export function remember(item: RecentWorkflow): void {
+  recent.items = [item, ...recent.items.filter((r) => r.id !== item.id)].slice(0, 5);
+  store();
+}
+
+export function forget(id: string): void {
+  recent.items = recent.items.filter((r) => r.id !== id);
+  store();
 }

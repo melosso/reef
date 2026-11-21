@@ -65,10 +65,9 @@
         <tr>
           <td class="nowrap">{formatDateTime(log.timestamp ?? log.Timestamp)}</td>
           <td class={levelClass(lvl)}>{lvl}</td>
-          <td class="msg"
-            >{log.message ?? log.Message}{#if log.exception ?? log.Exception}<pre class="code">{log.exception ??
-                  log.Exception}</pre>{/if}</td
-          >
+          <td class="msg">
+            {log.message ?? log.Message}{#if log.exception ?? log.Exception}<pre class="code">{log.exception ?? log.Exception}</pre>{/if}
+          </td>
         </tr>
       {:else}
         <tr><td colspan="3" class="empty">No log entries</td></tr>

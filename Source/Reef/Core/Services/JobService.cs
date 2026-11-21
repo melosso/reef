@@ -160,6 +160,8 @@ public class JobService
 
     public async Task<Job> CreateAsync(Job job)
     {
+        if (job.Type == JobType.ProfileExecution)
+            throw new InvalidOperationException("Profile jobs became schedule steps in workflows");
         // Validate job configuration before creating
 
         using var conn = new SqliteConnection(_connectionString);
@@ -208,6 +210,8 @@ public class JobService
 
     public async Task<bool> UpdateAsync(Job job)
     {
+        if (job.Type == JobType.ProfileExecution)
+            throw new InvalidOperationException("Profile jobs became schedule steps in workflows");
         var jobLock = _jobLocks.GetOrAdd(job.Id, _ => new SemaphoreSlim(1, 1));
         await jobLock.WaitAsync();
         try

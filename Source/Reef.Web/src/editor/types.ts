@@ -19,38 +19,6 @@ export interface CatalogField {
   columns?: CatalogField[];
 }
 
-export interface NodeDefinition {
-  type: string;
-  label: string;
-  icon: string;
-  tooltip: string;
-  rank: number;
-  required?: boolean;
-  fields: CatalogField[];
-}
-
-export interface Catalog {
-  kind: 'export' | 'import';
-  settings: CatalogField[];
-  nodes: NodeDefinition[];
-}
-
-export interface DocNode {
-  id: string;
-  type: string;
-  x: number;
-  y: number;
-  config?: Config;
-}
-
-export interface ProfileDoc {
-  kind: 'export' | 'import';
-  id?: string | null;
-  code?: string | null;
-  settings: Config;
-  nodes: DocNode[];
-}
-
 export type Options = Record<string, FieldOption[]>;
 
 export type Config = Record<string, unknown>;

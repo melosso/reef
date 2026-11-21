@@ -158,8 +158,8 @@
       !(await confirm({
         title: `${off ? 'Turn off' : 'Turn on'} ${form.name}?`,
         message: off
-          ? 'Profiles, jobs and webhooks that use this connection fail until the connection is turned on.'
-          : 'The connection becomes available to profiles and jobs.',
+          ? 'Workflows that use this connection fail until the connection is turned on.'
+          : 'The connection becomes available to workflows.',
         confirm: off ? 'Turn off' : 'Turn on',
         danger: off,
       }))
@@ -267,7 +267,7 @@
                 {:else if connections.length === 0}
                   <div class="empty-state">
                     <h2>No connections</h2>
-                    <p>A connection stores the database address and credentials that profiles query.</p>
+                    <p>A connection stores the database address and credentials that workflow steps query.</p>
                     <button type="button" class="btn primary" onclick={() => records.open('new')}>New connection</button>
                   </div>
                 {:else}No connection matches the search.{/if}

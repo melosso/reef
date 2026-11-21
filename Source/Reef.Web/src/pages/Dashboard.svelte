@@ -35,7 +35,6 @@
     navigate(href);
   }
 
-  const runHref = (kind: string, id: string) => `/executions/${kind}/${id}`;
   const describe = (a: AttentionAnomaly) =>
     a.reason === 'rows'
       ? `${formatNumber(a.value)} rows, usually ${formatNumber(a.median)}`
@@ -50,38 +49,34 @@
         <div class="panel-head">
           <h2>Needs attention</h2>
           <span class="spacer"></span>
-          <span class="muted" use:tooltip={'Runs started in the last 24 hours'}
-            >{formatNumber(attention.last24h.runs)}
-            {attention.last24h.runs === 1 ? 'run' : 'runs'}, {formatNumber(attention.last24h.failed)} failed</span
-          >
+          <span class="muted" use:tooltip={'Runs started in the last 24 hours'}>
+            {formatNumber(attention.last24h.runs)}
+            {attention.last24h.runs === 1 ? 'run' : 'runs'}, {formatNumber(attention.last24h.failed)} failed
+          </span>
         </div>
         {#if issues}
           <table class="data">
             <tbody>
-              {#each attention.failed as f (f.kind + f.executionId)}
-                <tr class="clickable" onclick={() => navigate(runHref(f.kind, f.executionId))}>
+              {#each attention.failed as f (f.executionId)}
+                <tr class="clickable" onclick={() => navigate(`/executions/${f.executionId}`)}>
                   <td class="mark"><StatusMark kind="err" label="Failed" /></td>
-                  <td
-                    ><a
-                      class="strong"
-                      href="/profiles/{f.kind}/{f.profileId}"
-                      onclick={(e) => open(e, `/profiles/${f.kind}/${f.profileId}`)}>{f.profileName}</a
-                    ></td
-                  >
+                  <td>
+                    <a class="strong" href="/workflows/{f.workflowId}" onclick={(e) => open(e, `/workflows/${f.workflowId}`)}>
+                      {f.workflowName}
+                    </a>
+                  </td>
                   <td class="detail" use:tooltip={f.error}>{f.error}</td>
                   <td class="when"><span use:tooltip={formatDateTime(f.startedAt)}>{formatRelative(f.startedAt)}</span></td>
                 </tr>
               {/each}
-              {#each attention.anomalies as a (a.kind + a.executionId)}
-                <tr class="clickable" onclick={() => navigate(runHref(a.kind, a.executionId))}>
+              {#each attention.anomalies as a (a.executionId)}
+                <tr class="clickable" onclick={() => navigate(`/executions/${a.executionId}`)}>
                   <td class="mark"><StatusMark kind="warn" label={a.reason === 'rows' ? 'Fewer rows' : 'Slower'} /></td>
-                  <td
-                    ><a
-                      class="strong"
-                      href="/profiles/{a.kind}/{a.profileId}"
-                      onclick={(e) => open(e, `/profiles/${a.kind}/${a.profileId}`)}>{a.profileName}</a
-                    ></td
-                  >
+                  <td>
+                    <a class="strong" href="/workflows/{a.workflowId}" onclick={(e) => open(e, `/workflows/${a.workflowId}`)}>
+                      {a.workflowName}
+                    </a>
+                  </td>
                   <td class="detail">{describe(a)}</td>
                   <td class="when"><span use:tooltip={formatDateTime(a.startedAt)}>{formatRelative(a.startedAt)}</span></td>
                 </tr>
@@ -97,7 +92,7 @@
             </tbody>
           </table>
         {:else}
-          <div class="panel-body"><StatusMark kind="ok" label="All clear. Every profile's latest run succeeded." /></div>
+          <div class="panel-body"><StatusMark kind="ok" label="All clear. Every workflow's latest run succeeded." /></div>
         {/if}
       </section>
 

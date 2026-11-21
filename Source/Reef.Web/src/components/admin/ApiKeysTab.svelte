@@ -79,32 +79,33 @@
 </div>
 <div class="table-wrap">
   <table class="data">
-    <thead
-      ><tr><th>Name</th><th>Status</th><th>Created</th><th>Expires</th><th>Last used</th><th><span class="sr">Actions</span></th></tr
-      ></thead
-    >
+    <thead>
+      <tr><th>Name</th><th>Status</th><th>Created</th><th>Expires</th><th>Last used</th><th><span class="sr">Actions</span></th></tr>
+    </thead>
     <tbody>
       {#each keys as k (k.id)}
         <tr>
           <td class="strong">{k.name}</td>
-          <td
-            ><StatusMark
+          <td>
+            <StatusMark
               kind={expired(k) || k.isActive === false ? 'off' : 'ok'}
               label={expired(k) ? 'Expired' : k.isActive === false ? 'Off' : 'Active'}
-            /></td
-          >
+            />
+          </td>
           <td>{formatDateTime(k.createdAt)}</td>
           <td>{k.expiresAt ? formatDateTime(k.expiresAt) : 'Never'}</td>
           <td>{k.lastUsedAt ? formatDateTime(k.lastUsedAt) : 'Never'}</td>
-          <td class="actions"
-            ><button
+          <td class="actions">
+            <button
               type="button"
               class="btn ghost icon danger"
               aria-label="Revoke {k.name}"
               use:tooltip={'Revoke'}
-              onclick={() => remove(k)}><Trash2 size={15} /></button
-            ></td
-          >
+              onclick={() => remove(k)}
+            >
+              <Trash2 size={15} />
+            </button>
+          </td>
         </tr>
       {:else}
         <tr><td colspan="6" class="empty">No API keys</td></tr>
@@ -123,8 +124,10 @@
           type="button"
           class="btn ghost icon"
           aria-label="Copy API key"
-          onclick={() => copyText(created)}><Copy size={14} /></button
+          onclick={() => copyText(created)}
         >
+          <Copy size={14} />
+        </button>
       </div>
     </div>
     <div class="dfoot"><button type="button" class="btn primary" onclick={() => dialog.close()}>Done</button></div>

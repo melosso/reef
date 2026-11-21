@@ -8,7 +8,6 @@
   import type { AttachmentConfig } from '../models/AttachmentConfig';
   import type { EmailApproval } from '../models/EmailApproval';
   import type { EmailPreview } from '../models/EmailPreview';
-  import type { ExportProfile } from '../models/ExportProfile';
   import type { PagedResult } from '../models/PagedResult';
   import { formatBytes, formatDateTime } from '../lib/format';
   import { notify } from '../lib/notify';
@@ -26,7 +25,6 @@
   const paging = urlPaging(25);
 
   let approvals = $state<EmailApproval[]>([]);
-  let profiles = $state<ExportProfile[]>([]);
   let loaded = $state(false);
   const selected = new SvelteSet<string>();
   let preview = $state<EmailPreview | null>(null);
@@ -45,10 +43,6 @@
   }
 
   $effect(() => {
-    api
-      .get<ExportProfile[]>('/api/profiles')
-      .then((p) => (profiles = p ?? []))
-      .catch(() => {});
     load();
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
@@ -65,7 +59,6 @@
   const allOnPage = $derived(pageItems.length > 0 && pageItems.every((a) => selected.has(a.guid)));
   const someOnPage = $derived(pageItems.some((a) => selected.has(a.guid)));
 
-  const profileName = (id: string) => profiles.find((p) => p.id === id)?.name ?? `Profile ${id}`;
   const redacted = (v: string | null | undefined) => v === '[REDACTED]';
 
   function attachments(config: string | null | undefined): ApprovalAttachment[] {
@@ -189,7 +182,7 @@
                   onchange={toggleAll}
                 />
               </th>{/if}
-            <th>Profile</th>
+            <th>Workflow</th>
             {#if tab === 'history'}<th>Status</th>{/if}
             <th>Recipients</th>
             {#if tab !== 'history'}<th>Subject</th>{/if}
@@ -210,7 +203,7 @@
               {#if tab === 'pending'}<td class="sel">
                   <input type="checkbox" aria-label="Select approval" checked={selected.has(a.guid)} onchange={() => toggle(a.guid)} />
                 </td>{/if}
-              <td class="strong">{a.profileId ? profileName(a.profileId) : (a.workflowName ?? 'Workflow')}</td>
+              <td class="strong">{a.workflowName ?? 'Deleted workflow'}</td>
               {#if tab === 'history'}<td><StatusMark kind={statusKind(a.status)} label={statusLabel(a.status)} /></td>{/if}
               <td class="trunc">
                 {#if redacted(a.recipients)}<span class="muted">Redacted</span>{:else}{a.recipients}{/if}

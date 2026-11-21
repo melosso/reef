@@ -19,12 +19,10 @@
   }
 
   const login = () => import('./pages/Login.svelte');
-  const editor = () => import('./pages/ProfileEditor.svelte');
   const connections = () => import('./pages/Connections.svelte');
   const destinations = () => import('./pages/Destinations.svelte');
   const templates = () => import('./pages/Templates.svelte');
   const jobs = () => import('./pages/Jobs.svelte');
-  const groups = () => import('./pages/Groups.svelte');
   const executions = () => import('./pages/Executions.svelte');
   const approvals = () => import('./pages/Approvals.svelte');
   const admin = () => import('./pages/Admin.svelte');
@@ -38,9 +36,6 @@
     { pattern: '/index', load: login, public: true },
     { pattern: '/logoff', load: () => import('./pages/Logout.svelte'), public: true },
     { pattern: '/dashboard', load: () => import('./pages/Dashboard.svelte') },
-    { pattern: '/profiles', load: () => import('./pages/Profiles.svelte') },
-    { pattern: '/profiles/:kind/new', load: editor },
-    { pattern: '/profiles/:kind/:id', load: editor },
     { pattern: '/workflows', load: () => import('./pages/Workflows.svelte') },
     { pattern: '/workflows/:id', load: () => import('./pages/WorkflowEditor.svelte') },
     { pattern: '/connections', load: connections, key: 'connections' },
@@ -51,10 +46,8 @@
     { pattern: '/templates/:id', load: templates, key: 'templates' },
     { pattern: '/jobs', load: jobs, key: 'jobs' },
     { pattern: '/jobs/:id', load: jobs, key: 'jobs' },
-    { pattern: '/groups', load: groups, key: 'groups' },
-    { pattern: '/groups/:id', load: groups, key: 'groups' },
     { pattern: '/executions', load: executions, key: 'executions' },
-    { pattern: '/executions/:kind/:id', load: executions, key: 'executions' },
+    { pattern: '/executions/:id', load: executions, key: 'executions' },
     { pattern: '/approvals', load: approvals, key: 'approvals' },
     { pattern: '/approvals/:tab', load: approvals, key: 'approvals' },
     { pattern: '/admin', load: admin, key: 'admin' },

@@ -46,8 +46,8 @@ public class AdminService
             // Get total connections
             var totalConnections = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Connections");
 
-            var totalProfiles = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Workflows");
-            var activeProfiles = await conn.ExecuteScalarAsync<int>("""SELECT COUNT(*) FROM Workflows WHERE DocumentJson LIKE '%"active":true%'""");
+            var totalWorkflows = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Workflows");
+            var activeWorkflows = await conn.ExecuteScalarAsync<int>("""SELECT COUNT(*) FROM Workflows WHERE DocumentJson LIKE '%"active":true%'""");
 
             var totalExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions");
             var successfulExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions WHERE Status = 'Success'");
@@ -92,10 +92,10 @@ public class AdminService
                 users = totalUsers,
                 connections = totalConnections,
                 apikeys = totalApiKeys,
-                profiles = new
+                workflows = new
                 {
-                    total = totalProfiles,
-                    active = activeProfiles
+                    total = totalWorkflows,
+                    active = activeWorkflows
                 },
                 executions = new
                 {

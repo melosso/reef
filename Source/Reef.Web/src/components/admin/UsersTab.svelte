@@ -102,15 +102,15 @@
     type="button"
     class="btn primary"
     onclick={() => (form = { username: '', newUsername: '', displayName: '', password: '', role: 'User', isActive: true })}
-    ><Plus size={15} />New user</button
   >
+    <Plus size={15} />New user
+  </button>
 </div>
 <div class="table-wrap">
   <table class="data">
-    <thead
-      ><tr><th>Username</th><th>Role</th><th>Status</th><th>Last seen</th><th>Created</th><th><span class="sr">Actions</span></th></tr
-      ></thead
-    >
+    <thead>
+      <tr><th>Username</th><th>Role</th><th>Status</th><th>Last seen</th><th>Created</th><th><span class="sr">Actions</span></th></tr>
+    </thead>
     <tbody>
       {#each users as u (u.id)}
         {@const seen = u.lastLoginAt || u.lastSeenAt}
@@ -127,16 +127,18 @@
           <td><span use:tooltip={formatDateTime(seen)}>{seen ? formatRelative(seen) : 'Never'}</span></td>
           <td>{formatDateTime(u.createdAt)}</td>
           <td class="actions">
-            <button type="button" class="btn ghost icon" aria-label="Edit {u.username}" use:tooltip={'Edit'} onclick={() => edit(u)}
-              ><Pencil size={15} /></button
-            >
+            <button type="button" class="btn ghost icon" aria-label="Edit {u.username}" use:tooltip={'Edit'} onclick={() => edit(u)}>
+              <Pencil size={15} />
+            </button>
             {#if !u.isFirstAdmin && u.username !== session.username}<button
                 type="button"
                 class="btn ghost icon danger"
                 aria-label="Delete {u.username}"
                 use:tooltip={'Delete'}
-                onclick={() => remove(u)}><Trash2 size={15} /></button
-              >{/if}
+                onclick={() => remove(u)}
+              >
+                <Trash2 size={15} />
+              </button>{/if}
           </td>
         </tr>
       {:else}
@@ -163,16 +165,17 @@
         <label
           for="u-role"
           use:tooltip={form.isFirstAdmin ? 'The first administrator keeps the Admin role' : 'Admins manage users, API keys and settings'}
-          >Role</label
         >
-        <select id="u-role" bind:value={form.role} disabled={form.isFirstAdmin}
-          ><option value="User">User</option><option value="Admin">Admin</option></select
-        >
+          Role
+        </label>
+        <select id="u-role" bind:value={form.role} disabled={form.isFirstAdmin}>
+          <option value="User">User</option><option value="Admin">Admin</option>
+        </select>
       </div>
       <div class="field">
-        <label for="u-pass" use:tooltip={form.id ? 'Leave empty to keep the current password' : null}
-          >{form.id ? 'New password' : 'Password'}</label
-        ><input id="u-pass" type="password" autocomplete="new-password" bind:value={form.password} />
+        <label for="u-pass" use:tooltip={form.id ? 'Leave empty to keep the current password' : null}>
+          {form.id ? 'New password' : 'Password'}
+        </label><input id="u-pass" type="password" autocomplete="new-password" bind:value={form.password} />
       </div>
       {#if form.id}<label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />Active</label>{/if}
     </form>

@@ -40,8 +40,8 @@
   {#if recent.items.length}
     <div class="recent">
       <h2>Recent</h2>
-      {#each recent.items as item (item.kind + item.id)}
-        <a href="/profiles/{item.kind}/{item.id}" aria-current={route.path === `/profiles/${item.kind}/${item.id}` ? 'page' : undefined}>
+      {#each recent.items as item (item.id)}
+        <a href="/workflows/{item.id}" aria-current={route.path === `/workflows/${item.id}` ? 'page' : undefined}>
           <StatusMark kind={item.status ?? 'idle'} />
           <span class="label">{item.name}</span>
         </a>
@@ -50,9 +50,9 @@
   {/if}
   <div class="grow"></div>
   {#if isAdmin()}
-    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined}
-      ><SlidersHorizontal size={16} strokeWidth={1.75} /><span class="label">Admin</span></a
-    >
+    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined}>
+      <SlidersHorizontal size={16} strokeWidth={1.75} /><span class="label">Admin</span>
+    </a>
   {/if}
 </aside>
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Facts from '../executions/Facts.svelte';
+  import Facts from '../Facts.svelte';
   import { api } from '../../lib/api';
   import type { AdminMetrics } from '../../models/AdminMetrics';
   import type { GitHubRelease } from '../../models/GitHubRelease';
