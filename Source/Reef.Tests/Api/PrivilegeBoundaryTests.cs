@@ -116,6 +116,51 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
         saved.IsSuccessStatusCode.Should().Be(accepted, await saved.Content.ReadAsStringAsync(_ct));
     }
 
+    private static JsonObject Workflow(string type, JsonObject config) => new()
+    {
+        ["name"] = $"Privileged {Guid.NewGuid():N}",
+        ["nodes"] = new JsonArray(
+            new JsonObject { ["id"] = "start", ["type"] = "manual", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject() },
+            new JsonObject { ["id"] = "step", ["type"] = type, ["x"] = 240, ["y"] = 0, ["config"] = config }),
+        ["edges"] = new JsonArray(new JsonObject { ["from"] = "start", ["to"] = "step" })
+    };
+
+    public static TheoryData<string, string> PrivilegedSteps => new()
+    {
+        { "command", """{"Runs":"Script","Interpreter":"sh","Script":"id"}""" },
+        { "fetch", """{"From":"Local","Path":"/etc"}""" },
+        { "fetch", """{"From":"Sftp","Settings":{"host":"files"},"Archive":true,"ArchiveFolder":"/srv"}""" },
+        { "write", """{"To":"LocalFile","FilePath":"/tmp/out.csv"}""" }
+    };
+
+    [Theory]
+    [MemberData(nameof(PrivilegedSteps))]
+    public async Task UsersCannotAddPrivilegedWorkflowStepsButAdminsCan(string type, string config)
+    {
+        var (user, _) = await CreateUserAsync();
+        var admin = await factory.CreateAdminClientAsync();
+
+        (await user.PostAsJsonAsync("/api/workflows", Workflow(type, JsonNode.Parse(config)!.AsObject()), _ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync("/api/workflows", Workflow(type, JsonNode.Parse(config)!.AsObject()), _ct))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task UsersCanRenameAWorkflowButNotChangeItsScript()
+    {
+        var (user, _) = await CreateUserAsync();
+        var admin = await factory.CreateAdminClientAsync();
+        var created = await admin.PostAsJsonAsync("/api/workflows", Workflow("command", new JsonObject { ["Runs"] = "Script", ["Interpreter"] = "sh", ["Script"] = "id" }), _ct);
+        var workflow = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!;
+        var id = workflow["id"]!.GetValue<string>();
+
+        workflow["name"] = workflow["name"]!.GetValue<string>() + " renamed";
+        (await user.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        workflow["nodes"]![1]!["config"]!["Script"] = "cat /etc/passwd";
+        (await user.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     [Fact]
     public async Task DeactivatedUsersLoseApiAccessAndCannotRefresh()
     {

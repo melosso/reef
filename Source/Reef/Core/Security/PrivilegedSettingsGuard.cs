@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using Reef.Core.Exceptions;
 using Reef.Core.Models;
+using Reef.Core.Nodes;
+using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Security;
 
@@ -25,6 +27,9 @@ public sealed class PrivilegedSettingsGuard(IHttpContextAccessor accessor)
     public void Check(string type, string? configurationJson, string? storedType, string? storedConfigurationJson) =>
         Require("File system destinations", FileSystem(type, configurationJson), storedType is null ? null : FileSystem(storedType, storedConfigurationJson));
 
+    public void Check(WorkflowDocument workflow, WorkflowDocument? stored) =>
+        Require("Scripts and local file paths", Privileged(workflow), stored is null ? null : Privileged(stored));
+
     public void RequireAdministrator(string what) => Require(what, what, null);
 
     private void Require(string what, string? requested, string? current)
@@ -48,6 +53,23 @@ public sealed class PrivilegedSettingsGuard(IHttpContextAccessor accessor)
         return string.IsNullOrWhiteSpace(p.SourceFilePath) && string.IsNullOrWhiteSpace(archive) && string.IsNullOrWhiteSpace(target)
             ? null
             : $"{p.SourceFilePath}|{archive}|{target}";
+    }
+
+    private static string? Privileged(WorkflowDocument workflow)
+    {
+        var parts = workflow.Nodes.OrderBy(n => n.Id, StringComparer.Ordinal).Select(n =>
+        {
+            var config = n.Config ?? new JsonObject();
+            string Text(string key) => ConfigPath.ToText(ConfigPath.Get(config, key));
+            return n.Type switch
+            {
+                "command" when Text("Runs") == "Script" => $"{n.Id}|{Text("Interpreter")}|{Text("InlineScript")}|{Text("Script")}|{Text("EnvironmentVariables")}",
+                "fetch" when Text("From") == "Local" || Text("Archive") == "true" => $"{n.Id}|{Text("From")}|{Text("Path")}|{Text("Archive")}|{Text("ArchiveFolder")}",
+                "write" when Text("To") == "LocalFile" => $"{n.Id}|{Text("FilePath")}",
+                _ => null
+            };
+        }).OfType<string>().ToList();
+        return parts.Count == 0 ? null : string.Join("\n", parts);
     }
 
     private static string? FileSystem(string type, string? configurationJson) =>

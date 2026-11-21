@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Reef.Core.Nodes.Exceptions;
+using Reef.Core.Security;
 using Reef.Core.Services;
 using Reef.Core.Workflows;
 using Reef.Core.Workflows.Catalogs;
@@ -75,12 +76,12 @@ public static class WorkflowsEndpoints
         await service.GetAsync(id, ct) is { } workflow ? Results.Ok(ids.ToPublic(workflow)) : Results.NotFound();
 
     private static Task<IResult> Create(WorkflowDocument document, HttpContext context, [FromServices] WorkflowService service,
-        [FromServices] WorkflowIds ids, [FromServices] AuditService audit, CancellationToken ct) =>
-        Save(null, document, context, service, ids, audit, ct);
+        [FromServices] WorkflowIds ids, [FromServices] AuditService audit, [FromServices] PrivilegedSettingsGuard guard, CancellationToken ct) =>
+        Save(null, document, context, service, ids, audit, guard, ct);
 
     private static Task<IResult> Update(int id, WorkflowDocument document, HttpContext context, [FromServices] WorkflowService service,
-        [FromServices] WorkflowIds ids, [FromServices] AuditService audit, CancellationToken ct) =>
-        Save(id, document, context, service, ids, audit, ct);
+        [FromServices] WorkflowIds ids, [FromServices] AuditService audit, [FromServices] PrivilegedSettingsGuard guard, CancellationToken ct) =>
+        Save(id, document, context, service, ids, audit, guard, ct);
 
     private static async Task<IResult> Delete(int id, HttpContext context, [FromServices] WorkflowService service, [FromServices] AuditService audit, CancellationToken ct)
     {
@@ -91,11 +92,12 @@ public static class WorkflowsEndpoints
     }
 
     private static async Task<IResult> Save(int? id, WorkflowDocument document, HttpContext context, WorkflowService service,
-        WorkflowIds ids, AuditService audit, CancellationToken ct)
+        WorkflowIds ids, AuditService audit, PrivilegedSettingsGuard guard, CancellationToken ct)
     {
         var userId = int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : (int?)null;
         try
         {
+            guard.Check(document, id is null ? null : await service.GetAsync(id.Value, ct));
             var saved = await service.SaveAsync(id, ids.ToInternal(document), userId, ct);
             await audit.LogAsync("Workflow", saved.Id ?? 0, id is null ? "Created" : "Updated", context.User.Identity?.Name ?? "Unknown", (string?)null, context);
             return id is null ? Results.Created("/api/workflows", ids.ToPublic(saved)) : Results.Ok(ids.ToPublic(saved));
