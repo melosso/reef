@@ -1442,6 +1442,8 @@ public class DestinationService
     /// Returns a modified ConfigurationJson that merges the base Destination config with the
     /// Endpoint's overrides. The returned JSON can be passed directly to SaveToDestinationAsync.
     /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions SkipNulls = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
+
     public string MergeWithEndpoint(Destination dest, DestinationEndpoint ep)
     {
         var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -1474,7 +1476,7 @@ public class DestinationService
                                 : cfg.Headers.Concat(extra).ToDictionary(k => k.Key, v => v.Value);
                         }
                     }
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             case DestinationType.Sftp:
@@ -1486,7 +1488,7 @@ public class DestinationService
 
                     if (!string.IsNullOrWhiteSpace(ep.RemotePath))
                         cfg.RemotePath = ep.RemotePath;
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             case DestinationType.S3:
@@ -1497,7 +1499,7 @@ public class DestinationService
 
                     if (!string.IsNullOrWhiteSpace(ep.KeyPrefix))
                         cfg.Prefix = ep.KeyPrefix;
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             default:

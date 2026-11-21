@@ -512,4 +512,34 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
 
         NodeRun(second, "sync")["rowCount"]!.GetValue<int>().Should().Be(0);
     }
+
+    [Fact]
+    public async Task DestinationSendsToTheChosenEndpoint()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        using var api = new MockHttpServer();
+        var paths = new List<string>();
+        api.Respond = url =>
+        {
+            lock (paths)
+                paths.Add(url.AbsolutePath);
+            return "ok";
+        };
+        var destinationId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync("/api/destinations", new
+        {
+            name = $"Api {Guid.NewGuid():N}", type = "Http", configurationJson = System.Text.Json.JsonSerializer.Serialize(new { url = api.BaseUrl + "base", method = "POST" })
+        }, _ct));
+        var endpointId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync($"/api/destinations/{destinationId}/endpoints", new { name = "Orders", pathSuffix = "orders" }, _ct));
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders" }),
+                Node("send", "destination", new JsonObject { ["DestinationId"] = destinationId, ["EndpointId"] = endpointId, ["Format"] = "JSON" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "send")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        paths.Should().ContainSingle().Which.Should().Be("/base/orders");
+    }
 }
