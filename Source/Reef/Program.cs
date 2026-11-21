@@ -626,6 +626,7 @@ public partial class Program
         ImportProfilesEndpoints.Map(app);
         ProfileDocumentsEndpoints.Map(app);
         WorkflowsEndpoints.Map(app);
+        WorkflowWebhooksEndpoints.Map(app);
         DashboardEndpoints.Map(app);
 
         var spaIndex = app.Environment.WebRootFileProvider.GetFileInfo("app/index.html");

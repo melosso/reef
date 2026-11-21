@@ -11,6 +11,8 @@ public static class WorkflowNodeCatalog
     public const string Fallback = "fallback";
     public const string FilesFormat = "Files";
     public const string Loop = "loop";
+    public const string Webhook = "webhook";
+    public const string TokenHash = "TokenHash";
     public const string LoopBatch = "loop";
     public const string LoopDone = "done";
 
@@ -47,7 +49,7 @@ public static class WorkflowNodeCatalog
                 new() { Key = "Cron", Label = "Cron expression", Required = true, Placeholder = "0 6 * * *", ShowWhen = new("Repeat", Cron) },
                 new() { Key = "EveryMinutes", Label = "Every minutes", Kind = NodeFieldKinds.Number, Required = true, ShowWhen = new("Repeat", Interval) }
             ]),
-            Trigger("webhook", "Webhook", "webhook", "Starts the workflow when a request reaches its webhook URL", []),
+            Trigger(Webhook, "Webhook", "webhook", "Starts the workflow when a request reaches its webhook URL. The JSON body becomes the rows", []),
 
             Node("query", "Query", "database", WorkflowNodeGroups.Sources, "Reads rows from a database connection",
             [

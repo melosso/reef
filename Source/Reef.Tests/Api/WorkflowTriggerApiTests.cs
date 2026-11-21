@@ -67,4 +67,48 @@ public class WorkflowTriggerApiTests(ReefApiFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync(_ct)).Should().Contain("Cron");
     }
+
+    [Fact]
+    public async Task WebhookTriggerRunsWorkflowWithTheRequestBodyAsItems()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        var id = await CreateAsync(client, true, [Node("hook", "webhook")]);
+        var created = await client.PostAsync($"/api/workflows/{id}/webhooks/hook/token", null, _ct);
+        created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync(_ct));
+        var url = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["url"]!.GetValue<string>();
+        var anonymous = factory.CreateClient();
+
+        var response = await anonymous.PostAsJsonAsync(url, new JsonArray(new JsonObject { ["id"] = 1 }, new JsonObject { ["id"] = 2 }), _ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(_ct));
+        var runId = (await response.Content.ReadFromJsonAsync<JsonObject>(_ct))!["executionId"]!.GetValue<string>();
+        var run = (await client.GetFromJsonAsync<JsonObject>($"/api/workflow-executions/{runId}", _ct))!;
+        run["triggerNodeId"]!.GetValue<string>().Should().Be("hook");
+        run["nodes"]![0]!["rowCount"]!.GetValue<int>().Should().Be(2);
+        (await anonymous.PostAsync("/webhooks/workflows/reef_wh_" + new string('a', 43), null, _ct)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task SavedWorkflowKeepsTheStoredWebhookTokenHash()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        var id = await CreateAsync(client, true, [Node("hook", "webhook")]);
+        var url = (await (await client.PostAsync($"/api/workflows/{id}/webhooks/hook/token", null, _ct)).Content.ReadFromJsonAsync<JsonObject>(_ct))!["url"]!.GetValue<string>();
+        var workflow = (await client.GetFromJsonAsync<JsonObject>($"/api/workflows/{id}", _ct))!;
+        workflow["nodes"]![0]!["config"]!["TokenHash"] = "forged";
+
+        (await client.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await factory.CreateClient().PostAsync(url, null, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task InactiveWorkflowRejectsWebhookCalls()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        var id = await CreateAsync(client, false, [Node("hook", "webhook")]);
+        var url = (await (await client.PostAsync($"/api/workflows/{id}/webhooks/hook/token", null, _ct)).Content.ReadFromJsonAsync<JsonObject>(_ct))!["url"]!.GetValue<string>();
+
+        (await factory.CreateClient().PostAsync(url, null, _ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
 }

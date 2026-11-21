@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Reef.Core.Nodes;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Nodes.Exceptions;
@@ -34,7 +36,16 @@ public class WorkflowService(DatabaseConfig config)
         if (errors.Count > 0)
             throw new NodeValidationException(errors);
 
-        var json = JsonSerializer.Serialize(new { document.Nodes, document.Edges, document.MaxPasses, document.Active }, Json);
+        var stored = id is null ? null : await GetAsync(id.Value, ct);
+        foreach (var node in document.Nodes.Where(n => n.Type == WorkflowNodeCatalog.Webhook))
+        {
+            node.Config ??= new JsonObject();
+            node.Config.Remove(WorkflowNodeCatalog.TokenHash);
+            if (stored?.Nodes.FirstOrDefault(n => n.Id == node.Id && n.Type == WorkflowNodeCatalog.Webhook)?.Config?[WorkflowNodeCatalog.TokenHash]?.DeepClone() is { } hash)
+                node.Config[WorkflowNodeCatalog.TokenHash] = hash;
+        }
+
+        var json = Serialize(document);
         var values = new { id, Name = document.Name.Trim(), DocumentJson = json, Hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))),
             Now = DateTime.UtcNow.ToString("O"), userId };
 
@@ -53,6 +64,28 @@ public class WorkflowService(DatabaseConfig config)
 
         return await GetAsync(id.Value, ct) ?? throw new InvalidOperationException("Workflow was saved but could not be read back");
     }
+
+    public async Task SetWebhookTokenHashAsync(int id, string nodeId, string hash, CancellationToken ct)
+    {
+        var document = await GetAsync(id, ct) ?? throw new KeyNotFoundException("Workflow not found");
+        var node = document.Nodes.FirstOrDefault(n => n.Id == nodeId && n.Type == WorkflowNodeCatalog.Webhook) ?? throw new KeyNotFoundException("Webhook node not found");
+        (node.Config ??= new JsonObject())[WorkflowNodeCatalog.TokenHash] = hash;
+        await using var db = new SqliteConnection(config.ConnectionString);
+        await db.ExecuteAsync(new CommandDefinition("UPDATE Workflows SET DocumentJson = @json WHERE Id = @id", new { id, json = Serialize(document) }, cancellationToken: ct));
+    }
+
+    // shortcut scans every workflow, index the hash when webhooks grow past hundreds
+    public async Task<(WorkflowDocument Workflow, WorkflowNode Node)?> FindWebhookAsync(string hash, CancellationToken ct)
+    {
+        foreach (var workflow in await ListAsync(ct))
+        {
+            if (workflow.Nodes.FirstOrDefault(n => n.Type == WorkflowNodeCatalog.Webhook && ConfigPath.ToText(n.Config?[WorkflowNodeCatalog.TokenHash]) == hash) is { } node)
+                return (workflow, node);
+        }
+        return null;
+    }
+
+    private static string Serialize(WorkflowDocument document) => JsonSerializer.Serialize(new { document.Nodes, document.Edges, document.MaxPasses, document.Active }, Json);
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
