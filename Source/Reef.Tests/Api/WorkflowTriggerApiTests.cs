@@ -3,7 +3,9 @@ using System.Net.Http.Json;
 using System.Text.Json.Nodes;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.Sqlite;
 using Reef.Core.Workflows.Triggers;
+using Reef.Tests.Templates;
 using Xunit;
 
 namespace Reef.Tests.Api;
@@ -110,5 +112,37 @@ public class WorkflowTriggerApiTests(ReefApiFactory factory)
         var url = (await (await client.PostAsync($"/api/workflows/{id}/webhooks/hook/token", null, _ct)).Content.ReadFromJsonAsync<JsonObject>(_ct))!["url"]!.GetValue<string>();
 
         (await factory.CreateClient().PostAsync(url, null, _ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task NodeSecretsAreEncryptedMaskedAndUsedByTheRun()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        using var api = new MockHttpServer();
+        api.SetResponse(200, "[]");
+        var id = await CreateAsync(client, false,
+            [
+                Node("start", "manual"),
+                Node("page", "fetch", new JsonObject
+                {
+                    ["From"] = "Http", ["Settings"] = new JsonObject { ["url"] = api.BaseUrl + "items", ["authType"] = "Bearer", ["authToken"] = "s3cret-token" }
+                })
+            ],
+            [new JsonObject { ["from"] = "start", ["to"] = "page" }]);
+
+        var workflow = (await client.GetFromJsonAsync<JsonObject>($"/api/workflows/{id}", _ct))!;
+        workflow["nodes"]![1]!["config"]!["Settings"]!["authToken"]!.GetValue<string>().Should().Be("[SECRET]");
+        await using (var db = new SqliteConnection($"Data Source={Path.Combine(factory.DataFolder, "Reef.db")}"))
+        {
+            await db.OpenAsync(_ct);
+            await using var cmd = db.CreateCommand();
+            cmd.CommandText = "SELECT group_concat(DocumentJson) FROM Workflows";
+            ((string)(await cmd.ExecuteScalarAsync(_ct))!).Should().NotContain("s3cret-token");
+        }
+        (await client.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await client.PostAsync($"/api/workflows/{id}/run", null, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        api.LastAuthorizationHeader.Should().Be("Bearer s3cret-token");
     }
 }

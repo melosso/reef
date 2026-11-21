@@ -4,7 +4,7 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows.Engine;
 
-public class NodeInvoker(IEnumerable<INodeExecutor> executors)
+public class NodeInvoker(IEnumerable<INodeExecutor> executors, WorkflowSecrets secrets)
 {
     private readonly Dictionary<string, INodeExecutor> _executors = executors.SelectMany(e => e.Types.Select(t => (t, e))).ToDictionary(p => p.t, p => p.e);
 
@@ -32,8 +32,8 @@ public class NodeInvoker(IEnumerable<INodeExecutor> executors)
         };
     }
 
-    private static NodeContext Resolve(NodeContext context, WorkflowNodeDefinition definition, ExpressionScope scope) =>
-        context with { Scope = scope, Config = WorkflowExpressions.Resolve(definition, context.Config, scope) };
+    private NodeContext Resolve(NodeContext context, WorkflowNodeDefinition definition, ExpressionScope scope) =>
+        context with { Scope = scope, Config = WorkflowExpressions.Resolve(definition, secrets.Reveal(definition, context.Config), scope) };
 
     private static Func<Task>? Chain(IEnumerable<Func<Task>?> steps)
     {

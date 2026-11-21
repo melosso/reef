@@ -4,9 +4,9 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows;
 
-public sealed class WorkflowIds(NodeFieldIds ids)
+public sealed class WorkflowIds(NodeFieldIds ids, WorkflowSecrets secrets)
 {
-    public WorkflowDocument ToPublic(WorkflowDocument document) => Rewrite(document, toPublic: true);
+    public WorkflowDocument ToPublic(WorkflowDocument document) => Rewrite(secrets.Mask(document), toPublic: true);
 
     public WorkflowDocument ToInternal(WorkflowDocument document) => Rewrite(document, toPublic: false);
 

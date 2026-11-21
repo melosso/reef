@@ -256,7 +256,7 @@ public static class WorkflowNodeCatalog
         new() { Key = "Settings.authType", Label = "Sign in with", Kind = NodeFieldKinds.Select, ShowWhen = new("From", Sftp),
             Options = [new("password", "Password"), new("privatekey", "Private key")] },
         new() { Key = "Settings.password", Label = "Password", Kind = NodeFieldKinds.Password, ShowWhen = new("Settings.authType", ["password"]) },
-        new() { Key = "Settings.privateKey", Label = "Private key", Kind = NodeFieldKinds.Textarea, ShowWhen = new("Settings.authType", ["privatekey"]) },
+        new() { Key = "Settings.privateKey", Label = "Private key", Kind = NodeFieldKinds.Textarea, Secret = true, ShowWhen = new("Settings.authType", ["privatekey"]) },
         new() { Key = "Settings.privateKeyPassphrase", Label = "Key passphrase", Kind = NodeFieldKinds.Password, ShowWhen = new("Settings.authType", ["privatekey"]) },
         new() { Key = "Settings.path", Label = "Remote folder", ShowWhen = new("From", Sftp) },
         new() { Key = "Settings.url", Label = "URL", Required = true, ShowWhen = new("From", Http) },

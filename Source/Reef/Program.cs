@@ -374,6 +374,7 @@ public partial class Program
         services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowService>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();
+        services.AddSingleton<Reef.Core.Workflows.WorkflowSecrets>();
         services.AddSingleton<Reef.Core.Workflows.Engine.WorkflowRunStore>();
         services.AddScoped<Reef.Core.Workflows.Engine.WorkflowEngine>();
         services.AddScoped<Reef.Core.Workflows.Engine.NodeInvoker>();

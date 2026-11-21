@@ -11,7 +11,7 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows;
 
-public class WorkflowService(DatabaseConfig config)
+public class WorkflowService(DatabaseConfig config, WorkflowSecrets secrets)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -45,6 +45,7 @@ public class WorkflowService(DatabaseConfig config)
                 node.Config[WorkflowNodeCatalog.TokenHash] = hash;
         }
 
+        secrets.Protect(document, stored);
         var json = Serialize(document);
         var values = new { id, Name = document.Name.Trim(), DocumentJson = json, Hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))),
             Now = DateTime.UtcNow.ToString("O"), userId };

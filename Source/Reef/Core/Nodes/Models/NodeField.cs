@@ -11,6 +11,7 @@ public class NodeField
     public string? Placeholder { get; init; }
     public bool Required { get; init; }
     public bool Hidden { get; init; }
+    public bool Secret { get; init; }
     public string? Format { get; init; }
     public List<NodeFieldOption>? Options { get; init; }
     public string? OptionsSource { get; init; }
