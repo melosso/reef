@@ -188,8 +188,6 @@ public class ApprovedEmailSenderService : BackgroundService
         try
         {
             // Commit delta sync hash (if present)
-            await CommitDeltaSyncForApprovalAsync(approval, connection, deltaSyncService, "Skipped");
-
             // Mark as processed (use SentAt even though we didn't send - it means "processed")
             const string updateSql = @"
                 UPDATE PendingEmailApprovals
@@ -257,16 +255,13 @@ public class ApprovedEmailSenderService : BackgroundService
                 Log.Information("Sending approved email {ApprovalId} (attempt {Attempt}/{MaxRetries})", approval.Id, attemptCount, _maxRetries);
 
                 // Get email destination from ProfileExecutions -> Profiles
-                var profileId = approval.ProfileId;
 
                 // Load the email destination (we need to query Profiles to get OutputDestinationId)
-                var destinationId = approval.DestinationId ?? await connection.ExecuteScalarAsync<int?>(
-                    "SELECT OutputDestinationId FROM Profiles WHERE Id = @ProfileId",
-                    new { ProfileId = profileId });
+                var destinationId = approval.DestinationId;
 
                 if (!destinationId.HasValue)
                 {
-                    throw new InvalidOperationException($"Email destination not configured for profile {profileId}");
+                    throw new InvalidOperationException("Email destination not set on the approval");
                 }
 
                 var emailDestination = await destinationService.GetByIdForExecutionAsync(destinationId.Value);
@@ -297,16 +292,7 @@ public class ApprovedEmailSenderService : BackgroundService
                     SentAt = DateTime.UtcNow.ToString("o")
                 });
 
-                // Update ProfileExecution ApprovalStatus to reflect successful email send
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
 
-                await connection.ExecuteAsync(updateExecutionSql, new
-                {
-                    ApprovalId = approval.Id
-                });
-
-                // Commit delta sync for this successfully sent email
-                await CommitDeltaSyncForApprovedEmailAsync(approval, connection, deltaSyncService);
 
                 // Redact sensitive email content per security policy - keep only metadata
                 const string redactSql = @"
@@ -356,14 +342,6 @@ public class ApprovedEmailSenderService : BackgroundService
             ErrorMessage = lastException?.Message
         });
 
-        // Update ProfileExecution ApprovalStatus to reflect email send failure
-        // Keep Status as 'Success' since the data extraction succeeded - only the email delivery failed
-        const string updateExecutionFailedSql = ExecutionApprovalStatus.RefreshForApprovalSql;
-
-        await connection.ExecuteAsync(updateExecutionFailedSql, new
-        {
-            ApprovalId = approval.Id
-        });
 
         Log.Error("Failed to send approved email {ApprovalId}: {Error}", approval.Id, lastException?.Message);
 
@@ -535,148 +513,6 @@ public class ApprovedEmailSenderService : BackgroundService
         return $"{maskedLocal}@{domain}";
     }
 
-    /// <summary>
-    /// Commit delta sync for a successfully sent approved email
-    /// This marks the email's reef_id as synced so it won't be re-sent
-    /// </summary>
-    private async Task CommitDeltaSyncForApprovedEmailAsync(
-        PendingEmailApproval approval,
-        SqliteConnection connection,
-        DeltaSyncService deltaSyncService)
-    {
-        await CommitDeltaSyncForApprovalAsync(approval, connection, deltaSyncService, "Approved");
-    }
 
-    /// <summary>
-    /// Commit delta sync hash for an approval (approved or skipped)
-    /// </summary>
-    private async Task CommitDeltaSyncForApprovalAsync(
-        PendingEmailApproval approval,
-        SqliteConnection connection,
-        DeltaSyncService deltaSyncService,
-        string action)
-    {
-        try
-        {
-            if (approval.ProfileId is not { } profileId || approval.ProfileExecutionId is not { } executionId)
-                return;
-            if (string.IsNullOrEmpty(approval.ReefId) || string.IsNullOrEmpty(approval.DeltaSyncHash))
-            {
-                Log.Debug("No ReefId or DeltaSyncHash for approval {ApprovalId}, skipping delta sync commit", approval.Id);
-                return;
-            }
 
-            // Get profile to check if delta sync is enabled
-            var profile = await connection.QueryFirstOrDefaultAsync<Profile>(
-                "SELECT * FROM Profiles WHERE Id = @Id",
-                new { Id = approval.ProfileId });
-
-            if (profile == null || !profile.DeltaSyncEnabled)
-            {
-                Log.Debug("Delta sync not enabled for profile {ProfileId}, skipping commit", approval.ProfileId);
-                return;
-            }
-
-            // Create a minimal DeltaSyncResult with just this one reef_id
-            // The hash was calculated during execution and stored with the approval
-            var deltaSyncResult = new DeltaSyncResult
-            {
-                NewRows = new List<Dictionary<string, object>>(),
-                ChangedRows = new List<Dictionary<string, object>>(),
-                UnchangedRows = new List<Dictionary<string, object>>(),
-                DeletedReefIds = new List<string>(),
-                TotalRowsProcessed = 1,
-                NewHashState = new Dictionary<string, string>
-                {
-                    [approval.ReefId] = approval.DeltaSyncHash
-                }
-            };
-
-            Log.Information("Committing delta sync for {Action} approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}', ExecutionId={ExecutionId}",
-                action, approval.Id, approval.ReefId, approval.DeltaSyncHash, approval.ProfileExecutionId);
-
-            // Commit the delta sync using the execution ID from the approval
-            await deltaSyncService.CommitDeltaSyncAsync(
-                profileId,
-                executionId,
-                deltaSyncResult);
-
-            // Update delta sync metrics on the execution record based on row type
-            await UpdateDeltaSyncMetricsForApprovalAsync(
-                executionId,
-                approval.DeltaSyncRowType,
-                connection);
-
-            Log.Information("Delta sync committed for {Action} email {ApprovalId}, ReefId: {ReefId}, RowType: {RowType}",
-                action, approval.Id, approval.ReefId, approval.DeltaSyncRowType ?? "(unknown)");
-        }
-        catch (Exception ex)
-        {
-            // Delta sync commit failure should not block processing
-            // Log warning but don't throw
-            Log.Warning(ex, "Failed to commit delta sync for {Action} email {ApprovalId}, ReefId: {ReefId}",
-                action, approval.Id, approval.ReefId);
-        }
-    }
-
-    /// <summary>
-    /// Update delta sync metrics incrementally as each approved email is sent
-    /// This increments the counters on the ProfileExecution record based on row type
-    /// </summary>
-    private async Task UpdateDeltaSyncMetricsForApprovalAsync(
-        int executionId,
-        string? rowType,
-        SqliteConnection connection)
-    {
-        try
-        {
-            if (string.IsNullOrEmpty(rowType))
-            {
-                Log.Debug("No row type for execution {ExecutionId}, skipping metrics update", executionId);
-                return;
-            }
-
-            // Increment the appropriate counter based on row type
-            string sql;
-            if (rowType == "New")
-            {
-                sql = @"
-                    UPDATE ProfileExecutions 
-                    SET DeltaSyncNewRows = COALESCE(DeltaSyncNewRows, 0) + 1,
-                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
-                    WHERE Id = @Id";
-            }
-            else if (rowType == "Changed")
-            {
-                sql = @"
-                    UPDATE ProfileExecutions 
-                    SET DeltaSyncChangedRows = COALESCE(DeltaSyncChangedRows, 0) + 1,
-                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
-                    WHERE Id = @Id";
-            }
-            else if (rowType == "Deleted")
-            {
-                sql = @"
-                    UPDATE ProfileExecutions 
-                    SET DeltaSyncDeletedRows = COALESCE(DeltaSyncDeletedRows, 0) + 1,
-                        DeltaSyncTotalHashedRows = COALESCE(DeltaSyncTotalHashedRows, 0) + 1
-                    WHERE Id = @Id";
-            }
-            else
-            {
-                Log.Debug("Unknown row type '{RowType}' for execution {ExecutionId}, skipping metrics update",
-                    rowType, executionId);
-                return;
-            }
-
-            await connection.ExecuteAsync(sql, new { Id = executionId });
-
-            Log.Debug("Updated delta sync metrics for execution {ExecutionId}, RowType: {RowType}",
-                executionId, rowType);
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Failed to update delta sync metrics for execution {ExecutionId}", executionId);
-        }
-    }
 }

@@ -31,10 +31,10 @@ public class ApiKeyAuthTests(ReefApiFactory factory)
         var admin = await factory.CreateAdminClientAsync();
         var (id, key) = await CreateKeyAsync(admin, write: true);
 
-        (await KeyClient(key).GetAsync("/api/profiles", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await KeyClient(key).GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
 
         (await admin.DeleteAsync($"/api/admin/api-keys/{id}", _ct)).EnsureSuccessStatusCode();
-        (await KeyClient(key).GetAsync("/api/profiles", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await KeyClient(key).GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -58,6 +58,6 @@ public class ApiKeyAuthTests(ReefApiFactory factory)
     [Fact]
     public async Task UnknownKeyIsRejected()
     {
-        (await KeyClient("reef_ak_00000000_nope").GetAsync("/api/profiles", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await KeyClient("reef_ak_00000000_nope").GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 }

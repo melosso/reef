@@ -18,7 +18,6 @@ public class EmailApprovalService
     private readonly string _connectionString;
     private readonly AuditService _auditService;
     private readonly EmailExportService _emailExportService;
-    private readonly ProfileService _profileService;
     private readonly NotificationService _notificationService;
     private readonly DeltaSyncService _deltaSyncService;
     private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailApprovalService>();
@@ -27,14 +26,12 @@ public class EmailApprovalService
         DatabaseConfig config,
         AuditService auditService,
         EmailExportService emailExportService,
-        ProfileService profileService,
         NotificationService notificationService,
         DeltaSyncService deltaSyncService)
     {
         _connectionString = config.ConnectionString;
         _auditService = auditService;
         _emailExportService = emailExportService;
-        _profileService = profileService;
         _notificationService = notificationService;
         _deltaSyncService = deltaSyncService;
     }
@@ -136,20 +133,6 @@ public class EmailApprovalService
                 Hash = hash
             });
 
-            // Update ProfileExecution with approval ID and status
-            const string updateExecutionSql = @"
-                UPDATE ProfileExecutions
-                SET ApprovalStatus = 'Pending', PendingEmailApprovalId = @ApprovalId
-                WHERE Id = @ExecutionId
-            ";
-
-            if (profileExecutionId is not null)
-                await connection.ExecuteAsync(updateExecutionSql, new
-                {
-                    ApprovalId = approvalId,
-                    ExecutionId = profileExecutionId
-                });
-
             Log.Information("Created pending email approval {ApprovalId} for profile {ProfileId}, execution {ExecutionId}",
                 approvalId, profileId, profileExecutionId);
 
@@ -222,15 +205,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql + "; UPDATE ProfileExecutions SET ApprovedAt = @ApprovedAt WHERE Id = (SELECT ProfileExecutionId FROM PendingEmailApprovals WHERE Id = @ApprovalId)";
-
-                await connection.ExecuteAsync(updateExecutionSql, new
-                {
-                    ApprovalId = approvalId,
-                    ApprovedAt = DateTime.UtcNow.ToString("o")
-                });
-
                 // Note: Sensitive data redaction happens in ApprovedEmailSenderService
                 // after the email is successfully sent or fails, not here during approval
 
@@ -285,11 +259,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
-
-                await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
-
                 // Redact sensitive email content per security policy - keep only metadata
                 const string redactSql = @"
                     UPDATE PendingEmailApprovals
@@ -389,11 +358,6 @@ public class EmailApprovalService
                         // Don't throw - the background service can retry
                     }
                 }
-
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
-
-                await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
 
                 // Mark as processed
                 const string markProcessedSql = @"
@@ -672,16 +636,7 @@ public class EmailApprovalService
         var profileId = approval.ProfileId;
         try
         {
-            string? roles;
-            if (profileId is { } id)
-            {
-                var profile = await _profileService.GetByIdAsync(id);
-                if (profile == null || !profile.EmailApprovalRequired)
-                    return false;
-                roles = profile.EmailApprovalRoles;
-            }
-            else
-                roles = approval.ApproverRoles;
+            var roles = approval.ApproverRoles;
 
             // Get user role
             await using var connection = new SqliteConnection(_connectionString);

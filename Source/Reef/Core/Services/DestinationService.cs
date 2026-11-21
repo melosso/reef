@@ -713,12 +713,12 @@ public class DestinationService
 
         // Check if destination is in use
         var inUse = await conn.ExecuteScalarAsync<int>(
-            new CommandDefinition("SELECT COUNT(*) FROM Profiles WHERE OutputDestinationId = @Id", new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(WorkflowUse.Sql("DestinationId"), new { Id = id }, cancellationToken: ct));
 
         if (inUse > 0)
         {
             throw new InvalidOperationException(
-                $"Cannot delete destination. It is used by {inUse} profile(s).");
+                $"Cannot delete destination. It is used by {inUse} workflow(s).");
         }
 
         var sql = "DELETE FROM Destinations WHERE Id = @Id";

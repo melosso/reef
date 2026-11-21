@@ -68,6 +68,6 @@ public class PasswordPepperTests(ReefApiFactory factory)
         var token = (await login.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(_ct))!["token"]!.GetValue<string>();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        (await client.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await client.GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 }

@@ -207,24 +207,6 @@ public partial class Program
             var stats = await jobsMigration.GetStatsAsync();
             Log.Debug("Jobs Migration Stats: {@Stats}", stats);
 
-            // Run PrePostProcessing migration to add pre/post-processing columns
-            Log.Debug("Running PrePostProcessing database migration...");
-            var prePostMigration = new PrePostProcessingMigration(connectionString);
-            await prePostMigration.ApplyAsync();
-
-            // Log pre/post migration stats
-            var prePostStats = await prePostMigration.GetStatsAsync();
-            Log.Debug("PrePostProcessing Migration Stats: {@Stats}", prePostStats);
-
-            // Run TransformationOptions migration to add TransformationOptionsJson column
-            Log.Debug("Running TransformationOptions database migration...");
-            var transformationOptionsMigration = new TransformationOptionsMigration(connectionString);
-            await transformationOptionsMigration.ApplyAsync();
-
-            // Log transformation options migration stats
-            var transformationOptionsStats = await transformationOptionsMigration.GetStatsAsync();
-            Log.Debug("TransformationOptions Migration Stats: {@Stats}", transformationOptionsStats);
-
             // Run MFA migration to add MFA columns to Users table
             var mfaMigration = new MfaMigration(connectionString);
             await mfaMigration.ApplyAsync();
@@ -232,18 +214,6 @@ public partial class Program
             // Run OIDC migration to add the OidcSubject column to Users table
             var oidcMigration = new OidcMigration(connectionString);
             await oidcMigration.ApplyAsync();
-
-            // Run Profile canvas migration to add the CanvasLayoutJson column to Profiles table
-            var profileCanvasMigration = new ProfileCanvasMigration(connectionString);
-            await profileCanvasMigration.ApplyAsync();
-
-            // Run Scripting migration to add stdout/stderr/exit-code columns for Script processing steps
-            Log.Debug("Running Scripting database migration...");
-            var scriptingMigration = new ScriptingMigration(connectionString);
-            await scriptingMigration.ApplyAsync();
-
-            var scriptingStats = await scriptingMigration.GetStatsAsync();
-            Log.Debug("Scripting Migration Stats: {@Stats}", scriptingStats);
 
             await new WorkflowsMigration(connectionString).ApplyAsync();
             await new UlidMigration(connectionString).ApplyAsync();
@@ -265,6 +235,9 @@ public partial class Program
                 JwtTokenService.SetCurrentStartupToken(startupToken);
                 Log.Debug("Startup token set for JWT validation");
             }
+
+            using (var scope = app.Services.CreateScope())
+                await scope.ServiceProvider.GetRequiredService<Reef.Core.Workflows.Conversion.ProfileCutover>().RunAsync();
 
             // Configure HTTP pipeline
             await ConfigureMiddleware(app);
@@ -355,23 +328,16 @@ public partial class Program
         services.AddScoped<QueryExecutor>();
         services.AddScoped<ConnectionService>();
         services.AddScoped<AttentionService>();
-        services.AddScoped<ProfileService>();
         services.AddSingleton<Reef.Core.Scripting.IScriptRunner, Reef.Core.Scripting.ProcessScriptRunner>();
-        services.AddScoped<ExecutionService>();
         services.AddScoped<WebhookService>();
         services.AddScoped<AuditService>();
         services.AddScoped<AdminService>();
         services.AddScoped<InterpreterService>();
-        services.AddScoped<GroupService>();
         services.AddScoped<DeltaSyncService>();
         services.AddScoped<EmailExportService>();
         services.AddScoped<EmailApprovalService>();
 
-        // Import Profile services
-        services.AddScoped<ImportProfileService>();
-        services.AddScoped<Reef.Core.ProfileDocuments.ProfileDocumentService>();
         services.AddSingleton<Reef.Core.Nodes.NodeFieldIds>();
-        services.AddSingleton<Reef.Core.ProfileDocuments.ProfileDocumentIds>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowService>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowIds>();
         services.AddSingleton<Reef.Core.Workflows.WorkflowSecrets>();
@@ -383,6 +349,7 @@ public partial class Program
         services.AddHostedService<Reef.Core.Workflows.Triggers.WorkflowSchedulerService>();
         services.AddScoped<Reef.Core.Workflows.Conversion.WorkflowConversionService>();
         services.AddSingleton<Reef.Core.Workflows.Conversion.LegacyProfileReader>();
+        services.AddScoped<Reef.Core.Workflows.Conversion.ProfileCutover>();
         foreach (var executor in typeof(Reef.Core.Workflows.Engine.INodeExecutor).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(Reef.Core.Workflows.Engine.INodeExecutor).IsAssignableFrom(t)))
             services.AddScoped(typeof(Reef.Core.Workflows.Engine.INodeExecutor), executor);
@@ -390,7 +357,6 @@ public partial class Program
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
         services.AddScoped<ImportFileOutputService>();
-        services.AddScoped<ImportExecutionService>();
 
         // Notification system
         services.AddSingleton<NotificationThrottler>();
@@ -616,9 +582,6 @@ public partial class Program
         OidcEndpoints.Map(app);
         AccountEndpoints.Map(app);
         ConnectionsEndpoints.Map(app);
-        ProfilesEndpoints.Map(app);
-        GroupsEndpoints.Map(app);
-        ExecutionsEndpoints.Map(app);
         EmailApprovalsEndpoints.Map(app);
         WebhooksEndpoints.Map(app);
         SystemInfoEndpoints.Map(app);
@@ -626,8 +589,6 @@ public partial class Program
         app.MapJobsEndpoints();
         app.MapDestinationsEndpoints();
         app.MapQueryTemplatesEndpoints();
-        ImportProfilesEndpoints.Map(app);
-        ProfileDocumentsEndpoints.Map(app);
         WorkflowsEndpoints.Map(app);
         WorkflowWebhooksEndpoints.Map(app);
         DashboardEndpoints.Map(app);

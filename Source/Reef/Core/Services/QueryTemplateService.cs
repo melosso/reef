@@ -130,13 +130,12 @@ public class QueryTemplateService
         using var conn = new SqliteConnection(_connectionString);
 
         // Check if template is in use
-        var inUse = await conn.ExecuteScalarAsync<int>(
-            "SELECT COUNT(*) FROM ProfileTransformations WHERE TemplateId = @Id", new { Id = id });
+        var inUse = await conn.ExecuteScalarAsync<int>(WorkflowUse.Sql("TemplateId"), new { Id = id });
 
         if (inUse > 0)
         {
             throw new InvalidOperationException(
-                $"Cannot delete template. It is used by {inUse} profile transformation(s).");
+                $"Cannot delete template. It is used by {inUse} workflow(s).");
         }
 
         var sql = "DELETE FROM QueryTemplates WHERE Id = @Id";

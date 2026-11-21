@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace Reef.Tests.Api;
 
-// Builds email export profiles through the api, the query reads from a fresh sqlite file.
+// Builds email workflows through the api, the query reads from a fresh sqlite file
 public static class EmailProfiles
 {
     public static string Rows(int count) =>
@@ -27,26 +27,13 @@ public static class EmailProfiles
         var destinationId = await IdOfAsync(await admin.PostAsJsonAsync("/api/destinations", new { name = $"Mail {Guid.NewGuid():N}", type = "Email", configurationJson = JsonSerializer.Serialize(smtp) }, ct));
         var config = new JsonObject
         {
-            ["OutputDestinationId"] = destinationId, ["EmailTemplateId"] = templateId, ["EmailRecipientsColumn"] = "Email",
-            ["UseHardcodedSubject"] = true, ["EmailSubjectHardcoded"] = "Hi"
+            ["DestinationId"] = destinationId, ["TemplateId"] = templateId, ["RecipientsFrom"] = "Column", ["RecipientsColumn"] = "Email", ["Subject"] = "Hi"
         };
         foreach (var (key, value) in mail ?? []) config[key] = value?.DeepClone();
-        var document = new JsonObject
-        {
-            ["kind"] = "export",
-            ["settings"] = new JsonObject { ["Name"] = $"Mail {Guid.NewGuid():N}", ["IsEnabled"] = true },
-            ["nodes"] = new JsonArray(
-                new JsonObject { ["id"] = "source", ["type"] = "source", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = query } },
-                new JsonObject { ["id"] = "mail", ["type"] = "emailexport", ["x"] = 300, ["y"] = 0, ["config"] = config })
-        };
-        return await IdOfAsync(await admin.PostAsJsonAsync("/api/profile-documents/export", document, ct));
+        return await TestWorkflows.CreateChainAsync(admin,
+            TestWorkflows.Node("query", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = query }),
+            TestWorkflows.Node("mail", "email", config));
     }
 
-    public static async Task<JsonNode> RunAsync(HttpClient admin, string profileId)
-    {
-        var ct = TestContext.Current.CancellationToken;
-        (await admin.PostAsJsonAsync($"/api/executions/execute/{profileId}", new { }, ct)).EnsureSuccessStatusCode();
-        var executions = await admin.GetFromJsonAsync<JsonArray>($"/api/executions/by-profile/{profileId}", ct);
-        return executions!.First()!;
-    }
+    public static Task<JsonObject> RunAsync(HttpClient admin, string workflowId) => TestWorkflows.RunAsync(admin, workflowId);
 }

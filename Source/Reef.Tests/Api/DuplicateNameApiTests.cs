@@ -15,7 +15,6 @@ public class DuplicateNameApiTests(ReefApiFactory factory)
         { "/api/destinations", """{"name":"{name}","type":"Local","configurationJson":"{\"BasePath\":\"exports\"}"}""" },
         { "/api/templates", """{"name":"{name}","type":"ScribanTemplate","outputFormat":"JSON","template":"{}"}""" },
         { "/api/jobs", """{"name":"{name}","type":"Cleanup","scheduleType":"Manual","isEnabled":true}""" },
-        { "/api/groups", """{"name":"{name}","description":""}""" }
     };
 
     [Theory]
@@ -33,27 +32,4 @@ public class DuplicateNameApiTests(ReefApiFactory factory)
         (await second.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(_ct))!["message"]!.GetValue<string>().Should().Contain("already exists");
     }
 
-    [Fact]
-    public async Task DuplicateProfileNameReturnsNameFieldError()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var destinations = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonArray>("/api/destinations", _ct);
-        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
-        var connectionId = await EmailProfiles.IdOfAsync(await admin.PostAsJsonAsync("/api/connections", new { name = $"Dup {Guid.NewGuid():N}", type = "Sqlite", connectionString = "Data Source=dup.db", isActive = true, hash = "" }, _ct));
-        var name = $"Duplicate {Guid.NewGuid():N}";
-        HttpContent Document() => JsonContent.Create(new System.Text.Json.Nodes.JsonObject
-        {
-            ["kind"] = "export",
-            ["settings"] = new System.Text.Json.Nodes.JsonObject { ["Name"] = name, ["IsEnabled"] = true },
-            ["nodes"] = new System.Text.Json.Nodes.JsonArray(
-                new System.Text.Json.Nodes.JsonObject { ["id"] = "source", ["type"] = "source", ["x"] = 0, ["y"] = 0, ["config"] = new System.Text.Json.Nodes.JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" } },
-                new System.Text.Json.Nodes.JsonObject { ["id"] = "destination", ["type"] = "destination", ["x"] = 300, ["y"] = 0, ["config"] = new System.Text.Json.Nodes.JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "JSON" } })
-        });
-        (await admin.PostAsync("/api/profile-documents/export", Document(), _ct)).EnsureSuccessStatusCode();
-
-        var second = await admin.PostAsync("/api/profile-documents/export", Document(), _ct);
-
-        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await second.Content.ReadAsStringAsync(_ct)).Should().Contain("already exists").And.Contain("Name");
-    }
 }

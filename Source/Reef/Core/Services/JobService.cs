@@ -158,32 +158,9 @@ public class JobService
         return jobs;
     }
 
-    /// <summary>
-    /// Validates job configuration to prevent invalid combinations of ProfileId and DestinationId
-    /// </summary>
-    private async Task ValidateJobConfiguration(Job job)
-    {
-        // If ProfileId is set (export profile), check if it's an Email export profile
-        if (job.ProfileId.HasValue && !job.ImportProfileId.HasValue)
-        {
-            using var conn = new SqliteConnection(_connectionString);
-            const string sql = "SELECT IsEmailExport FROM Profiles WHERE Id = @Id";
-
-            var isEmailExport = await conn.QueryFirstOrDefaultAsync<bool?>(sql, new { Id = job.ProfileId.Value });
-
-            // If profile exists and is an email export profile, DestinationId must be null
-            if (isEmailExport == true && job.DestinationId.HasValue)
-            {
-                throw new InvalidOperationException(
-                    "Cannot set a Destination for Email export profiles. Email profiles handle delivery internally.");
-            }
-        }
-    }
-
     public async Task<Job> CreateAsync(Job job)
     {
         // Validate job configuration before creating
-        await ValidateJobConfiguration(job);
 
         using var conn = new SqliteConnection(_connectionString);
 
@@ -236,8 +213,7 @@ public class JobService
         try
         {
             // Validate job configuration before updating
-            await ValidateJobConfiguration(job);
-
+    
             using var conn = new SqliteConnection(_connectionString);
 
             job.Hash = Reef.Helpers.HashHelper.ComputeDestinationHash(
@@ -1277,17 +1253,12 @@ public class JobService
         var executions = await conn.ExecuteAsync(
             "UPDATE JobExecutions SET Status = @Failed, CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = @Running", args);
         var jobs = await conn.ExecuteAsync("UPDATE Jobs SET Status = @Idle, ModifiedAt = @Now WHERE Status = @Running", args);
-        var runs = await conn.ExecuteAsync(
-            "UPDATE ProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
-        runs += await conn.ExecuteAsync(
-            "UPDATE ImportProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
-        if (await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'WorkflowExecutions'") > 0)
-            runs += await conn.ExecuteAsync("""
+        var runs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'WorkflowExecutions'") == 0 ? 0 : await conn.ExecuteAsync("""
                 UPDATE NodeRuns SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
                 UPDATE WorkflowExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
                 """, args);
         if (executions + jobs + runs > 0)
-            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} profile and workflow runs interrupted by restart", jobs, executions, runs);
+            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} workflow runs interrupted by restart", jobs, executions, runs);
     }
 
     /// <summary>

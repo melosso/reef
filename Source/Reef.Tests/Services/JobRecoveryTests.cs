@@ -37,27 +37,6 @@ public class JobRecoveryTests : IDisposable
     }
 
     [Fact]
-    public async Task InterruptedProfileRunsFailOnStartup()
-    {
-        await new Reef.Core.Data.DatabaseInitializer(ConnectionString).InitializeAsync();
-        await using (var db = new SqliteConnection(ConnectionString))
-        {
-            await db.OpenAsync();
-            await db.ExecuteAsync("PRAGMA foreign_keys = OFF;");
-            await db.ExecuteAsync("""
-                INSERT INTO ProfileExecutions (ProfileId, StartedAt, Status) VALUES (1, @Now, 'Running');
-                INSERT INTO ImportProfileExecutions (ImportProfileId, StartedAt, Status) VALUES (1, @Now, 'Running');
-                """, new { Now = DateTime.UtcNow });
-        }
-
-        await new JobService(new DatabaseConfig { ConnectionString = ConnectionString }, new ConfigurationBuilder().Build()).ResetInterruptedRunsAsync();
-
-        await using var check = new SqliteConnection(ConnectionString);
-        (await check.QuerySingleAsync<(string Status, string? ErrorMessage)>("SELECT Status, ErrorMessage FROM ProfileExecutions")).Should().Be(("Failed", "Interrupted by restart"));
-        (await check.QuerySingleAsync<(string Status, string? ErrorMessage)>("SELECT Status, ErrorMessage FROM ImportProfileExecutions")).Should().Be(("Failed", "Interrupted by restart"));
-    }
-
-    [Fact]
     public async Task InterruptedWorkflowRunsFailOnStartup()
     {
         await new Reef.Core.Data.DatabaseInitializer(ConnectionString).InitializeAsync();

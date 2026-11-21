@@ -19,7 +19,6 @@ public static class EmailApprovalsEndpoints
         group.MapGet("/", GetPendingApprovals);
         group.MapGet("/count", GetPendingCount);
         group.MapGet("/{guid:guid}", GetApprovalByGuid);
-        group.MapGet("/profile/{profileId:ulid(Profiles)}", GetApprovalsByProfile);
         group.MapGet("/statistics", GetApprovalStatistics);
         group.MapGet("/{guid:guid}/preview", PreviewApprovedEmail);
 
@@ -110,42 +109,6 @@ public static class EmailApprovalsEndpoints
         }
     }
 
-    /// <summary>
-    /// GET /api/email-approvals/profile/{profileId} - Get all approvals for a profile
-    /// </summary>
-    private static async Task<IResult> GetApprovalsByProfile(
-        int profileId,
-        [FromServices] EmailApprovalService service,
-        [FromQuery] int pageNumber = 1,
-        [FromQuery] int pageSize = 25)
-    {
-        try
-        {
-            if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1 || pageSize > 100) pageSize = 25;
-
-            var (approvals, totalCount) = await service.GetPendingApprovalsAsync(pageNumber, pageSize, profileId);
-
-            var totalPages = (totalCount + pageSize - 1) / pageSize;
-
-            return Results.Ok(new
-            {
-                data = approvals,
-                pagination = new
-                {
-                    pageNumber,
-                    pageSize,
-                    totalCount,
-                    totalPages
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Error getting approvals for profile {ProfileId}", profileId);
-            return Results.Problem("Error retrieving approvals");
-        }
-    }
 
     /// <summary>
     /// GET /api/email-approvals/statistics - Get approval workflow statistics

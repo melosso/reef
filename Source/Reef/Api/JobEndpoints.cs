@@ -223,17 +223,6 @@ public static class JobsEndpoints
         .WithName("GetJobsByStatus")
         .Produces<IEnumerable<Job>>(200);
 
-        // GET: Get jobs by profile
-        group.MapGet("/profile/{profileId:ulid(Profiles)}", async (
-            int profileId,
-            [FromServices] JobService service) =>
-        {
-            var jobs = await service.GetByProfileIdAsync(profileId);
-            return Results.Ok(jobs);
-        })
-        .WithName("GetJobsByProfile")
-        .Produces<IEnumerable<Job>>(200);
-
         // GET: Get due jobs
         group.MapGet("/due", async (
             [FromServices] JobService service) =>

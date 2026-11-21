@@ -5,7 +5,6 @@ using Reef.Core.Security;
 using Reef.Core.Services;
 using Reef.Core.Workflows;
 using Reef.Core.Workflows.Catalogs;
-using Reef.Core.Workflows.Conversion;
 using Reef.Core.Workflows.Engine;
 using Reef.Core.Workflows.Exceptions;
 using Reef.Core.Workflows.Models;
@@ -28,31 +27,11 @@ public static class WorkflowsEndpoints
         group.MapDelete("/{id:ulid(Workflows)}", Delete);
         group.MapPost("/{id:ulid(Workflows)}/run", Run);
         group.MapPost("/{id:ulid(Workflows)}/nodes/{node}/test", Test);
-        group.MapPost("/convert/{kind}/{id:ulid(kind)}", Convert);
         group.MapGet("/{id:ulid(Workflows)}/executions", (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) => runs.ListAsync(id, 50, ct));
         app.MapGet("/api/workflow-executions/{id:ulid(WorkflowExecutions)}", async (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) =>
             await runs.GetAsync(id, ct) is { } run ? Results.Ok(run) : Results.NotFound()).RequireAuthorization();
     }
 
-    private static async Task<IResult> Convert(string kind, int id, HttpContext context, [FromServices] WorkflowConversionService conversions,
-        [FromServices] WorkflowIds ids, [FromServices] AuditService audit, CancellationToken ct)
-    {
-        var userId = int.TryParse(context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var uid) ? uid : (int?)null;
-        try
-        {
-            var conversion = kind == "import" ? await conversions.ConvertImportAsync(id, userId, ct) : await conversions.ConvertExportAsync(id, userId, ct);
-            await audit.LogAsync("Workflow", conversion.Workflow.Id ?? 0, "Converted", context.User.Identity?.Name ?? "Unknown", $"From {kind} profile {id}", context);
-            return Results.Created("/api/workflows", new { workflow = ids.ToPublic(conversion.Workflow), notes = conversion.Notes });
-        }
-        catch (KeyNotFoundException)
-        {
-            return Results.NotFound();
-        }
-        catch (NodeValidationException ex)
-        {
-            return Results.BadRequest(new { error = ex.Message, errors = ex.Errors });
-        }
-    }
 
     private static async Task<IResult> Run(int id, [FromQuery] string? trigger, HttpContext context, [FromServices] WorkflowEngine engine,
         [FromServices] AuditService audit)

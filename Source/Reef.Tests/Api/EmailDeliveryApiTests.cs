@@ -54,7 +54,7 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         var recipients = 0;
         await using var smtp = new FakeSmtpServer(line => line.StartsWith("RCPT", StringComparison.OrdinalIgnoreCase) && Interlocked.Increment(ref recipients) == 2 ? "550 5.1.1 mailbox unavailable" : null);
         var admin = await factory.CreateAdminClientAsync();
-        var mail = new System.Text.Json.Nodes.JsonObject { ["UseHardcodedRecipients"] = true, ["EmailRecipientsHardcoded"] = "ops@example.com" };
+        var mail = new System.Text.Json.Nodes.JsonObject { ["RecipientsFrom"] = "Fixed", ["Recipients"] = "ops@example.com" };
         var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(5), mail,
             "{{ for row in rows }}<!doctype html><html><body>{{ row.Id }}</body></html>{{ end }}");
 
@@ -96,11 +96,11 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         var ct = TestContext.Current.CancellationToken;
         await using var smtp = new FakeSmtpServer();
         var admin = await factory.CreateAdminClientAsync();
-        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailApprovalRequired"] = true, ["EmailApprovalRoles"] = "[\"Admin\"]" };
+        var mail = new System.Text.Json.Nodes.JsonObject { ["RequireApproval"] = true, ["ApproverRoles"] = new System.Text.Json.Nodes.JsonArray("Admin") };
         var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(25), mail);
-        await EmailProfiles.RunAsync(admin, profileId);
-        var pending = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/email-approvals/profile/{profileId}", ct);
-        var guids = pending!["data"]!.AsArray().Select(a => a!["guid"]!.GetValue<string>()).ToList();
+        var run = await EmailProfiles.RunAsync(admin, profileId);
+        var pending = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>("/api/email-approvals?status=Pending&pageSize=100", ct);
+        var guids = pending!["data"]!.AsArray().Where(a => a!["workflowExecutionId"]?.GetValue<string>() == run["id"]!.GetValue<string>()).Select(a => a!["guid"]!.GetValue<string>()).ToList();
         guids.Should().HaveCount(25);
 
         foreach (var guid in guids)
@@ -119,13 +119,14 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         var admin = await factory.CreateAdminClientAsync();
         const string query = "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 3) " +
             "SELECT i AS Id, 'user' || i || '@example.com' AS Email, randomblob(CASE WHEN i = 2 THEN 26214400 ELSE 16 END) AS Doc, 'file-' || i || '.bin' AS Fname FROM n";
-        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailAttachmentConfig"] = """{"Enabled":true,"Mode":"Binary","Binary":{"ContentColumnName":"Doc","FilenameColumnName":"Fname"}}""" };
+        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailAttachmentConfig"] = """{"Enabled":true,"Mode":"Binary","Binary":{"ContentColumnName":"Doc","FilenameColumnName":"Fname"}}""", ["SuccessPercent"] = 50 };
         var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), query, mail);
 
         var execution = await EmailProfiles.RunAsync(admin, profileId);
 
         smtp.Recipients.Should().BeEquivalentTo("user1@example.com", "user3@example.com");
-        execution["status"]!.GetValue<string>().Should().Be("Partial");
+        execution["status"]!.GetValue<string>().Should().Be("Success");
+        TestWorkflows.NodeRun(execution, "mail")!["errorMessage"]!.GetValue<string>().Should().Contain("1 of 3");
     }
 
     private static System.Text.Json.Nodes.JsonObject DirectPath(string folder) => new()
@@ -188,26 +189,6 @@ public class EmailDeliveryApiTests(ReefApiFactory factory)
         execution["status"]!.GetValue<string>().Should().Be("Success");
         logins.Should().ContainSingle().Which.Should().Contain("auth=Bearer fresh-token");
         tokens.LastRequestBody.Should().Contain("grant_type=client_credentials").And.Contain("client_id=reef-app");
-    }
-
-    [Fact]
-    public async Task RunApprovalStatusReflectsAllItsEmails()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        await using var smtp = new FakeSmtpServer();
-        var admin = await factory.CreateAdminClientAsync();
-        var mail = new System.Text.Json.Nodes.JsonObject { ["EmailApprovalRequired"] = true, ["EmailApprovalRoles"] = "[\"Admin\"]" };
-        var profileId = await EmailProfiles.CreateAsync(admin, factory.DataFolder, Smtp(smtp.Port, new { SmtpServer = "127.0.0.1" }), EmailProfiles.Rows(3), mail);
-        var execution = await EmailProfiles.RunAsync(admin, profileId);
-        var approvals = (await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/email-approvals/profile/{profileId}", ct))!["data"]!.AsArray();
-
-        foreach (var approval in approvals.Take(1))
-            (await admin.PostAsJsonAsync($"/api/email-approvals/{approval!["guid"]}/reject", new { reason = "wrong" }, ct)).EnsureSuccessStatusCode();
-        var after = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>($"/api/executions/{execution["id"]}", ct);
-
-        execution["errorMessage"].Should().BeNull();
-        execution["outputMessage"]!.GetValue<string>().Should().Be("3 emails pending approval");
-        after!["approvalStatus"]!.GetValue<string>().Should().Be("Pending");
     }
 
     [Fact]

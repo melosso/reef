@@ -7,10 +7,10 @@ namespace Reef.Core.Workflows.Conversion;
 // Reads profile rows for the one time workflow conversion
 public class LegacyProfileReader(DatabaseConfig config)
 {
-    public async Task<bool> ExistsAsync(CancellationToken ct = default)
+    public async Task<bool> ExistsAsync(string table, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);
-        return await db.ExecuteScalarAsync<bool>(new CommandDefinition("SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'Profiles')", cancellationToken: ct));
+        return await db.ExecuteScalarAsync<bool>(new CommandDefinition("SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = @table)", new { table }, cancellationToken: ct));
     }
 
     public async Task<List<Profile>> ExportsAsync(int? id = null, CancellationToken ct = default)

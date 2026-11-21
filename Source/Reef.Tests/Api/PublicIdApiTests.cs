@@ -41,7 +41,7 @@ public class PublicIdApiTests(ReefApiFactory factory)
     {
         var admin = await factory.CreateAdminClientAsync();
 
-        (await admin.GetAsync("/api/executions?profileId=1", _ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await admin.GetAsync("/api/webhooks?jobId=1", _ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -86,21 +86,12 @@ public class PublicIdApiTests(ReefApiFactory factory)
     private async Task SeedAsync(HttpClient admin)
     {
         var connectionId = await CreateConnectionAsync(admin);
-        (await admin.PostAsJsonAsync("/api/groups", new { name = $"Ids {Guid.NewGuid():N}", description = "" }, _ct)).EnsureSuccessStatusCode();
         var destinations = await admin.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
         var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
-        var document = new JsonObject
-        {
-            ["kind"] = "export",
-            ["settings"] = new JsonObject { ["Name"] = $"Ids {Guid.NewGuid():N}", ["IsEnabled"] = true },
-            ["nodes"] = new JsonArray(
-                new JsonObject { ["id"] = "source", ["type"] = "source", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" } },
-                new JsonObject { ["id"] = "destination", ["type"] = "destination", ["x"] = 300, ["y"] = 0, ["config"] = new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "JSON" } })
-        };
-        var created = await admin.PostAsJsonAsync("/api/profile-documents/export", document, _ct);
-        created.EnsureSuccessStatusCode();
-        var profileId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
-        (await admin.PostAsJsonAsync($"/api/executions/execute/{profileId}", new { }, _ct)).EnsureSuccessStatusCode();
+        var workflowId = await TestWorkflows.CreateChainAsync(admin,
+            TestWorkflows.Node("query", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" }),
+            TestWorkflows.Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "JSON" }));
+        await TestWorkflows.RunAsync(admin, workflowId);
     }
 
     private static void Scan(string path, JsonNode? node, List<string> leaks)

@@ -58,6 +58,7 @@ public class WorkflowsMigration(string connectionString)
         var approvalColumns = (await conn.QueryAsync("PRAGMA table_info(PendingEmailApprovals)")).Select(r => (string)r.name).ToList();
         if (approvalColumns.Count > 0 && !approvalColumns.Contains("WorkflowExecutionId", StringComparer.OrdinalIgnoreCase))
             await ScopeApprovalsAsync(conn, approvalColumns);
+        await MissingReferences.RemoveAsync(conn);
         Log.Debug("Workflows migration completed");
     }
 
@@ -81,9 +82,7 @@ public class WorkflowsMigration(string connectionString)
                     LastSeenAt TEXT NOT NULL DEFAULT (datetime('now')),
                     IsDeleted INTEGER NOT NULL DEFAULT 0,
                     DeletedAt TEXT NULL,
-                    Ulid TEXT NULL,
-                    FOREIGN KEY (ProfileId) REFERENCES Profiles(Id) ON DELETE CASCADE,
-                    FOREIGN KEY (LastSeenExecutionId) REFERENCES ProfileExecutions(Id)
+                    Ulid TEXT NULL
                 );
                 INSERT INTO DeltaSyncState_new ({columns}) SELECT {columns} FROM DeltaSyncState;
                 DROP TABLE DeltaSyncState;
@@ -111,14 +110,11 @@ public class WorkflowsMigration(string connectionString)
         var ddl = Replace(table, "PendingEmailApprovals", "PendingEmailApprovals_new");
         ddl = Replace(ddl, "ProfileId INTEGER NOT NULL", "ProfileId INTEGER NULL");
         ddl = Replace(ddl, "ProfileExecutionId INTEGER NOT NULL", "ProfileExecutionId INTEGER NULL");
-        ddl = Replace(ddl, "FOREIGN KEY (ProfileId)", """
-            WorkflowExecutionId INTEGER NULL,
-                NodeId TEXT NULL,
-                DestinationId INTEGER NULL,
-                ApproverRoles TEXT NULL,
-                FOREIGN KEY (WorkflowExecutionId) REFERENCES WorkflowExecutions(Id) ON DELETE CASCADE,
-                FOREIGN KEY (ProfileId)
-            """);
+        var constraints = ddl.IndexOf("FOREIGN KEY", StringComparison.OrdinalIgnoreCase);
+        var close = ddl.LastIndexOf(')');
+        ddl = constraints < 0
+            ? string.Concat(ddl.AsSpan(0, close).TrimEnd(), ", WorkflowExecutionId INTEGER NULL, NodeId TEXT NULL, DestinationId INTEGER NULL, ApproverRoles TEXT NULL, FOREIGN KEY (WorkflowExecutionId) REFERENCES WorkflowExecutions(Id) ON DELETE CASCADE)")
+            : string.Concat(ddl.AsSpan(0, constraints), "WorkflowExecutionId INTEGER NULL, NodeId TEXT NULL, DestinationId INTEGER NULL, ApproverRoles TEXT NULL, FOREIGN KEY (WorkflowExecutionId) REFERENCES WorkflowExecutions(Id) ON DELETE CASCADE, ", ddl.AsSpan(constraints));
         var list = string.Join(", ", columns);
         await conn.ExecuteAsync("PRAGMA foreign_keys = OFF");
         try

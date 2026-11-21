@@ -14,9 +14,6 @@ namespace Reef.Api;
 public class JobExecutorService
 {
     private readonly JobService _jobService;
-    private readonly ExecutionService _executionService;
-    private readonly ProfileService _profileService;
-    private readonly ImportExecutionService _importExecutionService;
     private readonly NotificationService _notificationService;
     private readonly DatabaseConfig _database;
     private readonly AdminService _adminService;
@@ -27,9 +24,6 @@ public class JobExecutorService
 
     public JobExecutorService(
         JobService jobService,
-        ExecutionService executionService,
-        ProfileService profileService,
-        ImportExecutionService importExecutionService,
         NotificationService notificationService,
         DatabaseConfig database,
         AdminService adminService,
@@ -39,9 +33,6 @@ public class JobExecutorService
         PublicIdMap ids)
     {
         _jobService = jobService;
-        _executionService = executionService;
-        _profileService = profileService;
-        _importExecutionService = importExecutionService;
         _notificationService = notificationService;
         _database = database;
         _adminService = adminService;
@@ -271,9 +262,6 @@ public class JobExecutorService
         {
             switch (job.Type)
             {
-                case JobType.ProfileExecution:
-                    return await ExecuteProfileJobAsync(job, parameters, ct);
-
                 case JobType.HealthCheck:
                     return await ExecuteHealthCheckJobAsync();
 
@@ -292,65 +280,6 @@ public class JobExecutorService
             Log.Error(ex, "Error executing job type {JobType}", job.Type);
             return (false, null, ex.Message, null);
         }
-    }
-
-    /// <summary>
-    /// Execute a profile-based job (export or import profile)
-    /// </summary>
-    private async Task<(bool Success, string? OutputData, string? ErrorMessage, int? RowsProcessed)>
-        ExecuteProfileJobAsync(Job job, Dictionary<string, object>? parameters, CancellationToken ct)
-    {
-        // Import profile path
-        if (job.ImportProfileId.HasValue)
-        {
-            Log.Information("Job {JobName} (#{JobId}) executing import profile #{ImportProfileId}",
-                job.Name, job.Id, job.ImportProfileId.Value);
-            var execution = await _importExecutionService.ExecuteAsync(
-                job.ImportProfileId.Value,
-                $"Job-{job.Id}",
-                ct);
-
-            var success = execution.Status is "Success" or "PartialSuccess";
-            var outputData = JsonSerializer.Serialize(new { executionId = _ids.ToUlid(PublicIdTables.ImportProfileExecutions, execution.Id), status = execution.Status });
-            var errorMessage = success ? null : execution.ErrorMessage;
-            var rowsProcessed = execution.TotalRowsRead > 0 ? execution.TotalRowsRead : (int?)null;
-
-            return (success, outputData, errorMessage, rowsProcessed);
-        }
-
-        // Export profile path
-        if (!job.ProfileId.HasValue)
-        {
-            return (false, null, "ProfileId is required for ProfileExecution jobs", null);
-        }
-
-        Log.Information("Job {JobName} (#{JobId}) executing export profile #{ProfileId}",
-            job.Name, job.Id, job.ProfileId.Value);
-
-        // Convert parameters to string dictionary for ExecutionService
-        Dictionary<string, string>? stringParams = null;
-        if (parameters != null)
-        {
-            stringParams = parameters.ToDictionary(
-                kvp => kvp.Key,
-                kvp => kvp.Value?.ToString() ?? string.Empty
-            );
-        }
-
-        var (executionId, exportSuccess, outputPath, exportErrorMessage) =
-            await _executionService.ExecuteProfileAsync(
-                job.ProfileId.Value,
-                stringParams,
-                $"Job-{job.Id}",
-                job.Id,
-                job.DestinationId,
-                ct);
-
-        var exportOutputData = exportSuccess && outputPath != null
-            ? JsonSerializer.Serialize(new { executionId, outputPath })
-            : null;
-
-        return (exportSuccess, exportOutputData, exportErrorMessage, null);
     }
 
     /// <summary>

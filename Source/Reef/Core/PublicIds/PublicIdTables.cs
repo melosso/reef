@@ -1,6 +1,5 @@
 using Reef.Core.Models;
 using Reef.Core.Models.Dashboard;
-using Reef.Core.ProfileDocuments.Models;
 using Reef.Core.Services;
 using Reef.Core.Workflows.Models;
 
@@ -16,11 +15,9 @@ public static class PublicIdTables
 
     private static readonly HashSet<string> Tables = new(StringComparer.Ordinal)
     {
-        "ApiKeys", "AuditLog", "Connections", "DestinationEndpoints", "Destinations", "ImportExecutionErrors",
-        "ImportOutputTargets", ImportProfileExecutions, ImportProfiles, "JobDependencies", "JobExecutions", "Jobs",
-        "NotificationEmailTemplate", "NotificationSettings", "OidcSettings", "PendingEmailApprovals", "ProfileDependencies",
-        "ProfileExecutionErrors", "ProfileExecutionSplits", ProfileExecutions, "ProfileGroups", "ProfileParameters",
-        "ProfileTransformations", Profiles, "QueryTemplates", "ScheduledTasks", "UsernameHistory", "Users", "WebhookTriggers", "Workflows", "WorkflowExecutions", "NodeRuns"
+        "ApiKeys", "AuditLog", "Connections", "DestinationEndpoints", "Destinations",
+        "JobDependencies", "JobExecutions", "Jobs",
+        "NotificationEmailTemplate", "NotificationSettings", "OidcSettings", "PendingEmailApprovals", "QueryTemplates", "UsernameHistory", "Users", "WebhookTriggers", "Workflows", "WorkflowExecutions", "NodeRuns"
     };
 
     private static readonly Dictionary<string, string> ByName = new(StringComparer.OrdinalIgnoreCase)
@@ -59,7 +56,6 @@ public static class PublicIdTables
         [typeof(User)] = "Users",
         [typeof(ApiKey)] = "ApiKeys",
         [typeof(ProfileGroup)] = "ProfileGroups",
-        [typeof(GroupTreeNode)] = "ProfileGroups",
         [typeof(Connection)] = "Connections",
         [typeof(Profile)] = Profiles,
         [typeof(EmailExportConfig)] = Profiles,
@@ -118,35 +114,16 @@ public static class PublicIdTables
 
     public static string? ForName(string property) => ByName.GetValueOrDefault(property);
 
-    // a route argument naming a table, kind to follow the profile kind in the route, or type to follow the legacy type=import query
-    public const string ByKind = "kind";
-    public const string ByType = "type";
-
-    public static string? RouteTable(string argument, RouteValueDictionary values, HttpContext? context) => argument switch
-    {
-        ByKind => values[ByKind]?.ToString() switch
-        {
-            ProfileKinds.Export => Profiles,
-            ProfileKinds.Import => ImportProfiles,
-            _ => null
-        },
-        ByType => string.Equals(context?.Request.Query[ByType], ProfileKinds.Import, StringComparison.OrdinalIgnoreCase) ? ImportProfiles : Profiles,
-        _ => argument
-    };
-
     // the table for one property, resolved per object when the same property points at different tables
     public static Func<object, string?>? For(Type declaringType, string property)
     {
         if (declaringType == typeof(ImportExecutionError) && property == nameof(ImportExecutionError.ExecutionId))
             return _ => ImportProfileExecutions;
-        if (declaringType == typeof(ProfileDocument) && property == nameof(ProfileDocument.Id))
-            return o => ((ProfileDocument)o).Kind == ProfileKinds.Import ? ImportProfiles : Profiles;
         if (typeof(AuditLog).IsAssignableFrom(declaringType) && property == nameof(AuditLog.EntityId))
             return o => AuditEntities.GetValueOrDefault(((AuditLog)o).EntityType);
         if (declaringType == typeof(AttentionRun) || declaringType == typeof(AttentionFailure) || declaringType == typeof(AttentionAnomaly))
         {
-            if (property == "ProfileId") return o => IsImport(o) ? ImportProfiles : Profiles;
-            if (property == "ExecutionId") return o => IsImport(o) ? ImportProfileExecutions : ProfileExecutions;
+            if (property == "ExecutionId") return _ => "WorkflowExecutions";
         }
 
         if (property == "Id")
