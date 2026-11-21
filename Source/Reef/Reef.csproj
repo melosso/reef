@@ -70,7 +70,15 @@
     <Exec Command="npm run build" WorkingDirectory="$(WebDir)" />
   </Target>
 
-  <Target Name="IncludeWebOutput" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild">
+  <Target Name="ResetWebAssetManifests" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild" Condition="Exists('$(MSBuildProjectDirectory)/wwwroot/app/index.html')" Inputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html" Outputs="$(IntermediateOutputPath)webassets.stamp">
+    <ItemGroup>
+      <StaleWebAssetFiles Include="$(IntermediateOutputPath)staticwebassets*;$(IntermediateOutputPath)*.dswa.cache.json;$(IntermediateOutputPath)compressed/**" />
+    </ItemGroup>
+    <Delete Files="@(StaleWebAssetFiles)" />
+    <Touch Files="$(IntermediateOutputPath)webassets.stamp" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="IncludeWebOutput" AfterTargets="ResetWebAssetManifests" BeforeTargets="BeforeBuild">
     <ItemGroup>
       <Content Remove="wwwroot/app/**" />
       <Content Include="wwwroot/app/**" />
