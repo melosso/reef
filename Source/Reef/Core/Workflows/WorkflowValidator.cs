@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using NCrontab;
 using Reef.Core.Workflows.Models;
 using Reef.Core.Nodes;
 using Reef.Core.Nodes.Models;
@@ -32,6 +33,8 @@ public static class WorkflowValidator
             }
             nodes[node.Id] = (node, definition);
             NodeFieldValidator.Validate(definition.Fields, node.Config ?? new JsonObject(), node.Id, node.Name ?? definition.Label, errors);
+            if (node.Type == "schedule")
+                ValidateSchedule(node, errors);
         }
 
         if (!nodes.Values.Any(n => n.Definition.Group == WorkflowNodeGroups.Triggers))
@@ -57,5 +60,18 @@ public static class WorkflowValidator
         }
 
         return errors;
+    }
+
+    private static void ValidateSchedule(WorkflowNode node, List<NodeError> errors)
+    {
+        var config = node.Config ?? new JsonObject();
+        var label = node.Name ?? "Schedule";
+        if (ConfigPath.ToText(config["Repeat"]) == "Interval")
+        {
+            if (!int.TryParse(ConfigPath.ToText(config["EveryMinutes"]), out var minutes) || minutes < 1)
+                errors.Add(new($"{label}: Every minutes must be 1 or more", node.Id, "EveryMinutes"));
+        }
+        else if (ConfigPath.ToText(config["Cron"]) is { Length: > 0 } cron && CrontabSchedule.TryParse(cron) is null)
+            errors.Add(new($"{label}: Cron expression '{cron}' is not valid", node.Id, "Cron"));
     }
 }

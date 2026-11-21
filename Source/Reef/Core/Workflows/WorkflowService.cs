@@ -34,7 +34,7 @@ public class WorkflowService(DatabaseConfig config)
         if (errors.Count > 0)
             throw new NodeValidationException(errors);
 
-        var json = JsonSerializer.Serialize(new { document.Nodes, document.Edges, document.MaxPasses }, Json);
+        var json = JsonSerializer.Serialize(new { document.Nodes, document.Edges, document.MaxPasses, document.Active }, Json);
         var values = new { id, Name = document.Name.Trim(), DocumentJson = json, Hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json))),
             Now = DateTime.UtcNow.ToString("O"), userId };
 

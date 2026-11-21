@@ -30,6 +30,20 @@ public class WorkflowRunStore(DatabaseConfig config)
             """, node);
     }
 
+    public async Task<DateTime?> LastStartedAsync(int workflowId, string triggerNodeId, CancellationToken ct)
+    {
+        await using var db = new SqliteConnection(config.ConnectionString);
+        return await db.ExecuteScalarAsync<DateTime?>(new CommandDefinition(
+            "SELECT MAX(StartedAt) FROM WorkflowExecutions WHERE WorkflowId = @workflowId AND TriggerNodeId = @triggerNodeId", new { workflowId, triggerNodeId }, cancellationToken: ct));
+    }
+
+    public async Task<bool> IsRunningAsync(int workflowId, CancellationToken ct)
+    {
+        await using var db = new SqliteConnection(config.ConnectionString);
+        return await db.ExecuteScalarAsync<bool>(new CommandDefinition(
+            "SELECT EXISTS (SELECT 1 FROM WorkflowExecutions WHERE WorkflowId = @workflowId AND Status = @status)", new { workflowId, status = WorkflowRunStatus.Running }, cancellationToken: ct));
+    }
+
     public async Task<WorkflowExecution?> GetAsync(int id, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);

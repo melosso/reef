@@ -8,5 +8,6 @@ public class WorkflowDocument
     public List<WorkflowNode> Nodes { get; set; } = new();
     public List<WorkflowEdge> Edges { get; set; } = new();
     public int MaxPasses { get; set; } = 1000;
+    public bool Active { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
