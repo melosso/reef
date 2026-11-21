@@ -9,5 +9,6 @@ Source/Reef.Tests/obj/
 *.md
 !README.md
 !web.*.md
+!release-v*.md
 Source/Reef/wwwroot/app/
 Source/Reef.Web/node_modules/
