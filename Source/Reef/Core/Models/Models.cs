@@ -529,8 +529,13 @@ public class PendingEmailApproval
 {
     public int Id { get; set; }
     public string Guid { get; set; } = System.Guid.NewGuid().ToString(); // Public GUID for API access (prevents enumeration)
-    public int ProfileId { get; set; } // FK to Profiles table
-    public int ProfileExecutionId { get; set; } // FK to ProfileExecutions table
+    public int? ProfileId { get; set; }
+    public int? ProfileExecutionId { get; set; }
+    public int? WorkflowExecutionId { get; set; }
+    public string? NodeId { get; set; }
+    public int? DestinationId { get; set; }
+    public string? ApproverRoles { get; set; }
+    public string? WorkflowName { get; set; }
     public required string Recipients { get; set; } // CSV or JSON serialized recipient emails
     public string? CcAddresses { get; set; } // Optional CC addresses
     public required string Subject { get; set; } // Email subject

@@ -210,7 +210,7 @@
               {#if tab === 'pending'}<td class="sel"
                   ><input type="checkbox" aria-label="Select approval" checked={selected.has(a.guid)} onchange={() => toggle(a.guid)} /></td
                 >{/if}
-              <td class="strong">{profileName(a.profileId)}</td>
+              <td class="strong">{a.profileId ? profileName(a.profileId) : (a.workflowName ?? "Workflow")}</td>
               {#if tab === 'history'}<td><StatusMark kind={statusKind(a.status)} label={statusLabel(a.status)} /></td>{/if}
               <td class="trunc"
                 >{#if redacted(a.recipients)}<span class="muted">Redacted</span>{:else}{a.recipients}{/if}</td

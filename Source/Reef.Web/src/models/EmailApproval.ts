@@ -1,8 +1,11 @@
 export interface EmailApproval {
   id: string;
   guid: string;
-  profileId: string;
-  profileExecutionId: string;
+  profileId: string | null;
+  profileExecutionId: string | null;
+  workflowExecutionId?: string | null;
+  workflowName?: string | null;
+  nodeId?: string | null;
   recipients: string;
   ccAddresses?: string | null;
   subject: string;

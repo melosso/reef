@@ -55,6 +55,9 @@ public class WorkflowsMigration(string connectionString)
         var deltaColumns = (await conn.QueryAsync("PRAGMA table_info(DeltaSyncState)")).Select(r => (string)r.name).ToHashSet(StringComparer.OrdinalIgnoreCase);
         if (deltaColumns.Count > 0 && !deltaColumns.Contains("Scope"))
             await ScopeDeltaSyncStateAsync(conn, deltaColumns.Contains("Ulid"));
+        var approvalColumns = (await conn.QueryAsync("PRAGMA table_info(PendingEmailApprovals)")).Select(r => (string)r.name).ToList();
+        if (approvalColumns.Count > 0 && !approvalColumns.Contains("WorkflowExecutionId", StringComparer.OrdinalIgnoreCase))
+            await ScopeApprovalsAsync(conn, approvalColumns);
         Log.Debug("Workflows migration completed");
     }
 
@@ -98,5 +101,50 @@ public class WorkflowsMigration(string connectionString)
             await conn.ExecuteAsync("PRAGMA foreign_keys = ON");
         }
         Log.Information("DeltaSyncState now accepts workflow scopes");
+    }
+
+    // Workflow approvals have no profile
+    private static async Task ScopeApprovalsAsync(SqliteConnection conn, List<string> columns)
+    {
+        var table = await conn.ExecuteScalarAsync<string>("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'PendingEmailApprovals'") ?? "";
+        var indexes = (await conn.QueryAsync<string>("SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = 'PendingEmailApprovals' AND sql IS NOT NULL")).ToList();
+        var ddl = Replace(table, "PendingEmailApprovals", "PendingEmailApprovals_new");
+        ddl = Replace(ddl, "ProfileId INTEGER NOT NULL", "ProfileId INTEGER NULL");
+        ddl = Replace(ddl, "ProfileExecutionId INTEGER NOT NULL", "ProfileExecutionId INTEGER NULL");
+        ddl = Replace(ddl, "FOREIGN KEY (ProfileId)", """
+            WorkflowExecutionId INTEGER NULL,
+                NodeId TEXT NULL,
+                DestinationId INTEGER NULL,
+                ApproverRoles TEXT NULL,
+                FOREIGN KEY (WorkflowExecutionId) REFERENCES WorkflowExecutions(Id) ON DELETE CASCADE,
+                FOREIGN KEY (ProfileId)
+            """);
+        var list = string.Join(", ", columns);
+        await conn.ExecuteAsync("PRAGMA foreign_keys = OFF");
+        try
+        {
+            using var tx = conn.BeginTransaction();
+            await conn.ExecuteAsync(ddl, transaction: tx);
+            await conn.ExecuteAsync($"INSERT INTO PendingEmailApprovals_new ({list}) SELECT {list} FROM PendingEmailApprovals", transaction: tx);
+            await conn.ExecuteAsync("DROP TABLE PendingEmailApprovals", transaction: tx);
+            await conn.ExecuteAsync("ALTER TABLE PendingEmailApprovals_new RENAME TO PendingEmailApprovals", transaction: tx);
+            foreach (var index in indexes)
+                await conn.ExecuteAsync(index, transaction: tx);
+            await conn.ExecuteAsync("CREATE INDEX IF NOT EXISTS IX_PendingEmailApprovals_WorkflowExecutionId ON PendingEmailApprovals(WorkflowExecutionId)", transaction: tx);
+            tx.Commit();
+        }
+        finally
+        {
+            await conn.ExecuteAsync("PRAGMA foreign_keys = ON");
+        }
+        Log.Information("PendingEmailApprovals now accepts workflow approvals");
+    }
+
+    private static string Replace(string sql, string find, string replacement)
+    {
+        var at = sql.IndexOf(find, StringComparison.Ordinal);
+        return at < 0
+            ? throw new InvalidOperationException($"PendingEmailApprovals schema has no '{find}', migration stopped")
+            : string.Concat(sql.AsSpan(0, at), replacement, sql.AsSpan(at + find.Length));
     }
 }

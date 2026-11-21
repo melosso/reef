@@ -218,7 +218,7 @@ public static class EmailApprovalsEndpoints
             if (approval == null)
                 return Results.NotFound(new { message = "Approval not found" });
 
-            var canApprove = await service.UserCanApproveAsync(approval.ProfileId, userId);
+            var canApprove = await service.UserCanApproveAsync(approval, userId);
             Log.Information("Approval check for GUID={Guid}, ProfileId={ProfileId}, UserId={UserId}, CanApprove={CanApprove}",
                 guid, approval.ProfileId, userId, canApprove);
             if (!canApprove)
@@ -257,7 +257,7 @@ public static class EmailApprovalsEndpoints
             if (approval == null)
                 return Results.NotFound(new { message = "Approval not found" });
 
-            var canApprove = await service.UserCanApproveAsync(approval.ProfileId, userId);
+            var canApprove = await service.UserCanApproveAsync(approval, userId);
             if (!canApprove)
                 return Results.Forbid();
 
@@ -294,7 +294,7 @@ public static class EmailApprovalsEndpoints
             if (approval == null)
                 return Results.NotFound(new { message = "Approval not found" });
 
-            var canApprove = await service.UserCanApproveAsync(approval.ProfileId, userId);
+            var canApprove = await service.UserCanApproveAsync(approval, userId);
             if (!canApprove)
                 return Results.Forbid();
 

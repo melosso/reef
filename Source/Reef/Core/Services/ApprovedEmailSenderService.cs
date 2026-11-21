@@ -260,7 +260,7 @@ public class ApprovedEmailSenderService : BackgroundService
                 var profileId = approval.ProfileId;
 
                 // Load the email destination (we need to query Profiles to get OutputDestinationId)
-                var destinationId = await connection.ExecuteScalarAsync<int?>(
+                var destinationId = approval.DestinationId ?? await connection.ExecuteScalarAsync<int?>(
                     "SELECT OutputDestinationId FROM Profiles WHERE Id = @ProfileId",
                     new { ProfileId = profileId });
 
@@ -558,7 +558,8 @@ public class ApprovedEmailSenderService : BackgroundService
     {
         try
         {
-            // Only commit delta sync if ReefId and DeltaSyncHash are present
+            if (approval.ProfileId is not { } profileId || approval.ProfileExecutionId is not { } executionId)
+                return;
             if (string.IsNullOrEmpty(approval.ReefId) || string.IsNullOrEmpty(approval.DeltaSyncHash))
             {
                 Log.Debug("No ReefId or DeltaSyncHash for approval {ApprovalId}, skipping delta sync commit", approval.Id);
@@ -596,13 +597,13 @@ public class ApprovedEmailSenderService : BackgroundService
 
             // Commit the delta sync using the execution ID from the approval
             await deltaSyncService.CommitDeltaSyncAsync(
-                approval.ProfileId,
-                approval.ProfileExecutionId,
+                profileId,
+                executionId,
                 deltaSyncResult);
 
             // Update delta sync metrics on the execution record based on row type
             await UpdateDeltaSyncMetricsForApprovalAsync(
-                approval.ProfileExecutionId,
+                executionId,
                 approval.DeltaSyncRowType,
                 connection);
 

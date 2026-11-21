@@ -463,4 +463,34 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         cmd.CommandText = "SELECT COUNT(*) FROM Orders";
         (await cmd.ExecuteScalarAsync(_ct)).Should().Be(4L);
     }
+
+    [Fact]
+    public async Task EmailNodeHoldsMailsForApprovalByTheConfiguredRole()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        await using var smtp = new FakeSmtpServer(_ => null);
+        var templateId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync("/api/templates", new { name = $"Mail {Guid.NewGuid():N}", type = "ScribanTemplate", outputFormat = "HTML", template = "<p>{{ rows[0].Email }}</p>" }, _ct));
+        var mailServerId = await EmailProfiles.IdOfAsync(await client.PostAsJsonAsync("/api/destinations", new { name = $"Mail {Guid.NewGuid():N}", type = "Email", configurationJson = System.Text.Json.JsonSerializer.Serialize(EmailProfiles.Smtp(smtp.Port)) }, _ct));
+
+        var run = await RunAsync(client,
+            [
+                Node("start", "manual"),
+                Node("people", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = EmailProfiles.Rows(3) }),
+                Node("mail", "email", new JsonObject
+                {
+                    ["DestinationId"] = mailServerId, ["TemplateId"] = templateId, ["RecipientsFrom"] = "Column", ["RecipientsColumn"] = "Email",
+                    ["Subject"] = "Hi", ["RequireApproval"] = true, ["ApproverRoles"] = new JsonArray("Admin")
+                })
+            ],
+            [Edge("start", "people"), Edge("people", "mail")]);
+
+        run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
+        NodeRun(run, "mail")["errorMessage"]!.GetValue<string>().Should().Contain("3 emails wait for approval");
+        smtp.Messages.Should().BeEmpty();
+        var approvals = (await client.GetFromJsonAsync<JsonObject>("/api/email-approvals?status=Pending&pageSize=100", _ct))!["data"]!.AsArray()
+            .Where(a => a!["workflowExecutionId"]?.GetValue<string>() == run["id"]!.GetValue<string>()).ToList();
+        approvals.Should().HaveCount(3).And.OnlyContain(a => a!["nodeId"]!.GetValue<string>() == "mail");
+        var approve = await client.PostAsJsonAsync($"/api/email-approvals/{approvals[0]!["guid"]!.GetValue<string>()}/approve", new { notes = "ok" }, _ct);
+        approve.StatusCode.Should().Be(HttpStatusCode.OK, await approve.Content.ReadAsStringAsync(_ct));
+    }
 }

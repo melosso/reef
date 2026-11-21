@@ -15,23 +15,23 @@ public static class WorkflowWebhooksEndpoints
 
     public static void Map(WebApplication app)
     {
-        app.MapPost("/api/workflows/{id:ulid(Workflows)}/webhooks/{nodeId}/token", CreateToken).RequireAuthorization();
+        app.MapPost("/api/workflows/{id:ulid(Workflows)}/webhooks/{node}/token", CreateToken).RequireAuthorization();
         app.MapPost("/webhooks/workflows/{token}", Trigger);
     }
 
-    private static async Task<IResult> CreateToken(int id, string nodeId, HttpContext context, [FromServices] WorkflowService workflows,
+    private static async Task<IResult> CreateToken(int id, string node, HttpContext context, [FromServices] WorkflowService workflows,
         [FromServices] AuditService audit, CancellationToken ct)
     {
         var token = WebhookService.GenerateWebhookToken();
         try
         {
-            await workflows.SetWebhookTokenHashAsync(id, nodeId, WebhookService.ComputeTokenHash(token), ct);
+            await workflows.SetWebhookTokenHashAsync(id, node, WebhookService.ComputeTokenHash(token), ct);
         }
         catch (KeyNotFoundException ex)
         {
             return Results.NotFound(new { message = ex.Message });
         }
-        await audit.LogAsync("Workflow", id, "WebhookTokenCreated", context.User.Identity?.Name ?? "Unknown", nodeId, context);
+        await audit.LogAsync("Workflow", id, "WebhookTokenCreated", context.User.Identity?.Name ?? "Unknown", node, context);
         return Results.Ok(new { url = $"/webhooks/workflows/{token}", token });
     }
 

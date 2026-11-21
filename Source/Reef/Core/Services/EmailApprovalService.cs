@@ -80,8 +80,8 @@ public class EmailApprovalService
     /// Stores the email details for later approval/rejection
     /// </summary>
     public async Task<int> CreatePendingApprovalAsync(
-        int profileId,
-        int profileExecutionId,
+        int? profileId,
+        int? profileExecutionId,
         string recipients,
         string subject,
         string htmlBody,
@@ -89,7 +89,8 @@ public class EmailApprovalService
         string? attachmentConfig = null,
         string? reefId = null,
         string? deltaSyncHash = null,
-        string? deltaSyncRowType = null)
+        string? deltaSyncRowType = null,
+        WorkflowApprovalSource? workflow = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -103,11 +104,11 @@ public class EmailApprovalService
 
             const string sql = @"
                 INSERT INTO PendingEmailApprovals (
-                    Guid, ProfileId, ProfileExecutionId, Recipients, CcAddresses, Subject, HtmlBody,
+                    Guid, ProfileId, ProfileExecutionId, WorkflowExecutionId, NodeId, DestinationId, ApproverRoles, Recipients, CcAddresses, Subject, HtmlBody,
                     AttachmentConfig, ReefId, DeltaSyncHash, DeltaSyncRowType, Status, CreatedAt, ExpiresAt, Hash
                 )
                 VALUES (
-                    @Guid, @ProfileId, @ProfileExecutionId, @Recipients, @CcAddresses, @Subject, @HtmlBody,
+                    @Guid, @ProfileId, @ProfileExecutionId, @WorkflowExecutionId, @NodeId, @DestinationId, @ApproverRoles, @Recipients, @CcAddresses, @Subject, @HtmlBody,
                     @AttachmentConfig, @ReefId, @DeltaSyncHash, @DeltaSyncRowType, 'Pending', @CreatedAt, @ExpiresAt, @Hash
                 );
                 SELECT last_insert_rowid();
@@ -118,6 +119,10 @@ public class EmailApprovalService
                 Guid = guid,
                 ProfileId = profileId,
                 ProfileExecutionId = profileExecutionId,
+                workflow?.WorkflowExecutionId,
+                workflow?.NodeId,
+                workflow?.DestinationId,
+                workflow?.ApproverRoles,
                 Recipients = recipients,
                 CcAddresses = ccAddresses,
                 Subject = subject,
@@ -138,11 +143,12 @@ public class EmailApprovalService
                 WHERE Id = @ExecutionId
             ";
 
-            await connection.ExecuteAsync(updateExecutionSql, new
-            {
-                ApprovalId = approvalId,
-                ExecutionId = profileExecutionId
-            });
+            if (profileExecutionId is not null)
+                await connection.ExecuteAsync(updateExecutionSql, new
+                {
+                    ApprovalId = approvalId,
+                    ExecutionId = profileExecutionId
+                });
 
             Log.Information("Created pending email approval {ApprovalId} for profile {ProfileId}, execution {ExecutionId}",
                 approvalId, profileId, profileExecutionId);
@@ -348,7 +354,7 @@ public class EmailApprovalService
             if (approval != null)
             {
                 // Immediately commit delta sync hash (don't wait for background service)
-                if (!string.IsNullOrEmpty(approval.DeltaSyncHash) && !string.IsNullOrEmpty(approval.ReefId))
+                if (!string.IsNullOrEmpty(approval.DeltaSyncHash) && !string.IsNullOrEmpty(approval.ReefId) && approval is { ProfileId: { } skipProfileId, ProfileExecutionId: { } skipExecutionId })
                 {
                     try
                     {
@@ -370,8 +376,8 @@ public class EmailApprovalService
                             approvalId, approval.ReefId, approval.DeltaSyncHash);
 
                         await _deltaSyncService.CommitDeltaSyncAsync(
-                            approval.ProfileId,
-                            approval.ProfileExecutionId,
+                            skipProfileId,
+                            skipExecutionId,
                             deltaSyncResult);
 
                         Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}",
@@ -457,7 +463,7 @@ public class EmailApprovalService
             // Get paginated results
             var offset = (pageNumber - 1) * pageSize;
             var sql = $@"
-                SELECT *
+                SELECT *, (SELECT w.Name FROM WorkflowExecutions e JOIN Workflows w ON w.Id = e.WorkflowId WHERE e.Id = PendingEmailApprovals.WorkflowExecutionId) AS WorkflowName
                 FROM PendingEmailApprovals
                 {whereClause}
                 ORDER BY CreatedAt DESC
@@ -661,15 +667,21 @@ public class EmailApprovalService
     /// Check if a user has permission to approve emails for a specific profile
     /// Validates against EmailApprovalRoles in profile configuration
     /// </summary>
-    public async Task<bool> UserCanApproveAsync(int profileId, int userId)
+    public async Task<bool> UserCanApproveAsync(PendingEmailApproval approval, int userId)
     {
+        var profileId = approval.ProfileId;
         try
         {
-            var profile = await _profileService.GetByIdAsync(profileId);
-            Log.Debug("UserCanApproveAsync: ProfileId={ProfileId}, EmailApprovalRequired={Required}, UserId={UserId}",
-                profileId, profile?.EmailApprovalRequired, userId);
-            if (profile == null || !profile.EmailApprovalRequired)
-                return false;
+            string? roles;
+            if (profileId is { } id)
+            {
+                var profile = await _profileService.GetByIdAsync(id);
+                if (profile == null || !profile.EmailApprovalRequired)
+                    return false;
+                roles = profile.EmailApprovalRoles;
+            }
+            else
+                roles = approval.ApproverRoles;
 
             // Get user role
             await using var connection = new SqliteConnection(_connectionString);
@@ -687,7 +699,7 @@ public class EmailApprovalService
             var allowedRoles = new List<string>();
             try
             {
-                allowedRoles = JsonSerializer.Deserialize<List<string>>(profile.EmailApprovalRoles ?? "[]") ?? new();
+                allowedRoles = JsonSerializer.Deserialize<List<string>>(string.IsNullOrWhiteSpace(roles) ? "[]" : roles) ?? new();
             }
             catch
             {
