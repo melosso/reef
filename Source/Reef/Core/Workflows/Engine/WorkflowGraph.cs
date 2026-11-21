@@ -23,6 +23,20 @@ public class WorkflowGraph
 
     public string[] InputPorts(string nodeId) => [.. _edges.Where(e => e.To == nodeId && Reachable.Contains(e.From)).Select(e => e.ToPort).Distinct()];
 
+    public bool Reaches(string from, string to)
+    {
+        var seen = new HashSet<string> { from };
+        var queue = new Queue<string>(seen);
+        while (queue.TryDequeue(out var id))
+        {
+            if (id == to)
+                return true;
+            foreach (var edge in From(id).Where(e => seen.Add(e.To)))
+                queue.Enqueue(edge.To);
+        }
+        return false;
+    }
+
     private void Visit(string id, HashSet<string> path)
     {
         Reachable.Add(id);

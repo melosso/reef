@@ -493,4 +493,23 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         var approve = await client.PostAsJsonAsync($"/api/email-approvals/{approvals[0]!["guid"]!.GetValue<string>()}/approve", new { notes = "ok" }, _ct);
         approve.StatusCode.Should().Be(HttpStatusCode.OK, await approve.Content.ReadAsStringAsync(_ct));
     }
+
+    [Fact]
+    public async Task SmartSyncSavesStateWhenAnotherBranchFails()
+    {
+        var (client, connectionId, _) = await SetupAsync();
+        var id = await CreateAsync(client,
+            [
+                Node("start", "manual"),
+                Node("orders", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId, Total FROM Orders" }),
+                Node("sync", "deltasync", new JsonObject { ["IdColumn"] = "OrderId" }),
+                Node("broken", "command", new JsonObject { ["ConnectionId"] = connectionId, ["Runs"] = "Query", ["Command"] = "INSERT INTO Nowhere VALUES (1)" })
+            ],
+            [Edge("start", "orders"), Edge("orders", "sync"), Edge("start", "broken")]);
+
+        (await RunAgainAsync(client, id))["status"]!.GetValue<string>().Should().Be("Failed");
+        var second = await RunAgainAsync(client, id);
+
+        NodeRun(second, "sync")["rowCount"]!.GetValue<int>().Should().Be(0);
+    }
 }

@@ -286,7 +286,7 @@ public static class WorkflowNodeCatalog
         new() { Key = "Pick", Label = "Pick", Kind = NodeFieldKinds.Select, Default = "Latest", ShowWhen = new("From", Files),
             Options = [new("Latest", "Latest file"), new("Oldest", "Oldest file"), new("All", "All matching files"), new("Exact", "Exact path")] },
         new() { Key = "Archive", Label = "Archive after the run", Kind = NodeFieldKinds.Bool, ShowWhen = new("From", Files),
-            Tooltip = "Moves the fetched files once the whole run succeeds" },
+            Tooltip = "Moves the fetched files once the steps after Fetch succeed" },
         new() { Key = "ArchiveFolder", Label = "Archive folder", ShowWhen = new("Archive", True) }
     ];
 

@@ -29,7 +29,8 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
         var latest = new Dictionary<string, Dictionary<string, WorkflowItems>>();
         var states = new Dictionary<string, Dictionary<string, object>>();
         var passes = new Dictionary<string, int>();
-        var commits = new List<Func<Task>>();
+        var commits = new List<(string NodeId, Func<Task> Commit)>();
+        string? failedNode = null;
         var undos = new List<Func<Task>>();
         var workFolder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Reef.Helpers.TempPaths.WorkflowRoot, run.Id.ToString())).FullName;
         try
@@ -41,6 +42,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
                 if (pass >= workflow.MaxPasses)
                 {
                     run.Status = WorkflowRunStatus.Failed;
+                    failedNode = node.Id;
                     run.ErrorMessage = $"{node.Name ?? node.Id}: stopped after {workflow.MaxPasses} passes, the pass limit of this workflow";
                     break;
                 }
@@ -70,7 +72,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
                     record.Status = WorkflowRunStatus.Success;
                     record.ErrorMessage = result.Warning;
                     if (result.OnRunSuccess is { } commit)
-                        commits.Add(commit);
+                        commits.Add((node.Id, commit));
                     if (result.OnRunFailure is { } undo)
                         undos.Insert(0, undo);
                     record.RowCount = outputs.Values.Sum(o => o.Items.Count);
@@ -93,6 +95,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
                     {
                         record.Status = WorkflowRunStatus.Failed;
                         run.Status = WorkflowRunStatus.Failed;
+                        failedNode = node.Id;
                         run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
                     }
                 }
@@ -118,17 +121,19 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
             foreach (var node in workflow.Nodes.Where(n => graph.Reachable.Contains(n.Id) && !passes.ContainsKey(n.Id)))
                 await SkipAsync(run, new NodeRun { WorkflowExecutionId = run.Id, NodeId = node.Id, StartedAt = DateTime.UtcNow });
             run.Status = WorkflowRunStatus.Success;
-            try
-            {
-                foreach (var commit in commits)
-                    await commit();
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Workflow {WorkflowId} could not save its run state", workflowId);
-                run.Status = WorkflowRunStatus.Failed;
-                run.ErrorMessage = $"Output was written but the Smart Sync state was not saved: {ex.Message}";
-            }
+        }
+        try
+        {
+            foreach (var (_, commit) in commits.Where(c => failedNode is null || !graph.Reaches(c.NodeId, failedNode)))
+                await commit();
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Workflow {WorkflowId} could not save its run state", workflowId);
+            run.ErrorMessage = run.Status == WorkflowRunStatus.Failed
+                ? $"{run.ErrorMessage} Smart Sync state was not saved: {ex.Message}"
+                : $"Output was written but the Smart Sync state was not saved: {ex.Message}";
+            run.Status = WorkflowRunStatus.Failed;
         }
         if (run.Status == WorkflowRunStatus.Failed)
         {
