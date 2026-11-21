@@ -1,5 +1,12 @@
 import {
   ArrowRightLeft,
+  Clock,
+  GitBranch,
+  Merge,
+  MousePointerClick,
+  Repeat,
+  Terminal,
+  Webhook,
   CircleCheck,
   Copy,
   Database,
@@ -17,6 +24,13 @@ import {
 
 const ICONS: Record<string, LucideIcon> = {
   'arrow-right-left': ArrowRightLeft,
+  clock: Clock,
+  'git-branch': GitBranch,
+  merge: Merge,
+  'mouse-pointer-click': MousePointerClick,
+  repeat: Repeat,
+  terminal: Terminal,
+  webhook: Webhook,
   'check-circle': CircleCheck,
   copy: Copy,
   database: Database,

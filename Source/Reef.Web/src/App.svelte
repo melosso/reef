@@ -41,6 +41,8 @@
     { pattern: '/profiles', load: () => import('./pages/Profiles.svelte') },
     { pattern: '/profiles/:kind/new', load: editor },
     { pattern: '/profiles/:kind/:id', load: editor },
+    { pattern: '/workflows', load: () => import('./pages/Workflows.svelte') },
+    { pattern: '/workflows/:id', load: () => import('./pages/WorkflowEditor.svelte') },
     { pattern: '/connections', load: connections, key: 'connections' },
     { pattern: '/connections/:id', load: connections, key: 'connections' },
     { pattern: '/destinations', load: destinations, key: 'destinations' },
