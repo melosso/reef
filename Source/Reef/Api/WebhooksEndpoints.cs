@@ -403,15 +403,8 @@ public static class WebhooksEndpoints
             var webhook = await service.GetByTokenAsync(token);
             if (webhook == null)
             {
-                Log.Warning("Webhook token not found for token {Token}", WebhookService.MaskToken(token));
-                return Results.Json(
-                    new
-                    {
-                        error = "webhook_not_found",
-                        message = "Webhook token is invalid or does not exist"
-                    },
-                    statusCode: 404 // Not Found
-                );
+                var row = request?.Parameters is { Count: > 0 } p ? new List<Dictionary<string, object?>> { p.ToDictionary(x => x.Key, x => (object?)x.Value) } : [];
+                return await WorkflowWebhooksEndpoints.RunAsync(token, Reef.Core.Workflows.Models.WorkflowItems.FromRows(row), context.RequestServices, context.RequestAborted);
             }
 
             // Check if webhook is active

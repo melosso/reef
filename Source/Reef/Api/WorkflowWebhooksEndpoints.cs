@@ -35,16 +35,8 @@ public static class WorkflowWebhooksEndpoints
     }
 
     // shortcut answers after the run ends, queue runs when callers time out
-    private static async Task<IResult> Trigger(string token, HttpRequest request, [FromServices] WorkflowService workflows,
-        [FromServices] WebhookService webhooks, [FromServices] WorkflowEngine engine, [FromServices] PublicIdMap ids, CancellationToken ct)
+    private static async Task<IResult> Trigger(string token, HttpRequest request, CancellationToken ct)
     {
-        if (!WebhookService.IsValidTokenFormat(token) || await workflows.FindWebhookAsync(WebhookService.ComputeTokenHash(token), ct) is not var (workflow, node))
-            return Results.NotFound(new { error = "webhook_not_found", message = "Webhook token is invalid or does not exist" });
-        if (!workflow.Active)
-            return Results.Json(new { error = "workflow_inactive", message = "Turn on the workflow to accept webhook calls" }, statusCode: StatusCodes.Status403Forbidden);
-        if (!webhooks.CheckRateLimit($"workflow_{workflow.Id}_{node.Id}", MaxRequestsPerHour, 1))
-            return Results.Json(new { error = "rate_limit_exceeded", message = $"Webhook allows {MaxRequestsPerHour} calls per hour" }, statusCode: StatusCodes.Status429TooManyRequests);
-
         WorkflowItems items;
         try
         {
@@ -54,9 +46,22 @@ public static class WorkflowWebhooksEndpoints
         {
             return Results.BadRequest(new { error = "invalid_body", message = $"Request body is not valid JSON: {ex.Message}" });
         }
+        return await RunAsync(token, items, request.HttpContext.RequestServices, ct);
+    }
 
-        var run = await engine.RunAsync(workflow.Id!.Value, node.Id, items, ct);
+    public static async Task<IResult> RunAsync(string token, WorkflowItems items, IServiceProvider services, CancellationToken ct)
+    {
+        var workflows = services.GetRequiredService<WorkflowService>();
+        var webhooks = services.GetRequiredService<WebhookService>();
+        if (!WebhookService.IsValidTokenFormat(token) || await workflows.FindWebhookAsync(WebhookService.ComputeTokenHash(token), ct) is not var (workflow, node))
+            return Results.NotFound(new { error = "webhook_not_found", message = "Webhook token is invalid or does not exist" });
+        if (!workflow.Active)
+            return Results.Json(new { error = "workflow_inactive", message = "Turn on the workflow to accept webhook calls" }, statusCode: StatusCodes.Status403Forbidden);
+        if (!webhooks.CheckRateLimit($"workflow_{workflow.Id}_{node.Id}", MaxRequestsPerHour, 1))
+            return Results.Json(new { error = "rate_limit_exceeded", message = $"Webhook allows {MaxRequestsPerHour} calls per hour" }, statusCode: StatusCodes.Status429TooManyRequests);
+
+        var run = await services.GetRequiredService<WorkflowEngine>().RunAsync(workflow.Id!.Value, node.Id, items, ct);
         Log.Information("Webhook started workflow {WorkflowId} run {RunId}", workflow.Id, run.Id);
-        return Results.Ok(new { executionId = ids.ToUlid("WorkflowExecutions", run.Id), status = run.Status, error = run.ErrorMessage });
+        return Results.Ok(new { executionId = services.GetRequiredService<PublicIdMap>().ToUlid("WorkflowExecutions", run.Id), status = run.Status, error = run.ErrorMessage });
     }
 }

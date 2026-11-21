@@ -165,4 +165,35 @@ public class WorkflowConversionApiTests(ReefApiFactory factory)
 
         converted["notes"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Contain(n => n.Contains("every split file"));
     }
+
+    [Fact]
+    public async Task ConvertedProfileKeepsItsScheduleAndWebhookUrl()
+    {
+        var (client, connectionId, destinationId, _) = await SetupAsync();
+        var profileId = await CreateProfileAsync(client, "export",
+            Step("source", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT OrderId FROM Orders" }),
+            Step("destination", new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "CSV" }));
+        (await client.PostAsJsonAsync("/api/jobs", new
+        {
+            name = $"Nightly {Guid.NewGuid():N}", type = "ProfileExecution", profileId, scheduleType = "Weekly", startTime = "06:30:00", weekDays = "0,4", isEnabled = true
+        }, _ct)).StatusCode.Should().Be(HttpStatusCode.Created);
+        var hook = await client.PostAsJsonAsync("/api/webhooks", new { profileId }, _ct);
+        hook.StatusCode.Should().Be(HttpStatusCode.OK, await hook.Content.ReadAsStringAsync(_ct));
+        var created = (await hook.Content.ReadFromJsonAsync<JsonObject>(_ct))!;
+        var token = created["token"]!.GetValue<string>();
+
+        var workflow = (await ConvertAsync(client, "export", profileId))["workflow"]!;
+
+        workflow["active"]!.GetValue<bool>().Should().BeTrue();
+        var nodes = workflow["nodes"]!.AsArray();
+        nodes.Should().Contain(n => n!["type"]!.GetValue<string>() == "schedule" && n["config"]!["Cron"]!.GetValue<string>() == "30 6 * * 1,5");
+        var hookNode = nodes.Single(n => n!["type"]!.GetValue<string>() == "webhook")!["id"]!.GetValue<string>();
+        workflow["edges"]!.AsArray().Should().Contain(e => e!["from"]!.GetValue<string>() == hookNode);
+        (await client.DeleteAsync($"/api/webhooks/{created["id"]!.GetValue<string>()}", _ct)).IsSuccessStatusCode.Should().BeTrue();
+
+        var call = await factory.CreateClient().PostAsJsonAsync($"/webhooks/{token}", new { }, _ct);
+
+        call.StatusCode.Should().Be(HttpStatusCode.OK, await call.Content.ReadAsStringAsync(_ct));
+        (await call.Content.ReadFromJsonAsync<JsonObject>(_ct))!["executionId"].Should().NotBeNull();
+    }
 }

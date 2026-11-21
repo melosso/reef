@@ -5,6 +5,7 @@ namespace Reef.Core.Workflows.Conversion;
 
 public sealed class WorkflowChain
 {
+    public const string Start = "start";
     private const double Spacing = 240;
     private readonly WorkflowDocument _document;
     private string _last;
@@ -12,8 +13,8 @@ public sealed class WorkflowChain
     public WorkflowChain(string name)
     {
         _document = new WorkflowDocument { Name = name };
-        _document.Nodes.Add(new WorkflowNode { Id = "start", Type = "manual", X = 0, Y = 0, Config = new JsonObject() });
-        _last = "start";
+        _document.Nodes.Add(new WorkflowNode { Id = Start, Type = "manual", X = 0, Y = 0, Config = new JsonObject() });
+        _last = Start;
     }
 
     public string Last => _last;
