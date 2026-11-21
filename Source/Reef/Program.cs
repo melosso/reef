@@ -382,6 +382,7 @@ public partial class Program
         services.AddScoped<Reef.Core.Workflows.Triggers.WorkflowScheduler>();
         services.AddHostedService<Reef.Core.Workflows.Triggers.WorkflowSchedulerService>();
         services.AddScoped<Reef.Core.Workflows.Conversion.WorkflowConversionService>();
+        services.AddSingleton<Reef.Core.Workflows.Conversion.LegacyProfileReader>();
         foreach (var executor in typeof(Reef.Core.Workflows.Engine.INodeExecutor).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(Reef.Core.Workflows.Engine.INodeExecutor).IsAssignableFrom(t)))
             services.AddScoped(typeof(Reef.Core.Workflows.Engine.INodeExecutor), executor);

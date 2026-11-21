@@ -9,14 +9,14 @@ using Reef.Core.Workflows.Models;
 
 namespace Reef.Core.Workflows.Conversion;
 
-public class WorkflowConversionService(ProfileService profiles, ImportProfileService imports, WorkflowService workflows, JobService jobs, DatabaseConfig config)
+public class WorkflowConversionService(LegacyProfileReader legacy, WorkflowService workflows, DatabaseConfig config)
 {
     public async Task<WorkflowConversion> ConvertExportAsync(int profileId, int? userId, CancellationToken ct = default)
     {
-        var profile = await profiles.GetByIdAsync(profileId, ct) ?? throw new KeyNotFoundException("Profile not found");
+        var profile = (await legacy.ExportsAsync(profileId, ct)).FirstOrDefault() ?? throw new KeyNotFoundException("Profile not found");
         var conversion = ProfileWorkflowConverter.FromExport(profile);
         conversion.Workflow.Active = profile.IsEnabled;
-        var hashes = await AddTriggersAsync(conversion, await jobs.GetByProfileIdAsync(profileId), "ProfileId", profileId);
+        var hashes = await AddTriggersAsync(conversion, await legacy.JobsAsync("ProfileId", profileId, ct), "ProfileId", profileId);
         var saved = await SaveAsync(conversion.Workflow, userId, ct, hashes);
         if (profile.DeltaSyncEnabled)
             await CopySmartSyncHistoryAsync(profileId, DeltaSyncNodeExecutor.Scope(saved.Id!.Value, "deltasync"), ct);
@@ -25,10 +25,10 @@ public class WorkflowConversionService(ProfileService profiles, ImportProfileSer
 
     public async Task<WorkflowConversion> ConvertImportAsync(int importProfileId, int? userId, CancellationToken ct = default)
     {
-        var profile = await imports.GetByIdAsync(importProfileId) ?? throw new KeyNotFoundException("Import profile not found");
-        var conversion = ProfileWorkflowConverter.FromImport(profile, await imports.GetOutputTargetsAsync(importProfileId));
+        var profile = (await legacy.ImportsAsync(importProfileId, ct)).FirstOrDefault() ?? throw new KeyNotFoundException("Import profile not found");
+        var conversion = ProfileWorkflowConverter.FromImport(profile, await legacy.OutputTargetsAsync(importProfileId, ct));
         conversion.Workflow.Active = profile.IsEnabled;
-        var hashes = await AddTriggersAsync(conversion, await jobs.GetByImportProfileIdAsync(importProfileId), "ImportProfileId", importProfileId);
+        var hashes = await AddTriggersAsync(conversion, await legacy.JobsAsync("ImportProfileId", importProfileId, ct), "ImportProfileId", importProfileId);
         return conversion with { Workflow = await SaveAsync(conversion.Workflow, userId, ct, hashes) };
     }
 
