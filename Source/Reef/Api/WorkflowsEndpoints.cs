@@ -7,12 +7,15 @@ using Reef.Core.Workflows;
 using Reef.Core.Workflows.Catalogs;
 using Reef.Core.Workflows.Conversion;
 using Reef.Core.Workflows.Engine;
+using Reef.Core.Workflows.Exceptions;
 using Reef.Core.Workflows.Models;
 
 namespace Reef.Api;
 
 public static class WorkflowsEndpoints
 {
+    private const int TestRows = 100;
+
     public static void Map(WebApplication app)
     {
         var group = app.MapGroup("/api/workflows").RequireAuthorization();
@@ -24,6 +27,7 @@ public static class WorkflowsEndpoints
         group.MapPut("/{id:ulid(Workflows)}", Update);
         group.MapDelete("/{id:ulid(Workflows)}", Delete);
         group.MapPost("/{id:ulid(Workflows)}/run", Run);
+        group.MapPost("/{id:ulid(Workflows)}/nodes/{node}/test", Test);
         group.MapPost("/convert/{kind}/{id:ulid(kind)}", Convert);
         group.MapGet("/{id:ulid(Workflows)}/executions", (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) => runs.ListAsync(id, 50, ct));
         app.MapGet("/api/workflow-executions/{id:ulid(WorkflowExecutions)}", async (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) =>
@@ -64,6 +68,27 @@ public static class WorkflowsEndpoints
             return Results.NotFound(new { message = ex.Message });
         }
         catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> Test(int id, string node, HttpRequest request, [FromServices] NodeTester tester, CancellationToken ct)
+    {
+        try
+        {
+            var result = await tester.TestAsync(id, node, await JsonItems.ReadAsync(request.Body, ct), ct);
+            return Results.Ok(new
+            {
+                outputs = result.Outputs.ToDictionary(o => o.Key, o => new { o.Value.Columns, Items = o.Value.Items.Take(TestRows), o.Value.Files, Total = o.Value.Items.Count }),
+                warning = result.Warning
+            });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return Results.NotFound(new { message = ex.Message });
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NodeExecutionException or System.Text.Json.JsonException)
         {
             return Results.BadRequest(new { message = ex.Message });
         }

@@ -542,4 +542,26 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
         run["status"]!.GetValue<string>().Should().Be("Success", run.ToJsonString());
         paths.Should().ContainSingle().Which.Should().Be("/base/orders");
     }
+
+    [Fact]
+    public async Task NodeTestRunsOneStepWithPostedRows()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+        var id = await CreateAsync(client,
+            [
+                Node("start", "manual"),
+                Node("big", "if", new JsonObject { ["Column"] = "Total", ["Operator"] = "greaterThan", ["Value"] = "100" }),
+                Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV" })
+            ],
+            [Edge("start", "big"), Edge("big", "file", "true")]);
+
+        var test = await client.PostAsJsonAsync($"/api/workflows/{id}/nodes/big/test", new JsonArray(new JsonObject { ["Total"] = 50 }, new JsonObject { ["Total"] = 150 }), _ct);
+
+        test.StatusCode.Should().Be(HttpStatusCode.OK, await test.Content.ReadAsStringAsync(_ct));
+        var outputs = (await test.Content.ReadFromJsonAsync<JsonObject>(_ct))!["outputs"]!;
+        outputs["true"]!["total"]!.GetValue<int>().Should().Be(1);
+        outputs["false"]!["items"]![0]!["Total"]!.GetValue<int>().Should().Be(50);
+        (await client.PostAsJsonAsync($"/api/workflows/{id}/nodes/file/test", new JsonArray(), _ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await client.GetFromJsonAsync<JsonArray>($"/api/workflows/{id}/executions", _ct)).Should().BeEmpty();
+    }
 }

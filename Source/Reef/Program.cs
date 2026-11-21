@@ -378,6 +378,7 @@ public partial class Program
         services.AddSingleton<Reef.Core.Workflows.Engine.WorkflowRunStore>();
         services.AddScoped<Reef.Core.Workflows.Engine.WorkflowEngine>();
         services.AddScoped<Reef.Core.Workflows.Engine.NodeInvoker>();
+        services.AddScoped<Reef.Core.Workflows.Engine.NodeTester>();
         services.AddScoped<Reef.Core.Workflows.Triggers.WorkflowScheduler>();
         services.AddHostedService<Reef.Core.Workflows.Triggers.WorkflowSchedulerService>();
         services.AddScoped<Reef.Core.Workflows.Conversion.WorkflowConversionService>();

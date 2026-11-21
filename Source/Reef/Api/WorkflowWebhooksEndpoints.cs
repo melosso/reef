@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Reef.Core.Parsers;
 using Reef.Core.PublicIds;
 using Reef.Core.Services;
 using Reef.Core.Workflows;
@@ -49,7 +48,7 @@ public static class WorkflowWebhooksEndpoints
         WorkflowItems items;
         try
         {
-            items = await ReadItemsAsync(request, ct);
+            items = await JsonItems.ReadAsync(request.Body, ct);
         }
         catch (Exception ex) when (ex is System.Text.Json.JsonException or InvalidOperationException)
         {
@@ -59,22 +58,5 @@ public static class WorkflowWebhooksEndpoints
         var run = await engine.RunAsync(workflow.Id!.Value, node.Id, items, ct);
         Log.Information("Webhook started workflow {WorkflowId} run {RunId}", workflow.Id, run.Id);
         return Results.Ok(new { executionId = ids.ToUlid("WorkflowExecutions", run.Id), status = run.Status, error = run.ErrorMessage });
-    }
-
-    private static async Task<WorkflowItems> ReadItemsAsync(HttpRequest request, CancellationToken ct)
-    {
-        using var body = new MemoryStream();
-        await request.Body.CopyToAsync(body, ct);
-        if (body.Length == 0)
-            return new WorkflowItems();
-        body.Position = 0;
-        var rows = new List<Dictionary<string, object?>>();
-        await foreach (var row in ImportParserFactory.Create("JSON").ParseAsync(body, ImportRows.ParseFormatConfig(null), ct))
-        {
-            if (!string.IsNullOrWhiteSpace(row.ParseError))
-                throw new InvalidOperationException(row.ParseError);
-            rows.Add(row.Columns);
-        }
-        return WorkflowItems.FromRows(rows);
     }
 }
