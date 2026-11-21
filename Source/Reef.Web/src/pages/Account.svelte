@@ -168,9 +168,9 @@
     <div class="tabs" role="tablist">
       <button type="button" role="tab" aria-selected={tab === 'profile'} onclick={() => navigate('/account')}>Profile</button>
       <button type="button" role="tab" aria-selected={tab === 'password'} onclick={() => navigate('/account/password')}>Password</button>
-      <button type="button" role="tab" aria-selected={tab === 'security'} onclick={() => navigate('/account/security')}
-        >Two-factor authentication</button
-      >
+      <button type="button" role="tab" aria-selected={tab === 'security'} onclick={() => navigate('/account/security')}>
+        Two-factor authentication
+      </button>
     </div>
 
     {#if tab === 'profile'}
@@ -232,8 +232,10 @@
                     <button type="submit" class="btn primary" aria-busy={busy === 'verify'}>Activate</button><button
                       type="button"
                       class="btn"
-                      onclick={() => (totp = null)}>Cancel</button
+                      onclick={() => (totp = null)}
                     >
+                      Cancel
+                    </button>
                   </div>
                 </form>
               </div>
@@ -254,8 +256,10 @@
                 <button type="submit" class="btn primary" aria-busy={busy === 'reconfirm'}>Continue</button><button
                   type="button"
                   class="btn"
-                  onclick={() => (reconfirm = false)}>Cancel</button
+                  onclick={() => (reconfirm = false)}
                 >
+                  Cancel
+                </button>
               </div>
             </form>
           {:else}
@@ -265,8 +269,10 @@
                 class="btn"
                 disabled={emailActive}
                 aria-busy={busy === 'totp'}
-                onclick={() => (totpActive ? (reconfirm = true) : startTotp())}>{totpActive ? 'Reconfigure' : 'Set up'}</button
+                onclick={() => (totpActive ? (reconfirm = true) : startTotp())}
               >
+                {totpActive ? 'Reconfigure' : 'Set up'}
+              </button>
             </div>
           {/if}
         </div>
@@ -285,16 +291,18 @@
               class="btn"
               aria-busy={busy === 'email'}
               disabled={totpActive || (!emailActive && (!profile.emailMfaAvailable || !profile.email))}
-              onclick={enableEmail}>{emailActive ? 'Reconfigure' : 'Turn on'}</button
+              onclick={enableEmail}
             >
+              {emailActive ? 'Reconfigure' : 'Turn on'}
+            </button>
           </div>
         </div>
       </section>
       {#if profile.mfaEnabled}
         <div>
-          <button type="button" class="btn danger" aria-busy={busy === 'disable'} onclick={disableMfa}
-            >Turn off two-factor authentication</button
-          >
+          <button type="button" class="btn danger" aria-busy={busy === 'disable'} onclick={disableMfa}>
+            Turn off two-factor authentication
+          </button>
         </div>
       {/if}
     {/if}

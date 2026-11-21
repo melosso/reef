@@ -429,7 +429,9 @@
     <div class="table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Name</th><th>Type</th><th>Format</th><th>Tags</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
+          <tr>
+            <th>Name</th><th>Type</th><th>Format</th><th class="secondary">Tags</th><th>Status</th><th><span class="sr">Actions</span></th>
+          </tr>
         </thead>
         <tbody>
           {#each visible as t (t.id)}
@@ -444,7 +446,7 @@
               </td>
               <td>{TYPE_LABEL[t.type] ?? t.type}</td>
               <td>{t.outputFormat}</td>
-              <td>
+              <td class="secondary">
                 {(t.tags ?? '')
                   .split(',')
                   .map((x: string) => x.trim())

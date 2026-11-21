@@ -80,7 +80,11 @@
     <div class="table-wrap">
       <table class="data">
         <thead>
-          <tr><th>Name</th><th>Triggers</th><th>Steps</th><th>Updated</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
+          <tr>
+            <th>Name</th><th>Triggers</th><th class="secondary">Steps</th><th>Updated</th><th>Status</th><th>
+              <span class="sr">Actions</span>
+            </th>
+          </tr>
         </thead>
         <tbody>
           {#each visible as w (w.id)}
@@ -92,7 +96,7 @@
             >
               <td class="strong">{w.name}</td>
               <td>{triggers(w)}</td>
-              <td class="num">{w.nodes.length}</td>
+              <td class="num secondary">{w.nodes.length}</td>
               <td><span use:tooltip={formatDateTime(w.updatedAt)}>{formatRelative(w.updatedAt)}</span></td>
               <td>
                 <span use:tooltip={'Schedule and webhook triggers start the workflow only when it is on'}>

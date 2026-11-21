@@ -213,9 +213,13 @@
     </div>
     <div class="table-wrap">
       <table class="data">
-        <thead
-          ><tr><th>Name</th><th>Type</th><th>Tags</th><th>Last test</th><th>Status</th><th><span class="sr">Actions</span></th></tr></thead
-        >
+        <thead>
+          <tr>
+            <th>Name</th><th>Type</th><th class="secondary">Tags</th><th>Last test</th><th>Status</th><th>
+              <span class="sr">Actions</span>
+            </th>
+          </tr>
+        </thead>
         <tbody>
           {#each visible as c (c.id)}
             {@const ok = c.lastTestResult?.startsWith('Success')}
@@ -227,7 +231,7 @@
             >
               <td class="strong">{c.name}</td>
               <td>{TYPES[c.type] ?? c.type}</td>
-              <td>
+              <td class="secondary">
                 {#each (c.tags ?? '')
                   .split(',')
                   .map((t: string) => t.trim())
@@ -237,9 +241,9 @@
               </td>
               <td>
                 {#if c.lastTestedAt}
-                  <span use:tooltip={c.lastTestResult ?? formatDateTime(c.lastTestedAt)}
-                    ><StatusMark kind={ok ? 'ok' : 'err'} label={`${ok ? 'Passed' : 'Failed'} ${formatRelative(c.lastTestedAt)}`} /></span
-                  >
+                  <span use:tooltip={c.lastTestResult ?? formatDateTime(c.lastTestedAt)}>
+                    <StatusMark kind={ok ? 'ok' : 'err'} label={`${ok ? 'Passed' : 'Failed'} ${formatRelative(c.lastTestedAt)}`} />
+                  </span>
                 {:else}<span class="muted">Never tested</span>{/if}
               </td>
               <td><StatusMark kind={c.isActive ? 'ok' : 'off'} label={c.isActive ? 'On' : 'Off'} /></td>
@@ -249,20 +253,24 @@
                   class="btn ghost icon"
                   aria-label="Edit {c.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => records.open(c.id)}><Pencil size={15} /></button
+                  onclick={() => records.open(c.id)}
                 >
+                  <Pencil size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon danger"
                   aria-label="Delete {c.name}"
                   use:tooltip={'Delete'}
-                  onclick={() => remove(c)}><Trash2 size={15} /></button
+                  onclick={() => remove(c)}
                 >
+                  <Trash2 size={15} />
+                </button>
               </td>
             </tr>
           {:else}
-            <tr
-              ><td colspan="6" class="empty">
+            <tr>
+              <td colspan="6" class="empty">
                 {#if !loaded}Loading connections
                 {:else if connections.length === 0}
                   <div class="empty-state">
@@ -271,8 +279,8 @@
                     <button type="button" class="btn primary" onclick={() => records.open('new')}>New connection</button>
                   </div>
                 {:else}No connection matches the search.{/if}
-              </td></tr
-            >
+              </td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -286,16 +294,16 @@
       <div class="field"><label for="c-name">Name</label><input id="c-name" bind:value={form.name} autocomplete="off" /></div>
       <div class="field">
         <label for="c-type">Type</label>
-        <select id="c-type" bind:value={form.type}
-          >{#each Object.entries(TYPES) as [value, label] (value)}<option {value}>{label}</option>{/each}</select
-        >
+        <select id="c-type" bind:value={form.type}>
+          {#each Object.entries(TYPES) as [value, label] (value)}<option {value}>{label}</option>{/each}
+        </select>
       </div>
       <div class="field">
-        <label for="c-string"
-          >Connection string
-          {#if !form.id}<button type="button" class="link small" onclick={() => (form!.connectionString = EXAMPLES[form!.type])}
-              >Insert example</button
-            >{/if}
+        <label for="c-string">
+          Connection string
+          {#if !form.id}<button type="button" class="link small" onclick={() => (form!.connectionString = EXAMPLES[form!.type])}>
+              Insert example
+            </button>{/if}
         </label>
         <textarea
           id="c-string"
@@ -303,8 +311,7 @@
           spellcheck="false"
           autocomplete="off"
           placeholder={form.id ? 'Saved and encrypted. Type a new connection string to replace it.' : ''}
-          bind:value={form.connectionString}
-        ></textarea>
+          bind:value={form.connectionString}></textarea>
       </div>
       <div class="field">
         <label for="c-tags">Tags</label><input

@@ -132,8 +132,10 @@
               onclick={() => {
                 step = 'email';
                 password = '';
-              }}>Use another email</button
+              }}
             >
+              Use another email
+            </button>
           </div>
           <input class="sr" type="text" autocomplete="username" value={username} readonly tabindex="-1" aria-hidden="true" />
           <div class="field">
@@ -169,8 +171,10 @@
           onclick={() => {
             mfa = null;
             code = '';
-          }}>Use another account</button
+          }}
         >
+          Use another account
+        </button>
       </div>
     {/if}
   </div>

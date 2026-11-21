@@ -418,7 +418,9 @@
       <table class="data">
         <thead>
           <tr>
-            <th>Name</th><th>Task</th><th>Schedule</th><th>Status</th><th>Health</th><th>Last run</th><th>Next run</th><th>
+            <th>Name</th><th>Task</th><th>Schedule</th><th>Status</th><th>Health</th><th class="secondary">Last run</th><th>
+              Next run
+            </th><th>
               <span class="sr">Actions</span>
             </th>
           </tr>
@@ -440,7 +442,9 @@
               <td>{schedule(j)}</td>
               <td><StatusMark kind={s[1]} label={s[0]} /></td>
               <td><span use:tooltip={h.hint}><StatusMark kind={h.kind} label={h.label} /></span></td>
-              <td><span use:tooltip={formatDateTime(j.lastRunTime)}>{j.lastRunTime ? formatRelative(j.lastRunTime) : 'Never'}</span></td>
+              <td class="secondary">
+                <span use:tooltip={formatDateTime(j.lastRunTime)}>{j.lastRunTime ? formatRelative(j.lastRunTime) : 'Never'}</span>
+              </td>
               <td><span use:tooltip={formatDateTime(j.nextRunTime)}>{j.nextRunTime ? formatRelative(j.nextRunTime) : ''}</span></td>
               <td class="actions">
                 <button

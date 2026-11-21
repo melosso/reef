@@ -276,16 +276,16 @@
 
 {#snippet configField(f: DestField)}
   {#if f.kind === 'bool'}
-    <label class="check"
-      ><input type="checkbox" bind:checked={() => form!.config[f.key] === true, (v) => (form!.config[f.key] = v)} />{f.label}</label
-    >
+    <label class="check">
+      <input type="checkbox" bind:checked={() => form!.config[f.key] === true, (v) => (form!.config[f.key] = v)} />{f.label}
+    </label>
   {:else}
     <div class="field">
       <label for={fieldId(f)} use:tooltip={f.hint ?? null}>{f.label}</label>
       {#if f.kind === 'select'}
-        <select id={fieldId(f)} bind:value={form!.config[f.key]}
-          >{#each f.options ?? [] as [value, label] (value)}<option {value}>{label}</option>{/each}</select
-        >
+        <select id={fieldId(f)} bind:value={form!.config[f.key]}>
+          {#each f.options ?? [] as [value, label] (value)}<option {value}>{label}</option>{/each}
+        </select>
       {:else if f.kind === 'textarea'}
         <textarea
           id={fieldId(f)}
@@ -330,10 +330,13 @@
     </div>
     <div class="table-wrap">
       <table class="data">
-        <thead
-          ><tr><th>Name</th><th>Type</th><th>Description</th><th>Tags</th><th>Status</th><th><span class="sr">Actions</span></th></tr
-          ></thead
-        >
+        <thead>
+          <tr>
+            <th>Name</th><th>Type</th><th class="secondary">Description</th><th class="secondary">Tags</th><th>Status</th><th>
+              <span class="sr">Actions</span>
+            </th>
+          </tr>
+        </thead>
         <tbody>
           {#each visible as d (d.id)}
             <tr
@@ -344,14 +347,14 @@
             >
               <td class="strong">{d.name}</td>
               <td>{TYPE_LABEL[d.type] ?? d.type}</td>
-              <td class="muted trunc">{d.description ?? ''}</td>
-              <td
-                >{(d.tags ?? '')
+              <td class="muted trunc secondary">{d.description ?? ''}</td>
+              <td class="secondary">
+                {(d.tags ?? '')
                   .split(',')
                   .map((t: string) => t.trim())
                   .filter(Boolean)
-                  .join(', ')}</td
-              >
+                  .join(', ')}
+              </td>
               <td><StatusMark kind={d.isActive ? 'ok' : 'off'} label={d.isActive ? 'On' : 'Off'} /></td>
               <td class="actions">
                 <button
@@ -359,20 +362,24 @@
                   class="btn ghost icon"
                   aria-label="Edit {d.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => records.open(d.id)}><Pencil size={15} /></button
+                  onclick={() => records.open(d.id)}
                 >
+                  <Pencil size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon danger"
                   aria-label="Delete {d.name}"
                   use:tooltip={'Delete'}
-                  onclick={() => remove(d)}><Trash2 size={15} /></button
+                  onclick={() => remove(d)}
                 >
+                  <Trash2 size={15} />
+                </button>
               </td>
             </tr>
           {:else}
-            <tr
-              ><td colspan="6" class="empty">
+            <tr>
+              <td colspan="6" class="empty">
                 {#if !loaded}Loading destinations
                 {:else if list.length === 0}
                   <div class="empty-state">
@@ -381,8 +388,8 @@
                     <button type="button" class="btn primary" onclick={() => records.open('new')}>New destination</button>
                   </div>
                 {:else}No destination matches the search.{/if}
-              </td></tr
-            >
+              </td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -428,10 +435,10 @@
         <p class="muted">Endpoints override the base configuration per profile.</p>
         {#each endpoints as ep (ep.id)}
           <div class="ep">
-            <span class="grow"
-              >{#if ep.method}<span class="num">{ep.method}</span>
-              {/if}<strong>{ep.name}</strong> <span class="muted">{ep.pathSuffix || ep.remotePath || ep.keyPrefix || ''}</span></span
-            >
+            <span class="grow">
+              {#if ep.method}<span class="num">{ep.method}</span>
+              {/if}<strong>{ep.name}</strong> <span class="muted">{ep.pathSuffix || ep.remotePath || ep.keyPrefix || ''}</span>
+            </span>
             {#if form.type === 'Http'}<button type="button" class="link" onclick={() => testEndpoint(ep)}>Test</button>{/if}
             <button type="button" class="link" onclick={() => (endpointForm = { ...ep })}>Edit</button>
             <button type="button" class="link danger" onclick={() => deleteEndpoint(ep)}>Delete</button>
@@ -446,18 +453,19 @@
                   <label for="ep-path">Path suffix</label><input id="ep-path" placeholder="orders" bind:value={endpointForm.pathSuffix} />
                 </div>
                 <div class="field">
-                  <label for="ep-method">Method</label><select id="ep-method" bind:value={endpointForm.method}
-                    ><option value="">Inherit, POST</option>{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as m (m)}<option value={m}
-                        >{m}</option
-                      >{/each}</select
-                  >
+                  <label for="ep-method">Method</label><select id="ep-method" bind:value={endpointForm.method}>
+                    <option value="">Inherit, POST</option>{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as m (m)}<option value={m}>
+                        {m}
+                      </option>{/each}
+                  </select>
                 </div>
               </div>
               <div class="field">
-                <label for="ep-format">Upload format</label><select id="ep-format" bind:value={endpointForm.uploadFormat}
-                  ><option value="">Inherit</option><option value="raw">Raw binary</option><option value="multipart">Multipart</option
-                  ><option value="json">JSON</option></select
-                >
+                <label for="ep-format">Upload format</label><select id="ep-format" bind:value={endpointForm.uploadFormat}>
+                  <option value="">Inherit</option><option value="raw">Raw binary</option><option value="multipart">
+                    Multipart
+                  </option><option value="json">JSON</option>
+                </select>
               </div>
               <div class="field">
                 <label for="ep-headers">Extra headers in JSON</label><textarea
@@ -498,8 +506,10 @@
         aria-busy={busy === 'test'}
         disabled={form?.type === 'Http' && endpoints.length > 0}
         use:tooltip={form?.type === 'Http' && endpoints.length > 0 ? 'Test each endpoint from its row' : null}
-        onclick={() => testConfig(toStored(form!.type, form!.config), form!.name || 'Destination')}>Test connection</button
+        onclick={() => testConfig(toStored(form!.type, form!.config), form!.name || 'Destination')}
       >
+        Test connection
+      </button>
       <button type="submit" form="destination-form" class="btn primary" aria-busy={busy === 'save'}>Save</button>
     {/snippet}
   </Sheet>

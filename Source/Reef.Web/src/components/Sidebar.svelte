@@ -5,6 +5,7 @@
   import { recent } from '../lib/recent.svelte';
   import { isAdmin } from '../lib/session.svelte';
   import { api } from '../lib/api';
+  import { tooltip } from '../lib/tooltip';
   import StatusMark from './StatusMark.svelte';
   import Logo from './Logo.svelte';
 
@@ -23,6 +24,15 @@
     return () => clearInterval(timer);
   });
 
+  const narrow = window.matchMedia('(max-width: 1199px)');
+  let rail = $state(narrow.matches);
+  $effect(() => {
+    const update = () => (rail = narrow.matches);
+    narrow.addEventListener('change', update);
+    return () => narrow.removeEventListener('change', update);
+  });
+  const hint = (text: string) => (rail ? { text, placement: 'right' as const } : null);
+
   const active = (href: string) => route.path === href || route.path.startsWith(`${href}/`);
 </script>
 
@@ -30,14 +40,14 @@
   <a class="brand" href="/dashboard"><Logo /><span>Reef</span></a>
   <nav aria-label="Main">
     {#each navItems as item (item.href)}
-      <a href={item.href} aria-current={active(item.href) ? 'page' : undefined}>
+      <a href={item.href} aria-current={active(item.href) ? 'page' : undefined} aria-label={item.label} use:tooltip={hint(item.label)}>
         <item.icon size={16} strokeWidth={1.75} />
         <span class="label">{item.label}</span>
         {#if item.href === '/approvals' && approvals > 0}<span class="num count" aria-label="{approvals} pending">{approvals}</span>{/if}
       </a>
     {/each}
   </nav>
-  {#if recent.items.length}
+  {#if recent.items.length && !rail}
     <div class="recent">
       <h2>Recent</h2>
       {#each recent.items as item (item.id)}
@@ -50,7 +60,7 @@
   {/if}
   <div class="grow"></div>
   {#if isAdmin()}
-    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined}>
+    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined} aria-label="Admin" use:tooltip={hint('Admin')}>
       <SlidersHorizontal size={16} strokeWidth={1.75} /><span class="label">Admin</span>
     </a>
   {/if}
@@ -128,5 +138,29 @@
   .grow {
     flex: 1;
     min-height: 16px;
+  }
+  @media (max-width: 1199px) {
+    .side {
+      width: 60px;
+      padding: 12px 8px;
+    }
+    .brand {
+      padding: 8px 10px 18px;
+    }
+    .brand span,
+    .label {
+      display: none;
+    }
+    a:not(.brand) {
+      justify-content: center;
+      padding: 9px 0;
+      position: relative;
+    }
+    .count {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 11px;
+    }
   }
 </style>

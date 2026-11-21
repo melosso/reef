@@ -303,11 +303,13 @@ input[role='switch']:disabled {
   gap: 8px;
 }
 .toolbar input[type='search'] {
-  width: 280px;
+  flex: 0 1 280px;
+  min-width: 140px;
 }
 .toolbar select {
   width: auto;
-  min-width: 140px;
+  flex: 0 1 auto;
+  min-width: 120px;
 }
 .toolbar .spacer {
   flex: 1;
@@ -511,4 +513,13 @@ pre.code {
 
 .code-ref {
   margin-left: 8px;
+}
+
+@media (max-width: 1100px) {
+  table.data .secondary {
+    display: none;
+  }
+  .wide-label {
+    display: none;
+  }
 }

@@ -72,8 +72,10 @@
             ondblclick={() => (renaming = true)}
             onkeydown={(e) => {
               if (e.key === 'F2') renaming = true;
-            }}>{crumb.label}</span
+            }}
           >
+            {crumb.label}
+          </span>
         {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}
       {/each}
     </nav>
@@ -110,6 +112,8 @@
     color: var(--muted);
     white-space: nowrap;
     min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
   }
   .crumbs a {
     color: var(--muted);
@@ -133,6 +137,7 @@
     min-width: 240px;
   }
   .status {
+    flex: none;
     font-size: 13px;
     color: var(--muted);
     white-space: nowrap;
@@ -179,6 +184,13 @@
     }
     .command {
       width: auto;
+      flex: none;
+    }
+  }
+  @media (max-width: 900px) {
+    .crumbs a,
+    .crumbs > span[aria-hidden='true'] {
+      display: none;
     }
   }
 </style>

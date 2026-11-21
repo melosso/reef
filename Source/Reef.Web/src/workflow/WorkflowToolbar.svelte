@@ -114,6 +114,7 @@
   }
   .add {
     anchor-name: --workflow-add;
+    white-space: nowrap;
     display: flex;
     align-items: center;
     gap: 6px;

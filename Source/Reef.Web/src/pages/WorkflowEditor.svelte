@@ -380,7 +380,9 @@
     </span>
   {/snippet}
   {#snippet actions()}
-    <button type="button" class="btn" onclick={() => (panel = 'settings')}><Settings2 size={15} />Workflow settings</button>
+    <button type="button" class="btn" aria-label="Workflow settings" use:tooltip={'Workflow settings'} onclick={() => (panel = 'settings')}>
+      <Settings2 size={15} /><span class="wide-label">Workflow settings</span>
+    </button>
     <button
       type="button"
       class="btn"
