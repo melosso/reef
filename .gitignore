@@ -11,3 +11,6 @@ Source/Reef.Tests/obj/
 !web.*.md
 Source/Reef/wwwroot/app/
 Source/Reef.Web/node_modules/
+
+# test output
+Source/Reef.Tests/exports/
