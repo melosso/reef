@@ -195,6 +195,7 @@ public static class DestinationsEndpoints
             [FromServices] DestinationService service,
             [FromServices] PublicIdMap ids) =>
         {
+            if (RequiredName.Check(destination.Name) is { } blank) return blank;
             try
             {
                 var created = await service.CreateAsync(destination);
@@ -223,6 +224,7 @@ public static class DestinationsEndpoints
             [FromBody] Destination destination,
             [FromServices] DestinationService service) =>
         {
+            if (RequiredName.Check(destination.Name) is { } blank) return blank;
             if (id != destination.Id)
             {
                 return Results.BadRequest(new { message = "ID mismatch" });

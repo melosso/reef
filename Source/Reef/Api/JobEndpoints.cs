@@ -44,6 +44,7 @@ public static class JobsEndpoints
             [FromServices] JobService service,
             [FromServices] PublicIdMap ids) =>
         {
+            if (RequiredName.Check(job.Name) is { } blank) return blank;
             try
             {
                 var created = await service.CreateAsync(job);
@@ -68,6 +69,7 @@ public static class JobsEndpoints
             [FromBody] Job job,
             [FromServices] JobService service) =>
         {
+            if (RequiredName.Check(job.Name) is { } blank) return blank;
             if (id != job.Id)
             {
                 return Results.BadRequest(new { message = "ID mismatch" });

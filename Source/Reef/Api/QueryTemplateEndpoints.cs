@@ -47,6 +47,7 @@ public static class QueryTemplatesEndpoints
             [FromServices] QueryTemplateService service,
             [FromServices] PublicIdMap ids) =>
         {
+            if (RequiredName.Check(template.Name) is { } blank) return blank;
             try
             {
                 var created = await service.CreateAsync(template);
@@ -71,6 +72,7 @@ public static class QueryTemplatesEndpoints
             [FromBody] QueryTemplate template,
             [FromServices] QueryTemplateService service) =>
         {
+            if (RequiredName.Check(template.Name) is { } blank) return blank;
             if (id != template.Id)
             {
                 return Results.BadRequest(new { message = "ID mismatch" });

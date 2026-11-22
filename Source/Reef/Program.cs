@@ -485,6 +485,11 @@ public partial class Program
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 await context.Response.WriteAsJsonAsync(new { success = false, message = ex.Message });
             }
+            catch (BadHttpRequestException ex)
+            {
+                context.Response.StatusCode = ex.StatusCode;
+                await context.Response.WriteAsJsonAsync(new { success = false, message = "The request is not valid." });
+            }
             catch (Exception ex)
             {
                 Log.Error(ex, "Unhandled exception");
