@@ -172,7 +172,7 @@
               <td>
                 {#if lastRuns[w.id!]}
                   {@const run = lastRuns[w.id!]}
-                  <a href="/executions/{run.id}" use:tooltip={run.errorMessage ?? formatDateTime(run.startedAt)}>
+                  <a class="run" href="/executions/{run.id}" use:tooltip={run.errorMessage ?? formatDateTime(run.startedAt)}>
                     <StatusMark kind={statusKind(run.status)} label="{statusLabel(run.status)} {formatRelative(run.startedAt)}" />
                   </a>
                 {:else}<span class="muted">Never</span>{/if}
@@ -180,7 +180,7 @@
               <td class="secondary"><span use:tooltip={formatDateTime(w.updatedAt)}>{formatRelative(w.updatedAt)}</span></td>
               <td>
                 <span use:tooltip={'Schedule and webhook triggers start the workflow only when it is on'}>
-                  <StatusMark kind={w.active ? 'ok' : 'off'} label={w.active ? 'On' : 'Off'} />
+                  <StatusMark kind={w.active ? 'on' : 'off'} label={w.active ? 'On' : 'Off'} />
                 </span>
               </td>
               <td class="actions">
@@ -220,5 +220,12 @@
 <style>
   .sel {
     width: 36px;
+  }
+  .run {
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .run:hover {
+    text-decoration: underline;
   }
 </style>

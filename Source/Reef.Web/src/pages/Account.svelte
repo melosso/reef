@@ -211,7 +211,7 @@
         <div class="panel-head">
           <h2>Authenticator app</h2>
           <span class="grow"></span>
-          <StatusMark kind={totpActive ? 'ok' : 'off'} label={totpActive ? 'Active' : 'Off'} />
+          <StatusMark kind={totpActive ? 'on' : 'off'} label={totpActive ? 'Active' : 'Off'} />
         </div>
         <div class="panel-body fields">
           <p class="muted">Time-based codes from an app such as Aegis, 1Password or Google Authenticator.</p>
@@ -285,7 +285,7 @@
         <div class="panel-head">
           <h2>Email codes</h2>
           <span class="grow"></span>
-          <StatusMark kind={emailActive ? 'ok' : 'off'} label={emailActive ? 'Active' : 'Off'} />
+          <StatusMark kind={emailActive ? 'on' : 'off'} label={emailActive ? 'Active' : 'Off'} />
         </div>
         <div class="panel-body fields">
           <p class="muted">{emailHint}</p>

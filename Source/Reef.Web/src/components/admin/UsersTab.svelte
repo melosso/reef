@@ -123,7 +123,7 @@
             </span>
           </td>
           <td>{u.role}</td>
-          <td><StatusMark kind={u.isActive ? 'ok' : 'off'} label={u.isActive ? 'Active' : 'Off'} /></td>
+          <td><StatusMark kind={u.isActive ? 'on' : 'off'} label={u.isActive ? 'Active' : 'Off'} /></td>
           <td><span use:tooltip={formatDateTime(seen)}>{seen ? formatRelative(seen) : 'Never'}</span></td>
           <td>{formatDateTime(u.createdAt)}</td>
           <td class="actions">

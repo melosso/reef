@@ -246,7 +246,7 @@
                   </span>
                 {:else}<span class="muted">Never tested</span>{/if}
               </td>
-              <td><StatusMark kind={c.isActive ? 'ok' : 'off'} label={c.isActive ? 'On' : 'Off'} /></td>
+              <td><StatusMark kind={c.isActive ? 'on' : 'off'} label={c.isActive ? 'On' : 'Off'} /></td>
               <td class="actions">
                 <button
                   type="button"

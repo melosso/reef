@@ -455,7 +455,7 @@
               </td>
               <td>
                 <button type="button" class="plain" use:tooltip={t.isActive ? 'Turn off' : 'Turn on'} onclick={() => toggleActive(t)}>
-                  <StatusMark kind={t.isActive ? 'ok' : 'off'} label={t.isActive ? 'On' : 'Off'} />
+                  <StatusMark kind={t.isActive ? 'on' : 'off'} label={t.isActive ? 'On' : 'Off'} />
                 </button>
               </td>
               <td class="actions">

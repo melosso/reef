@@ -1,5 +1,5 @@
 <script lang="ts">
-  export type StatusKind = 'ok' | 'err' | 'warn' | 'run' | 'idle' | 'off';
+  export type StatusKind = 'ok' | 'err' | 'warn' | 'run' | 'idle' | 'on' | 'off';
 
   let { kind, label }: { kind: StatusKind; label?: string } = $props();
 </script>
@@ -14,6 +14,10 @@
       <circle cx="5" cy="5" r="3.5" stroke-dasharray="3 2" />
     {:else if kind === 'off'}
       <path d="M2 5h6" />
+    {:else if kind === 'on'}
+      <circle cx="5" cy="5" r="3" class="dot" />
+    {:else if kind === 'idle'}
+      <circle cx="5" cy="5" r="1.5" class="dot" />
     {:else}
       <circle cx="5" cy="5" r="3.5" />
     {/if}
@@ -52,6 +56,18 @@
   .idle svg,
   .off svg {
     stroke: var(--muted);
+  }
+  .on svg {
+    stroke: var(--ok);
+  }
+  .dot {
+    fill: currentColor;
+  }
+  .on .dot {
+    color: var(--ok);
+  }
+  .idle .dot {
+    color: var(--muted);
   }
   .off {
     color: var(--muted);

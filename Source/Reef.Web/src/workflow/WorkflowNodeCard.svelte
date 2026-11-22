@@ -67,8 +67,13 @@
     margin: -1px;
   }
   .card.invalid,
-  .card.failed:not(.selected) {
+  .card.failed {
     border-color: var(--err);
+  }
+  .card.failed.selected {
+    box-shadow:
+      0 0 0 2px var(--bg),
+      0 0 0 4px var(--accent);
   }
   .head {
     display: flex;

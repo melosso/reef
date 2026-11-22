@@ -355,7 +355,7 @@
                   .filter(Boolean)
                   .join(', ')}
               </td>
-              <td><StatusMark kind={d.isActive ? 'ok' : 'off'} label={d.isActive ? 'On' : 'Off'} /></td>
+              <td><StatusMark kind={d.isActive ? 'on' : 'off'} label={d.isActive ? 'On' : 'Off'} /></td>
               <td class="actions">
                 <button
                   type="button"
@@ -366,13 +366,7 @@
                 >
                   <Pencil size={15} />
                 </button>
-                <button
-                  type="button"
-                  class="btn ghost icon danger"
-                  aria-label="Delete {d.name}"
-                  use:tooltip={'Delete'}
-                  onclick={() => remove(d)}
-                >
+                <button type="button" class="btn ghost icon" aria-label="Delete {d.name}" use:tooltip={'Delete'} onclick={() => remove(d)}>
                   <Trash2 size={15} />
                 </button>
               </td>
