@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Reef.Core.Nodes;
+using Reef.Core.Nodes.Exceptions;
 using Reef.Core.Nodes.Models;
 using Reef.Core.Workflows.Catalogs;
 using Reef.Core.Workflows.Models;
@@ -11,6 +12,7 @@ namespace Reef.Core.Workflows;
 public sealed class WorkflowSecrets(EncryptionService encryption)
 {
     public const string Masked = "[SECRET]";
+    private static readonly string[] Targets = ["From", "Settings.url", "Settings.host", "Settings.port", "Settings.serviceUrl", "Settings.uncPath", "Settings.region"];
 
     // Empty or masked input keeps secret
     public void Protect(WorkflowDocument document, WorkflowDocument? stored)
@@ -20,11 +22,14 @@ public sealed class WorkflowSecrets(EncryptionService encryption)
             if (node.Config is not { } config)
                 continue;
             var previous = stored?.Nodes.FirstOrDefault(n => n.Id == node.Id && n.Type == node.Type)?.Config;
+            var moved = previous is not null && Targets.Any(t => ConfigPath.ToText(ConfigPath.Get(config, t)) != ConfigPath.ToText(ConfigPath.Get(previous, t)));
             foreach (var key in Keys(node.Type))
             {
                 if (Text(ConfigPath.Get(config, key)) is not { } text)
                     continue;
                 var old = Text(ConfigPath.Get(previous, key)) ?? "";
+                if (moved && old.Length > 0 && (text == Masked || text == old))
+                    throw new NodeValidationException([new NodeError("Enter this secret again because the target changed", node.Id, key)]);
                 if (text.Length == 0 || text == Masked || text == old)
                     ConfigPath.Set(config, key, old.Length > 0 ? JsonValue.Create(old) : null);
                 else

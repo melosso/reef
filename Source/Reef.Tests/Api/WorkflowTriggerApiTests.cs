@@ -147,6 +147,28 @@ public class WorkflowTriggerApiTests(ReefApiFactory factory)
     }
 
     [Fact]
+    public async Task StoredSecretsAreNotSentToANewTarget()
+    {
+        var client = await factory.CreateAdminClientAsync();
+        var id = await CreateAsync(client, false,
+            [
+                Node("start", "manual"),
+                Node("page", "fetch", new JsonObject
+                {
+                    ["From"] = "Http", ["Settings"] = new JsonObject { ["url"] = "https://api.example.com/items", ["authType"] = "Bearer", ["authToken"] = "s3cret-token" }
+                })
+            ],
+            [new JsonObject { ["from"] = "start", ["to"] = "page" }]);
+        var workflow = (await client.GetFromJsonAsync<JsonObject>($"/api/workflows/{id}", _ct))!;
+
+        workflow["nodes"]![1]!["config"]!["Settings"]!["url"] = "https://elsewhere.example/items";
+        var moved = await client.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct);
+
+        moved.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await moved.Content.ReadAsStringAsync(_ct)).Should().Contain("Settings.authToken");
+    }
+
+    [Fact]
     public async Task RunListPagesAllWorkflowRunsWithTheWorkflowName()
     {
         var client = await factory.CreateAdminClientAsync();
