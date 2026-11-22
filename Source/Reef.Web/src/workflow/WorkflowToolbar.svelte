@@ -86,10 +86,14 @@
     if (!initialized.current || fitted) return;
     fitted = true;
     setTimeout(() => {
-      flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
+      flow.fitView({ padding: '48px', maxZoom: 1, minZoom: 0.45 }).then(() => {
         const data = (n: { data: unknown }) => n.data as { trigger?: boolean; status?: string | null };
         const failed = flow.getNodes().find((n) => data(n).status === 'err');
-        if (failed && flow.getViewport().zoom < 0.6) flow.setCenter(failed.position.x + 110, failed.position.y + 60, { zoom: 0.6 });
+        const start = flow.getNodes().find((n) => data(n).trigger);
+        const { zoom } = flow.getViewport();
+        const pane = document.querySelector('.svelte-flow')?.clientWidth ?? 0;
+        if (failed && zoom < 0.6) flow.setCenter(failed.position.x + 110, failed.position.y + 60, { zoom: 0.6 });
+        else if (zoom <= 0.45 && start) flow.setCenter(start.position.x + pane / 2 / zoom - 80, start.position.y + 40, { zoom });
       });
     }, 50);
   });
