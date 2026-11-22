@@ -139,4 +139,4 @@ The template uses DocumentTemplate syntax with directives and sections. Copy the
 6. Paste template content from `.txt` file
 7. Click **Save**
 
-Then create a profile using your invoice query and select this template. The PDF will automatically handle multi-page invoices with repeated headers and footers.
+Then create a workflow with a Query step for your invoice query and a Template step that uses this template. The PDF will automatically handle multi-page invoices with repeated headers and footers.

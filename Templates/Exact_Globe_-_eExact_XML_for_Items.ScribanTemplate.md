@@ -559,41 +559,16 @@ This ensures compatibility with downstream systems expecting the original SQL-ge
    - **Content**: Paste the XML template above
 4. Click **Save**
 
-### Step 2: Create the Profile
+### Step 2: Create the workflow
 
-1. Navigate to **Profiles** in Reef
-2. Click **New Profile**
-3. Configure the profile:
+1. Open **Workflows** and click **New workflow**.
+2. Add a **Query** step. Choose your connection and paste the SQL query from above.
+3. Add a **Smart Sync** step. Set **Unique id column** to `ItemCode`, **Hash algorithm** to `SHA256`, **Duplicate ids** and **Empty ids** to **Fail the run**, **Decimal places compared** to `6`. Turn on **Pass deleted rows** to detect removed records and **Leave the id column out** to keep `ItemCode` internal.
+4. Add a **Template** step and choose `the template from Step 1`.
+5. Add a **Destination** step. Choose your destination, set **Format** to **Files from input** and **File name** to a name such as `export_{timestamp}.xml`.
+6. Connect Manual trigger, Query, Smart Sync, Template and Destination in this order. Add a **Schedule** step for timed runs, turn the workflow on in **Workflow settings** and save.
 
-#### Basic Settings
-- **Name**: `Item Export - XML with Smart Sync`
-- **Description**: Exports item/product data to eExact XML format with change tracking
-- **Connection**: Select your database connection
-- **Query**: Paste the SQL query from above
-
-#### Output Settings
-- **Output Format**: `Custom Template`
-- **Template**: Select `eExact XML Template for Items`
-- **File Extension**: `.xml`
-
-#### Destination
-- **Type**: Choose your destination (Local, S3, SFTP, Azure Blob, etc.)
-- **Path**: Configure destination-specific settings
-
-#### Smart Sync Configuration
-
-Enable Smart Sync to track changes and only export modified items:
-
-- **Enable Smart Sync**: Yes
-- **ReefId Column**: `ItemCode` (must match the unique identifier in your query)
-- **Hash Algorithm**: `SHA256` (recommended for security and collision resistance)
-- **Duplicate Strategy**: `Strict` (ensures data integrity)
-- **Null Strategy**: `Strict` (consistent NULL handling)
-- **Numeric Precision**: `6` (for floating-point comparison)
-- **Track Deletions**: Yes (optional - detects removed items)
-- **Exclude ReefId from Output**: Yes (recommended - keeps `ItemCode` internal)
-
----
+Smart Sync passes only new and changed rows, so each run writes the records that changed since the last successful run.
 
 ## Advanced: Conditional Output Techniques
 
@@ -821,41 +796,16 @@ Create a new Query Template in Reef with the following configuration:
    - **Content**: Paste the XML template above
 4. Click **Save**
 
-### Step 2: Create the Profile
+### Step 2: Create the workflow
 
-1. Navigate to **Profiles** in Reef
-2. Click **New Profile**
-3. Configure the profile:
+1. Open **Workflows** and click **New workflow**.
+2. Add a **Query** step. Choose your connection and paste the SQL query from above.
+3. Add a **Smart Sync** step. Set **Unique id column** to `ItemCode`, **Hash algorithm** to `SHA256`, **Duplicate ids** and **Empty ids** to **Fail the run**, **Decimal places compared** to `6`. Turn on **Pass deleted rows** to detect removed records and **Leave the id column out** to keep `ItemCode` internal.
+4. Add a **Template** step and choose `the template from Step 1`.
+5. Add a **Destination** step. Choose your destination, set **Format** to **Files from input** and **File name** to a name such as `export_{timestamp}.xml`.
+6. Connect Manual trigger, Query, Smart Sync, Template and Destination in this order. Add a **Schedule** step for timed runs, turn the workflow on in **Workflow settings** and save.
 
-#### Basic Settings
-- **Name**: `Customer Export - XML with Smart Sync`
-- **Description**: Exports customer data to eExact XML format with change tracking
-- **Connection**: Select your database connection
-- **Query**: Paste the SQL query from above
-
-#### Output Settings
-- **Output Format**: `Custom Template`
-- **Template**: Select `eExact XML Template for Debtors`
-- **File Extension**: `.xml`
-
-#### Destination
-- **Type**: Choose your destination (Local, S3, SFTP, Azure Blob, etc.)
-- **Path**: Configure destination-specific settings
-
-#### Smart Sync Configuration
-
-Enable Smart Sync to track changes and only export modified records:
-
-- **Enable Smart Sync**: Yes
-- **ReefId Column**: `EntityCode` (must match the unique identifier in your query)
-- **Hash Algorithm**: `SHA256` (recommended for security and collision resistance)
-- **Duplicate Strategy**: `Strict` (ensures data integrity)
-- **Null Strategy**: `Strict` (consistent NULL handling)
-- **Numeric Precision**: `6` (for floating-point comparison)
-- **Track Deletions**: Yes (optional - detects removed records)
-- **Exclude ReefId from Output**: Yes (recommended - keeps `EntityCode` internal)
-
-This pattern offers simple, maintainable SQL queries with clear data flow and easy debugging. It improves performance by reducing database overhead and network transfer, especially with Smart Sync for incremental exports. The approach is flexible, allowing easy changes to output formats and fields, and ensures data integrity through consistent hashing and duplicate prevention. Compared to traditional complex SQL, it requires fewer table scans, is much faster, and is easier to optimize and maintain.
+Smart Sync passes only new and changed rows, so each run writes the records that changed since the last successful run.
 
 ## Advanced: Conditional Output with Scriban
 

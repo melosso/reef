@@ -85,4 +85,4 @@ The template uses DocumentTemplate syntax with directives and sections. Copy the
 6. Paste template content from `.txt` file
 7. Click **Save**
 
-Then create a profile using your picking query and select this template. The PDF will show all items with checkboxes for warehouse staff to mark as picked.
+Then create a workflow with a Query step for your picking query and a Template step that uses this template. The PDF will show all items with checkboxes for warehouse staff to mark as picked.
