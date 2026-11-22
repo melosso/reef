@@ -312,6 +312,12 @@ table.data td {
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
+.panel > table.data :is(th, td):first-child {
+  padding-left: 16px;
+}
+.panel > table.data :is(th, td):last-child {
+  padding-right: 16px;
+}
 table.data th {
   font-size: 12px;
   font-weight: 500;

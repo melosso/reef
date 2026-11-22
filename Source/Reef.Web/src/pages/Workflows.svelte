@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Play, Plus } from '@lucide/svelte';
+  import { ChevronDown, ChevronUp, Play, Plus } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
@@ -78,7 +78,19 @@
     await load();
   }
 
-  const visible = $derived(workflows.filter((w) => w.name.toLowerCase().includes(search.trim().toLowerCase())));
+  let statusFilter = $state('');
+  let sort = $state<{ key: 'name' | 'run'; dir: 1 | -1 } | null>(null);
+  const lastStatus = (w: Workflow) => lastRuns[w.id!]?.status ?? 'Never';
+  const visible = $derived.by(() => {
+    const term = search.trim().toLowerCase();
+    const list = workflows.filter((w) => w.name.toLowerCase().includes(term) && (!statusFilter || lastStatus(w) === statusFilter));
+    if (!sort) return list;
+    const { key, dir } = sort;
+    const value = (w: Workflow) => (key === 'name' ? w.name.toLowerCase() : (lastRuns[w.id!]?.startedAt ?? ''));
+    return [...list].sort((a, b) => value(a).localeCompare(value(b)) * dir);
+  });
+  const sortBy = (key: 'name' | 'run') => (sort = { key, dir: sort?.key === key && sort.dir === 1 ? -1 : 1 });
+  const ariaSort = (key: 'name' | 'run') => (sort?.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined);
   const allVisible = $derived(visible.length > 0 && visible.every((w) => selected.includes(w.id!)));
 
   function triggers(w: Workflow): string {
@@ -97,6 +109,10 @@
   }
 </script>
 
+{#snippet arrow(key: 'name' | 'run')}
+  {#if sort?.key === key}{#if sort.dir === 1}<ChevronUp size={12} />{:else}<ChevronDown size={12} />{/if}{/if}
+{/snippet}
+
 <Page crumbs={[{ label: 'Workflows' }]}>
   {#snippet actions()}
     <button type="button" class="btn primary" onclick={() => navigate('/workflows/new')}><Plus size={15} />New workflow</button>
@@ -104,6 +120,12 @@
   <div class="page-body">
     <div class="toolbar">
       <input type="search" placeholder="Search name" aria-label="Search workflows" bind:value={search} />
+      <select aria-label="Last run" bind:value={statusFilter}>
+        <option value="">All last runs</option>
+        <option value="Success">Success</option>
+        <option value="Failed">Failed</option>
+        <option value="Never">Never run</option>
+      </select>
       {#if chosen.length}
         <button type="button" class="btn" disabled={busy === 'bulk'} onclick={turnOff}>Turn off</button>
         <button type="button" class="btn danger" disabled={busy === 'bulk'} onclick={removeChosen}>Delete</button>
@@ -124,9 +146,11 @@
                   onchange={() => (selected = allVisible ? [] : visible.map((w) => w.id!))}
                 />{/if}
             </th>
-            <th>Name</th><th>Triggers</th><th class="secondary">Steps</th><th>Last run</th><th class="secondary">Updated</th><th>
-              Status
-            </th><th>
+            <th aria-sort={ariaSort('name')}>
+              <button type="button" onclick={() => sortBy('name')}>Name{@render arrow('name')}</button>
+            </th><th>Triggers</th><th class="secondary"> Steps </th><th aria-sort={ariaSort('run')}>
+              <button type="button" onclick={() => sortBy('run')}>Last run{@render arrow('run')}</button>
+            </th><th class="secondary"> Updated </th><th> Status </th><th>
               <span class="sr">Actions</span>
             </th>
           </tr>
@@ -183,7 +207,7 @@
                     <p>A workflow connects triggers, queries, transforms and deliveries on one canvas.</p>
                     <button type="button" class="btn primary" onclick={() => navigate('/workflows/new')}>New workflow</button>
                   </div>
-                {:else}No workflow matches the search.{/if}
+                {:else}No workflow matches the filters.{/if}
               </td>
             </tr>
           {/each}
