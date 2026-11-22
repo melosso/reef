@@ -23,7 +23,7 @@
   import WorkflowEdgeLine from '../workflow/WorkflowEdgeLine.svelte';
   import WorkflowNodeCard from '../workflow/WorkflowNodeCard.svelte';
   import WorkflowToolbar from '../workflow/WorkflowToolbar.svelte';
-  import { History, lastPass, nextId, outputsOf, PALETTE_ID } from '../workflow/graph';
+  import { History, lastPass, nextId, outputsOf, PALETTE_ID, tidy } from '../workflow/graph';
 
   const params = $derived(match('/workflows/:id', route.path) ?? {});
   const isNew = $derived(params.id === 'new');
@@ -230,7 +230,7 @@
     selected = id;
     selectedEdge = null;
     panel = id ? 'node' : 'closed';
-    if (id) reveal?.(id, 420);
+    if (id) reveal?.(id, parseInt(getComputedStyle(document.documentElement).getPropertyValue('--inspector')));
   }
 
   function close() {
@@ -459,7 +459,7 @@
           {nodeTypes}
           {edgeTypes}
           deleteKey={null}
-          minZoom={0.15}
+          minZoom={0.3}
           maxZoom={1.6}
           snapGrid={[8, 8]}
           proOptions={{ hideAttribution: true }}
@@ -494,7 +494,7 @@
             <Panel position="top-center">
               <div class="pinned" role="status">
                 Run from {formatDateTime(run.startedAt)}
-                <button type="button" class="btn ghost" onclick={showLatest}>Show latest run</button>
+                <button type="button" class="btn ghost" onclick={showLatest}>Latest run</button>
               </div>
             </Panel>
           {/if}
@@ -507,6 +507,10 @@
             onadd={addNode}
             onundo={undo}
             onredo={redo}
+            ontidy={() => {
+              tidy(doc!);
+              changed();
+            }}
             onclose={() => setTimeout(() => (insertAt = null))}
             register={(t, r) => {
               toFlow = t;
@@ -610,7 +614,7 @@
     inset: 0;
   }
   .canvas.inset {
-    right: 420px;
+    right: var(--inspector);
   }
   .state {
     display: inline-flex;
@@ -635,7 +639,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: 420px;
+    width: var(--inspector);
     display: flex;
     flex-direction: column;
     background: var(--surface);

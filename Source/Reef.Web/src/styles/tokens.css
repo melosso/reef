@@ -1,4 +1,5 @@
 :root {
+  --inspector: 420px;
   --bg: #f5f7fa;
   --surface: #ffffff;
   --line: #e1e6ee;
@@ -67,4 +68,10 @@
   --err: #f59e9e;
   --shadow: rgba(0, 0, 0, 0.4);
   color-scheme: dark;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --inspector: 360px;
+  }
 }

@@ -350,7 +350,7 @@
     top: 0;
     right: 0;
     bottom: 0;
-    width: 420px;
+    width: var(--inspector);
     display: flex;
     flex-direction: column;
     background: var(--surface);
