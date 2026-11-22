@@ -75,6 +75,7 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     {
         { "command", """{"Runs":"Script","Interpreter":"sh","Script":"id"}""" },
         { "fetch", """{"From":"Local","Path":"/etc"}""" },
+        { "fetch", """{"From":"NetworkShare","Settings":{"uncPath":"/etc"},"Pattern":"*"}""" },
         { "fetch", """{"From":"Sftp","Settings":{"host":"files"},"Archive":true,"ArchiveFolder":"/srv"}""" },
         { "write", """{"To":"LocalFile","FilePath":"/tmp/out.csv"}""" }
     };

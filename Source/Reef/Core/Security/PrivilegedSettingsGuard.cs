@@ -64,7 +64,8 @@ public sealed class PrivilegedSettingsGuard(IHttpContextAccessor accessor)
             return n.Type switch
             {
                 "command" when Text("Runs") == "Script" => $"{n.Id}|{Text("Interpreter")}|{Text("InlineScript")}|{Text("Script")}|{Text("EnvironmentVariables")}",
-                "fetch" when Text("From") == "Local" || Text("Archive") == "true" => $"{n.Id}|{Text("From")}|{Text("Path")}|{Text("Archive")}|{Text("ArchiveFolder")}",
+                "fetch" when Text("From") is "Local" or "NetworkShare" || Text("Archive") == "true"
+                    => $"{n.Id}|{Text("From")}|{Text("Path")}|{Text("Pattern")}|{Text("Settings")}|{Text("Archive")}|{Text("ArchiveFolder")}",
                 "write" when Text("To") == "LocalFile" => $"{n.Id}|{Text("FilePath")}",
                 _ => null
             };
