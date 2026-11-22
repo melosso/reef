@@ -5,7 +5,7 @@ using Serilog;
 
 namespace Reef.Core.Database;
 
-// Rebuilds tables whose foreign keys name a table that does not exist
+// Drops foreign keys to missing tables
 public static partial class MissingReferences
 {
     public static async Task RemoveAsync(SqliteConnection connection)

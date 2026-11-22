@@ -1,6 +1,6 @@
 namespace Reef.Core.Services;
 
-// Counts workflows whose step config names an id
+// Workflows whose steps name the id
 public static class WorkflowUse
 {
     public static string Sql(string key) =>

@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 
 namespace Reef.Tests.Api;
 
-// Creates and runs workflows through the api
+// Workflow helpers over the api
 public static class TestWorkflows
 {
     public static JsonObject Node(string id, string type, JsonObject? config = null) =>
@@ -12,7 +12,7 @@ public static class TestWorkflows
     public static JsonObject Edge(string from, string to, string fromPort = "main", string toPort = "main") =>
         new() { ["from"] = from, ["fromPort"] = fromPort, ["to"] = to, ["toPort"] = toPort };
 
-    // Links the nodes in order from a manual trigger
+    // Chains steps after a manual trigger
     public static async Task<string> CreateChainAsync(HttpClient client, params JsonObject[] steps)
     {
         var nodes = new JsonArray(Node("start", "manual"));

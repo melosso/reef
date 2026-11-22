@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 
 namespace Reef.Tests.Api;
 
-// Builds email workflows through the api, the query reads from a fresh sqlite file
+// Email workflows over fresh sqlite files
 public static class EmailProfiles
 {
     public static string Rows(int count) =>

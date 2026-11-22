@@ -33,7 +33,7 @@ export function lastPass(runs: NodeRun[], nodeId: string): NodeRun | undefined {
   return runs.filter((r) => r.nodeId === nodeId).at(-1);
 }
 
-// Snapshots are taken before each change, edits with the same key merge
+// Snapshot before change same keys merge
 export class History {
   #past: string[] = [];
   #future: string[] = [];

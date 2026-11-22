@@ -12,7 +12,7 @@ public sealed class WorkflowSecrets(EncryptionService encryption)
 {
     public const string Masked = "[SECRET]";
 
-    // Empty or masked input keeps the stored secret
+    // Empty or masked input keeps secret
     public void Protect(WorkflowDocument document, WorkflowDocument? stored)
     {
         foreach (var node in document.Nodes)

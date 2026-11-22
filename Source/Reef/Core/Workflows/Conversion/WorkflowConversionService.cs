@@ -32,7 +32,7 @@ public class WorkflowConversionService(LegacyProfileReader legacy, WorkflowServi
         return conversion with { Workflow = await SaveAsync(conversion.Workflow, userId, ct, hashes) };
     }
 
-    // Webhook nodes reuse the stored token hash so the old URL keeps working
+    // Old webhook URLs keep working
     private async Task<Dictionary<string, string>> AddTriggersAsync(WorkflowConversion conversion, IEnumerable<Job> profileJobs, string column, int id)
     {
         var workflow = conversion.Workflow;

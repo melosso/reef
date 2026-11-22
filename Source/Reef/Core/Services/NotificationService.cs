@@ -128,7 +128,7 @@ public class NotificationService
         }
     }
 
-    // Workflow runs use the stored profile notification templates
+    // Workflow runs reuse profile templates
     public Task SendWorkflowRunAsync(Reef.Core.Workflows.Models.WorkflowExecution run, string workflowName, CancellationToken ct = default)
     {
         var execution = new ProfileExecution

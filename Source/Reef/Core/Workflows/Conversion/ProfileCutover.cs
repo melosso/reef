@@ -4,7 +4,7 @@ using Serilog;
 
 namespace Reef.Core.Workflows.Conversion;
 
-// Converts every profile to a workflow once, then drops the profile tables
+// One time profile to workflow cutover
 public class ProfileCutover(LegacyProfileReader legacy, WorkflowConversionService conversions, DatabaseConfig config)
 {
     private static readonly string[] LegacyTables =
@@ -57,7 +57,7 @@ public class ProfileCutover(LegacyProfileReader legacy, WorkflowConversionServic
         Log.Information("Backed up the database to {Backup} before the workflow conversion", target);
     }
 
-    // Profile approvals keep their roles and mail server without the profile row
+    // Approvals keep roles and mail server
     private async Task DropAsync(bool hasExports, CancellationToken ct)
     {
         await using var db = new SqliteConnection(config.ConnectionString);

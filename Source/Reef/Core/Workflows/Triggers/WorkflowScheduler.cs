@@ -7,7 +7,7 @@ namespace Reef.Core.Workflows.Triggers;
 
 public class WorkflowScheduler(WorkflowService workflows, WorkflowRunStore runs, WorkflowEngine engine)
 {
-    // shortcut runs due workflows one after another, move to a queue when runs overlap
+    // shortcut due workflows run one by one
     public async Task<int> RunDueAsync(DateTime now, CancellationToken ct)
     {
         var started = 0;

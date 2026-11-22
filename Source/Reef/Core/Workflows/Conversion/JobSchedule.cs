@@ -5,7 +5,7 @@ namespace Reef.Core.Workflows.Conversion;
 
 public static class JobSchedule
 {
-    // Job weekdays count from Monday, cron counts from Sunday
+    // Job weekdays start Monday cron Sunday
     public static JsonObject? ToTrigger(Job job)
     {
         var at = job.StartTime ?? TimeSpan.Zero;

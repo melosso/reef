@@ -34,7 +34,7 @@ public static class WorkflowWebhooksEndpoints
         return Results.Ok(new { url = $"/webhooks/workflows/{token}", token });
     }
 
-    // shortcut answers after the run ends, queue runs when callers time out
+    // shortcut runs synchronously until callers time out
     private static async Task<IResult> Trigger(string token, HttpRequest request, CancellationToken ct)
     {
         WorkflowItems items;

@@ -55,7 +55,7 @@ public class EmailNodeExecutor(DestinationService destinations, QueryTemplateSer
         return new NodeResult { Outputs = { [WorkflowPorts.Main] = input }, Warning = failed };
     }
 
-    // Steps after this node run without waiting for approval
+    // Later steps do not wait
     private async Task<NodeResult> HoldAsync(NodeContext context, EmailExportConfig settings, int serverId, QueryTemplate template, List<Dictionary<string, object>> rows)
     {
         var (rendered, errors) = await email.RenderEmailsForApprovalAsync(settings, template, rows, AttachmentConfig.Parse(settings.EmailAttachmentConfig));

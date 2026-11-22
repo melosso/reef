@@ -13,7 +13,7 @@ public class AttentionService(DatabaseConfig config, Reef.Core.Workflows.Trigger
     private const int Baseline = 10;
     private const int MinimumBaseline = 3;
 
-    // shortcut ranks every run per workflow, add a StartedAt window past a few hundred thousand runs
+    // shortcut ranks every run per workflow
     private const string RunsSql = """
         WITH runs AS (
             SELECT e.WorkflowId, w.Name AS WorkflowName, w.DocumentJson LIKE '%"type":"deltasync"%' AS DeltaSyncEnabled, e.Id AS ExecutionId, e.Status, e.StartedAt,

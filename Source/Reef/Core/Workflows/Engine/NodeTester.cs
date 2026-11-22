@@ -8,7 +8,7 @@ public class NodeTester(WorkflowService workflows, NodeInvoker invoker)
 {
     private static readonly string[] FullRunOnly = [WorkflowNodeGroups.Deliver, WorkflowNodeGroups.Hooks];
 
-    // Run commits are skipped so a test leaves no state
+    // Tests skip run commits
     public async Task<NodeResult> TestAsync(int workflowId, string nodeId, WorkflowItems input, CancellationToken ct)
     {
         var workflow = await workflows.GetAsync(workflowId, ct) ?? throw new KeyNotFoundException("Workflow not found");

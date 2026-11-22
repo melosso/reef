@@ -75,7 +75,7 @@ public class WorkflowService(DatabaseConfig config, WorkflowSecrets secrets)
         await db.ExecuteAsync(new CommandDefinition("UPDATE Workflows SET DocumentJson = @json WHERE Id = @id", new { id, json = Serialize(document) }, cancellationToken: ct));
     }
 
-    // shortcut scans every workflow, index the hash when webhooks grow past hundreds
+    // shortcut scans every workflow per call
     public async Task<(WorkflowDocument Workflow, WorkflowNode Node)?> FindWebhookAsync(string hash, CancellationToken ct)
     {
         foreach (var workflow in await ListAsync(ct))

@@ -4,7 +4,7 @@ using Reef.Core.Models;
 
 namespace Reef.Core.Workflows.Conversion;
 
-// Reads profile rows for the one time workflow conversion
+// Profile rows for the cutover
 public class LegacyProfileReader(DatabaseConfig config)
 {
     public async Task<bool> ExistsAsync(string table, CancellationToken ct = default)
