@@ -13,7 +13,7 @@ export const notify = {
     toast.info(message, { id: o.key, description: o.description, action: o.action, duration: 5000 }),
   warning: (message: string, o: Options = {}) => toast.warning(message, { id: o.key, description: o.description, duration: 8000 }),
   error: (message: string, o: Options = {}) =>
-    toast.error(message, { id: o.key, description: o.description, duration: Number.POSITIVE_INFINITY }),
+    toast.error(message, { id: o.key, description: o.description, action: o.action, duration: Number.POSITIVE_INFINITY }),
   fail: (error: unknown, key?: string) => {
     if (error instanceof ApiError && error.status === 0) return;
     const message = error instanceof Error ? error.message : String(error);

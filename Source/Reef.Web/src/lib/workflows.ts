@@ -1,6 +1,7 @@
 import { api } from './api';
 import { confirm } from './confirm.svelte';
 import { notify } from './notify';
+import { navigate } from './router.svelte';
 import type { Workflow } from '../models/Workflow';
 import type { WorkflowExecution } from '../models/WorkflowExecution';
 
@@ -21,7 +22,12 @@ export async function runWorkflow(workflow: Workflow): Promise<WorkflowExecution
   )
     return null;
   const run = await api.post<WorkflowExecution>(`/api/workflows/${workflow.id}/run`);
-  if (run.status === 'Failed') notify.error(`${workflow.name}: ${run.errorMessage ?? 'Run failed'}`, { key: `run-${workflow.id}` });
+  const editor = `/workflows/${workflow.id}`;
+  if (run.status === 'Failed')
+    notify.error(`${workflow.name}: ${run.errorMessage ?? 'Run failed'}`, {
+      key: `run-${workflow.id}`,
+      action: location.pathname === editor ? undefined : { label: 'Open', onClick: () => navigate(`${editor}?run=${run.id}`) },
+    });
   else notify.success(`${workflow.name} ran`, { key: `run-${workflow.id}` });
   return run;
 }
