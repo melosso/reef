@@ -166,6 +166,11 @@
     if (!doc || !catalog.length) return;
     const invalid = new Set(errors.map((e) => e.nodeId).filter(Boolean));
     const measured = new Map(untrack(() => nodes).map((n) => [n.id, n.measured]));
+    const picked = new Set(
+      untrack(() => nodes)
+        .filter((n) => n.selected)
+        .map((n) => n.id),
+    );
     const stale = !!run && (dirty || (doc.version ?? 0) > run.workflowVersion);
     nodes = doc.nodes.map((n) => {
       const def = definition(n.type);
@@ -176,7 +181,7 @@
         type: 'card',
         position: { x: n.x, y: n.y },
         measured: measured.get(n.id),
-        selected: n.id === selected,
+        selected: n.id === selected || picked.has(n.id),
         deletable: false,
         data: {
           label: def?.label ?? n.type,
@@ -278,17 +283,16 @@
     document.getElementById(PALETTE_ID)?.showPopover();
   }
 
-  function removeNode(id: string) {
-    if (!doc) return;
-    const removed = doc.nodes.find((n) => n.id === id);
-    if (removed)
-      notify.info(`${removed.name || definition(removed.type)?.label || removed.type} deleted`, {
-        key: 'step-delete',
-        action: { label: 'Undo', onClick: undo },
-      });
-    doc.nodes = doc.nodes.filter((n) => n.id !== id);
-    doc.edges = doc.edges.filter((e) => e.from !== id && e.to !== id);
-    errors = errors.filter((e) => e.nodeId !== id);
+  function removeNode(...ids: string[]) {
+    if (!doc || !ids.length) return;
+    const first = doc.nodes.find((n) => n.id === ids[0]);
+    notify.info(ids.length > 1 ? `${ids.length} steps deleted` : `${first ? titleOf(first) : 'Step'} deleted`, {
+      key: 'step-delete',
+      action: { label: 'Undo', onClick: undo },
+    });
+    doc.nodes = doc.nodes.filter((n) => !ids.includes(n.id));
+    doc.edges = doc.edges.filter((e) => !ids.includes(e.from) && !ids.includes(e.to));
+    errors = errors.filter((e) => !e.nodeId || !ids.includes(e.nodeId));
     changed();
     close();
   }
@@ -356,6 +360,8 @@
       run = await api.get<WorkflowExecution>(`/api/workflow-executions/${started.id}`);
       setQuery('run', null);
       remember({ id: doc.id, name, status: run.status === 'Failed' ? 'err' : 'ok' });
+      const failed = run.nodes.find((n) => n.status === 'Failed');
+      if (failed) select(failed.nodeId);
       revision++;
     } catch (e) {
       notify.fail(e, 'workflow-run');
@@ -392,14 +398,18 @@
       e.preventDefault();
       redo();
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
-      if (selected) {
+      const picked = nodes.filter((n) => n.selected).map((n) => n.id);
+      if (picked.length > 1 || selected) {
         e.preventDefault();
-        removeNode(selected);
+        removeNode(...(picked.length > 1 ? picked : [selected!]));
       } else if (selectedEdge) {
         e.preventDefault();
         removeEdge(selectedEdge);
       }
-    } else if (e.key === 'Escape' && panel !== 'closed') close();
+    } else if (e.key === 'Escape') {
+      if (panel !== 'closed') close();
+      nodes = nodes.map((n) => (n.selected ? { ...n, selected: false } : n));
+    }
   }
 
   function ondrop(e: DragEvent) {
@@ -475,15 +485,15 @@
           {nodeTypes}
           {edgeTypes}
           deleteKey={null}
-          selectionKey={null}
           edgesFocusable={false}
-          multiSelectionKey={null}
           minZoom={0.1}
           maxZoom={1.6}
           snapGrid={[8, 8]}
           proOptions={{ hideAttribution: true }}
           onconnect={connect}
-          onnodeclick={({ node }) => select(node.id)}
+          onnodeclick={({ node, event }) => {
+            if (!(event.shiftKey || event.ctrlKey || event.metaKey)) select(node.id);
+          }}
           onedgeclick={({ edge }) => {
             selectedEdge = edge.id;
             selected = null;
