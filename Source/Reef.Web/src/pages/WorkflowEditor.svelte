@@ -423,7 +423,7 @@
           {nodeTypes}
           {edgeTypes}
           deleteKey={null}
-          minZoom={0.3}
+          minZoom={0.15}
           maxZoom={1.6}
           snapGrid={[8, 8]}
           proOptions={{ hideAttribution: true }}
