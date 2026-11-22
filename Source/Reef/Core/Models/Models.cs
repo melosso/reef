@@ -635,21 +635,6 @@ public class DeltaSyncResult
 }
 
 /// <summary>
-/// Criteria for resetting delta sync state
-/// </summary>
-public class DeltaSyncResetCriteria
-{
-    public DateTime? LastSeenBefore { get; set; }
-    public DateTime? LastSeenAfter { get; set; }
-    public int? LastSeenExecutionIdBefore { get; set; }
-    public bool? IsDeleted { get; set; }
-    public string? ReefIdPattern { get; set; }
-}
-
-
-
-
-/// <summary>
 /// Database configuration - used by all services
 /// </summary>
 public class DatabaseConfig

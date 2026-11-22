@@ -356,7 +356,6 @@ public partial class Program
         services.AddScoped<Reef.Core.Targets.DatabaseImportTarget>();
         services.AddScoped<Reef.Core.Targets.LocalFileImportTarget>();
         services.AddScoped<Reef.Core.Sources.DestinationSourceAdapter>();
-        services.AddScoped<ImportFileOutputService>();
 
         // Notification system
         services.AddSingleton<NotificationThrottler>();
