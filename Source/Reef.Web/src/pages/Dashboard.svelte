@@ -84,9 +84,11 @@
         {#if issues}
           <table class="data">
             <tbody>
-              {#each attention.failed as f (f.executionId)}
+              {#each attention.failed.slice(0, 8) as f (f.executionId)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${f.executionId}`)}>
-                  <td class="mark"><a class="plain" href="/executions/{f.executionId}"><StatusMark kind="err" label="Failed" /></a></td>
+                  <td class="mark">
+                    <a class="plain" href="/executions/{f.executionId}"><StatusMark kind="err" /><span class="sr">Failed run</span></a>
+                  </td>
                   <td class="name">
                     <a
                       class="strong"
@@ -100,6 +102,14 @@
                   <td class="when"><span use:tooltip={formatDateTime(f.startedAt)}>{formatRelative(f.startedAt)}</span></td>
                 </tr>
               {/each}
+              {#if attention.failed.length > 8}
+                <tr>
+                  <td class="mark"></td>
+                  <td colspan="3">
+                    <a href="/workflows?last=Failed">{formatNumber(attention.failed.length - 8)} more failing workflows</a>
+                  </td>
+                </tr>
+              {/if}
               {#each attention.anomalies as a (a.executionId)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${a.executionId}`)}>
                   <td class="mark"><StatusMark kind="warn" label={a.reason === 'rows' ? 'Fewer rows' : 'Slower'} /></td>

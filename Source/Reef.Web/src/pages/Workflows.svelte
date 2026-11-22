@@ -1,12 +1,14 @@
 <script lang="ts">
   import { ChevronDown, ChevronUp, Play, Plus } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
+  import Pager from '../components/Pager.svelte';
+  import { urlPaging } from '../lib/paging.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatRelative } from '../lib/format';
   import { notify } from '../lib/notify';
-  import { navigate } from '../lib/router.svelte';
+  import { navigate, route } from '../lib/router.svelte';
   import { tooltip } from '../lib/tooltip';
   import type { Workflow } from '../models/Workflow';
   import { forget } from '../lib/recent.svelte';
@@ -78,7 +80,7 @@
     await load();
   }
 
-  let statusFilter = $state('');
+  let statusFilter = $state(route.query.get('last') ?? '');
   let sort = $state<{ key: 'name' | 'run'; dir: 1 | -1 } | null>(null);
   const lastStatus = (w: Workflow) => lastRuns[w.id!]?.status ?? 'Never';
   const visible = $derived.by(() => {
@@ -91,7 +93,10 @@
   });
   const sortBy = (key: 'name' | 'run') => (sort = { key, dir: sort?.key === key && sort.dir === 1 ? -1 : 1 });
   const ariaSort = (key: 'name' | 'run') => (sort?.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : undefined);
-  const allVisible = $derived(visible.length > 0 && visible.every((w) => selected.includes(w.id!)));
+  const paging = urlPaging(50);
+  const pages = $derived(Math.max(1, Math.ceil(visible.length / paging.size)));
+  const rows = $derived(visible.slice((Math.min(paging.page, pages) - 1) * paging.size, Math.min(paging.page, pages) * paging.size));
+  const allVisible = $derived(rows.length > 0 && rows.every((w) => selected.includes(w.id!)));
 
   function triggers(w: Workflow): string {
     return [...new Set(w.nodes.filter((n) => TRIGGERS[n.type]).map((n) => TRIGGERS[n.type]))].join(', ') || 'None';
@@ -119,8 +124,8 @@
   {/snippet}
   <div class="page-body">
     <div class="toolbar">
-      <input type="search" placeholder="Search name" aria-label="Search workflows" bind:value={search} />
-      <select aria-label="Last run" bind:value={statusFilter}>
+      <input type="search" placeholder="Search name" aria-label="Search workflows" bind:value={search} oninput={() => (paging.page = 1)} />
+      <select aria-label="Last run" bind:value={statusFilter} onchange={() => (paging.page = 1)}>
         <option value="">All last runs</option>
         <option value="Success">Success</option>
         <option value="Failed">Failed</option>
@@ -143,7 +148,7 @@
                   type="checkbox"
                   aria-label="Select all workflows"
                   checked={allVisible}
-                  onchange={() => (selected = allVisible ? [] : visible.map((w) => w.id!))}
+                  onchange={() => (selected = allVisible ? [] : rows.map((w) => w.id!))}
                 />{/if}
             </th>
             <th aria-sort={ariaSort('name')}>
@@ -156,7 +161,7 @@
           </tr>
         </thead>
         <tbody>
-          {#each visible as w (w.id)}
+          {#each rows as w (w.id)}
             <tr
               class="clickable"
               onclick={(e) => {
@@ -167,7 +172,7 @@
                 <input type="checkbox" aria-label="Select {w.name}" checked={selected.includes(w.id!)} onchange={() => toggle(w.id!)} />
               </td>
               <td class="strong">{w.name}</td>
-              <td>{triggers(w)}</td>
+              <td class="nowrap">{triggers(w)}</td>
               <td class="num secondary">{w.nodes.length}</td>
               <td>
                 {#if lastRuns[w.id!]}
@@ -214,12 +219,18 @@
         </tbody>
       </table>
     </div>
+    {#if visible.length > 50}
+      <Pager bind:page={paging.page} bind:pageSize={paging.size} total={visible.length} {pages} sizes={[50, 100, 250]} />
+    {/if}
   </div>
 </Page>
 
 <style>
   .sel {
     width: 36px;
+  }
+  .nowrap {
+    white-space: nowrap;
   }
   .run {
     color: var(--ink);
