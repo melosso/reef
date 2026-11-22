@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { Copy, FlaskConical, Link, Maximize2, Minimize2, Play, Trash2, X } from '@lucide/svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
@@ -103,6 +103,18 @@
     if (untrack(() => latest)?.status === 'Failed') tab = 'run';
   });
 
+  const stale = $derived(!!run && (dirty || (workflow.version ?? 0) > run.workflowVersion));
+  const failure = $derived(latest?.status === 'Failed' ? (latest.errorMessage ?? 'Failed') : null);
+  let fieldList = $state<HTMLElement>();
+
+  async function editSettings() {
+    tab = 'settings';
+    await tick();
+    const target =
+      fieldList?.querySelector<HTMLElement>('.cm-content') ?? fieldList?.querySelectorAll<HTMLElement>('input, select, textarea')[1];
+    target?.focus();
+  }
+
   const errorFor = (key: string) => errors.find((e) => e.nodeId === node.id && e.field === key)?.message;
 
   async function runTest() {
@@ -154,7 +166,8 @@
     <button type="button" class="btn ghost icon" aria-label="Close panel" onclick={onclose}><X size={15} /></button>
   </div>
   {#snippet settingsView()}
-    <div class="fields">
+    <div class="fields" bind:this={fieldList}>
+      {#if failure && !stale}<pre class="error">{failure}</pre>{/if}
       <div class="field">
         <label for="node-name" use:tooltip={`Shown on the card. Empty uses ${def.label}`}>Name</label>
         <input id="node-name" value={node.name ?? ''} placeholder={def.label} oninput={(e) => onrename(e.currentTarget.value)} />
@@ -246,14 +259,17 @@
         <FlaskConical size={14} />Test step
       </button>
     </div>
-    <ItemsTable
-      outputs={output}
-      empty={latest?.status === 'Failed'
-        ? 'This step failed. The error is on the Last run tab.'
-        : 'No output yet. Run the workflow or test this step.'}
-    />
+    {#if failure && !test}
+      <p class="muted">
+        This step failed in the last run.
+        {#if !wide}<button type="button" class="link" onclick={() => (tab = 'run')}>Show the error</button>{/if}
+      </p>
+    {:else}
+      <ItemsTable outputs={output} empty="No output yet. Run the workflow or test this step." />
+    {/if}
   {/snippet}
   {#snippet runView()}
+    {#if latest && run && stale}<p class="muted">From the run before your changes.</p>{/if}
     {#if latest && run}
       <dl class="facts">
         <dt>Status</dt>
@@ -273,7 +289,10 @@
     {:else}
       <p class="muted">{run ? 'This step did not run in the last run.' : 'The workflow has not run yet.'}</p>
     {/if}
-    <button type="button" class="btn" onclick={onrun}><Play size={14} />{run ? 'Run again' : 'Run workflow'}</button>
+    <div class="actions">
+      {#if failure && !stale}<button type="button" class="btn primary" onclick={editSettings}>Edit settings</button>{/if}
+      <button type="button" class="btn" onclick={onrun}><Play size={14} />{run ? 'Run again' : 'Run workflow'}</button>
+    </div>
   {/snippet}
   {#if wide}
     <div class="trio">
@@ -423,6 +442,10 @@
   }
   .facts dd {
     margin: 0;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
   }
   .error {
     margin: 0 0 16px;

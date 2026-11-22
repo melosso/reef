@@ -16,6 +16,7 @@
     status: StatusKind | null;
     result: string;
     error: string | null;
+    stale: boolean;
   }
 
   let { data, selected }: NodeProps = $props();
@@ -28,7 +29,7 @@
   class="card"
   class:selected
   class:invalid={card.invalid}
-  class:failed={card.status === 'err'}
+  class:failed={card.status === 'err' && !card.stale}
   class:trigger={card.trigger}
   aria-invalid={card.invalid ? 'true' : undefined}
 >
@@ -41,7 +42,7 @@
     <span class="title">{card.name}</span>
   </div>
   {#if card.summary}<div class="body">{card.summary}</div>{/if}
-  <div class="foot" use:tooltip={card.error}>
+  <div class="foot" class:stale={card.stale} use:tooltip={card.stale ? 'From the run before your changes' : card.error}>
     {#if card.status}<StatusMark kind={card.status} />{/if}
     <span class="text">{card.status ? card.result : 'Not run yet'}</span>
   </div>
@@ -115,6 +116,9 @@
     border-top: 1px solid var(--line);
     font-size: 12px;
     color: var(--muted);
+  }
+  .foot.stale {
+    opacity: 0.55;
   }
   .foot .text {
     flex: 1;

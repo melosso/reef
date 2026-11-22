@@ -160,6 +160,7 @@
     if (!doc || !catalog.length) return;
     const invalid = new Set(errors.map((e) => e.nodeId).filter(Boolean));
     const measured = new Map(untrack(() => nodes).map((n) => [n.id, n.measured]));
+    const stale = !!run && (dirty || (doc.version ?? 0) > run.workflowVersion);
     nodes = doc.nodes.map((n) => {
       const def = definition(n.type);
       const pass = run ? lastPass(run.nodes, n.id) : undefined;
@@ -191,6 +192,7 @@
                   : `${pass.rowCount} ${pass.rowCount === 1 ? 'row' : 'rows'}${count > 1 ? `, ${count} passes` : ''}`
             : '',
           error: pass?.errorMessage ?? null,
+          stale: !!pass && stale,
         },
       };
     });
