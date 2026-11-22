@@ -364,6 +364,11 @@
       return;
     }
     if (typing || document.querySelector('dialog[open]')) return;
+    if (e.key === 'Enter' && active?.classList.contains('svelte-flow__node') && active.dataset.id) {
+      e.preventDefault();
+      select(active.dataset.id);
+      return;
+    }
     if (e.key === '/') {
       e.preventDefault();
       document.getElementById(PALETTE_ID)?.showPopover();
@@ -459,6 +464,8 @@
           {nodeTypes}
           {edgeTypes}
           deleteKey={null}
+          selectionKey={null}
+          multiSelectionKey={null}
           minZoom={0.3}
           maxZoom={1.6}
           snapGrid={[8, 8]}

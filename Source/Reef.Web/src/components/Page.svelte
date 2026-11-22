@@ -63,21 +63,24 @@
                 else if (e.key === 'Escape') renaming = false;
               }}
             />
-          {:else if crumb.onrename}<span
-              class="current editable"
-              role="button"
-              tabindex="0"
-              aria-current="page"
-              aria-keyshortcuts="F2"
-              use:tooltip={'Double-click to rename'}
-              ondblclick={() => (renaming = true)}
-              onkeydown={(e) => {
-                if (e.key === 'F2') renaming = true;
-              }}
-            >
-              {crumb.label}
-            </span>
-          {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}
+          {:else if crumb.onrename}<h1 class="title">
+              <span
+                class="current editable"
+                role="button"
+                tabindex="0"
+                aria-current="page"
+                aria-keyshortcuts="F2"
+                use:tooltip={'Double-click to rename'}
+                ondblclick={() => (renaming = true)}
+                onkeydown={(e) => {
+                  if (e.key === 'F2') renaming = true;
+                }}
+              >
+                {crumb.label}
+              </span>
+            </h1>
+          {:else if i === crumbs.length - 1}<h1 class="title"><span class="current" aria-current="page">{crumb.label}</span></h1>
+          {:else}<span class="current">{crumb.label}</span>{/if}
         {/each}
       </nav>
       {#if status}<div class="status">{@render status()}</div>{/if}
@@ -142,6 +145,11 @@
   }
   .editable {
     cursor: text;
+  }
+  .title {
+    display: flex;
+    min-width: 0;
+    font-size: inherit;
   }
   .rename {
     font: inherit;

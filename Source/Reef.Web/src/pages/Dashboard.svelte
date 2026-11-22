@@ -86,7 +86,7 @@
             <tbody>
               {#each attention.failed as f (f.executionId)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${f.executionId}`)}>
-                  <td class="mark"><StatusMark kind="err" label="Failed" /></td>
+                  <td class="mark"><a class="plain" href="/executions/{f.executionId}"><StatusMark kind="err" label="Failed" /></a></td>
                   <td class="name">
                     <a
                       class="strong"
@@ -144,8 +144,10 @@
             <tbody>
               {#each upNextGroups as item (item.key)}
                 <tr class="clickable" onclick={() => navigate(item.more ? '/workflows' : item.href)}>
-                  <td class="strong">
-                    {item.name}{#if item.more}<span class="muted">{` and ${formatNumber(item.more)} more`}</span>{/if}
+                  <td>
+                    <a class="strong" href={item.more ? '/workflows' : item.href}>{item.name}</a>{#if item.more}<span class="muted">
+                        {` and ${formatNumber(item.more)} more`}
+                      </span>{/if}
                   </td>
                   <td class="when"><span use:tooltip={formatDateTime(item.at)}>{formatRelative(item.at)}</span></td>
                 </tr>
@@ -169,7 +171,7 @@
                   <td class="mark">
                     <span use:tooltip={run.errorMessage}><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></span>
                   </td>
-                  <td class="strong">{run.workflowName ?? 'Deleted workflow'}</td>
+                  <td><a class="strong" href="/executions/{run.id}">{run.workflowName ?? 'Deleted workflow'}</a></td>
                   <td class="when"><span use:tooltip={formatDateTime(run.startedAt)}>{formatRelative(run.startedAt)}</span></td>
                 </tr>
               {/each}
@@ -194,6 +196,10 @@
   }
   .spacer {
     flex: 1;
+  }
+  .plain {
+    color: inherit;
+    text-decoration: none;
   }
   .strong {
     font-weight: 500;

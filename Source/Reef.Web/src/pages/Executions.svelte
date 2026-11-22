@@ -141,7 +141,7 @@
         <tbody>
           {#each runs as run (run.id)}
             <tr class="clickable" onclick={() => navigate(`/executions/${run.id}${location.search}`)}>
-              <td class="strong">{run.workflowName ?? 'Deleted workflow'}</td>
+              <td><a class="strong" href="/executions/{run.id}{location.search}">{run.workflowName ?? 'Deleted workflow'}</a></td>
               <td>
                 {stepName(
                   run.triggerNodeId,
@@ -232,6 +232,11 @@
 {/if}
 
 <style>
+  .strong {
+    font-weight: 500;
+    color: var(--ink);
+    text-decoration: none;
+  }
   .facts {
     display: grid;
     grid-template-columns: max-content 1fr;
