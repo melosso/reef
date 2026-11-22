@@ -134,7 +134,7 @@ public class WorkflowRunApiTests(ReefApiFactory factory)
             [Edge("start", "orders"), Edge("orders", "file")]);
 
         run["status"]!.GetValue<string>().Should().Be("Failed");
-        run["errorMessage"]!.GetValue<string>().Should().Contain("orders").And.Contain("Missing");
+        run["errorMessage"]!.GetValue<string>().Should().StartWith("Query: ").And.Contain("Missing");
         NodeRun(run, "orders")["status"]!.GetValue<string>().Should().Be("Failed");
         run["nodes"]!.AsArray().Should().NotContain(n => n!["nodeId"]!.GetValue<string>() == "file");
     }

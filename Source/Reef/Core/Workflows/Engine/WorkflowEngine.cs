@@ -96,7 +96,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
                         record.Status = WorkflowRunStatus.Failed;
                         run.Status = WorkflowRunStatus.Failed;
                         failedNode = node.Id;
-                        run.ErrorMessage = $"{node.Name ?? node.Id}: {record.ErrorMessage}";
+                        run.ErrorMessage = $"{node.Name ?? WorkflowNodeCatalog.Catalog.Find(node.Type)?.Label ?? node.Id}: {record.ErrorMessage}";
                     }
                 }
                 finally
