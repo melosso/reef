@@ -24,19 +24,26 @@
     return () => clearInterval(timer);
   });
 
-  const narrow = window.matchMedia('(max-width: 1199px)');
-  let rail = $state(narrow.matches);
+  const narrow = window.matchMedia('(max-width: 1023px)');
+  const medium = window.matchMedia('(max-width: 1199px)');
+  let width = $state(narrow.matches ? 0 : medium.matches ? 1 : 2);
   $effect(() => {
-    const update = () => (rail = narrow.matches);
+    const update = () => (width = narrow.matches ? 0 : medium.matches ? 1 : 2);
     narrow.addEventListener('change', update);
-    return () => narrow.removeEventListener('change', update);
+    medium.addEventListener('change', update);
+    return () => {
+      narrow.removeEventListener('change', update);
+      medium.removeEventListener('change', update);
+    };
   });
+  const canvas = $derived(/^\/workflows\/[^/]+$/.test(route.path));
+  const rail = $derived(width === 0 || (width === 1 && canvas));
   const hint = (text: string) => (rail ? { text, placement: 'right' as const } : null);
 
   const active = (href: string) => route.path === href || route.path.startsWith(`${href}/`);
 </script>
 
-<aside class="side">
+<aside class="side" class:rail>
   <a class="brand" href="/dashboard"><Logo /><span>Reef</span></a>
   <nav aria-label="Main">
     {#each navItems as item (item.href)}
@@ -139,28 +146,26 @@
     flex: 1;
     min-height: 16px;
   }
-  @media (max-width: 1199px) {
-    .side {
-      width: 60px;
-      padding: 12px 8px;
-    }
-    .brand {
-      padding: 8px 10px 18px;
-    }
-    .brand span,
-    .label {
-      display: none;
-    }
-    a:not(.brand) {
-      justify-content: center;
-      padding: 9px 0;
-      position: relative;
-    }
-    .count {
-      position: absolute;
-      top: 2px;
-      right: 4px;
-      font-size: 11px;
-    }
+  .side.rail {
+    width: 60px;
+    padding: 12px 8px;
+  }
+  .rail .brand {
+    padding: 8px 10px 18px;
+  }
+  .rail .brand span,
+  .rail .label {
+    display: none;
+  }
+  .rail a:not(.brand) {
+    justify-content: center;
+    padding: 9px 0;
+    position: relative;
+  }
+  .rail .count {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 11px;
   }
 </style>
