@@ -276,77 +276,8 @@ public class DeltaSyncService
         }
     }
 
-    /// <summary>
-    /// Reset delta sync state for a profile (manual reset)
-    /// </summary>
-    public async Task ResetDeltaSyncStateAsync(int profileId, string? scope = null)
-    {
-        using var db = new SqliteConnection(_connectionString);
 
-        await db.ExecuteAsync(
-            "DELETE FROM DeltaSyncState WHERE ProfileId IS @ProfileId AND Scope IS @Scope",
-            new { ProfileId = Owner(profileId, scope), Scope = scope });
 
-        Log.Information("Delta sync state reset for profile {ProfileId}", profileId);
-    }
-
-    /// <summary>
-    /// Reset delta sync state for specific rows
-    /// </summary>
-    public async Task<int> ResetDeltaSyncRowsAsync(int profileId, List<string> reefIds, string? scope = null)
-    {
-        using var db = new SqliteConnection(_connectionString);
-
-        var deleted = await db.ExecuteAsync(
-            "DELETE FROM DeltaSyncState WHERE ProfileId IS @ProfileId AND Scope IS @Scope AND ReefId IN @ReefIds",
-            new { ProfileId = Owner(profileId, scope), Scope = scope, ReefIds = reefIds });
-
-        Log.Information("Reset delta sync state for {Count} rows in profile {ProfileId}",
-            deleted, profileId);
-
-        return deleted;
-    }
-
-    /// <summary>
-    /// Reset delta sync state by criteria
-    /// </summary>
-    public async Task<int> ResetDeltaSyncByCriteriaAsync(
-        int profileId,
-        DeltaSyncResetCriteria criteria,
-        string? scope = null)
-    {
-        using var db = new SqliteConnection(_connectionString);
-
-        var sql = "DELETE FROM DeltaSyncState WHERE ProfileId IS @ProfileId AND Scope IS @Scope";
-        var parameters = new DynamicParameters();
-        parameters.Add("ProfileId", Owner(profileId, scope));
-        parameters.Add("Scope", scope);
-
-        if (criteria.LastSeenBefore.HasValue)
-        {
-            sql += " AND LastSeenAt < @LastSeenBefore";
-            parameters.Add("LastSeenBefore", criteria.LastSeenBefore.Value.ToString("yyyy-MM-dd HH:mm:ss"));
-        }
-
-        if (criteria.IsDeleted.HasValue)
-        {
-            sql += " AND IsDeleted = @IsDeleted";
-            parameters.Add("IsDeleted", criteria.IsDeleted.Value ? 1 : 0);
-        }
-
-        if (!string.IsNullOrWhiteSpace(criteria.ReefIdPattern))
-        {
-            sql += " AND ReefId LIKE @Pattern";
-            parameters.Add("Pattern", criteria.ReefIdPattern.Replace("*", "%"));
-        }
-
-        var deleted = await db.ExecuteAsync(sql, parameters);
-
-        Log.Information("Reset delta sync state for {Count} rows matching criteria in profile {ProfileId}",
-            deleted, profileId);
-
-        return deleted;
-    }
 
 
     /// <summary>
@@ -372,43 +303,7 @@ public class DeltaSyncService
         }
     }
 
-    /// <summary>
-    /// Get global delta sync statistics
-    /// </summary>
-    public async Task<DeltaSyncStats> GetGlobalStatsAsync()
-    {
-        using var db = new SqliteConnection(_connectionString);
 
-        var stats = await db.QueryFirstOrDefaultAsync<DeltaSyncStats>(@"
-            SELECT 
-                (SELECT COUNT(DISTINCT ProfileId) FROM DeltaSyncState) AS ProfilesWithDeltaSync,
-                (SELECT COUNT(*) FROM DeltaSyncState WHERE IsDeleted = 0) AS TotalHashedRows,
-                (SELECT COUNT(*) FROM DeltaSyncState WHERE IsDeleted = 1) AS TotalDeletedRows
-        ");
-
-        return stats ?? new DeltaSyncStats();
-    }
-
-    /// <summary>
-    /// Get delta sync statistics for a specific profile
-    /// </summary>
-    public async Task<ProfileDeltaSyncStats> GetProfileStatsAsync(int profileId, string? scope = null)
-    {
-        using var db = new SqliteConnection(_connectionString);
-
-        var stats = await db.QueryFirstOrDefaultAsync<ProfileDeltaSyncStats>(@"
-            SELECT 
-                COUNT(CASE WHEN IsDeleted = 0 THEN 1 END) AS ActiveRows,
-                COUNT(CASE WHEN IsDeleted = 1 THEN 1 END) AS DeletedRows,
-                COUNT(*) AS TotalTrackedRows,
-                MIN(FirstSeenAt) AS FirstTrackedAt,
-                MAX(LastSeenAt) AS LastTrackedAt
-            FROM DeltaSyncState
-            WHERE ProfileId IS @ProfileId AND Scope IS @Scope
-        ", new { ProfileId = Owner(profileId, scope), Scope = scope });
-
-        return stats ?? new ProfileDeltaSyncStats();
-    }
 
     /// <summary>
     /// Normalize a row's column keys to handle case-insensitive matching

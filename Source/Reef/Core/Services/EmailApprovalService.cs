@@ -19,21 +19,18 @@ public class EmailApprovalService
     private readonly AuditService _auditService;
     private readonly EmailExportService _emailExportService;
     private readonly NotificationService _notificationService;
-    private readonly DeltaSyncService _deltaSyncService;
     private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailApprovalService>();
 
     public EmailApprovalService(
         DatabaseConfig config,
         AuditService auditService,
         EmailExportService emailExportService,
-        NotificationService notificationService,
-        DeltaSyncService deltaSyncService)
+        NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
         _auditService = auditService;
         _emailExportService = emailExportService;
         _notificationService = notificationService;
-        _deltaSyncService = deltaSyncService;
     }
 
     /// <summary>
@@ -322,43 +319,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Immediately commit delta sync hash (don't wait for background service)
-                if (!string.IsNullOrEmpty(approval.DeltaSyncHash) && !string.IsNullOrEmpty(approval.ReefId) && approval is { ProfileId: { } skipProfileId, ProfileExecutionId: { } skipExecutionId })
-                {
-                    try
-                    {
-                        // Create a minimal DeltaSyncResult with just this one reef_id
-                        var deltaSyncResult = new DeltaSyncResult
-                        {
-                            NewRows = new List<Dictionary<string, object>>(),
-                            ChangedRows = new List<Dictionary<string, object>>(),
-                            UnchangedRows = new List<Dictionary<string, object>>(),
-                            DeletedReefIds = new List<string>(),
-                            TotalRowsProcessed = 1,
-                            NewHashState = new Dictionary<string, string>
-                            {
-                                [approval.ReefId] = approval.DeltaSyncHash
-                            }
-                        };
-
-                        Log.Information("Committing delta sync for skipped approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}'",
-                            approvalId, approval.ReefId, approval.DeltaSyncHash);
-
-                        await _deltaSyncService.CommitDeltaSyncAsync(
-                            skipProfileId,
-                            skipExecutionId,
-                            deltaSyncResult);
-
-                        Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}",
-                            approvalId, approval.ReefId);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Failed to commit delta sync hash for skipped email {ApprovalId}", approvalId);
-                        // Don't throw - the background service can retry
-                    }
-                }
-
                 // Mark as processed
                 const string markProcessedSql = @"
                     UPDATE PendingEmailApprovals

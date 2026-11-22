@@ -85,7 +85,7 @@ public static partial class WorkflowExpressions
             ["node"] = nodes,
             ["workflow"] = new ScriptObject { ["id"] = scope.Workflow.Id, ["name"] = scope.Workflow.Name, ["execution_id"] = scope.ExecutionId }
         };
-        var context = new TemplateContext { StrictVariables = true, EnableRelaxedMemberAccess = true, LoopLimit = 10_000, RecursiveLimit = 50, LimitToString = 1_000_000 };
+        var context = new TemplateContext { StrictVariables = true, EnableRelaxedMemberAccess = true, LoopLimit = 10_000, RecursiveLimit = 50, LimitToString = 1_000_000, RegexTimeOut = TimeSpan.FromSeconds(1) };
         context.PushGlobal(globals);
         return context;
     }

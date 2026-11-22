@@ -167,16 +167,6 @@ public class ImportProfile
     public string Code { get; set; } = "";
 }
 
-/// <summary>
-/// Extended view of ImportProfile with joined name lookups
-/// </summary>
-public class ImportProfileWithNames : ImportProfile
-{
-    public string? GroupName { get; set; }
-    public string? TargetConnectionName { get; set; }
-    public string? TargetConnectionType { get; set; }
-    public string? SourceDestinationName { get; set; }
-}
 
 /// <summary>
 /// Execution record for an import profile run, mirrors ImportProfileExecutions table schema.
@@ -289,17 +279,6 @@ public class ImportExecutionError
     public DateTime OccurredAt { get; set; } = DateTime.UtcNow;
 }
 
-public record ImportDeltaSyncStats
-{
-    public int ActiveRows { get; init; }
-    public int DeletedRows { get; init; }
-    public int TotalTrackedRows { get; init; }
-    public string? LastSyncDate { get; init; }
-    public int NewRowsLastRun { get; init; }
-    public int ChangedRowsLastRun { get; init; }
-    public int DeletedRowsLastRun { get; init; }
-    public int UnchangedRowsLastRun { get; init; }
-}
 
 /// <summary>
 /// Mapping of a source column to a target database column
@@ -471,52 +450,8 @@ public class ParsedRow
     public bool IsSkipped { get; set; }
 }
 
-/// <summary>
-/// Request body for testing import source connectivity
-/// </summary>
-public class TestImportSourceRequest
-{
-    public string SourceType { get; set; } = "Local";
-    public string? SourceConfig { get; set; }
-    public int? SourceDestinationId { get; set; }
-    public string? SourceFilePath { get; set; }
-    public string? SourceFilePattern { get; set; }
-    public string SourceFileSelection { get; set; } = "Latest";
-}
 
-/// <summary>
-/// Request body for getting target table schema
-/// </summary>
-public class GetTargetSchemaRequest
-{
-    public string TargetType { get; set; } = "Database";
-    public int? TargetConnectionId { get; set; }
-    public required string TargetTable { get; set; }
-}
 
-/// <summary>
-/// Request body for previewing parsed rows without writing
-/// </summary>
-public class PreviewImportRequest
-{
-    public int? ImportProfileId { get; set; }
-    public string SourceType { get; set; } = "Local";
-    public string? SourceConfig { get; set; }
-    public int? SourceDestinationId { get; set; }
-    public string? SourceFilePath { get; set; }
-    public string? SourceFilePattern { get; set; }
-    public string SourceFileSelection { get; set; } = "Latest";
-    public string SourceFormat { get; set; } = "CSV";
-    public string? FormatConfig { get; set; }
-    public int MaxRows { get; set; } = 10;
-
-    // HTTP source fields
-    public string? HttpMethod { get; set; }
-    public string? HttpBodyTemplate { get; set; }
-    public bool HttpPaginationEnabled { get; set; }
-    public string? HttpPaginationConfig { get; set; }
-    public string? HttpDataRootPath { get; set; }
-}
 
 /// <summary>
 /// Request body for reordering output targets
@@ -526,29 +461,7 @@ public class ReorderOutputTargetsRequest
     public List<int> Ids { get; set; } = new();
 }
 
-/// <summary>
-/// Response from the preview endpoint
-/// </summary>
-public class PreviewImportResponse
-{
-    public bool Success { get; set; }
-    public List<Dictionary<string, object?>> Rows { get; set; } = new();
-    public List<string> Columns { get; set; } = new();
-    public int TotalRowsParsed { get; set; }
-    public int RowsReturned { get; set; }
-    public string? ErrorMessage { get; set; }
-    public List<string> ParseWarnings { get; set; } = new();
-}
 
-/// <summary>
-/// Response from listing source files
-/// </summary>
-public class ListSourceFilesResponse
-{
-    public bool Success { get; set; }
-    public List<SourceFileInfo> Files { get; set; } = new();
-    public string? ErrorMessage { get; set; }
-}
 
 public class SourceFileInfo
 {

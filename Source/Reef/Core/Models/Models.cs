@@ -233,17 +233,6 @@ public class ProfileExecution
     public int? SplitFailureCount { get; set; } // Number of splits that failed
 }
 
-/// <summary>
-/// Paged result for executions
-/// </summary>
-public class ExecutionPagedResult
-{
-    public List<ProfileExecution> Data { get; set; } = new();
-    public int TotalCount { get; set; }
-    public int Page { get; set; }
-    public int PageSize { get; set; }
-    public int TotalPages { get; set; }
-}
 
 /// <summary>
 /// Represents a single split from a multi-output profile execution
@@ -597,25 +586,7 @@ public class TestConnectionResponse
     public long? ResponseTimeMs { get; set; }
 }
 
-/// <summary>
-/// Profile execution request
-/// </summary>
-public class ExecuteProfileRequest
-{
-    public int ProfileId { get; set; }
-    public Dictionary<string, string>? Parameters { get; set; }
-    public string? TriggeredBy { get; set; }
-}
 
-/// <summary>
-/// Profile execution response
-/// </summary>
-public class ExecuteProfileResponse
-{
-    public int ExecutionId { get; set; }
-    public string Status { get; set; } = "Running";
-    public string? OutputPath { get; set; }
-}
 
 /// <summary>
 /// Delta sync configuration
@@ -675,36 +646,8 @@ public class DeltaSyncResetCriteria
     public string? ReefIdPattern { get; set; }
 }
 
-/// <summary>
-/// Delta sync statistics
-/// </summary>
-public class DeltaSyncStats
-{
-    public int ProfilesWithDeltaSync { get; set; }
-    public int TotalHashedRows { get; set; }
-    public int TotalDeletedRows { get; set; }
-}
 
-/// <summary>
-/// Profile-specific delta sync statistics
-/// </summary>
-public class ProfileDeltaSyncStats
-{
-    public int ActiveRows { get; set; }
-    public int DeletedRows { get; set; }
-    public int TotalTrackedRows { get; set; }
-    public DateTime? FirstTrackedAt { get; set; }
-    public DateTime? LastTrackedAt { get; set; }
-}
 
-/// <summary>
-/// Request to reset specific rows
-/// </summary>
-public class ResetRowsRequest
-{
-    public List<string>? ReefIds { get; set; }
-    public DeltaSyncResetCriteria? Criteria { get; set; }
-}
 
 /// <summary>
 /// Database configuration - used by all services
