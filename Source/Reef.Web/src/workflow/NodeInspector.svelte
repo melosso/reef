@@ -91,14 +91,15 @@
         : null,
   );
 
+  const nodeId = $derived(node.id);
   $effect(() => {
-    void node.id;
+    void nodeId;
     test = null;
     hookUrl = null;
   });
 
   $effect(() => {
-    void node.id;
+    void nodeId;
     if (untrack(() => latest)?.status === 'Failed') tab = 'run';
   });
 
