@@ -19,6 +19,7 @@
   let usernameError = $state(false);
   let step = $state<'email' | 'password'>('email');
   let password = $state('');
+  let passwordError = $state(false);
   let code = $state('');
   let busy = $state(false);
   let mfa = $state<{ sessionId: string; method: string } | null>(null);
@@ -66,6 +67,7 @@
       storeSession(data);
       navigate(next(), true);
     } catch (error) {
+      passwordError = error instanceof ApiError && error.status === 401;
       notify.fail(error, 'sign-in');
     } finally {
       busy = false;
@@ -150,7 +152,15 @@
           <input class="sr" type="text" autocomplete="username" value={username} readonly tabindex="-1" aria-hidden="true" />
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" type="password" bind:value={password} autocomplete="current-password" use:focus />
+            <input
+              id="password"
+              type="password"
+              bind:value={password}
+              aria-invalid={passwordError ? 'true' : undefined}
+              oninput={() => (passwordError = false)}
+              autocomplete="current-password"
+              use:focus
+            />
           </div>
           <button class="btn primary full" type="submit" aria-busy={busy} disabled={busy}>Sign in</button>
         </form>
@@ -197,9 +207,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 24px;
-    padding: 24px;
+    padding: 18vh 24px 24px;
   }
   .card {
     width: 360px;
