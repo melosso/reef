@@ -379,6 +379,12 @@
     gap: 12px;
     margin-bottom: 12px;
   }
+  .testbar span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .url {
     display: flex;
     align-items: center;
