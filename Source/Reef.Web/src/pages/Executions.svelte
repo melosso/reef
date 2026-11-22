@@ -15,6 +15,7 @@
   import { runWorkflow } from '../lib/workflows';
   import type { PagedResult } from '../models/PagedResult';
   import type { Workflow } from '../models/Workflow';
+  import { stepTitle } from '../workflow/graph';
   import type { WorkflowCatalog } from '../models/WorkflowCatalog';
   import type { WorkflowExecution } from '../models/WorkflowExecution';
 
@@ -96,7 +97,7 @@
 
   function stepName(nodeId: string, workflow = detailWorkflow): string {
     const node = workflow?.nodes.find((n) => n.id === nodeId);
-    return node?.name || (node ? (labels[node.type] ?? nodeId) : nodeId);
+    return node && workflow ? stepTitle(workflow, node, labels[node.type] ?? node.type) : nodeId;
   }
 
   async function rerun() {

@@ -44,6 +44,13 @@ export function tidy(workflow: Workflow): void {
   }
 }
 
+// Unnamed steps of one type get a number
+export function stepTitle(workflow: Workflow, node: Workflow['nodes'][number], label: string): string {
+  if (node.name) return node.name;
+  const same = workflow.nodes.filter((n) => n.type === node.type && !n.name);
+  return same.length > 1 ? `${label} ${same.indexOf(node) + 1}` : label;
+}
+
 export const GROUPS = ['Triggers', 'Sources', 'Transform', 'Flow', 'Deliver', 'Hooks'];
 
 export function outputsOf(def: WorkflowNodeDefinition, config: Record<string, unknown>): string[] {

@@ -23,7 +23,7 @@
   import WorkflowEdgeLine from '../workflow/WorkflowEdgeLine.svelte';
   import WorkflowNodeCard from '../workflow/WorkflowNodeCard.svelte';
   import WorkflowToolbar from '../workflow/WorkflowToolbar.svelte';
-  import { History, lastPass, nextId, outputsOf, PALETTE_ID, tidy } from '../workflow/graph';
+  import { History, lastPass, nextId, outputsOf, PALETTE_ID, stepTitle, tidy } from '../workflow/graph';
 
   const params = $derived(match('/workflows/:id', route.path) ?? {});
   const isNew = $derived(params.id === 'new');
@@ -51,9 +51,11 @@
   let reveal: ((id: string, panel: number) => void) | null = null;
   const history = new History();
   let baseline = '';
+  let savedJson = '';
   let revision = $state(0);
 
   const definition = (type: string) => catalog.find((d) => d.type === type);
+  const titleOf = (node: WorkflowNode) => stepTitle(doc!, node, definition(node.type)?.label ?? node.type);
   const selectedNode = $derived(doc?.nodes.find((n) => n.id === selected) ?? null);
   const selectedDef = $derived(selectedNode ? definition(selectedNode.type) : undefined);
   const name = $derived(doc?.name || 'Untitled workflow');
@@ -100,7 +102,9 @@
       loaded.nodes.forEach((n) => (n.config ??= {}));
       doc = loaded;
       baseline = JSON.stringify(doc);
+      savedJson = baseline;
       if (isNew) {
+        savedJson = '';
         dirty = true;
         panel = 'settings';
       } else {
@@ -176,7 +180,7 @@
         deletable: false,
         data: {
           label: def?.label ?? n.type,
-          name: n.name || def?.label || n.type,
+          name: titleOf(n),
           named: !!n.name,
           icon: def?.icon ?? '',
           summary: def ? summary(n, def) : 'Unknown step type',
@@ -223,7 +227,7 @@
     if (!snapshot) return;
     doc = JSON.parse(snapshot) as Workflow;
     baseline = snapshot;
-    dirty = true;
+    dirty = snapshot !== savedJson;
     if (selected && !doc.nodes.some((n) => n.id === selected)) close();
     revision++;
   }
@@ -326,6 +330,7 @@
       saved.nodes.forEach((n) => (n.config ??= {}));
       doc = saved;
       baseline = JSON.stringify(doc);
+      savedJson = baseline;
       revision++;
       return true;
     } catch (e) {
@@ -554,7 +559,7 @@
           onrun={runNow}
           labelOf={(id) => {
             const n = doc!.nodes.find((x) => x.id === id);
-            return n?.name || definition(n?.type ?? '')?.label || id;
+            return n ? titleOf(n) : id;
           }}
           onconnect={(port, target) => {
             const input = definition(doc!.nodes.find((n) => n.id === target)?.type ?? '')?.inputs[0] ?? 'main';

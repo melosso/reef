@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Workflow } from '../src/models/Workflow';
 import type { WorkflowNodeDefinition } from '../src/models/WorkflowNodeDefinition';
-import { History, nextId, outputsOf, tidy } from '../src/workflow/graph';
+import { History, nextId, outputsOf, stepTitle, tidy } from '../src/workflow/graph';
 
 const workflow = (ids: string[]): Workflow => ({
   name: 'w',
@@ -53,5 +53,12 @@ describe('workflow graph helpers', () => {
       [300, 0],
       [300, 160],
     ]);
+  });
+
+  it('numbers unnamed steps that share a type', () => {
+    const w = workflow(['a', 'b', 'c']);
+    w.nodes[1].name = 'Orders';
+    expect(w.nodes.map((n) => stepTitle(w, n, 'Query'))).toEqual(['Query 1', 'Orders', 'Query 2']);
+    expect(stepTitle(workflow(['x']), workflow(['x']).nodes[0], 'Query')).toBe('Query');
   });
 });

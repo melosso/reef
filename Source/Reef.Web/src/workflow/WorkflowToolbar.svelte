@@ -117,12 +117,19 @@
       use:tooltip={'Arrange steps in run order'}
       onclick={() => {
         ontidy();
-        setTimeout(() => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 }), 50);
+        setTimeout(() => flow.fitView({ padding: '48px', maxZoom: 1, minZoom: 0.4, duration: 200 }), 50);
       }}
     >
       Tidy up
     </button>
-    <button type="button" class="tb" onclick={() => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 })}>Fit</button>
+    <button
+      type="button"
+      class="tb"
+      use:tooltip={'Fit the steps, down to a readable size'}
+      onclick={() => flow.fitView({ padding: '48px', maxZoom: 1, minZoom: 0.4, duration: 200 })}
+    >
+      Fit
+    </button>
     <button
       type="button"
       class="tb num"

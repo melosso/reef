@@ -144,14 +144,8 @@
 <aside class="inspector" class:wide aria-label="{def.label} step">
   <div class="ihead">
     <span class="iicon"><Icon size={16} /></span>
-    <h2 use:tooltip={{ text: def.tooltip, placement: 'bottom-start' }}>{node.name || def.label}</h2>
-    <button
-      type="button"
-      class="btn ghost icon"
-      aria-label="Delete {node.name || def.label}"
-      use:tooltip={'Delete step'}
-      onclick={onremove}
-    >
+    <h2 use:tooltip={{ text: def.tooltip, placement: 'bottom-start' }}>{labelOf(node.id)}</h2>
+    <button type="button" class="btn ghost icon" aria-label="Delete {labelOf(node.id)}" use:tooltip={'Delete step'} onclick={onremove}>
       <Trash2 size={15} />
     </button>
     <button
