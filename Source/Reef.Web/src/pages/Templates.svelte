@@ -413,7 +413,9 @@
 
 <Page crumbs={[{ label: 'Templates' }]}>
   {#snippet actions()}
-    <button type="button" class="btn" onclick={openGallery}><LibraryBig size={15} />Template gallery</button>
+    <button type="button" class="btn" aria-label="Template gallery" use:tooltip={'Template gallery'} onclick={openGallery}>
+      <LibraryBig size={15} /><span class="wide-label">Template gallery</span>
+    </button>
     <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New template</button>
   {/snippet}
   <div class="page-body">
