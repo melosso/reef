@@ -15,6 +15,7 @@
     onadd,
     onundo,
     onredo,
+    ontidy,
     onclose,
     register,
   }: {
@@ -25,6 +26,7 @@
     onadd: (type: string) => void;
     onundo: () => void;
     onredo: () => void;
+    ontidy: () => void;
     onclose: () => void;
     register: (toFlow: (p: XYPosition) => XYPosition, reveal: (id: string, panel: number) => void) => void;
   } = $props();
@@ -85,8 +87,11 @@
     fitted = true;
     setTimeout(() => {
       flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
-        const start = flow.getNodes().find((n) => (n.data as { trigger?: boolean }).trigger);
-        if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
+        const data = (n: { data: unknown }) => n.data as { trigger?: boolean; status?: string | null };
+        const failed = flow.getNodes().find((n) => data(n).status === 'err');
+        const start = flow.getNodes().find((n) => data(n).trigger);
+        if (failed && flow.getViewport().zoom < 0.6) flow.setCenter(failed.position.x + 110, failed.position.y + 60, { zoom: 0.6 });
+        else if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
       });
     }, 50);
   });
@@ -104,6 +109,17 @@
       <Redo2 size={15} />
     </button>
     <span class="sep" aria-hidden="true"></span>
+    <button
+      type="button"
+      class="tb"
+      use:tooltip={'Arrange steps in run order'}
+      onclick={() => {
+        ontidy();
+        setTimeout(() => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 }), 50);
+      }}
+    >
+      Tidy up
+    </button>
     <button type="button" class="tb" onclick={() => flow.fitView({ padding: '48px', maxZoom: 1, duration: 200 })}>Fit</button>
     <button
       type="button"
@@ -194,6 +210,7 @@
   .tb {
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
     padding: 7px 10px;
     border: 0;
     border-radius: var(--radius);

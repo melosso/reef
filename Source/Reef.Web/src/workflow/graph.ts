@@ -6,6 +6,44 @@ import type { WorkflowNodeDefinition } from '../models/WorkflowNodeDefinition';
 
 export const PALETTE_ID = 'workflow-steps';
 
+const COLUMN = 300;
+const ROW = 160;
+const PER_ROW = 8;
+
+// Ranks steps by longest path and wraps every eight ranks
+export function tidy(workflow: Workflow): void {
+  const next = new Map<string, string[]>();
+  for (const e of workflow.edges) next.set(e.from, [...(next.get(e.from) ?? []), e.to]);
+  const incoming = new Set(workflow.edges.map((e) => e.to));
+  const rank = new Map<string, number>();
+  const path = new Set<string>();
+  const visit = (id: string, r: number) => {
+    if (path.has(id) || (rank.get(id) ?? -1) >= r) return;
+    rank.set(id, r);
+    path.add(id);
+    for (const to of next.get(id) ?? []) visit(to, r + 1);
+    path.delete(id);
+  };
+  workflow.nodes.filter((n) => !incoming.has(n.id)).forEach((n) => visit(n.id, 0));
+  workflow.nodes.forEach((n) => rank.has(n.id) || visit(n.id, 0));
+  const columns = new Map<number, typeof workflow.nodes>();
+  for (const n of workflow.nodes) columns.set(rank.get(n.id)!, [...(columns.get(rank.get(n.id)!) ?? []), n]);
+  const last = Math.max(0, ...rank.values());
+  let top = 0;
+  for (let row = 0; row * PER_ROW <= last; row++) {
+    let tallest = 1;
+    for (let col = 0; col < PER_ROW; col++) {
+      const column = columns.get(row * PER_ROW + col) ?? [];
+      column.forEach((n, i) => {
+        n.x = col * COLUMN;
+        n.y = top + i * ROW;
+      });
+      tallest = Math.max(tallest, column.length);
+    }
+    top += tallest * ROW + 80;
+  }
+}
+
 export const GROUPS = ['Triggers', 'Sources', 'Transform', 'Flow', 'Deliver', 'Hooks'];
 
 export function outputsOf(def: WorkflowNodeDefinition, config: Record<string, unknown>): string[] {
