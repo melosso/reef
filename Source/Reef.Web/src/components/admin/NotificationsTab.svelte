@@ -99,7 +99,7 @@
 
 {#if s}
   <form class="fields narrow" onsubmit={save}>
-    <label class="check"><input type="checkbox" role="switch" bind:checked={s.isEnabled} />Send email notifications</label>
+    <label class="check"><input type="checkbox" bind:checked={s.isEnabled} />Send email notifications</label>
     <div class="field">
       <label for="n-dest">Email destination</label>
       <select id="n-dest" bind:value={s.destinationId}>
@@ -126,7 +126,7 @@
       <legend>Database size</legend>
       <label class="check"><input type="checkbox" bind:checked={s.notifyOnDatabaseSizeThreshold} />Alert above the threshold</label>
       {#if s.notifyOnDatabaseSizeThreshold}<div class="field">
-          <label for="n-db">Threshold in MB</label><input id="n-db" type="number" min="1" bind:value={thresholdMb} />
+          <label for="n-db">Threshold in MB</label><input id="n-db" type="number" bind:value={thresholdMb} />
         </div>{/if}
     </fieldset>
 
@@ -137,7 +137,6 @@
           <label for="n-cool" use:tooltip={'Minimum time between two approval alerts'}>Cooldown in hours</label><input
             id="n-cool"
             type="number"
-            min="1"
             bind:value={s.newEmailApprovalCooldownHours}
           />
         </div>{/if}

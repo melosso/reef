@@ -31,7 +31,47 @@
     load();
   });
 
+  let selected = $state<string[]>([]);
+  const chosen = $derived(workflows.filter((w) => selected.includes(w.id!)));
+
+  function toggle(id: string) {
+    selected = selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id];
+  }
+
+  async function turnOff() {
+    busy = 'bulk';
+    const results = await Promise.allSettled(
+      chosen.filter((w) => w.active).map((w) => api.put(`/api/workflows/${w.id}`, { ...w, active: false })),
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed) notify.error(`${failed} ${failed === 1 ? 'workflow' : 'workflows'} could not be turned off`, { key: 'bulk' });
+    else notify.success('Workflows turned off', { key: 'bulk' });
+    selected = [];
+    busy = null;
+    await load();
+  }
+
+  async function removeChosen() {
+    const count = chosen.length;
+    const ok = await confirm({
+      title: `Delete ${count} ${count === 1 ? 'workflow' : 'workflows'}?`,
+      message: 'The workflows, their run history and their Smart Sync state are deleted.',
+      confirm: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    busy = 'bulk';
+    const results = await Promise.allSettled(chosen.map((w) => api.del(`/api/workflows/${w.id}`).then(() => forget(w.id!))));
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    if (failed) notify.error(`${failed} ${failed === 1 ? 'workflow' : 'workflows'} could not be deleted`, { key: 'bulk' });
+    else notify.success(`${count} ${count === 1 ? 'workflow' : 'workflows'} deleted`, { key: 'bulk' });
+    selected = [];
+    busy = null;
+    await load();
+  }
+
   const visible = $derived(workflows.filter((w) => w.name.toLowerCase().includes(search.trim().toLowerCase())));
+  const allVisible = $derived(visible.length > 0 && visible.every((w) => selected.includes(w.id!)));
 
   function triggers(w: Workflow): string {
     return [...new Set(w.nodes.filter((n) => TRIGGERS[n.type]).map((n) => TRIGGERS[n.type]))].join(', ') || 'None';
@@ -74,6 +114,11 @@
   <div class="page-body">
     <div class="toolbar">
       <input type="search" placeholder="Search name" aria-label="Search workflows" bind:value={search} />
+      {#if chosen.length}
+        <button type="button" class="btn" disabled={busy === 'bulk'} onclick={turnOff}>Turn off</button>
+        <button type="button" class="btn danger" disabled={busy === 'bulk'} onclick={removeChosen}>Delete</button>
+        <span class="muted"><span class="num">{chosen.length}</span> selected</span>
+      {/if}
       <span class="spacer"></span>
       <span class="muted"><span class="num">{visible.length}</span> of <span class="num">{workflows.length}</span></span>
     </div>
@@ -81,6 +126,14 @@
       <table class="data">
         <thead>
           <tr>
+            <th class="sel">
+              {#if visible.length}<input
+                  type="checkbox"
+                  aria-label="Select all workflows"
+                  checked={allVisible}
+                  onchange={() => (selected = allVisible ? [] : visible.map((w) => w.id!))}
+                />{/if}
+            </th>
             <th>Name</th><th>Triggers</th><th class="secondary">Steps</th><th>Updated</th><th>Status</th><th>
               <span class="sr">Actions</span>
             </th>
@@ -91,9 +144,12 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button')) navigate(`/workflows/${w.id}`);
+                if (!(e.target as Element).closest('button, input')) navigate(`/workflows/${w.id}`);
               }}
             >
+              <td class="sel">
+                <input type="checkbox" aria-label="Select {w.name}" checked={selected.includes(w.id!)} onchange={() => toggle(w.id!)} />
+              </td>
               <td class="strong">{w.name}</td>
               <td>{triggers(w)}</td>
               <td class="num secondary">{w.nodes.length}</td>
@@ -128,7 +184,7 @@
             </tr>
           {:else}
             <tr>
-              <td colspan="6" class="empty">
+              <td colspan="7" class="empty">
                 {#if !loaded}Loading workflows
                 {:else if workflows.length === 0}
                   <div class="empty-state">
@@ -145,3 +201,9 @@
     </div>
   </div>
 </Page>
+
+<style>
+  .sel {
+    width: 36px;
+  }
+</style>

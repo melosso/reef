@@ -32,4 +32,14 @@ public class DuplicateNameApiTests(ReefApiFactory factory)
         (await second.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonObject>(_ct))!["message"]!.GetValue<string>().Should().Contain("already exists");
     }
 
+    [Fact]
+    public async Task JobWithInvalidRetriesIsRejected()
+    {
+        var admin = await factory.CreateAdminClientAsync();
+
+        var response = await admin.PostAsJsonAsync("/api/jobs", new { name = $"Retry {Guid.NewGuid():N}", type = "Cleanup", scheduleType = "Manual", maxRetries = 50, isEnabled = true }, _ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync(_ct)).Should().Contain("Retries");
+    }
 }

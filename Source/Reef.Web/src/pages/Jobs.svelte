@@ -436,7 +436,7 @@
               }}
             >
               <td>
-                <span class="strong">{j.name}</span>{#if j.description}<span class="sub">{j.description}</span>{/if}
+                <span class="strong" use:tooltip={j.description}>{j.name}</span>
               </td>
               <td>{taskOf(j)}</td>
               <td>{schedule(j)}</td>
@@ -568,7 +568,7 @@
           </div>
         {:else if form.scheduleType === 2}
           <div class="field">
-            <label for="j-int">Interval in minutes</label><input id="j-int" type="number" min="1" bind:value={form.intervalMinutes} />
+            <label for="j-int">Interval in minutes</label><input id="j-int" type="number" bind:value={form.intervalMinutes} />
           </div>
         {:else if form.scheduleType >= 3}
           {#if form.scheduleType === 4}
@@ -586,7 +586,7 @@
           {/if}
           {#if form.scheduleType === 5}
             <div class="field">
-              <label for="j-mday">Day of the month</label><input id="j-mday" type="number" min="1" max="31" bind:value={form.monthDay} />
+              <label for="j-mday">Day of the month</label><input id="j-mday" type="number" bind:value={form.monthDay} />
             </div>
           {/if}
           <div class="field">
@@ -605,23 +605,17 @@
             </select>
           </div>
           <div class="field">
-            <label for="j-retry">Retries</label><input id="j-retry" type="number" min="0" max="10" bind:value={form.maxRetries} />
+            <label for="j-retry">Retries</label><input id="j-retry" type="number" bind:value={form.maxRetries} />
           </div>
         </div>
         <div class="field">
-          <label for="j-timeout">Timeout in minutes</label><input
-            id="j-timeout"
-            type="number"
-            min="1"
-            max="1440"
-            bind:value={form.timeoutMinutes}
-          />
+          <label for="j-timeout">Timeout in minutes</label><input id="j-timeout" type="number" bind:value={form.timeoutMinutes} />
         </div>
         <div class="field">
           <label for="j-tags">Tags</label><input id="j-tags" bind:value={form.tags} use:tooltip={'Comma-separated'} />
         </div>
         <label class="check"><input type="checkbox" bind:checked={form.allowConcurrent} />Allow concurrent runs</label>
-        <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />On</label>
+        <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />On</label>
         <label class="check" use:tooltip={'Pause the job after 10 consecutive failures'}>
           <input type="checkbox" bind:checked={form.autoPauseEnabled} />Auto-pause on repeated failures
         </label>
@@ -684,15 +678,6 @@
   .strong {
     font-weight: 500;
     display: block;
-  }
-  .sub {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    max-width: 320px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .queue {
     display: flex;

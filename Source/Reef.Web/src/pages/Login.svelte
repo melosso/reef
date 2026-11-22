@@ -159,7 +159,7 @@
       <form onsubmit={verify} class="fields">
         <div class="field">
           <label for="code" class="sr">Verification code</label>
-          <input id="code" class="code" bind:value={code} inputmode="numeric" autocomplete="one-time-code" maxlength="6" use:focus />
+          <input id="code" class="code" bind:value={code} inputmode="numeric" autocomplete="one-time-code" use:focus />
         </div>
         <button class="btn primary full" type="submit" aria-busy={busy} disabled={busy || code.length !== 6}>Verify</button>
       </form>

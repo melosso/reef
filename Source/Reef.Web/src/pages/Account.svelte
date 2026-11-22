@@ -230,7 +230,6 @@
                       class="number"
                       inputmode="numeric"
                       autocomplete="one-time-code"
-                      maxlength="7"
                       bind:value={verifyCode}
                     />
                   </div>
@@ -254,7 +253,6 @@
                   class="number"
                   inputmode="numeric"
                   autocomplete="one-time-code"
-                  maxlength="7"
                   bind:value={reconfirmCode}
                 />
               </div>

@@ -174,13 +174,13 @@
         <thead>
           <tr>
             {#if tab === 'pending'}<th class="sel">
-                <input
-                  type="checkbox"
-                  aria-label="Select all on this page"
-                  checked={allOnPage}
-                  indeterminate={someOnPage && !allOnPage}
-                  onchange={toggleAll}
-                />
+                {#if pageItems.length}<input
+                    type="checkbox"
+                    aria-label="Select all on this page"
+                    checked={allOnPage}
+                    indeterminate={someOnPage && !allOnPage}
+                    onchange={toggleAll}
+                  />{/if}
               </th>{/if}
             <th>Workflow</th>
             {#if tab === 'history'}<th>Status</th>{/if}

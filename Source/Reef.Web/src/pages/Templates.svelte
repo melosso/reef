@@ -442,7 +442,7 @@
               }}
             >
               <td>
-                <span class="strong">{t.name}</span>{#if t.description}<span class="sub">{t.description}</span>{/if}
+                <span class="strong" use:tooltip={t.description}>{t.name}</span>
               </td>
               <td>{TYPE_LABEL[t.type] ?? t.type}</td>
               <td>{t.outputFormat}</td>
@@ -592,7 +592,7 @@
           />
         </div>
       </div>
-      <label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />On</label>
+      <label class="check"><input type="checkbox" bind:checked={form.isActive} />On</label>
       {#if preview !== null}
         <section class="fields">
           <h3 class="row">
@@ -686,15 +686,6 @@
   .strong {
     font-weight: 500;
     display: block;
-  }
-  .sub {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    max-width: 420px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .vrow {
     display: flex;

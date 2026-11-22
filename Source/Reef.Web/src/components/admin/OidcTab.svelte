@@ -57,7 +57,7 @@
       Reef supports one OpenID Connect provider, for example Pocket ID or Microsoft Entra ID. Sign-in matches accounts by username or
       verified email address.
     </p>
-    <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
+    <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
     <div class="field">
       <label for="o-name" use:tooltip={'Displayed on the sign-in button'}>Provider name</label><input
         id="o-name"

@@ -177,7 +177,7 @@
           {form.id ? 'New password' : 'Password'}
         </label><input id="u-pass" type="password" autocomplete="new-password" bind:value={form.password} />
       </div>
-      {#if form.id}<label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />On</label>{/if}
+      {#if form.id}<label class="check"><input type="checkbox" bind:checked={form.isActive} />On</label>{/if}
     </form>
     {#snippet footer()}
       <button type="button" class="btn" onclick={() => (form = null)}>Cancel</button>

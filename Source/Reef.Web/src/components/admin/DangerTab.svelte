@@ -63,7 +63,7 @@
     <div class="panel-head"><h3>Delete old audit entries</h3></div>
     <div class="panel-body row">
       <div class="field">
-        <label for="dz-audit">Keep entries from the last days</label><input id="dz-audit" type="number" min="90" bind:value={auditDays} />
+        <label for="dz-audit">Keep entries from the last days</label><input id="dz-audit" type="number" bind:value={auditDays} />
       </div>
       <button type="button" class="btn danger" onclick={() => retention('audits')}>Delete older entries</button>
     </div>
@@ -72,12 +72,7 @@
     <div class="panel-head"><h3>Delete old executions</h3></div>
     <div class="panel-body row">
       <div class="field">
-        <label for="dz-exec">Keep executions from the last days</label><input
-          id="dz-exec"
-          type="number"
-          min="1"
-          bind:value={executionDays}
-        />
+        <label for="dz-exec">Keep executions from the last days</label><input id="dz-exec" type="number" bind:value={executionDays} />
       </div>
       <button type="button" class="btn danger" onclick={() => retention('executions')}>Delete older executions</button>
     </div>

@@ -158,10 +158,23 @@ public class JobService
         return jobs;
     }
 
-    public async Task<Job> CreateAsync(Job job)
+    private static void Validate(Job job)
     {
         if (job.Type == JobType.ProfileExecution)
             throw new InvalidOperationException("Profile jobs became schedule steps in workflows");
+        if (job.ScheduleType == ScheduleType.Interval && job.IntervalMinutes is not > 0)
+            throw new InvalidOperationException("Interval in minutes must be 1 or more");
+        if (job.ScheduleType == ScheduleType.Monthly && job.MonthDay is not (>= 1 and <= 31))
+            throw new InvalidOperationException("Day of the month must be between 1 and 31");
+        if (job.MaxRetries is < 0 or > 10)
+            throw new InvalidOperationException("Retries must be between 0 and 10");
+        if (job.TimeoutMinutes is < 1 or > 1440)
+            throw new InvalidOperationException("Timeout in minutes must be between 1 and 1440");
+    }
+
+    public async Task<Job> CreateAsync(Job job)
+    {
+        Validate(job);
         // Validate job configuration before creating
 
         using var conn = new SqliteConnection(_connectionString);
@@ -210,8 +223,7 @@ public class JobService
 
     public async Task<bool> UpdateAsync(Job job)
     {
-        if (job.Type == JobType.ProfileExecution)
-            throw new InvalidOperationException("Profile jobs became schedule steps in workflows");
+        Validate(job);
         var jobLock = _jobLocks.GetOrAdd(job.Id, _ => new SemaphoreSlim(1, 1));
         await jobLock.WaitAsync();
         try
