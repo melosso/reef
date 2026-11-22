@@ -9,7 +9,7 @@ namespace Reef.Core.Workflows.Engine;
 
 public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, NodeInvoker invoker, Reef.Core.Services.NotificationService notifications)
 {
-    private const int SampleRows = 20;
+    private const int SampleCount = 20;
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public async Task<WorkflowExecution> RunAsync(int workflowId, string? triggerNodeId, WorkflowItems? triggerItems = null, CancellationToken ct = default)
@@ -79,7 +79,7 @@ public class WorkflowEngine(WorkflowService workflows, WorkflowRunStore runs, No
                     record.OutputSampleJson = JsonSerializer.Serialize(outputs.ToDictionary(o => o.Key, o => new
                     {
                         o.Value.Columns,
-                        Items = o.Value.Items.Take(SampleRows),
+                        Items = SampleRows.Take(o.Value.Items, SampleCount),
                         o.Value.Files,
                         Total = o.Value.Items.Count
                     }), Json);

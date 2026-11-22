@@ -66,7 +66,7 @@ public static class WorkflowsEndpoints
             var result = await tester.TestAsync(id, node, await JsonItems.ReadAsync(request.Body, ct), ct);
             return Results.Ok(new
             {
-                outputs = result.Outputs.ToDictionary(o => o.Key, o => new { o.Value.Columns, Items = o.Value.Items.Take(TestRows), o.Value.Files, Total = o.Value.Items.Count }),
+                outputs = result.Outputs.ToDictionary(o => o.Key, o => new { o.Value.Columns, Items = SampleRows.Take(o.Value.Items, TestRows), o.Value.Files, Total = o.Value.Items.Count }),
                 warning = result.Warning
             });
         }
