@@ -209,7 +209,12 @@
       <p class="muted">Loading run</p>
     {/if}
     {#snippet footer()}
-      <button type="button" class="btn" disabled={!detailWorkflow} onclick={() => navigate(`/workflows/${detail!.workflowId}`)}>
+      <button
+        type="button"
+        class="btn"
+        disabled={!detailWorkflow}
+        onclick={() => navigate(`/workflows/${detail!.workflowId}?run=${detail!.id}`)}
+      >
         <Pencil size={14} />Open in editor
       </button>
       <button type="button" class="btn primary" aria-busy={rerunning} disabled={!detailWorkflow || rerunning} onclick={rerun}>

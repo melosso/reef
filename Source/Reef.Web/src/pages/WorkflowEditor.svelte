@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { Background, BackgroundVariant, SvelteFlow, type Connection, type Edge, type Node, type XYPosition } from '@xyflow/svelte';
+  import { Background, BackgroundVariant, Panel, SvelteFlow, type Connection, type Edge, type Node, type XYPosition } from '@xyflow/svelte';
   import { Play, Settings2, X } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
   import { api, ApiError, type FieldError } from '../lib/api';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
-  import { match, navigate, route, setLeaveGuard } from '../lib/router.svelte';
+  import { formatDateTime } from '../lib/format';
+  import { match, navigate, route, setLeaveGuard, setQuery } from '../lib/router.svelte';
   import { remember } from '../lib/recent.svelte';
   import { tooltip } from '../lib/tooltip';
   import { runWorkflow } from '../lib/workflows';
@@ -117,8 +118,23 @@
 
   async function loadRun() {
     if (!doc?.id) return;
+    const pinned = route.query.get('run');
+    const picked = pinned ? await api.get<WorkflowExecution>(`/api/workflow-executions/${pinned}`).catch(() => null) : null;
+    if (picked?.workflowId === doc.id) {
+      run = picked;
+      const failed = picked.nodes.find((n) => n.status === 'Failed');
+      if (failed && doc.nodes.some((n) => n.id === failed.nodeId)) select(failed.nodeId);
+      return;
+    }
+    if (pinned) setQuery('run', null);
     const list = await api.get<WorkflowExecution[]>(`/api/workflows/${doc.id}/executions`).catch(() => []);
     run = list[0] ? await api.get<WorkflowExecution>(`/api/workflow-executions/${list[0].id}`).catch(() => null) : null;
+  }
+
+  async function showLatest() {
+    setQuery('run', null);
+    await loadRun();
+    revision++;
   }
 
   function summary(node: WorkflowNode, def: WorkflowNodeDefinition): string {
@@ -255,6 +271,12 @@
 
   function removeNode(id: string) {
     if (!doc) return;
+    const removed = doc.nodes.find((n) => n.id === id);
+    if (removed)
+      notify.info(`${removed.name || definition(removed.type)?.label || removed.type} deleted`, {
+        key: 'step-delete',
+        action: { label: 'Undo', onClick: undo },
+      });
     doc.nodes = doc.nodes.filter((n) => n.id !== id);
     doc.edges = doc.edges.filter((e) => e.from !== id && e.to !== id);
     errors = errors.filter((e) => e.nodeId !== id);
@@ -322,6 +344,7 @@
       const started = await runWorkflow(doc);
       if (!started) return;
       run = await api.get<WorkflowExecution>(`/api/workflow-executions/${started.id}`);
+      setQuery('run', null);
       remember({ id: doc.id, name, status: run.status === 'Failed' ? 'err' : 'ok' });
       revision++;
     } catch (e) {
@@ -467,6 +490,14 @@
           }}
           onmove={(_, viewport) => (zoom = viewport.zoom)}
         >
+          {#if run && route.query.get('run') === run.id}
+            <Panel position="top-center">
+              <div class="pinned" role="status">
+                Run from {formatDateTime(run.startedAt)}
+                <button type="button" class="btn ghost" onclick={showLatest}>Show latest run</button>
+              </div>
+            </Panel>
+          {/if}
           <Background variant={BackgroundVariant.Dots} gap={20} size={1.2} patternColor="var(--dot)" bgColor="var(--bg)" />
           <WorkflowToolbar
             {catalog}
@@ -629,6 +660,17 @@
     flex: 1;
     overflow: auto;
     padding: 18px 20px 24px;
+  }
+  .pinned {
+    display: flex;
+    white-space: nowrap;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 4px 4px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px var(--shadow);
   }
   .check {
     display: flex;

@@ -81,7 +81,11 @@
                 <tr class="clickable" onclick={() => navigate(`/executions/${f.executionId}`)}>
                   <td class="mark"><StatusMark kind="err" label="Failed" /></td>
                   <td>
-                    <a class="strong" href="/workflows/{f.workflowId}" onclick={(e) => open(e, `/workflows/${f.workflowId}`)}>
+                    <a
+                      class="strong"
+                      href="/workflows/{f.workflowId}?run={f.executionId}"
+                      onclick={(e) => open(e, `/workflows/${f.workflowId}?run=${f.executionId}`)}
+                    >
                       {f.workflowName}
                     </a>
                   </td>
