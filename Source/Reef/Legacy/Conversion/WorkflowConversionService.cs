@@ -6,8 +6,9 @@ using Microsoft.Data.Sqlite;
 using Reef.Core.Services;
 using Reef.Core.Workflows.Engine.Executors;
 using Reef.Core.Workflows.Models;
+using Reef.Core.Workflows;
 
-namespace Reef.Core.Workflows.Conversion;
+namespace Reef.Legacy.Conversion;
 
 public class WorkflowConversionService(LegacyProfileReader legacy, WorkflowService workflows, DatabaseConfig config)
 {

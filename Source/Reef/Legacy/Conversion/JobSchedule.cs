@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using Reef.Core.Models;
 
-namespace Reef.Core.Workflows.Conversion;
+namespace Reef.Legacy.Conversion;
 
 public static class JobSchedule
 {

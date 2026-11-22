@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using Reef.Core.Models;
 using Reef.Core.Workflows.Models;
 
-namespace Reef.Core.Workflows.Conversion;
+namespace Reef.Legacy.Conversion;
 
 public static class ProfileWorkflowConverter
 {

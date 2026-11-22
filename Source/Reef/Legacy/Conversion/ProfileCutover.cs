@@ -2,7 +2,7 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using Serilog;
 
-namespace Reef.Core.Workflows.Conversion;
+namespace Reef.Legacy.Conversion;
 
 // One time profile to workflow cutover
 public class ProfileCutover(LegacyProfileReader legacy, WorkflowConversionService conversions, DatabaseConfig config)

@@ -6,7 +6,7 @@ using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Reef.Core.Services;
-using Reef.Core.Workflows.Conversion;
+using Reef.Legacy.Conversion;
 using Xunit;
 
 namespace Reef.Tests.Api;

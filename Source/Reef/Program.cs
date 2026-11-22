@@ -237,7 +237,7 @@ public partial class Program
             }
 
             using (var scope = app.Services.CreateScope())
-                await scope.ServiceProvider.GetRequiredService<Reef.Core.Workflows.Conversion.ProfileCutover>().RunAsync();
+                await scope.ServiceProvider.GetRequiredService<Reef.Legacy.Conversion.ProfileCutover>().RunAsync();
 
             // Configure HTTP pipeline
             await ConfigureMiddleware(app);
@@ -347,9 +347,9 @@ public partial class Program
         services.AddScoped<Reef.Core.Workflows.Engine.NodeTester>();
         services.AddScoped<Reef.Core.Workflows.Triggers.WorkflowScheduler>();
         services.AddHostedService<Reef.Core.Workflows.Triggers.WorkflowSchedulerService>();
-        services.AddScoped<Reef.Core.Workflows.Conversion.WorkflowConversionService>();
-        services.AddSingleton<Reef.Core.Workflows.Conversion.LegacyProfileReader>();
-        services.AddScoped<Reef.Core.Workflows.Conversion.ProfileCutover>();
+        services.AddScoped<Reef.Legacy.Conversion.WorkflowConversionService>();
+        services.AddSingleton<Reef.Legacy.Conversion.LegacyProfileReader>();
+        services.AddScoped<Reef.Legacy.Conversion.ProfileCutover>();
         foreach (var executor in typeof(Reef.Core.Workflows.Engine.INodeExecutor).Assembly.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(Reef.Core.Workflows.Engine.INodeExecutor).IsAssignableFrom(t)))
             services.AddScoped(typeof(Reef.Core.Workflows.Engine.INodeExecutor), executor);

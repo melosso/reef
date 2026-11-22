@@ -2,7 +2,7 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Models;
 
-namespace Reef.Core.Workflows.Conversion;
+namespace Reef.Legacy.Conversion;
 
 // Profile rows for the cutover
 public class LegacyProfileReader(DatabaseConfig config)
