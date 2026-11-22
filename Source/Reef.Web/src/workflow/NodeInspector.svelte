@@ -35,6 +35,7 @@
     onrun,
     onconnect,
     ondisconnect,
+    labelOf,
   }: {
     workflow: Workflow;
     node: WorkflowNode;
@@ -50,11 +51,12 @@
     onrun: () => void;
     onconnect: (port: string, target: string) => void;
     ondisconnect: (port: string, target: string) => void;
+    labelOf: (id: string) => string;
   } = $props();
 
   const FULL_RUN_ONLY = ['Deliver', 'Hooks'];
   let wide = $state(false);
-  const nameOf = (id: string) => workflow.nodes.find((n) => n.id === id)?.name || id;
+  const nameOf = (id: string) => labelOf(id);
   const ports = $derived(outputsOf(def, node.config));
   const outgoing = $derived(workflow.edges.filter((e) => e.from === node.id));
   const targets = $derived(
@@ -148,7 +150,7 @@
     <div class="fields">
       <div class="field">
         <label for="node-name" use:tooltip={`Shown on the card. Empty uses ${def.label}`}>Name</label>
-        <input id="node-name" value={node.name ?? ''} oninput={(e) => onrename(e.currentTarget.value)} />
+        <input id="node-name" value={node.name ?? ''} placeholder={def.label} oninput={(e) => onrename(e.currentTarget.value)} />
       </div>
       {#each fields as field (field.key)}
         <FieldControl {field} config={node.config} {options} error={errorFor(field.key)} onchange={() => onchange(field.key)} />
@@ -207,7 +209,7 @@
             >
               <option value="">{ports.length > 1 ? `Connect ${port} to` : 'Connect to'}</option>
               {#each targets.filter((t) => !outgoing.some((o) => o.fromPort === port && o.to === t.id)) as t (t.id)}
-                <option value={t.id}>{t.name || t.id}</option>
+                <option value={t.id}>{labelOf(t.id)}</option>
               {/each}
             </select>
           {/each}

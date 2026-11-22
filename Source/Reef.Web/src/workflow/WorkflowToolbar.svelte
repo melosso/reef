@@ -86,7 +86,7 @@
     setTimeout(() => {
       flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
         const start = flow.getNodes().find((n) => (n.data as { trigger?: boolean }).trigger);
-        if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 400, start.position.y + 60, { zoom: 0.8 });
+        if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
       });
     }, 50);
   });
@@ -148,6 +148,7 @@
           type="button"
           draggable="true"
           class:active={flat[active]?.type === def.type}
+          onmouseenter={() => (active = flat.findIndex((f) => f.type === def.type))}
           use:tooltip={{ text: def.tooltip, placement: 'right' }}
           ondragstart={(e) => {
             e.dataTransfer?.setData('application/x-reef-node', def.type);
@@ -275,7 +276,6 @@
     text-align: left;
     cursor: grab;
   }
-  .menu button:hover,
   .menu button.active {
     background: var(--hover);
   }

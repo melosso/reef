@@ -144,7 +144,9 @@
               <td>
                 <span use:tooltip={run.errorMessage}><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></span>
               </td>
-              <td class="muted trunc secondary">{run.errorMessage?.split('\n')[0] ?? ''}</td>
+              <td class="muted trunc secondary">
+                {run.errorMessage?.split('\n')[0] ?? (run.status === 'Failed' ? 'No error message recorded' : '')}
+              </td>
               <td><span use:tooltip={formatDateTime(run.startedAt)}>{formatRelative(run.startedAt)}</span></td>
               <td class="num">{duration(run)}</td>
             </tr>

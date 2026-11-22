@@ -83,7 +83,14 @@
       {#if status}<div class="status">{@render status()}</div>{/if}
     </div>
     <div class="center">
-      <button type="button" class="command" onclick={openCommandBar} aria-keyshortcuts="Control+K">
+      <button
+        type="button"
+        class="command"
+        onclick={openCommandBar}
+        aria-keyshortcuts="Control+K"
+        aria-label="Search or run a command"
+        use:tooltip={'Search or run a command (Ctrl K)'}
+      >
         <Search size={15} />
         <span>Search or run a command</span>
         <kbd>Ctrl K</kbd>

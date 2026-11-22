@@ -112,12 +112,12 @@
             </tbody>
           </table>
         {:else}
-          <div class="panel-body">
+          <div class="panel-body calm">
             {#if attention.last24h.failed}
-              <StatusMark
-                kind="warn"
-                label="No workflow is failing now. {formatNumber(attention.last24h.failed)} earlier runs failed in the last 24 hours."
-              />
+              <StatusMark kind="ok" label="No workflow is failing now." />
+              <a class="failed" href="/executions?status=Failed">
+                {formatNumber(attention.last24h.failed)} earlier runs failed in the last 24 hours
+              </a>
             {:else}<StatusMark kind="ok" label="Every workflow's latest run succeeded." />{/if}
           </div>
         {/if}
@@ -171,6 +171,11 @@
 </Page>
 
 <style>
+  .calm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+  }
   .failed {
     color: var(--err);
   }

@@ -122,6 +122,8 @@
   }
 
   function summary(node: WorkflowNode, def: WorkflowNodeDefinition): string {
+    if (node.type === 'manual') return 'Run, API or Ctrl K';
+    if (node.type === 'webhook') return node.config.TokenHash ? 'Webhook URL is set' : 'No webhook URL yet';
     if (node.type === 'schedule')
       return textOf(node.config.Repeat) === 'Interval'
         ? `Every ${textOf(node.config.EveryMinutes)} min`
@@ -500,6 +502,10 @@
           onremove={() => removeNode(selectedNode!.id)}
           onclose={close}
           onrun={runNow}
+          labelOf={(id) => {
+            const n = doc!.nodes.find((x) => x.id === id);
+            return n?.name || definition(n?.type ?? '')?.label || id;
+          }}
           onconnect={(port, target) => {
             const input = definition(doc!.nodes.find((n) => n.id === target)?.type ?? '')?.inputs[0] ?? 'main';
             connect({ source: selectedNode!.id, sourceHandle: port, target, targetHandle: input });
