@@ -75,6 +75,7 @@
       <StaleWebAssetFiles Include="$(IntermediateOutputPath)staticwebassets*;$(IntermediateOutputPath)*.dswa.cache.json;$(IntermediateOutputPath)compressed/**" />
     </ItemGroup>
     <Delete Files="@(StaleWebAssetFiles)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
     <Touch Files="$(IntermediateOutputPath)webassets.stamp" AlwaysCreate="true" />
   </Target>
 
