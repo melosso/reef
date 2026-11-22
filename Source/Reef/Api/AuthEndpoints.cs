@@ -212,6 +212,7 @@ public static class AuthEndpoints
     {
         var authGroup = app.MapGroup("/api/auth");
 
+        authGroup.MapPost("/identify", Identify).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/login", Login).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/mfa", VerifyMfa).AddEndpointFilter(new OriginValidationFilter());
         authGroup.MapPost("/verify-otp", VerifyMfa).AddEndpointFilter(new OriginValidationFilter());
@@ -221,6 +222,12 @@ public static class AuthEndpoints
         authGroup.MapPost("/logout", Logout);
         authGroup.MapPost("/resend-otp", ResendOtp).AddEndpointFilter(new OriginValidationFilter());
     }
+
+    // Sign in step one check
+    private static IResult Identify([FromBody] IdentifyRequest request) =>
+        string.IsNullOrWhiteSpace(request.Username)
+            ? Results.BadRequest(new { error = "Enter your email address", errors = new[] { new { field = "Username", message = "Enter your email address" } } })
+            : Results.NoContent();
 
     /// <summary>
     /// Login endpoint - validates credentials and returns JWT token

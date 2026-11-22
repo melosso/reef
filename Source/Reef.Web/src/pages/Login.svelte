@@ -2,7 +2,7 @@
   import type { LoginResult } from '../models/LoginResult';
   import { onMount } from 'svelte';
   import Logo from '../components/Logo.svelte';
-  import { request } from '../lib/api';
+  import { ApiError, request } from '../lib/api';
   import { navigate, route } from '../lib/router.svelte';
   import { session, storeSession } from '../lib/session.svelte';
   import { notify } from '../lib/notify';
@@ -16,6 +16,7 @@
   };
 
   let username = $state('');
+  let usernameError = $state(false);
   let step = $state<'email' | 'password'>('email');
   let password = $state('');
   let code = $state('');
@@ -41,9 +42,16 @@
       .catch(() => {});
   });
 
-  function proceed(e: SubmitEvent) {
+  async function proceed(e: SubmitEvent) {
     e.preventDefault();
-    step = 'password';
+    try {
+      await request('POST', '/api/auth/identify', { username });
+      usernameError = false;
+      step = 'password';
+    } catch (error) {
+      usernameError = error instanceof ApiError && error.errors.some((x) => x.field === 'Username');
+      notify.fail(error, 'sign-in');
+    }
   }
 
   async function signIn(e: SubmitEvent) {
@@ -113,6 +121,8 @@
             <input
               id="username"
               bind:value={username}
+              aria-invalid={usernameError ? 'true' : undefined}
+              oninput={() => (usernameError = false)}
               inputmode="email"
               autocomplete="username"
               autocapitalize="none"
