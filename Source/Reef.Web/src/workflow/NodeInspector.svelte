@@ -125,7 +125,15 @@
     <button type="button" class="btn ghost icon" aria-label="Close panel" onclick={onclose}><X size={15} /></button>
   </div>
   <div class="tabs" role="tablist">
-    <button type="button" role="tab" aria-selected={tab === 'settings'} onclick={() => (tab = 'settings')}>Settings</button>
+    <button
+      type="button"
+      role="tab"
+      aria-selected={tab === 'settings'}
+      use:tooltip={'Text fields accept {{ }} expressions: json.Column for the current row, node.stepid.first for an earlier step, run_index for the pass'}
+      onclick={() => (tab = 'settings')}
+    >
+      Settings
+    </button>
     <button type="button" role="tab" aria-selected={tab === 'input'} onclick={() => (tab = 'input')}>Input</button>
     <button type="button" role="tab" aria-selected={tab === 'output'} onclick={() => (tab = 'output')}>Output</button>
     <button type="button" role="tab" aria-selected={tab === 'run'} onclick={() => (tab = 'run')}>Last run</button>
