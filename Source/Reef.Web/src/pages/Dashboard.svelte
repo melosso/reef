@@ -58,6 +58,13 @@
         ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
       : [],
   );
+  const upNextGroups = $derived.by(() => {
+    const groups: Record<string, (typeof upNext)[number][]> = {};
+    for (const item of upNext) (groups[item.at.slice(0, 16)] ??= []).push(item);
+    return Object.values(groups)
+      .slice(0, 6)
+      .map((items) => ({ ...items[0], more: items.length - 1 }));
+  });
   const issues = $derived((attention?.failed.length ?? 0) + (attention?.anomalies.length ?? 0) + (approvals ? 1 : 0));
 </script>
 
@@ -80,7 +87,7 @@
               {#each attention.failed as f (f.executionId)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${f.executionId}`)}>
                   <td class="mark"><StatusMark kind="err" label="Failed" /></td>
-                  <td>
+                  <td class="name">
                     <a
                       class="strong"
                       href="/workflows/{f.workflowId}?run={f.executionId}"
@@ -96,7 +103,7 @@
               {#each attention.anomalies as a (a.executionId)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${a.executionId}`)}>
                   <td class="mark"><StatusMark kind="warn" label={a.reason === 'rows' ? 'Fewer rows' : 'Slower'} /></td>
-                  <td>
+                  <td class="name">
                     <a class="strong" href="/workflows/{a.workflowId}" onclick={(e) => open(e, `/workflows/${a.workflowId}`)}>
                       {a.workflowName}
                     </a>
@@ -135,9 +142,11 @@
         {#if upNext.length}
           <table class="data">
             <tbody>
-              {#each upNext as item (item.key)}
-                <tr class="clickable" onclick={() => navigate(item.href)}>
-                  <td class="strong">{item.name}</td>
+              {#each upNextGroups as item (item.key)}
+                <tr class="clickable" onclick={() => navigate(item.more ? '/workflows' : item.href)}>
+                  <td class="strong">
+                    {item.name}{#if item.more}<span class="muted">{` and ${formatNumber(item.more)} more`}</span>{/if}
+                  </td>
                   <td class="when"><span use:tooltip={formatDateTime(item.at)}>{formatRelative(item.at)}</span></td>
                 </tr>
               {/each}
@@ -190,6 +199,9 @@
     font-weight: 500;
     color: var(--ink);
     text-decoration: none;
+  }
+  td.name {
+    white-space: nowrap;
   }
   td.mark {
     width: 1%;
