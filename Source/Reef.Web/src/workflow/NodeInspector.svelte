@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Copy, FlaskConical, Link, Play, Trash2, X } from '@lucide/svelte';
+  import { Copy, FlaskConical, Link, Maximize2, Minimize2, Play, Trash2, X } from '@lucide/svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
   import { formatDateTime, formatDuration } from '../lib/format';
@@ -18,7 +18,7 @@
   import type { WorkflowNode } from '../models/WorkflowNode';
   import type { WorkflowNodeDefinition } from '../models/WorkflowNodeDefinition';
   import ItemsTable from './ItemsTable.svelte';
-  import { lastPass, samples } from './graph';
+  import { lastPass, outputsOf, samples } from './graph';
 
   let {
     workflow,
@@ -33,6 +33,8 @@
     onremove,
     onclose,
     onrun,
+    onconnect,
+    ondisconnect,
   }: {
     workflow: Workflow;
     node: WorkflowNode;
@@ -46,9 +48,18 @@
     onremove: () => void;
     onclose: () => void;
     onrun: () => void;
+    onconnect: (port: string, target: string) => void;
+    ondisconnect: (port: string, target: string) => void;
   } = $props();
 
   const FULL_RUN_ONLY = ['Deliver', 'Hooks'];
+  let wide = $state(false);
+  const nameOf = (id: string) => workflow.nodes.find((n) => n.id === id)?.name || id;
+  const ports = $derived(outputsOf(def, node.config));
+  const outgoing = $derived(workflow.edges.filter((e) => e.from === node.id));
+  const targets = $derived(
+    workflow.nodes.filter((n) => n.id !== node.id && n.type !== 'manual' && n.type !== 'schedule' && n.type !== 'webhook'),
+  );
   let tab = $state<'settings' | 'input' | 'output' | 'run'>('settings');
   let test = $state<NodeTestResult | null>(null);
   let testing = $state(false);
@@ -109,7 +120,7 @@
   }
 </script>
 
-<aside class="inspector" aria-label="{def.label} step">
+<aside class="inspector" class:wide aria-label="{def.label} step">
   <div class="ihead">
     <span class="iicon"><Icon size={16} /></span>
     <h2 use:tooltip={{ text: def.tooltip, placement: 'bottom-start' }}>{node.name || def.label}</h2>
@@ -122,107 +133,205 @@
     >
       <Trash2 size={15} />
     </button>
-    <button type="button" class="btn ghost icon" aria-label="Close panel" onclick={onclose}><X size={15} /></button>
-  </div>
-  <div class="tabs" role="tablist">
     <button
       type="button"
-      role="tab"
-      aria-selected={tab === 'settings'}
-      use:tooltip={'Text fields accept {{ }} expressions: json.Column for the current row, node.stepid.first for an earlier step, run_index for the pass'}
-      onclick={() => (tab = 'settings')}
+      class="btn ghost icon"
+      aria-label={wide ? 'Show tabs' : 'Show input, settings and output side by side'}
+      use:tooltip={wide ? 'Show tabs' : 'Input, settings and output side by side'}
+      onclick={() => (wide = !wide)}
     >
-      Settings
+      {#if wide}<Minimize2 size={15} />{:else}<Maximize2 size={15} />{/if}
     </button>
-    <button type="button" role="tab" aria-selected={tab === 'input'} onclick={() => (tab = 'input')}>Input</button>
-    <button type="button" role="tab" aria-selected={tab === 'output'} onclick={() => (tab = 'output')}>Output</button>
-    <button type="button" role="tab" aria-selected={tab === 'run'} onclick={() => (tab = 'run')}>Last run</button>
+    <button type="button" class="btn ghost icon" aria-label="Close panel" onclick={onclose}><X size={15} /></button>
   </div>
-  <div class="ibody">
-    {#if tab === 'settings'}
-      <div class="fields">
+  {#snippet settingsView()}
+    <div class="fields">
+      <div class="field">
+        <label for="node-name" use:tooltip={`Shown on the card. Empty uses ${def.label}`}>Name</label>
+        <input id="node-name" value={node.name ?? ''} oninput={(e) => onrename(e.currentTarget.value)} />
+      </div>
+      {#each fields as field (field.key)}
+        <FieldControl {field} config={node.config} {options} error={errorFor(field.key)} onchange={() => onchange(field.key)} />
+      {/each}
+      {#if def.type === 'webhook'}
         <div class="field">
-          <label for="node-name" use:tooltip={`Shown on the card. Empty uses ${def.label}`}>Name</label>
-          <input id="node-name" value={node.name ?? ''} oninput={(e) => onrename(e.currentTarget.value)} />
+          <span class="label">Webhook URL</span>
+          {#if hookUrl}
+            <div class="url">
+              <code>{hookUrl}</code>
+              <button type="button" class="btn ghost icon" aria-label="Copy URL" use:tooltip={'Copy'} onclick={() => copyText(hookUrl!)}>
+                <Copy size={14} />
+              </button>
+            </div>
+          {/if}
+          <button
+            type="button"
+            class="btn"
+            disabled={!workflow.id || dirty}
+            use:tooltip={!workflow.id || dirty
+              ? 'Save the workflow first'
+              : node.config.TokenHash
+                ? 'Replaces the current URL. Callers of the old URL get 404.'
+                : 'POST JSON to this URL to start the workflow'}
+            onclick={createUrl}
+          >
+            <Link size={14} />{node.config.TokenHash ? 'Replace URL' : 'Create URL'}
+          </button>
         </div>
-        {#each fields as field (field.key)}
-          <FieldControl {field} config={node.config} {options} error={errorFor(field.key)} onchange={() => onchange(field.key)} />
-        {/each}
-        {#if def.type === 'webhook'}
-          <div class="field">
-            <span class="label">Webhook URL</span>
-            {#if hookUrl}
-              <div class="url">
-                <code>{hookUrl}</code>
-                <button type="button" class="btn ghost icon" aria-label="Copy URL" use:tooltip={'Copy'} onclick={() => copyText(hookUrl!)}>
-                  <Copy size={14} />
-                </button>
-              </div>
-            {/if}
-            <button
-              type="button"
-              class="btn"
-              disabled={!workflow.id || dirty}
-              use:tooltip={!workflow.id || dirty
-                ? 'Save the workflow first'
-                : node.config.TokenHash
-                  ? 'Replaces the current URL. Callers of the old URL get 404.'
-                  : 'POST JSON to this URL to start the workflow'}
-              onclick={createUrl}
-            >
-              <Link size={14} />{node.config.TokenHash ? 'Replace URL' : 'Create URL'}
-            </button>
-          </div>
-        {/if}
-      </div>
-    {:else if tab === 'input'}
-      <ItemsTable
-        outputs={input}
-        empty={def.inputs.length
-          ? 'No input yet. Run the workflow to see the rows that reach this step.'
-          : 'Triggers start the workflow and have no input.'}
-      />
-    {:else if tab === 'output'}
-      <div class="testbar">
-        <span class="muted">{test ? 'Test result' : latest ? `Run ${formatDateTime(latest.startedAt)}` : ''}</span>
-        <button
-          type="button"
-          class="btn"
-          aria-busy={testing}
-          disabled={!!testBlocked || testing}
-          use:tooltip={testBlocked ?? 'Run this step alone with its input rows'}
-          onclick={runTest}
-        >
-          <FlaskConical size={14} />Test step
-        </button>
-      </div>
-      <ItemsTable outputs={output} empty="No output yet. Run the workflow or test this step." />
-    {:else}
-      {#if latest && run}
-        <dl class="facts">
-          <dt>Status</dt>
-          <dd>
-            <StatusMark kind={latest.status === 'Failed' ? 'err' : latest.status === 'Skipped' ? 'off' : 'ok'} label={latest.status} />
-          </dd>
-          <dt>Started</dt>
-          <dd>{formatDateTime(latest.startedAt)}</dd>
-          <dt>Duration</dt>
-          <dd class="num">{latest.completedAt ? formatDuration(Date.parse(latest.completedAt) - Date.parse(latest.startedAt)) : ''}</dd>
-          <dt>Rows out</dt>
-          <dd class="num">{latest.rowCount}</dd>
-          {#if passes.length > 1}<dt>Passes</dt>
-            <dd class="num">{passes.length}</dd>{/if}
-        </dl>
-        {#if latest.errorMessage}<pre class="error">{latest.errorMessage}</pre>{/if}
-      {:else}
-        <p class="muted">{run ? 'This step did not run in the last run.' : 'The workflow has not run yet.'}</p>
       {/if}
-      <button type="button" class="btn" onclick={onrun}><Play size={14} />{run ? 'Run again' : 'Run workflow'}</button>
+      {#if ports.length}
+        <div class="field">
+          <span class="label">Next steps</span>
+          {#each outgoing as edge (edge.fromPort + edge.to)}
+            <div class="link-row">
+              <span>{ports.length > 1 ? `${edge.fromPort}: ` : ''}{nameOf(edge.to)}</span>
+              <button
+                type="button"
+                class="btn ghost icon"
+                aria-label="Remove connection to {nameOf(edge.to)}"
+                use:tooltip={'Remove connection'}
+                onclick={() => ondisconnect(edge.fromPort, edge.to)}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          {/each}
+          {#each ports as port (port)}
+            <select
+              aria-label="Connect {port} to a step"
+              value=""
+              onchange={(e) => {
+                if (e.currentTarget.value) onconnect(port, e.currentTarget.value);
+                e.currentTarget.value = '';
+              }}
+            >
+              <option value="">{ports.length > 1 ? `Connect ${port} to` : 'Connect to'}</option>
+              {#each targets.filter((t) => !outgoing.some((o) => o.fromPort === port && o.to === t.id)) as t (t.id)}
+                <option value={t.id}>{t.name || t.id}</option>
+              {/each}
+            </select>
+          {/each}
+        </div>
+      {/if}
+    </div>
+  {/snippet}
+  {#snippet inputView()}
+    <ItemsTable
+      outputs={input}
+      empty={def.inputs.length
+        ? 'No input yet. Run the workflow to see the rows that reach this step.'
+        : 'Triggers start the workflow and have no input.'}
+    />
+  {/snippet}
+  {#snippet outputView()}
+    <div class="testbar">
+      <span class="muted">{test ? 'Test result' : latest ? `Run ${formatDateTime(latest.startedAt)}` : ''}</span>
+      <button
+        type="button"
+        class="btn"
+        aria-busy={testing}
+        disabled={!!testBlocked || testing}
+        use:tooltip={testBlocked ?? 'Run this step alone with its input rows'}
+        onclick={runTest}
+      >
+        <FlaskConical size={14} />Test step
+      </button>
+    </div>
+    <ItemsTable outputs={output} empty="No output yet. Run the workflow or test this step." />
+  {/snippet}
+  {#snippet runView()}
+    {#if latest && run}
+      <dl class="facts">
+        <dt>Status</dt>
+        <dd>
+          <StatusMark kind={latest.status === 'Failed' ? 'err' : latest.status === 'Skipped' ? 'off' : 'ok'} label={latest.status} />
+        </dd>
+        <dt>Started</dt>
+        <dd>{formatDateTime(latest.startedAt)}</dd>
+        <dt>Duration</dt>
+        <dd class="num">{latest.completedAt ? formatDuration(Date.parse(latest.completedAt) - Date.parse(latest.startedAt)) : ''}</dd>
+        <dt>Rows out</dt>
+        <dd class="num">{latest.rowCount}</dd>
+        {#if passes.length > 1}<dt>Passes</dt>
+          <dd class="num">{passes.length}</dd>{/if}
+      </dl>
+      {#if latest.errorMessage}<pre class="error">{latest.errorMessage}</pre>{/if}
+    {:else}
+      <p class="muted">{run ? 'This step did not run in the last run.' : 'The workflow has not run yet.'}</p>
     {/if}
-  </div>
+    <button type="button" class="btn" onclick={onrun}><Play size={14} />{run ? 'Run again' : 'Run workflow'}</button>
+  {/snippet}
+  {#if wide}
+    <div class="trio">
+      <section aria-label="Input">
+        <h3>Input</h3>
+        {@render inputView()}
+      </section>
+      <section aria-label="Settings">
+        <h3>Settings</h3>
+        {@render settingsView()}
+      </section>
+      <section aria-label="Output">
+        <h3>Output</h3>
+        {@render outputView()}
+      </section>
+    </div>
+  {:else}
+    <div class="tabs" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={tab === 'settings'}
+        use:tooltip={'Text fields accept {{ }} expressions: json.Column for the current row, node.stepid.first for an earlier step, run_index for the pass'}
+        onclick={() => (tab = 'settings')}
+      >
+        Settings
+      </button>
+      <button type="button" role="tab" aria-selected={tab === 'input'} onclick={() => (tab = 'input')}>Input</button>
+      <button type="button" role="tab" aria-selected={tab === 'output'} onclick={() => (tab = 'output')}>Output</button>
+      <button type="button" role="tab" aria-selected={tab === 'run'} onclick={() => (tab = 'run')}>Last run</button>
+    </div>
+    <div class="ibody">
+      {#if tab === 'settings'}{@render settingsView()}
+      {:else if tab === 'input'}{@render inputView()}
+      {:else if tab === 'output'}{@render outputView()}
+      {:else}{@render runView()}{/if}
+    </div>
+  {/if}
 </aside>
 
 <style>
+  .inspector.wide {
+    width: min(1180px, calc(100vw - 120px));
+  }
+  .trio {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-top: 1px solid var(--line);
+  }
+  .trio section {
+    min-width: 0;
+    overflow: auto;
+    padding: 14px 18px 24px;
+    border-right: 1px solid var(--line);
+  }
+  .trio section:last-child {
+    border-right: 0;
+  }
+  .trio h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--soft);
+  }
+  .link-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
   .inspector {
     position: absolute;
     top: 0;

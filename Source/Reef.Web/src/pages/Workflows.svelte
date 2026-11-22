@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Play, Plus, Trash2 } from '@lucide/svelte';
+  import { Play, Plus } from '@lucide/svelte';
   import Page from '../components/Page.svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
@@ -95,24 +95,6 @@
       busy = null;
     }
   }
-
-  async function remove(w: Workflow) {
-    const ok = await confirm({
-      title: `Delete ${w.name}?`,
-      message: 'The workflow, its run history and its Smart Sync state are deleted.',
-      confirm: 'Delete',
-      danger: true,
-    });
-    if (!ok) return;
-    try {
-      await api.del(`/api/workflows/${w.id}`);
-      forget(w.id!);
-      notify.success(`${w.name} deleted`);
-      await load();
-    } catch (e) {
-      notify.fail(e, `delete-${w.id}`);
-    }
-  }
 </script>
 
 <Page crumbs={[{ label: 'Workflows' }]}>
@@ -188,15 +170,6 @@
                   onclick={() => run(w)}
                 >
                   <Play size={15} />
-                </button>
-                <button
-                  type="button"
-                  class="btn ghost icon danger"
-                  aria-label="Delete {w.name}"
-                  use:tooltip={'Delete'}
-                  onclick={() => remove(w)}
-                >
-                  <Trash2 size={15} />
                 </button>
               </td>
             </tr>

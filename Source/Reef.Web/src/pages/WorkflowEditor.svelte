@@ -500,6 +500,14 @@
           onremove={() => removeNode(selectedNode!.id)}
           onclose={close}
           onrun={runNow}
+          onconnect={(port, target) => {
+            const input = definition(doc!.nodes.find((n) => n.id === target)?.type ?? '')?.inputs[0] ?? 'main';
+            connect({ source: selectedNode!.id, sourceHandle: port, target, targetHandle: input });
+          }}
+          ondisconnect={(port, target) => {
+            doc!.edges = doc!.edges.filter((e) => !(e.from === selectedNode!.id && e.fromPort === port && e.to === target));
+            changed();
+          }}
         />
       {:else if panel === 'settings'}
         <aside class="settings" aria-label="Workflow settings">
