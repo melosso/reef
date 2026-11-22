@@ -121,6 +121,10 @@
   }
 
   function summary(node: WorkflowNode, def: WorkflowNodeDefinition): string {
+    if (node.type === 'schedule')
+      return textOf(node.config.Repeat) === 'Interval'
+        ? `Every ${textOf(node.config.EveryMinutes)} min`
+        : `Cron ${textOf(node.config.Cron)}`;
     const first = def.fields.find((f) => visible(f, node.config) && (f.kind === 'select' || f.kind === 'code' || f.required));
     if (!first) return '';
     const value = getPath(node.config, first.key);

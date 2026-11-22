@@ -7,4 +7,5 @@ public record DashboardAttention(
     IReadOnlyList<AttentionFailure> Failed,
     IReadOnlyList<AttentionAnomaly> Anomalies,
     IReadOnlyList<AttentionJob> UpNext,
+    IReadOnlyList<AttentionWorkflow> UpNextWorkflows,
     AttentionTotals Last24h);

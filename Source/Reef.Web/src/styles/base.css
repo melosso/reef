@@ -188,9 +188,15 @@ label.check {
 }
 .btn[disabled],
 .btn[aria-disabled='true'] {
-  opacity: 0.55;
+  color: var(--muted);
   cursor: default;
   pointer-events: none;
+}
+.btn.primary[disabled],
+.btn.primary[aria-disabled='true'] {
+  border-color: var(--line-strong);
+  background: var(--hover);
+  color: var(--muted);
 }
 .btn[aria-busy='true'] {
   cursor: progress;

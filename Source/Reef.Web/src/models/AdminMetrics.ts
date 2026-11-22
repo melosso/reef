@@ -8,5 +8,5 @@ export interface AdminMetrics {
   executions?: { total?: number; successRate?: number; failedLast24h?: number };
   notifications?: { isEnabled?: boolean };
   recentStats?: { last7Days?: ExecutionStats };
-  system?: { databaseSizeMb?: number; databaseSizeThresholdMb?: number; exportsSizeMb?: number; uptimeDays?: number };
+  system?: { databaseSizeMb?: number; databaseSizeThresholdMb?: number; exportsSizeMb?: number; uptimeDays?: number; uptimeHours?: number };
 }

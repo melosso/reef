@@ -8,17 +8,23 @@
   import { tooltip } from '../lib/tooltip';
   import type { AttentionAnomaly } from '../models/AttentionAnomaly';
   import type { DashboardAttention } from '../models/DashboardAttention';
+  import type { PagedResult } from '../models/PagedResult';
+  import type { WorkflowExecution } from '../models/WorkflowExecution';
+  import { statusKind, statusLabel } from '../lib/status';
 
   let attention = $state<DashboardAttention | null>(null);
   let approvals = $state(0);
+  let recentRuns = $state<WorkflowExecution[]>([]);
 
   async function load() {
     try {
-      const [data, pending] = await Promise.all([
+      const [data, pending, runs] = await Promise.all([
         api.get<DashboardAttention>('/api/dashboard/attention'),
         api.get<{ count: number }>('/api/email-approvals/count').catch(() => ({ count: 0 })),
+        api.get<PagedResult<WorkflowExecution>>('/api/workflow-executions?pageSize=8').catch(() => null),
       ]);
       attention = data;
+      recentRuns = runs?.data ?? [];
       approvals = pending?.count ?? 0;
     } catch (e) {
       notify.fail(e, 'dashboard');
@@ -39,6 +45,19 @@
     a.reason === 'rows'
       ? `${formatNumber(a.value)} rows, usually ${formatNumber(a.median)}`
       : `Took ${formatDuration(a.value)}, usually ${formatDuration(a.median)}`;
+  const upNext = $derived(
+    attention
+      ? [
+          ...attention.upNextWorkflows.map((w) => ({
+            key: `w${w.workflowId}${w.nextRunTime}`,
+            name: w.workflowName,
+            at: w.nextRunTime,
+            href: `/workflows/${w.workflowId}`,
+          })),
+          ...attention.upNext.map((j) => ({ key: `j${j.id}`, name: j.name, at: j.nextRunTime, href: `/jobs/${j.id}` })),
+        ].sort((a, b) => Date.parse(a.at) - Date.parse(b.at))
+      : [],
+  );
   const issues = $derived((attention?.failed.length ?? 0) + (attention?.anomalies.length ?? 0) + (approvals ? 1 : 0));
 </script>
 
@@ -99,21 +118,42 @@
       <section class="panel">
         <div class="panel-head">
           <h2>Up next</h2>
-          <span class="spacer"></span><a href="/jobs">All jobs</a>
+          <span class="spacer"></span><a href="/workflows">All workflows</a>
         </div>
-        {#if attention.upNext.length}
+        {#if upNext.length}
           <table class="data">
             <tbody>
-              {#each attention.upNext as job (job.id)}
-                <tr class="clickable" onclick={() => navigate(`/jobs/${job.id}`)}>
-                  <td class="strong">{job.name}</td>
-                  <td class="when"><span use:tooltip={formatDateTime(job.nextRunTime)}>{formatRelative(job.nextRunTime)}</span></td>
+              {#each upNext as item (item.key)}
+                <tr class="clickable" onclick={() => navigate(item.href)}>
+                  <td class="strong">{item.name}</td>
+                  <td class="when"><span use:tooltip={formatDateTime(item.at)}>{formatRelative(item.at)}</span></td>
                 </tr>
               {/each}
             </tbody>
           </table>
         {:else}
-          <div class="panel-body muted">No jobs scheduled in the next 24 hours.</div>
+          <div class="panel-body muted">Nothing scheduled in the next 24 hours.</div>
+        {/if}
+      </section>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Recent runs</h2>
+          <span class="spacer"></span><a href="/executions">All runs</a>
+        </div>
+        {#if recentRuns.length}
+          <table class="data">
+            <tbody>
+              {#each recentRuns as run (run.id)}
+                <tr class="clickable" onclick={() => navigate(`/executions/${run.id}`)}>
+                  <td class="mark"><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></td>
+                  <td class="strong">{run.workflowName ?? 'Deleted workflow'}</td>
+                  <td class="when"><span use:tooltip={formatDateTime(run.startedAt)}>{formatRelative(run.startedAt)}</span></td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+          <div class="panel-body muted">No runs yet.</div>
         {/if}
       </section>
     {/if}

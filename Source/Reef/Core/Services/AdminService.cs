@@ -109,7 +109,8 @@ public class AdminService
                     databaseSizeMb = Math.Round(dbSize / 1024.0 / 1024.0, 2),
                     databaseSizeThresholdMb = Math.Round(dbSizeThresholdMb / 1024.0 / 1024.0, 2),
                     exportsSizeMb = Math.Round(exportsSize / 1024.0 / 1024.0, 2),
-                    uptimeDays = Math.Round(uptime.TotalDays, 2)
+                    uptimeDays = Math.Round(uptime.TotalDays, 2),
+                    uptimeHours = (int)uptime.TotalHours
                 },
                 notifications = new
                 {

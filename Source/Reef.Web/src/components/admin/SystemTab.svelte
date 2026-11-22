@@ -44,6 +44,13 @@
       clean(latest.tag) !== clean(version) &&
       clean(latest.tag).localeCompare(clean(version), undefined, { numeric: true }) > 0,
   );
+
+  function uptime(hours: number): string {
+    const days = Math.floor(hours / 24);
+    const rest = hours % 24;
+    const h = `${rest} ${rest === 1 ? 'hour' : 'hours'}`;
+    return days ? `${days} ${days === 1 ? 'day' : 'days'} ${h}` : h;
+  }
 </script>
 
 <section class="panel">
@@ -51,17 +58,16 @@
   <div class="panel-body fields">
     <Facts
       items={[
-        ['Version', info?.version ?? version],
+        ['Version', (info?.version ?? version).split('+')[0]],
         ['Environment', info?.environment ?? 'Production'],
-        ['Uptime', info?.uptime?.days !== undefined ? `${info.uptime.days} days` : null],
+        ['Uptime', info?.uptime?.hours !== undefined ? uptime(info.uptime.hours) : null],
         [
           'Storage',
           storage
             ? `Database ${storage.databaseSizeMb ?? 0} MB of ${storage.databaseSizeThresholdMb || 1024} MB, exports ${storage.exportsSizeMb ?? 0} MB`
             : null,
         ],
-        ['Server time', now.toLocaleTimeString()],
-        ['Server date', now.toLocaleDateString()],
+        ['Server time', formatDateTime(now.toISOString())],
         ['Reported at', info?.timestamp ? formatDateTime(info.timestamp) : null],
       ]}
     />

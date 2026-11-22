@@ -8,7 +8,7 @@ namespace Reef.Core.Services;
 /// <summary>
 /// Finds the workflows and jobs that need a person, for the home page
 /// </summary>
-public class AttentionService(DatabaseConfig config)
+public class AttentionService(DatabaseConfig config, Reef.Core.Workflows.Triggers.WorkflowScheduler scheduler)
 {
     private const int Baseline = 10;
     private const int MinimumBaseline = 3;
@@ -72,6 +72,8 @@ public class AttentionService(DatabaseConfig config)
             failed.OrderByDescending(f => f.StartedAt).ToList(),
             anomalies.OrderByDescending(a => a.StartedAt).ToList(),
             upNext.ToList(),
+            [.. (await scheduler.UpcomingAsync(DateTime.UtcNow, DateTime.UtcNow.AddDays(1), ct)).OrderBy(u => u.Next)
+                .Select(u => new AttentionWorkflow(u.Workflow.Id!.Value, u.Workflow.Name, u.Next.ToString("O")))],
             totals);
     }
 

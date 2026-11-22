@@ -34,6 +34,21 @@ public class WorkflowScheduler(WorkflowService workflows, WorkflowRunStore runs,
         return started;
     }
 
+    public async Task<List<(WorkflowDocument Workflow, DateTime Next)>> UpcomingAsync(DateTime now, DateTime until, CancellationToken ct)
+    {
+        var upcoming = new List<(WorkflowDocument, DateTime)>();
+        foreach (var workflow in (await workflows.ListAsync(ct)).Where(w => w.Active && w.Id is not null))
+        {
+            foreach (var trigger in workflow.Nodes.Where(n => n.Type == "schedule"))
+            {
+                var last = await runs.LastStartedAsync(workflow.Id!.Value, trigger.Id, ct) ?? workflow.UpdatedAt ?? now;
+                if (Next(trigger, last) is { } next && next <= until)
+                    upcoming.Add((workflow, next < now ? now : next));
+            }
+        }
+        return upcoming;
+    }
+
     private static DateTime? Next(WorkflowNode trigger, DateTime last)
     {
         var config = trigger.Config ?? new();
