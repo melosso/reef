@@ -34,12 +34,10 @@
     <span class="title">{card.name}</span>
   </div>
   {#if card.summary}<div class="body">{card.summary}</div>{/if}
-  {#if card.status}
-    <div class="foot" use:tooltip={card.error}>
-      <StatusMark kind={card.status} />
-      <span class="text">{card.result}</span>
-    </div>
-  {/if}
+  <div class="foot" use:tooltip={card.error}>
+    {#if card.status}<StatusMark kind={card.status} />{/if}
+    <span class="text">{card.status ? card.result : 'Not run yet'}</span>
+  </div>
   {#each card.outputs as port, i (port)}
     <Handle type="source" position={Position.Right} id={port} style="top: {offset(i, card.outputs.length)}" />
     {#if card.outputs.length > 1}<span class="port out" style="top: {offset(i, card.outputs.length)}">{port}</span>{/if}
