@@ -78,7 +78,7 @@ public static class WorkflowNodeCatalog
             Node("deltasync", "Smart Sync", "refresh-cw", WorkflowNodeGroups.Transform, "Passes only rows that are new or changed since the last successful run",
             [
                 new() { Key = "IdColumn", Label = "Unique id column", Required = true, Format = NodeFieldFormats.Identifier,
-                    Tooltip = "Column that identifies a row across runs" },
+                    Tooltip = "Column that identifies a row across runs, so Smart Sync can tell new and changed rows apart" },
                 new() { Key = "HashAlgorithm", Label = "Hash algorithm", Kind = NodeFieldKinds.Select, Default = "SHA256",
                     Options = [new("SHA256", "SHA256"), new("SHA512", "SHA512"), new("MD5", "MD5")] },
                 new() { Key = "DuplicateIds", Label = "Duplicate ids", Kind = NodeFieldKinds.Select, Default = "Strict",
@@ -98,7 +98,7 @@ public static class WorkflowNodeCatalog
             ]),
             Node("split", "Split", "split", WorkflowNodeGroups.Transform, "Groups rows by a column so the next steps write one file per value",
             [
-                new() { Key = "Column", Label = "Split by column", Required = true },
+                new() { Key = "Column", Label = "Split by column", Required = true, Tooltip = "Rows with the same value in this column go into one file, so each customer or region gets its own" },
                 new() { Key = "FileName", Label = "File name", Placeholder = "{workflow}_{splitkey}_{timestamp}.{format}" },
                 new() { Key = "ExcludeColumn", Label = "Leave the split column out", Kind = NodeFieldKinds.Bool }
             ]),
@@ -185,8 +185,10 @@ public static class WorkflowNodeCatalog
                 new() { Key = "GroupByColumn", Label = "One email per value of", Tooltip = "Leave empty to send one email per row" },
                 new() { Key = "SuccessPercent", Label = "Success threshold in percent", Kind = NodeFieldKinds.Number, Default = 100,
                     Tooltip = "The step succeeds when at least this share of emails is sent" },
-                new() { Key = "RequireApproval", Label = "Hold for approval", Kind = NodeFieldKinds.Bool },
-                new() { Key = "ApproverRoles", Label = "Approver roles", Kind = NodeFieldKinds.Json, Placeholder = "[\"Admin\"]", ShowWhen = new("RequireApproval", True) },
+                new() { Key = "RequireApproval", Label = "Hold for approval", Kind = NodeFieldKinds.Bool,
+                    Tooltip = "Emails wait on the Approvals page until someone approves them. Steps after this one run right away" },
+                new() { Key = "ApproverRoles", Label = "Approver roles", Kind = NodeFieldKinds.Json, Placeholder = "[\"Admin\"]", ShowWhen = new("RequireApproval", True),
+                    Tooltip = "Roles allowed to approve these emails. Leave empty to let every signed in user approve" },
                 new() { Key = "EmailAttachmentConfig", Label = "Attachments", Kind = NodeFieldKinds.Json,
                     Tooltip = "Attachment settings as JSON, leave empty to send without attachments" },
                 RunPerRow()

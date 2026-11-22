@@ -24,6 +24,8 @@ public class DestinationNodeExecutor(DestinationService destinations) : INodeExe
         {
             var endpoint = await destinations.GetEndpointByIdAsync(NodeConfig.Id(context.Config, "EndpointId"), ct)
                 ?? throw new NodeExecutionException("Endpoint not found");
+            if (endpoint.DestinationId != destination.Id)
+                throw new NodeExecutionException($"Endpoint {endpoint.Name} belongs to another destination");
             settings = destinations.MergeWithEndpoint(destination, endpoint);
         }
 

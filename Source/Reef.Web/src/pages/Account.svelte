@@ -9,6 +9,7 @@
   import type { TotpSetup } from '../models/TotpSetup';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
+  import { tooltip } from '../lib/tooltip';
   import { match, navigate, route } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
 
@@ -195,7 +196,12 @@
           />
         </div>
         <div class="field">
-          <label for="a-new">New password</label><input id="a-new" type="password" autocomplete="new-password" bind:value={next} />
+          <label for="a-new" use:tooltip={'At least 6 characters, different from the current password'}>New password</label><input
+            id="a-new"
+            type="password"
+            autocomplete="new-password"
+            bind:value={next}
+          />
         </div>
         <p class="muted">Changing the password signs this account out.</p>
         <div><button type="submit" class="btn primary" aria-busy={busy === 'password'}>Change password</button></div>

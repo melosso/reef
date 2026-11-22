@@ -1,6 +1,6 @@
-const dateTime = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-const number = new Intl.NumberFormat();
-const relative = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+const dateTime = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+const number = new Intl.NumberFormat('en-US');
+const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 
 export function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null;

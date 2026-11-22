@@ -621,7 +621,7 @@
           <label for="j-tags">Tags</label><input id="j-tags" bind:value={form.tags} use:tooltip={'Comma-separated'} />
         </div>
         <label class="check"><input type="checkbox" bind:checked={form.allowConcurrent} />Allow concurrent runs</label>
-        <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />Enabled</label>
+        <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />On</label>
         <label class="check" use:tooltip={'Pause the job after 10 consecutive failures'}>
           <input type="checkbox" bind:checked={form.autoPauseEnabled} />Auto-pause on repeated failures
         </label>

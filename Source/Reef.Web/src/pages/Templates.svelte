@@ -592,7 +592,7 @@
           />
         </div>
       </div>
-      <label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />Active</label>
+      <label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />On</label>
       {#if preview !== null}
         <section class="fields">
           <h3 class="row">

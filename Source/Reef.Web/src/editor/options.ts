@@ -20,7 +20,13 @@ export async function loadOptions(): Promise<Options> {
   const urls = [...new Set(Object.values(SOURCES).map((s) => s.url))];
   const results = await Promise.all(urls.map((url) => api.get<OptionRecord[]>(url).catch(() => [])));
   const byUrl = Object.fromEntries(urls.map((url, i) => [url, Array.isArray(results[i]) ? results[i] : []]));
-  return Object.fromEntries(
+  const options: Options = Object.fromEntries(
     Object.entries(SOURCES).map(([name, source]) => [name, byUrl[source.url].filter(source.filter ?? (() => true)).map(source.map)]),
   );
+  const targets = byUrl['/api/destinations'].filter((d) => d.type !== 'Email');
+  const endpoints = await Promise.all(targets.map((d) => api.get<OptionRecord[]>(`/api/destinations/${d.id}/endpoints`).catch(() => [])));
+  options['destination-endpoints'] = targets.flatMap((d, i) =>
+    (endpoints[i] ?? []).map((e) => ({ value: e.id, label: `${d.name}: ${e.name}` })),
+  );
+  return options;
 }
