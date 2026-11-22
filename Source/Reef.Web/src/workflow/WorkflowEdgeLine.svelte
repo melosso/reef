@@ -15,10 +15,22 @@
 <BaseEdge path={geometry[0]} {markerEnd} class={selected ? 'picked' : ''} interactionWidth={24} />
 <EdgeLabel x={geometry[1]} y={geometry[2]} transparent>
   <div class="tools" class:shown={selected}>
-    <button type="button" aria-label="Insert a step here" use:tooltip={'Insert step'} onclick={() => actions.insert(id)}>
+    <button
+      type="button"
+      tabindex={selected ? 0 : -1}
+      aria-label="Insert a step here"
+      use:tooltip={'Insert step'}
+      onclick={() => actions.insert(id)}
+    >
       <Plus size={13} />
     </button>
-    <button type="button" aria-label="Delete connection" use:tooltip={'Delete connection'} onclick={() => actions.remove(id)}>
+    <button
+      type="button"
+      tabindex={selected ? 0 : -1}
+      aria-label="Delete connection"
+      use:tooltip={'Delete connection'}
+      onclick={() => actions.remove(id)}
+    >
       <X size={13} />
     </button>
   </div>

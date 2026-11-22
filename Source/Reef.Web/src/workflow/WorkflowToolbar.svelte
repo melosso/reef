@@ -89,9 +89,7 @@
       flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
         const data = (n: { data: unknown }) => n.data as { trigger?: boolean; status?: string | null };
         const failed = flow.getNodes().find((n) => data(n).status === 'err');
-        const start = flow.getNodes().find((n) => data(n).trigger);
         if (failed && flow.getViewport().zoom < 0.6) flow.setCenter(failed.position.x + 110, failed.position.y + 60, { zoom: 0.6 });
-        else if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
       });
     }, 50);
   });
@@ -157,7 +155,7 @@
     />
     {#if !flat.length}<p class="none">No step matches.</p>{/if}
     {#each groups as group (group.name)}
-      <h3>{group.name}</h3>
+      <h2>{group.name}</h2>
       {#each group.nodes as def (def.type)}
         {@const Icon = stepIcon(def.icon)}
         <button
@@ -269,13 +267,13 @@
     color: var(--ink);
     box-shadow: 0 8px 24px var(--shadow);
   }
-  h3 {
+  h2 {
     margin: 10px 10px 4px;
     font-size: 12px;
     font-weight: 600;
     color: var(--muted);
   }
-  h3:first-child {
+  h2:first-child {
     margin-top: 4px;
   }
   .menu button {

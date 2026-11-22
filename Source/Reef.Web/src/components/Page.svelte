@@ -149,7 +149,7 @@
   .title {
     display: flex;
     min-width: 0;
-    font-size: inherit;
+    font-size: 16px;
   }
   .rename {
     font: inherit;

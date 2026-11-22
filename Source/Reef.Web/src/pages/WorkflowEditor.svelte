@@ -471,8 +471,9 @@
           {edgeTypes}
           deleteKey={null}
           selectionKey={null}
+          edgesFocusable={false}
           multiSelectionKey={null}
-          minZoom={0.3}
+          minZoom={0.1}
           maxZoom={1.6}
           snapGrid={[8, 8]}
           proOptions={{ hideAttribution: true }}
@@ -493,7 +494,8 @@
             let moves = false;
             for (const m of moved) {
               const target = doc!.nodes.find((n) => n.id === m.id);
-              if (target && (target.x !== m.position.x || target.y !== m.position.y)) {
+              // Snapping alone is no move
+              if (target && (Math.abs(target.x - m.position.x) >= 8 || Math.abs(target.y - m.position.y) >= 8)) {
                 target.x = m.position.x;
                 target.y = m.position.y;
                 moves = true;
