@@ -7,7 +7,8 @@ const backend = process.env.REEF_BACKEND ?? 'http://localhost:8085';
 export default defineConfig(({ command }) => ({
   plugins: [svelte(), svelteTesting()],
   base: command === 'build' ? '/app/' : '/',
-  build: { outDir: '../Reef/wwwroot/app', emptyOutDir: true, chunkSizeWarningLimit: 1200 },
+  // MSBuild lists assets before this build
+  build: { outDir: '../Reef/wwwroot/app', emptyOutDir: process.env.REEF_KEEP_ASSETS !== '1', chunkSizeWarningLimit: 1200 },
   server: { port: 3000, strictPort: true, proxy: { '/api': backend, '/health': backend } },
   test: { environment: 'jsdom', include: ['tests/**/*.test.ts'] },
 }));

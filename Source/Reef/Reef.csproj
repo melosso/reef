@@ -67,7 +67,7 @@
 
   <Target Name="BuildWeb" BeforeTargets="BeforeBuild;ResolveProjectStaticWebAssets" Condition="'$(SkipWebBuild)' != 'true' And Exists('$(WebDir)/package.json')" Inputs="@(WebSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html">
     <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(WebDir)" Condition="!Exists('$(WebDir)/node_modules')" />
-    <Exec Command="npm run build" WorkingDirectory="$(WebDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebDir)" EnvironmentVariables="REEF_KEEP_ASSETS=1" />
   </Target>
 
   <Target Name="ResetWebAssetManifests" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild;ResolveProjectStaticWebAssets" Condition="Exists('$(MSBuildProjectDirectory)/wwwroot/app/index.html')" Inputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html" Outputs="$(IntermediateOutputPath)webassets.stamp">
