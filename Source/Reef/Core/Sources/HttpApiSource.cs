@@ -15,22 +15,22 @@ public class HttpApiSource : IImportSource
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(300) };
 
     public async Task<List<ImportSourceFile>> FetchAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
+        var config = ParseConfig(options);
         if (string.IsNullOrWhiteSpace(config.Url))
             throw new InvalidOperationException("HTTP source URL is not configured");
 
         byte[] data;
 
-        if (profile.HttpPaginationEnabled && !string.IsNullOrWhiteSpace(profile.HttpPaginationConfig))
+        if (options.HttpPaginationEnabled && !string.IsNullOrWhiteSpace(options.HttpPaginationConfig))
         {
-            data = await FetchPaginatedAsync(config, profile, ct);
+            data = await FetchPaginatedAsync(config, options, ct);
         }
         else
         {
-            data = await FetchSingleAsync(config, profile.HttpDataRootPath, ct);
+            data = await FetchSingleAsync(config, options.HttpDataRootPath, ct);
         }
 
         var stream = new MemoryStream(data);
@@ -47,11 +47,11 @@ public class HttpApiSource : IImportSource
     }
 
     public Task<List<SourceFileInfo>> ListFilesAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
         // HTTP sources don't have directory browsing; return the endpoint as a single item
-        var config = ParseConfig(profile);
+        var config = ParseConfig(options);
         return Task.FromResult(new List<SourceFileInfo>
         {
             new SourceFileInfo
@@ -63,7 +63,7 @@ public class HttpApiSource : IImportSource
     }
 
     public Task<bool> ArchiveAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         string fileIdentifier,
         CancellationToken ct = default)
     {
@@ -72,10 +72,10 @@ public class HttpApiSource : IImportSource
     }
 
     public async Task<(bool Success, string? Message)> TestAsync(
-        ImportProfile profile,
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        var config = ParseConfig(profile);
+        var config = ParseConfig(options);
         if (string.IsNullOrWhiteSpace(config.Url))
             return (false, "No URL configured");
 
@@ -124,12 +124,12 @@ public class HttpApiSource : IImportSource
         return bytes;
     }
 
-    private async Task<byte[]> FetchPaginatedAsync(HttpConfig config, ImportProfile profile, CancellationToken ct)
+    private async Task<byte[]> FetchPaginatedAsync(HttpConfig config, ImportSourceOptions options, CancellationToken ct)
     {
         ImportPaginationConfig? pagCfg;
         try
         {
-            pagCfg = JsonSerializer.Deserialize<ImportPaginationConfig>(profile.HttpPaginationConfig!, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            pagCfg = JsonSerializer.Deserialize<ImportPaginationConfig>(options.HttpPaginationConfig!, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
         }
         catch
         {
@@ -137,7 +137,7 @@ public class HttpApiSource : IImportSource
         }
 
         if (pagCfg == null || pagCfg.Type == "None")
-            return await FetchSingleAsync(config, profile.HttpDataRootPath, ct);
+            return await FetchSingleAsync(config, options.HttpDataRootPath, ct);
 
         var allRows = new List<object>();
         int page = 0;
@@ -157,12 +157,12 @@ public class HttpApiSource : IImportSource
             using var doc = JsonDocument.Parse(json);
 
             // Determine effective root path: prefer HttpDataRootPath, fall back to FormatConfig.DataRootPath
-            var effectiveRootPath = profile.HttpDataRootPath;
-            if (string.IsNullOrWhiteSpace(effectiveRootPath) && !string.IsNullOrWhiteSpace(profile.FormatConfig))
+            var effectiveRootPath = options.HttpDataRootPath;
+            if (string.IsNullOrWhiteSpace(effectiveRootPath) && !string.IsNullOrWhiteSpace(options.FormatConfig))
             {
                 try
                 {
-                    using var fDoc = JsonDocument.Parse(profile.FormatConfig);
+                    using var fDoc = JsonDocument.Parse(options.FormatConfig);
                     if (fDoc.RootElement.TryGetProperty("DataRootPath", out var drpEl)
                         && drpEl.ValueKind == JsonValueKind.String)
                     {
@@ -347,21 +347,21 @@ public class HttpApiSource : IImportSource
         return req;
     }
 
-    private HttpConfig ParseConfig(ImportProfile profile)
+    private HttpConfig ParseConfig(ImportSourceOptions options)
     {
-        var json = profile.SourceConfig ?? "{}";
+        var json = options.SourceConfig ?? "{}";
         try
         {
             var cfg = JsonSerializer.Deserialize<HttpConfig>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new HttpConfig();
             // Profile-level overrides
-            if (!string.IsNullOrWhiteSpace(profile.HttpMethod)) cfg.Method = profile.HttpMethod;
-            if (!string.IsNullOrWhiteSpace(profile.HttpBodyTemplate)) cfg.Body = profile.HttpBodyTemplate;
+            if (!string.IsNullOrWhiteSpace(options.HttpMethod)) cfg.Method = options.HttpMethod;
+            if (!string.IsNullOrWhiteSpace(options.HttpBodyTemplate)) cfg.Body = options.HttpBodyTemplate;
             return cfg;
         }
         catch
         {
-            return new HttpConfig { Method = profile.HttpMethod ?? "GET" };
+            return new HttpConfig { Method = options.HttpMethod ?? "GET" };
         }
     }
 

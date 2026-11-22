@@ -27,19 +27,17 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
         var admin = await factory.CreateAdminClientAsync();
         var pdfId = await EmailProfiles.IdOfAsync(await admin.PostAsJsonAsync("/api/templates", new { name = $"Pdf {Guid.NewGuid():N}", type = "DocumentTemplate", outputFormat = "PDF", template = "{{# content }}<p>x</p>{{/ content }}" }, _ct));
 
-        var profileId = await EmailProfileAsync(admin, PdfAttachment(pdfId));
+        var workflowId = await EmailProfileAsync(admin, PdfAttachment(pdfId));
 
         await using var db = Db();
-        var stored = await db.ExecuteScalarAsync<string>("SELECT EmailAttachmentConfig FROM Profiles WHERE Ulid = @profileId", new { profileId });
+        var stored = await db.ExecuteScalarAsync<string>("SELECT DocumentJson FROM Workflows WHERE Ulid = @workflowId", new { workflowId });
         var internalId = await db.ExecuteScalarAsync<long>("SELECT Id FROM QueryTemplates WHERE Ulid = @pdfId", new { pdfId });
-        JsonNode.Parse(stored!)!["DocumentTemplate"]!["TemplateId"]!.GetValue<long>().Should().Be(internalId);
+        var storedMail = JsonNode.Parse(stored!)!["nodes"]!.AsArray().First(n => n!["type"]!.GetValue<string>() == "email")!;
+        JsonNode.Parse(storedMail["config"]!["EmailAttachmentConfig"]!.GetValue<string>())!["DocumentTemplate"]!["TemplateId"]!.GetValue<long>().Should().Be(internalId);
 
-        var document = await admin.GetFromJsonAsync<JsonObject>($"/api/profile-documents/export/{profileId}", _ct);
-        var mail = document!["nodes"]!.AsArray().First(n => n!["type"]!.GetValue<string>() == "emailexport")!;
-        mail["config"]!["EmailAttachmentConfig"]!["DocumentTemplate"]!["TemplateId"]!.GetValue<string>().Should().Be(pdfId);
-
-        var profile = await admin.GetFromJsonAsync<JsonObject>($"/api/profiles/{profileId}", _ct);
-        JsonNode.Parse(profile!["emailAttachmentConfig"]!.GetValue<string>())!["DocumentTemplate"]!["TemplateId"]!.GetValue<string>().Should().Be(pdfId);
+        var workflow = await admin.GetFromJsonAsync<JsonObject>($"/api/workflows/{workflowId}", _ct);
+        var mail = workflow!["nodes"]!.AsArray().First(n => n!["type"]!.GetValue<string>() == "email")!;
+        JsonNode.Parse(mail["config"]!["EmailAttachmentConfig"]!.GetValue<string>())!["DocumentTemplate"]!["TemplateId"]!.GetValue<string>().Should().Be(pdfId);
     }
 
     [Fact]
@@ -69,17 +67,4 @@ public class EmbeddedIdApiTests(ReefApiFactory factory)
         (await admin.GetFromJsonAsync<JsonObject>($"/api/jobs/{secondId}", _ct))!["dependsOnJobIds"]!.GetValue<string>().Should().Be(first);
     }
 
-    [Fact]
-    public async Task ProfileDependenciesTravelAsUlids()
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var first = await EmailProfileAsync(admin, "");
-        var second = await EmailProfileAsync(admin, "");
-        await using (var db = Db())
-            await db.ExecuteAsync("UPDATE Profiles SET DependsOnProfileIds = (SELECT Id FROM Profiles WHERE Ulid = @first) WHERE Ulid = @second", new { first, second });
-
-        var profile = await admin.GetFromJsonAsync<JsonObject>($"/api/profiles/{second}", _ct);
-
-        profile!["dependsOnProfileIds"]!.GetValue<string>().Should().Be(first);
-    }
 }

@@ -4,6 +4,7 @@
 
 using Reef.Core.Models;
 using Serilog;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Services;
 

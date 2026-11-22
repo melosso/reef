@@ -9,6 +9,7 @@
   import type { TotpSetup } from '../models/TotpSetup';
   import { confirm } from '../lib/confirm.svelte';
   import { notify } from '../lib/notify';
+  import { tooltip } from '../lib/tooltip';
   import { match, navigate, route } from '../lib/router.svelte';
   import { session } from '../lib/session.svelte';
 
@@ -168,9 +169,9 @@
     <div class="tabs" role="tablist">
       <button type="button" role="tab" aria-selected={tab === 'profile'} onclick={() => navigate('/account')}>Profile</button>
       <button type="button" role="tab" aria-selected={tab === 'password'} onclick={() => navigate('/account/password')}>Password</button>
-      <button type="button" role="tab" aria-selected={tab === 'security'} onclick={() => navigate('/account/security')}
-        >Two-factor authentication</button
-      >
+      <button type="button" role="tab" aria-selected={tab === 'security'} onclick={() => navigate('/account/security')}>
+        Two-factor authentication
+      </button>
     </div>
 
     {#if tab === 'profile'}
@@ -195,7 +196,12 @@
           />
         </div>
         <div class="field">
-          <label for="a-new">New password</label><input id="a-new" type="password" autocomplete="new-password" bind:value={next} />
+          <label for="a-new" use:tooltip={'At least 6 characters, different from the current password'}>New password</label><input
+            id="a-new"
+            type="password"
+            autocomplete="new-password"
+            bind:value={next}
+          />
         </div>
         <p class="muted">Changing the password signs this account out.</p>
         <div><button type="submit" class="btn primary" aria-busy={busy === 'password'}>Change password</button></div>
@@ -205,7 +211,7 @@
         <div class="panel-head">
           <h2>Authenticator app</h2>
           <span class="grow"></span>
-          <StatusMark kind={totpActive ? 'ok' : 'off'} label={totpActive ? 'Active' : 'Off'} />
+          <StatusMark kind={totpActive ? 'on' : 'off'} label={totpActive ? 'Active' : 'Off'} />
         </div>
         <div class="panel-body fields">
           <p class="muted">Time-based codes from an app such as Aegis, 1Password or Google Authenticator.</p>
@@ -215,7 +221,7 @@
               <div class="fields">
                 <div>
                   <span class="muted">Manual key</span>
-                  <div class="num key">{totp.key}</div>
+                  <div class="key">{totp.key}</div>
                 </div>
                 <form class="fields" onsubmit={confirmTotp}>
                   <div class="field">
@@ -224,7 +230,6 @@
                       class="number"
                       inputmode="numeric"
                       autocomplete="one-time-code"
-                      maxlength="7"
                       bind:value={verifyCode}
                     />
                   </div>
@@ -232,8 +237,10 @@
                     <button type="submit" class="btn primary" aria-busy={busy === 'verify'}>Activate</button><button
                       type="button"
                       class="btn"
-                      onclick={() => (totp = null)}>Cancel</button
+                      onclick={() => (totp = null)}
                     >
+                      Cancel
+                    </button>
                   </div>
                 </form>
               </div>
@@ -246,7 +253,6 @@
                   class="number"
                   inputmode="numeric"
                   autocomplete="one-time-code"
-                  maxlength="7"
                   bind:value={reconfirmCode}
                 />
               </div>
@@ -254,8 +260,10 @@
                 <button type="submit" class="btn primary" aria-busy={busy === 'reconfirm'}>Continue</button><button
                   type="button"
                   class="btn"
-                  onclick={() => (reconfirm = false)}>Cancel</button
+                  onclick={() => (reconfirm = false)}
                 >
+                  Cancel
+                </button>
               </div>
             </form>
           {:else}
@@ -265,8 +273,10 @@
                 class="btn"
                 disabled={emailActive}
                 aria-busy={busy === 'totp'}
-                onclick={() => (totpActive ? (reconfirm = true) : startTotp())}>{totpActive ? 'Reconfigure' : 'Set up'}</button
+                onclick={() => (totpActive ? (reconfirm = true) : startTotp())}
               >
+                {totpActive ? 'Reconfigure' : 'Set up'}
+              </button>
             </div>
           {/if}
         </div>
@@ -275,7 +285,7 @@
         <div class="panel-head">
           <h2>Email codes</h2>
           <span class="grow"></span>
-          <StatusMark kind={emailActive ? 'ok' : 'off'} label={emailActive ? 'Active' : 'Off'} />
+          <StatusMark kind={emailActive ? 'on' : 'off'} label={emailActive ? 'Active' : 'Off'} />
         </div>
         <div class="panel-body fields">
           <p class="muted">{emailHint}</p>
@@ -285,16 +295,18 @@
               class="btn"
               aria-busy={busy === 'email'}
               disabled={totpActive || (!emailActive && (!profile.emailMfaAvailable || !profile.email))}
-              onclick={enableEmail}>{emailActive ? 'Reconfigure' : 'Turn on'}</button
+              onclick={enableEmail}
             >
+              {emailActive ? 'Reconfigure' : 'Turn on'}
+            </button>
           </div>
         </div>
       </section>
       {#if profile.mfaEnabled}
         <div>
-          <button type="button" class="btn danger" aria-busy={busy === 'disable'} onclick={disableMfa}
-            >Turn off two-factor authentication</button
-          >
+          <button type="button" class="btn danger" aria-busy={busy === 'disable'} onclick={disableMfa}>
+            Turn off two-factor authentication
+          </button>
         </div>
       {/if}
     {/if}

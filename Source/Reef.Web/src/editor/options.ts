@@ -14,14 +14,19 @@ const SOURCES: Record<
   },
   'email-destinations': { url: '/api/destinations', filter: (d) => d.type === 'Email', map: (d) => ({ value: d.id, label: d.name }) },
   templates: { url: '/api/templates', map: (t) => ({ value: t.id, label: t.outputFormat ? `${t.name} (${t.outputFormat})` : t.name }) },
-  groups: { url: '/api/groups', map: (g) => ({ value: g.id, label: g.name }) },
 };
 
 export async function loadOptions(): Promise<Options> {
   const urls = [...new Set(Object.values(SOURCES).map((s) => s.url))];
   const results = await Promise.all(urls.map((url) => api.get<OptionRecord[]>(url).catch(() => [])));
   const byUrl = Object.fromEntries(urls.map((url, i) => [url, Array.isArray(results[i]) ? results[i] : []]));
-  return Object.fromEntries(
+  const options: Options = Object.fromEntries(
     Object.entries(SOURCES).map(([name, source]) => [name, byUrl[source.url].filter(source.filter ?? (() => true)).map(source.map)]),
   );
+  const targets = byUrl['/api/destinations'].filter((d) => d.type !== 'Email');
+  const endpoints = await Promise.all(targets.map((d) => api.get<OptionRecord[]>(`/api/destinations/${d.id}/endpoints`).catch(() => [])));
+  options['destination-endpoints'] = targets.flatMap((d, i) =>
+    (endpoints[i] ?? []).map((e) => ({ value: e.id, label: `${d.name}: ${e.name}` })),
+  );
+  return options;
 }

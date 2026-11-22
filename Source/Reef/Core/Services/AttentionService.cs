@@ -6,40 +6,33 @@ using Reef.Core.Models.Dashboard;
 namespace Reef.Core.Services;
 
 /// <summary>
-/// Finds the profiles and jobs that need a person, for the home page
+/// Finds the workflows and jobs that need a person, for the home page
 /// </summary>
-public class AttentionService(DatabaseConfig config)
+public class AttentionService(DatabaseConfig config, Reef.Core.Workflows.Triggers.WorkflowScheduler scheduler)
 {
     private const int Baseline = 10;
     private const int MinimumBaseline = 3;
 
-    // shortcut: ranks every run per profile, add a StartedAt window when execution history grows past a few hundred thousand rows
+    // shortcut ranks every run per workflow
     private const string RunsSql = """
         WITH runs AS (
-            SELECT 'export' AS Kind, e.ProfileId, p.Name AS ProfileName, p.DeltaSyncEnabled, e.Id AS ExecutionId, e.Status, e.StartedAt,
-                   e.ErrorMessage, e.RowCount AS Rows, e.ExecutionTimeMs AS DurationMs
-            FROM ProfileExecutions e JOIN Profiles p ON p.Id = e.ProfileId
-            WHERE e.Status <> 'Running'
-            UNION ALL
-            SELECT 'import', e.ImportProfileId, p.Name, p.DeltaSyncEnabled, e.Id, e.Status, e.StartedAt,
-                   e.ErrorMessage, e.TotalRowsRead, CAST((julianday(e.CompletedAt) - julianday(e.StartedAt)) * 86400000 AS INTEGER)
-            FROM ImportProfileExecutions e JOIN ImportProfiles p ON p.Id = e.ImportProfileId
+            SELECT e.WorkflowId, w.Name AS WorkflowName, w.DocumentJson LIKE '%"type":"deltasync"%' AS DeltaSyncEnabled, e.Id AS ExecutionId, e.Status, e.StartedAt,
+                   e.ErrorMessage, (SELECT MAX(RowCount) FROM NodeRuns n WHERE n.WorkflowExecutionId = e.Id) AS Rows,
+                   CAST((julianday(e.CompletedAt) - julianday(e.StartedAt)) * 86400000 AS INTEGER) AS DurationMs
+            FROM WorkflowExecutions e JOIN Workflows w ON w.Id = e.WorkflowId
             WHERE e.Status <> 'Running'
         ), ranked AS (
             SELECT *,
-                   ROW_NUMBER() OVER (PARTITION BY Kind, ProfileId ORDER BY ExecutionId DESC) AS Recent,
-                   ROW_NUMBER() OVER (PARTITION BY Kind, ProfileId, Status = 'Success' ORDER BY ExecutionId DESC) AS SuccessRank
+                   ROW_NUMBER() OVER (PARTITION BY WorkflowId ORDER BY ExecutionId DESC) AS Recent,
+                   ROW_NUMBER() OVER (PARTITION BY WorkflowId, Status = 'Success' ORDER BY ExecutionId DESC) AS SuccessRank
             FROM runs
         )
         SELECT * FROM ranked WHERE Recent = 1 OR (Status = 'Success' AND SuccessRank <= @Window)
-        ORDER BY Kind, ProfileId, ExecutionId DESC
+        ORDER BY WorkflowId, ExecutionId DESC
         """;
 
     private const string TotalsSql = """
-        SELECT COUNT(*) AS Runs, COALESCE(SUM(Status = 'Failed'), 0) AS Failed FROM (
-            SELECT Status, StartedAt FROM ProfileExecutions
-            UNION ALL
-            SELECT Status, StartedAt FROM ImportProfileExecutions)
+        SELECT COUNT(*) AS Runs, COALESCE(SUM(Status = 'Failed'), 0) AS Failed FROM WorkflowExecutions
         WHERE julianday(StartedAt) >= julianday('now', '-1 day')
         """;
 
@@ -61,15 +54,15 @@ public class AttentionService(DatabaseConfig config)
 
         var failed = new List<AttentionFailure>();
         var anomalies = new List<AttentionAnomaly>();
-        foreach (var profile in runs.GroupBy(r => (r.Kind, r.ProfileId)))
+        foreach (var workflow in runs.GroupBy(r => r.WorkflowId))
         {
-            var latest = profile.First(r => r.Recent == 1);
+            var latest = workflow.First(r => r.Recent == 1);
             if (latest.Status == "Failed")
             {
-                failed.Add(new AttentionFailure(latest.Kind, latest.ProfileId, latest.ProfileName, latest.ExecutionId,
+                failed.Add(new AttentionFailure(latest.WorkflowId, latest.WorkflowName, latest.ExecutionId,
                     FirstLine(latest.ErrorMessage), latest.StartedAt));
             }
-            else if (latest.Status == "Success" && FindAnomaly(latest, profile.Where(r => r.Status == "Success" && r.ExecutionId != latest.ExecutionId).ToList()) is { } anomaly)
+            else if (latest.Status == "Success" && FindAnomaly(latest, workflow.Where(r => r.Status == "Success" && r.ExecutionId != latest.ExecutionId).ToList()) is { } anomaly)
             {
                 anomalies.Add(anomaly);
             }
@@ -79,6 +72,8 @@ public class AttentionService(DatabaseConfig config)
             failed.OrderByDescending(f => f.StartedAt).ToList(),
             anomalies.OrderByDescending(a => a.StartedAt).ToList(),
             upNext.ToList(),
+            [.. (await scheduler.UpcomingAsync(DateTime.UtcNow, DateTime.UtcNow.AddDays(1), ct)).OrderBy(u => u.Next)
+                .Select(u => new AttentionWorkflow(u.Workflow.Id!.Value, u.Workflow.Name, u.Next.ToString("O")))],
             totals);
     }
 
@@ -100,7 +95,7 @@ public class AttentionService(DatabaseConfig config)
     }
 
     private static AttentionAnomaly Anomaly(AttentionRun run, string reason, long value, long median) =>
-        new(run.Kind, run.ProfileId, run.ProfileName, run.ExecutionId, reason, value, median, run.StartedAt);
+        new(run.WorkflowId, run.WorkflowName, run.ExecutionId, reason, value, median, run.StartedAt);
 
     private static long? Median(IEnumerable<long?> values)
     {

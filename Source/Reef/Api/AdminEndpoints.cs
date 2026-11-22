@@ -46,6 +46,8 @@ public static class AdminEndpoints
         group.MapPost("/notification-templates/{templateType}/reset", ResetNotificationTemplate);
         group.MapGet("/logs", (Delegate)GetLogs);
         group.MapGet("/version", GetVersion);
+        group.MapGet("/interpreters", async ([FromServices] InterpreterService interpreters) => Results.Ok(await interpreters.CheckAllAsync()));
+        group.MapPost("/interpreters/{name}/test", async (string name, [FromServices] InterpreterService interpreters) => Results.Ok(await interpreters.CheckOneAsync(name)));
         group.MapGet("/danger/confirmation-string", GetConfirmationString);
         group.MapPost("/danger/reset-database", ResetDatabase);
         group.MapPost("/danger/clear-old-audits", ClearOldAudits);

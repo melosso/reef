@@ -28,11 +28,10 @@ This workflow combines:
 
 ## Key Configuration
 
-**Profile Settings:**
-- **Type**: Email Export
-- **Split Key Column**: `approver_email`
-- **Email Group By Split Key**: ✓ Enabled
-- **Email Template**: This template (Invoice Approval Request)
+**Send email step:**
+- **One email per value of**: `approver_email`
+- **Email template**: this template (Invoice Approval Request)
+- **Hold for approval**: on, when an approver checks the mails before they go out
 
 **Attachment Configuration:**
 - **Mode**: DocumentTemplate
@@ -277,38 +276,25 @@ ORDER BY u.Email, inv.Priority, inv.InvoiceDate;
 5. Paste content from `Document_Template_-_Invoice_Approval_Process.DocumentTemplate.txt`
 6. Click **Save**
 
-### Step 3: Create Profile
+### Step 3: Create the workflow
 
-1. Navigate to **Profiles** page
-2. Click **Create Profile**
-3. Fill in basic details:
-   - **Name**: `Invoice Approval Workflow`
-   - **Connection**: Your MySQL connection
-   - **Query**: Paste the static query above
-4. Configure output:
-   - **Output Format**: Email Export
-   - **Email Template**: Select `Invoice Approval Process Email`
-5. Configure splitting:
-   - **Split Key Column**: `approver_email`
-   - **Email Group By Split Key**: ✓ Enable
-6. Configure email recipients:
-   - **Recipients**: Use column `approver_email`
-   - **Subject**: Use hardcoded: `Invoice Approval Required - {{ rows.size }} invoice(s) pending`
-7. Configure attachments:
-   - **Enable Attachments**: ✓
-   - **Mode**: DocumentTemplate
-   - **Document Template**: Select `Invoice Approval Process`
-   - **Filename Column**: `invoice_filename`
-   - **Generate Per Row**: ✓ **Enable** (this creates one PDF per invoice)
-8. Click **Save**
+1. Open **Workflows** and click **New workflow**.
+2. Add a **Query** step. Choose your MySQL connection and paste the static query above.
+3. Add a **Send email** step after the query:
+   - **Email template**: `Invoice Approval Process Email`
+   - **Recipients from**: a column, **Recipient column**: `approver_email`
+   - **Subject**: `Invoice Approval Required - {{ rows.size }} invoice(s) pending`
+   - **One email per value of**: `approver_email`
+   - **Attachments**: `{"Enabled":true,"Mode":"DocumentTemplate","DocumentTemplate":{"TemplateId":"<id of Invoice Approval Process>","GeneratePerRow":true,"FilenameColumnName":"invoice_filename"}}`
+4. Save the workflow.
 
 ### Step 4: Test
 
-1. Click **Run Now** on your profile
+1. Click **Run** in the editor.
 2. Check the approver inboxes:
    - `john.smith@company.com` should receive 1 email with 2 PDFs
    - `sarah.johnson@company.com` should receive 1 email with 3 PDFs
-3. Review the logs for execution details
+3. Open **Executions** for the step results of the run.
 
 ---
 

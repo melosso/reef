@@ -1,7 +1,6 @@
 export interface AttentionAnomaly {
-  kind: 'export' | 'import';
-  profileId: string;
-  profileName: string;
+  workflowId: string;
+  workflowName: string;
   executionId: string;
   reason: 'rows' | 'duration';
   value: number;

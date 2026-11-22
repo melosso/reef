@@ -12,7 +12,7 @@ public sealed class PublicIdMiddleware(RequestDelegate next, PublicIdMap ids)
         {
             foreach (var (name, policies) in endpoint.RoutePattern.ParameterPolicies)
             {
-                if (TableOf(policies) is { } argument && PublicIdTables.RouteTable(argument, context.Request.RouteValues, context) is { } table
+                if (TableOf(policies) is { } table
                     && context.Request.RouteValues[name]?.ToString() is { } ulid && ids.TryToId(table, ulid, out var id))
                     context.Request.RouteValues[name] = id.ToString();
             }

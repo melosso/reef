@@ -46,17 +46,13 @@ public class AdminService
             // Get total connections
             var totalConnections = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Connections");
 
-            // Get total profiles (export + import)
-            var totalProfiles = await conn.ExecuteScalarAsync<int>(
-                "SELECT (SELECT COUNT(*) FROM Profiles) + (SELECT COUNT(*) FROM ImportProfiles)");
-            var activeProfiles = await conn.ExecuteScalarAsync<int>(
-                "SELECT (SELECT COUNT(*) FROM Profiles WHERE IsEnabled = 1) + (SELECT COUNT(*) FROM ImportProfiles WHERE IsEnabled = 1)");
+            var totalWorkflows = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM Workflows");
+            var activeWorkflows = await conn.ExecuteScalarAsync<int>("""SELECT COUNT(*) FROM Workflows WHERE DocumentJson LIKE '%"active":true%'""");
 
-            // Get total executions
-            var totalExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ProfileExecutions");
-            var successfulExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ProfileExecutions WHERE Status = 'Success'");
-            var failedLast24h = await conn.ExecuteScalarAsync<int>(@"SELECT COUNT(*) FROM ProfileExecutions WHERE Status = 'Failed' AND StartedAt >= datetime('now', '-1 day')");
-            var runningExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ProfileExecutions WHERE Status = 'Running'");
+            var totalExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions");
+            var successfulExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions WHERE Status = 'Success'");
+            var failedLast24h = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions WHERE Status = 'Failed' AND julianday(StartedAt) >= julianday('now', '-1 day')");
+            var runningExecutions = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions WHERE Status = 'Running'");
             var successRate = totalExecutions > 0 ? Math.Round((double)successfulExecutions / totalExecutions * 100, 2) : 0;
 
             // Get total API keys
@@ -71,7 +67,7 @@ public class AdminService
             }
 
             // Get recent execution statistics
-            var recentStats = await conn.QueryFirstOrDefaultAsync<dynamic>(@"SELECT COUNT(*) as Total, SUM(CASE WHEN Status = 'Success' THEN 1 ELSE 0 END) as Success, SUM(CASE WHEN Status = 'Failed' THEN 1 ELSE 0 END) as Failed, AVG(CAST((julianday(CompletedAt) - julianday(StartedAt)) * 86400000 AS INTEGER)) as AvgDurationMs FROM ProfileExecutions WHERE StartedAt >= datetime('now', '-7 days')");
+            var recentStats = await conn.QueryFirstOrDefaultAsync<dynamic>(@"SELECT COUNT(*) as Total, SUM(CASE WHEN Status = 'Success' THEN 1 ELSE 0 END) as Success, SUM(CASE WHEN Status = 'Failed' THEN 1 ELSE 0 END) as Failed, AVG(CAST((julianday(CompletedAt) - julianday(StartedAt)) * 86400000 AS INTEGER)) as AvgDurationMs FROM WorkflowExecutions WHERE julianday(StartedAt) >= julianday('now', '-7 days')");
 
             // Get uptime (from most recent application startup)
             var uptimeQuery = await conn.QueryFirstOrDefaultAsync<DateTime?>("SELECT StartedAt FROM ApplicationStartup ORDER BY StartedAt DESC LIMIT 1");
@@ -96,10 +92,10 @@ public class AdminService
                 users = totalUsers,
                 connections = totalConnections,
                 apikeys = totalApiKeys,
-                profiles = new
+                workflows = new
                 {
-                    total = totalProfiles,
-                    active = activeProfiles
+                    total = totalWorkflows,
+                    active = activeWorkflows
                 },
                 executions = new
                 {
@@ -113,7 +109,8 @@ public class AdminService
                     databaseSizeMb = Math.Round(dbSize / 1024.0 / 1024.0, 2),
                     databaseSizeThresholdMb = Math.Round(dbSizeThresholdMb / 1024.0 / 1024.0, 2),
                     exportsSizeMb = Math.Round(exportsSize / 1024.0 / 1024.0, 2),
-                    uptimeDays = Math.Round(uptime.TotalDays, 2)
+                    uptimeDays = Math.Round(uptime.TotalDays, 2),
+                    uptimeHours = (int)uptime.TotalHours
                 },
                 notifications = new
                 {
@@ -199,19 +196,10 @@ public class AdminService
             var sql = $@"
                 SELECT
                     al.*,
-                    CASE
-                        WHEN al.EntityType = 'Profile'       THEN p.Code
-                        WHEN al.EntityType = 'ImportProfile' THEN ip.Code
-                        ELSE NULL
-                    END AS EntityCode,
-                    CASE
-                        WHEN al.EntityType = 'Profile'       THEN p.Name
-                        WHEN al.EntityType = 'ImportProfile' THEN ip.Name
-                        ELSE NULL
-                    END AS EntityName
+                    NULL AS EntityCode,
+                    w.Name AS EntityName
                 FROM AuditLog al
-                LEFT JOIN Profiles      p  ON al.EntityType = 'Profile'       AND al.EntityId = p.Id
-                LEFT JOIN ImportProfiles ip ON al.EntityType = 'ImportProfile' AND al.EntityId = ip.Id
+                LEFT JOIN Workflows w ON al.EntityType = 'Workflow' AND al.EntityId = w.Id
                 {whereClause}
                 ORDER BY al.Timestamp DESC LIMIT @PageSize OFFSET @Offset";
             parameters.Add("PageSize", pageSize);
@@ -834,9 +822,9 @@ public class AdminService
             await conn.OpenAsync();
 
             var cutoffDate = DateTime.UtcNow.AddDays(-retentionDays);
-            var deletedCount = await conn.ExecuteAsync(
-                "DELETE FROM ProfileExecutions WHERE StartedAt < @CutoffDate AND Id NOT IN (SELECT LastSeenExecutionId FROM DeltaSyncState WHERE LastSeenExecutionId IS NOT NULL)",
-                new { CutoffDate = cutoffDate });
+            var old = new { CutoffDate = cutoffDate.ToString("O") };
+            await conn.ExecuteAsync("DELETE FROM NodeRuns WHERE WorkflowExecutionId IN (SELECT Id FROM WorkflowExecutions WHERE StartedAt < @CutoffDate AND Status <> 'Running')", old);
+            var deletedCount = await conn.ExecuteAsync("DELETE FROM WorkflowExecutions WHERE StartedAt < @CutoffDate AND Status <> 'Running' AND Id NOT IN (SELECT WorkflowExecutionId FROM PendingEmailApprovals WHERE WorkflowExecutionId IS NOT NULL)", old);
 
             Log.Information("Deleted {Count} execution log entries older than {Days} days", deletedCount, retentionDays);
             return deletedCount;
@@ -859,10 +847,8 @@ public class AdminService
             await conn.OpenAsync();
 
             // First get the count
-            var totalCount = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM ProfileExecutions");
-
-            // Then delete all
-            await conn.ExecuteAsync("DELETE FROM ProfileExecutions");
+            var totalCount = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM WorkflowExecutions WHERE Status <> 'Running'");
+            await conn.ExecuteAsync("DELETE FROM NodeRuns WHERE WorkflowExecutionId IN (SELECT Id FROM WorkflowExecutions WHERE Status <> 'Running'); DELETE FROM PendingEmailApprovals WHERE WorkflowExecutionId IN (SELECT Id FROM WorkflowExecutions WHERE Status <> 'Running'); DELETE FROM WorkflowExecutions WHERE Status <> 'Running'");
 
             Log.Warning("DANGER: Deleted ALL execution logs ({Count} entries)", totalCount);
             return totalCount;

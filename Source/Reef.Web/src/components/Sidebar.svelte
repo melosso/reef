@@ -5,6 +5,7 @@
   import { recent } from '../lib/recent.svelte';
   import { isAdmin } from '../lib/session.svelte';
   import { api } from '../lib/api';
+  import { tooltip } from '../lib/tooltip';
   import StatusMark from './StatusMark.svelte';
   import Logo from './Logo.svelte';
 
@@ -23,25 +24,41 @@
     return () => clearInterval(timer);
   });
 
+  const narrow = window.matchMedia('(max-width: 1023px)');
+  const medium = window.matchMedia('(max-width: 1199px)');
+  let width = $state(narrow.matches ? 0 : medium.matches ? 1 : 2);
+  $effect(() => {
+    const update = () => (width = narrow.matches ? 0 : medium.matches ? 1 : 2);
+    narrow.addEventListener('change', update);
+    medium.addEventListener('change', update);
+    return () => {
+      narrow.removeEventListener('change', update);
+      medium.removeEventListener('change', update);
+    };
+  });
+  const canvas = $derived(/^\/workflows\/[^/]+$/.test(route.path));
+  const rail = $derived(width === 0 || (width === 1 && canvas));
+  const hint = (text: string) => (rail ? { text, placement: 'right' as const } : null);
+
   const active = (href: string) => route.path === href || route.path.startsWith(`${href}/`);
 </script>
 
-<aside class="side">
+<aside class="side" class:rail>
   <a class="brand" href="/dashboard"><Logo /><span>Reef</span></a>
   <nav aria-label="Main">
     {#each navItems as item (item.href)}
-      <a href={item.href} aria-current={active(item.href) ? 'page' : undefined}>
+      <a href={item.href} aria-current={active(item.href) ? 'page' : undefined} aria-label={item.label} use:tooltip={hint(item.label)}>
         <item.icon size={16} strokeWidth={1.75} />
         <span class="label">{item.label}</span>
         {#if item.href === '/approvals' && approvals > 0}<span class="num count" aria-label="{approvals} pending">{approvals}</span>{/if}
       </a>
     {/each}
   </nav>
-  {#if recent.items.length}
+  {#if recent.items.length && !rail}
     <div class="recent">
       <h2>Recent</h2>
-      {#each recent.items as item (item.kind + item.id)}
-        <a href="/profiles/{item.kind}/{item.id}" aria-current={route.path === `/profiles/${item.kind}/${item.id}` ? 'page' : undefined}>
+      {#each recent.items as item (item.id)}
+        <a href="/workflows/{item.id}" aria-current={route.path === `/workflows/${item.id}` ? 'page' : undefined}>
           <StatusMark kind={item.status ?? 'idle'} />
           <span class="label">{item.name}</span>
         </a>
@@ -50,9 +67,9 @@
   {/if}
   <div class="grow"></div>
   {#if isAdmin()}
-    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined}
-      ><SlidersHorizontal size={16} strokeWidth={1.75} /><span class="label">Admin</span></a
-    >
+    <a href="/admin" aria-current={active('/admin') ? 'page' : undefined} aria-label="Admin" use:tooltip={hint('Admin')}>
+      <SlidersHorizontal size={16} strokeWidth={1.75} /><span class="label">Admin</span>
+    </a>
   {/if}
 </aside>
 
@@ -128,5 +145,27 @@
   .grow {
     flex: 1;
     min-height: 16px;
+  }
+  .side.rail {
+    width: 60px;
+    padding: 12px 8px;
+  }
+  .rail .brand {
+    padding: 8px 10px 18px;
+  }
+  .rail .brand span,
+  .rail .label {
+    display: none;
+  }
+  .rail a:not(.brand) {
+    justify-content: center;
+    padding: 9px 0;
+    position: relative;
+  }
+  .rail .count {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 11px;
   }
 </style>

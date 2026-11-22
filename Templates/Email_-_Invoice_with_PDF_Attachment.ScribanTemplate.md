@@ -162,7 +162,7 @@ ORDER BY c.Email, li.LineNumber
 
 ---
 
-## Profile Setup
+## Workflow Setup
 
 ### Step 1: Create Document Template (PDF Invoice)
 1. Navigate to **Templates** page
@@ -186,32 +186,21 @@ ORDER BY c.Email, li.LineNumber
 5. In **Template Content** textarea, paste the content from `Email_-_Invoice_with_PDF_Attachment.ScribanTemplate.html`
 6. Click **Save**
 
-### Step 3: Create Email Export Profile
-1. Navigate to **Profiles** page
-2. Click **Create Profile**
-3. Configure **General** tab:
-   - Name: `Send Customer Invoices`
-   - Connection: Select your database
-   - Query: Paste query from above
-   - **Enable Email Export**: ✓
-4. Configure **Email** tab:
-   - Email Body Template: Select `Email - Invoice Notification`
-   - Recipients Column: `customer_email`
-   - Subject Hardcoded: `Your Invoice #{{invoice_number}} from {{company_name}}`
-5. Configure **Attachments**:
-   - **Enable Email Attachments**: ✓
-   - **Document Template**: Select `Invoice - Customer PDF`
-   - **Filename Column**: Create calculated column or hardcode `Invoice_{{invoice_number}}.pdf`
-   - **Page Size**: A4
-   - **Orientation**: Portrait
-6. Configure **Split Output**:
-   - **Enable Splitting**: ✓
-   - **Split Key Column**: `customer_email`
-7. Save profile
+### Step 3: Create the workflow
+1. Open **Workflows** and click **New workflow**.
+2. Add a **Query** step. Choose your database and paste the query from above.
+3. Add a **Send email** step and connect it after the query:
+   - **Mail server**: your email destination
+   - **Email template**: `Email - Invoice Notification`
+   - **Recipients from**: a column, **Recipient column**: `customer_email`
+   - **Subject**: `Your Invoice #{{invoice_number}} from {{company_name}}`
+   - **One email per value of**: `customer_email`
+   - **Attachments**: `{"Enabled":true,"Mode":"DocumentTemplate","DocumentTemplate":{"TemplateId":"<id of Invoice - Customer PDF>","GeneratePerRow":true}}`
+4. Save the workflow.
 
-### Step 4: Execute Profile
-- Click **Execute** on the profile
-- Each customer receives one email with their PDF invoice attached
+### Step 4: Run the workflow
+- Click **Run** in the editor. Reef asks for confirmation before it sends emails.
+- Each customer receives one email with their PDF invoice attached.
 
 ## Notes
 

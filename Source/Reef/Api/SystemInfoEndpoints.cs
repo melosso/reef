@@ -54,7 +54,8 @@ public static class SystemInfoEndpoints
                 timestamp = DateTime.UtcNow,
                 uptime = new
                 {
-                    days = uptimeDays
+                    days = uptimeDays,
+                    hours = metrics?.system?.uptimeHours ?? 0
                 },
                 license = new
                 {

@@ -1,4 +1,4 @@
-const DETAIL_COLLECTIONS = ['/connections', '/destinations', '/templates', '/jobs', '/groups'];
+const DETAIL_COLLECTIONS = ['/connections', '/destinations', '/templates', '/jobs'];
 const ADMIN_TABS: Record<string, string> = { apikeys: 'api-keys' };
 const ACCOUNT_TABS: Record<string, string> = { mfa: 'security' };
 
@@ -12,7 +12,7 @@ export function canonicalUrl(path: string, search: string): string | null {
     query.delete(key);
     return value;
   };
-  let next = path.toLowerCase().replace(/\/+$/, '') || '/';
+  let next = path.replace(/\/+$/, '').replace(/^\/[^/]*/, (first) => first.toLowerCase()) || '/';
 
   if (next === '/' || next === '/index') next = '/login';
   else if (next === '/logoff') next = '/logout';
@@ -28,13 +28,9 @@ export function canonicalUrl(path: string, search: string): string | null {
     if (id) next = `${next}/${id}`;
   } else if (next === '/executions') {
     const id = take('id');
-    const importId = take('importId');
-    if (id) next = `/executions/export/${id}`;
-    else if (importId) next = `/executions/import/${importId}`;
-    const profileId = take('profileId');
-    if (profileId) query.set('profile', profileId.includes(':') ? profileId : `export:${profileId}`);
-    const jobId = take('jobId');
-    if (jobId) query.set('job', jobId);
+    if (id) next = `/executions/${id}`;
+  } else if (next === '/profiles' || next.startsWith('/profiles/')) {
+    next = '/workflows';
   }
 
   const rest = query.toString();

@@ -1,13 +1,12 @@
 namespace Reef.Core.Models.Dashboard;
 
 /// <summary>
-/// One finished export or import run as read for the attention query
+/// One finished workflow run as read for the attention query
 /// </summary>
 public class AttentionRun
 {
-    public string Kind { get; init; } = "";
-    public int ProfileId { get; init; }
-    public string ProfileName { get; init; } = "";
+    public int WorkflowId { get; init; }
+    public string WorkflowName { get; init; } = "";
     public bool DeltaSyncEnabled { get; init; }
     public int ExecutionId { get; init; }
     public string Status { get; init; } = "";

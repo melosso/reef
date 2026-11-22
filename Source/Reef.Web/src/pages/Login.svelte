@@ -2,7 +2,7 @@
   import type { LoginResult } from '../models/LoginResult';
   import { onMount } from 'svelte';
   import Logo from '../components/Logo.svelte';
-  import { request } from '../lib/api';
+  import { ApiError, request } from '../lib/api';
   import { navigate, route } from '../lib/router.svelte';
   import { session, storeSession } from '../lib/session.svelte';
   import { notify } from '../lib/notify';
@@ -16,8 +16,10 @@
   };
 
   let username = $state('');
+  let usernameError = $state(false);
   let step = $state<'email' | 'password'>('email');
   let password = $state('');
+  let passwordError = $state(false);
   let code = $state('');
   let busy = $state(false);
   let mfa = $state<{ sessionId: string; method: string } | null>(null);
@@ -41,9 +43,16 @@
       .catch(() => {});
   });
 
-  function proceed(e: SubmitEvent) {
+  async function proceed(e: SubmitEvent) {
     e.preventDefault();
-    step = 'password';
+    try {
+      await request('POST', '/api/auth/identify', { username });
+      usernameError = false;
+      step = 'password';
+    } catch (error) {
+      usernameError = error instanceof ApiError && error.errors.some((x) => x.field === 'Username');
+      notify.fail(error, 'sign-in');
+    }
   }
 
   async function signIn(e: SubmitEvent) {
@@ -58,6 +67,7 @@
       storeSession(data);
       navigate(next(), true);
     } catch (error) {
+      passwordError = error instanceof ApiError && error.status === 401;
       notify.fail(error, 'sign-in');
     } finally {
       busy = false;
@@ -113,6 +123,8 @@
             <input
               id="username"
               bind:value={username}
+              aria-invalid={usernameError ? 'true' : undefined}
+              oninput={() => (usernameError = false)}
               inputmode="email"
               autocomplete="username"
               autocapitalize="none"
@@ -132,13 +144,23 @@
               onclick={() => {
                 step = 'email';
                 password = '';
-              }}>Use another email</button
+              }}
             >
+              Use another email
+            </button>
           </div>
           <input class="sr" type="text" autocomplete="username" value={username} readonly tabindex="-1" aria-hidden="true" />
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" type="password" bind:value={password} autocomplete="current-password" use:focus />
+            <input
+              id="password"
+              type="password"
+              bind:value={password}
+              aria-invalid={passwordError ? 'true' : undefined}
+              oninput={() => (passwordError = false)}
+              autocomplete="current-password"
+              use:focus
+            />
           </div>
           <button class="btn primary full" type="submit" aria-busy={busy} disabled={busy}>Sign in</button>
         </form>
@@ -157,7 +179,7 @@
       <form onsubmit={verify} class="fields">
         <div class="field">
           <label for="code" class="sr">Verification code</label>
-          <input id="code" class="code" bind:value={code} inputmode="numeric" autocomplete="one-time-code" maxlength="6" use:focus />
+          <input id="code" class="code" bind:value={code} inputmode="numeric" autocomplete="one-time-code" use:focus />
         </div>
         <button class="btn primary full" type="submit" aria-busy={busy} disabled={busy || code.length !== 6}>Verify</button>
       </form>
@@ -169,8 +191,10 @@
           onclick={() => {
             mfa = null;
             code = '';
-          }}>Use another account</button
+          }}
         >
+          Use another account
+        </button>
       </div>
     {/if}
   </div>
@@ -183,9 +207,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     gap: 24px;
-    padding: 24px;
+    padding: 18vh 24px 24px;
   }
   .card {
     width: 360px;

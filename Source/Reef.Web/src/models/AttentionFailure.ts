@@ -1,7 +1,6 @@
 export interface AttentionFailure {
-  kind: 'export' | 'import';
-  profileId: string;
-  profileName: string;
+  workflowId: string;
+  workflowName: string;
   executionId: string;
   error: string;
   startedAt: string;

@@ -9,6 +9,7 @@ using Npgsql;
 using Reef.Core.Models;
 using Reef.Core.Services;
 using Serilog;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Targets;
 

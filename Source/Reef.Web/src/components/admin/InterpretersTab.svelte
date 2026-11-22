@@ -8,7 +8,7 @@
   let busy = $state<string | null>(null);
 
   async function load() {
-    list = await api.get<Interpreter[]>('/api/profiles/interpreters').catch((e) => {
+    list = await api.get<Interpreter[]>('/api/admin/interpreters').catch((e) => {
       notify.fail(e);
       return [];
     });
@@ -21,7 +21,7 @@
   async function test(name: string) {
     busy = name;
     try {
-      const s = await api.post<Interpreter>(`/api/profiles/interpreters/${name}/test`);
+      const s = await api.post<Interpreter>(`/api/admin/interpreters/${name}/test`);
       (s.available ? notify.success : notify.error)(`${s.displayName} is ${s.available ? 'available' : 'not available'}`);
       await load();
     } catch (e) {

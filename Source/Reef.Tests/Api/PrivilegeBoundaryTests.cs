@@ -31,67 +31,6 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
         return (client, id);
     }
 
-    private static JsonObject Node(string type, JsonObject config) => new() { ["id"] = type, ["type"] = type, ["x"] = 40, ["y"] = 40, ["config"] = config };
-
-    private async Task<JsonObject> ExportDocumentAsync(HttpClient client, JsonObject destinationConfig, JsonObject? postprocess = null)
-    {
-        var admin = await factory.CreateAdminClientAsync();
-        var created = await admin.PostAsJsonAsync("/api/connections",
-            new { name = $"Shop {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={Path.Combine(factory.DataFolder, "shop.db")}", isActive = true, hash = "" }, _ct);
-        created.EnsureSuccessStatusCode();
-        var connectionId = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
-        var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        destinationConfig["OutputDestinationId"] = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
-        destinationConfig["OutputFormat"] = "CSV";
-        var nodes = new JsonArray(
-            Node("source", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" }),
-            Node("destination", destinationConfig));
-        if (postprocess is not null) nodes.Add(Node("postprocess", postprocess));
-        return new JsonObject { ["kind"] = "export", ["settings"] = new JsonObject { ["Name"] = $"Export {Guid.NewGuid():N}", ["IsEnabled"] = false }, ["nodes"] = nodes };
-    }
-
-    private static JsonObject ScriptStep() => new()
-    {
-        ["PostProcessType"] = "Script",
-        ["PostProcessConfig"] = new JsonObject { ["Interpreter"] = "sh", ["ScriptIsInline"] = true, ["ScriptPathOrInline"] = "id" }
-    };
-
-    [Fact]
-    public async Task UsersCannotRunAdHocScripts()
-    {
-        var (user, _) = await CreateUserAsync();
-
-        (await user.PostAsJsonAsync("/api/profiles/test-script", new { interpreter = "sh", scriptPathOrInline = "id", scriptIsInline = true }, _ct))
-            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await user.PostAsJsonAsync("/api/profiles/interpreters/sh/test", new { }, _ct))
-            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
-    public async Task UsersCannotAddScriptStepsButAdminsCan()
-    {
-        var (user, _) = await CreateUserAsync();
-        var admin = await factory.CreateAdminClientAsync();
-
-        (await user.PostAsJsonAsync("/api/profile-documents/export", await ExportDocumentAsync(user, new JsonObject(), ScriptStep()), _ct))
-            .IsSuccessStatusCode.Should().BeFalse();
-        (await admin.PostAsJsonAsync("/api/profile-documents/export", await ExportDocumentAsync(admin, new JsonObject(), ScriptStep()), _ct))
-            .StatusCode.Should().Be(HttpStatusCode.Created);
-    }
-
-    [Fact]
-    public async Task UsersCannotReadServerFilesThroughImportPreview()
-    {
-        var (user, _) = await CreateUserAsync();
-        var settings = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-
-        var preview = await user.PostAsJsonAsync("/api/import-profiles/preview",
-            new { name = "peek", sourceType = "Local", sourceFilePath = settings, sourceFileSelection = "Exact", sourceFormat = "JSON", targetTable = "x", maxRows = 10 }, _ct);
-
-        preview.IsSuccessStatusCode.Should().BeFalse();
-        (await preview.Content.ReadAsStringAsync(_ct)).Should().NotContain("SecretKey");
-    }
-
     [Fact]
     public async Task UsersCannotPointDestinationsAtTheFileSystem()
     {
@@ -104,16 +43,69 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     }
 
     [Theory]
-    [InlineData("orders/{profile}_{guid}.{format}", true)]
-    [InlineData("../escape-{guid}.csv", false)]
-    [InlineData("/tmp/escape-{guid}.csv", false)]
-    public async Task FileNameTemplatesCannotLeaveTheExportFolder(string template, bool accepted)
+    [InlineData("orders/{workflow}_{guid}.{format}", "Success")]
+    [InlineData("../escape-{guid}.csv", "Failed")]
+    [InlineData("/tmp/escape-{guid}.csv", "Failed")]
+    public async Task FileNameTemplatesCannotLeaveTheExportFolder(string template, string status)
     {
         var admin = await factory.CreateAdminClientAsync();
+        var connectionId = await EmailProfiles.IdOfAsync(await admin.PostAsJsonAsync("/api/connections",
+            new { name = $"Names {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={Path.Combine(factory.DataFolder, $"names-{Guid.NewGuid():N}.db")}", isActive = true, hash = "" }, _ct));
+        var destinations = await admin.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
+        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
+        var workflowId = await TestWorkflows.CreateChainAsync(admin,
+            TestWorkflows.Node("query", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = "SELECT 1 AS One" }),
+            TestWorkflows.Node("file", "destination", new JsonObject { ["DestinationId"] = destinationId, ["Format"] = "CSV", ["FileName"] = template }));
 
-        var saved = await admin.PostAsJsonAsync("/api/profile-documents/export", await ExportDocumentAsync(admin, new JsonObject { ["FilenameTemplate"] = template }), _ct);
+        var run = await TestWorkflows.RunAsync(admin, workflowId);
 
-        saved.IsSuccessStatusCode.Should().Be(accepted, await saved.Content.ReadAsStringAsync(_ct));
+        run["status"]!.GetValue<string>().Should().Be(status, run.ToJsonString());
+    }
+
+    private static JsonObject Workflow(string type, JsonObject config) => new()
+    {
+        ["name"] = $"Privileged {Guid.NewGuid():N}",
+        ["nodes"] = new JsonArray(
+            new JsonObject { ["id"] = "start", ["type"] = "manual", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject() },
+            new JsonObject { ["id"] = "step", ["type"] = type, ["x"] = 240, ["y"] = 0, ["config"] = config }),
+        ["edges"] = new JsonArray(new JsonObject { ["from"] = "start", ["to"] = "step" })
+    };
+
+    public static TheoryData<string, string> PrivilegedSteps => new()
+    {
+        { "command", """{"Runs":"Script","Interpreter":"sh","Script":"id"}""" },
+        { "fetch", """{"From":"Local","Path":"/etc"}""" },
+        { "fetch", """{"From":"NetworkShare","Settings":{"uncPath":"/etc"},"Pattern":"*"}""" },
+        { "fetch", """{"From":"Sftp","Settings":{"host":"files"},"Archive":true,"ArchiveFolder":"/srv"}""" },
+        { "write", """{"To":"LocalFile","FilePath":"/tmp/out.csv"}""" }
+    };
+
+    [Theory]
+    [MemberData(nameof(PrivilegedSteps))]
+    public async Task UsersCannotAddPrivilegedWorkflowStepsButAdminsCan(string type, string config)
+    {
+        var (user, _) = await CreateUserAsync();
+        var admin = await factory.CreateAdminClientAsync();
+
+        (await user.PostAsJsonAsync("/api/workflows", Workflow(type, JsonNode.Parse(config)!.AsObject()), _ct))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await admin.PostAsJsonAsync("/api/workflows", Workflow(type, JsonNode.Parse(config)!.AsObject()), _ct))
+            .StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task UsersCanRenameAWorkflowButNotChangeItsScript()
+    {
+        var (user, _) = await CreateUserAsync();
+        var admin = await factory.CreateAdminClientAsync();
+        var created = await admin.PostAsJsonAsync("/api/workflows", Workflow("command", new JsonObject { ["Runs"] = "Script", ["Interpreter"] = "sh", ["Script"] = "id" }), _ct);
+        var workflow = (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!;
+        var id = workflow["id"]!.GetValue<string>();
+
+        workflow["name"] = workflow["name"]!.GetValue<string>() + " renamed";
+        (await user.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        workflow["nodes"]![1]!["config"]!["Script"] = "cat /etc/passwd";
+        (await user.PutAsJsonAsync($"/api/workflows/{id}", workflow, _ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]
@@ -121,11 +113,11 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     {
         var (user, id) = await CreateUserAsync();
         var admin = await factory.CreateAdminClientAsync();
-        (await user.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await user.GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
 
         (await admin.PutAsJsonAsync($"/api/admin/users/{id}", new { role = "User", isActive = false }, _ct)).EnsureSuccessStatusCode();
 
-        (await user.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await user.GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await user.PostAsync("/api/auth/refresh", null, _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
@@ -151,18 +143,18 @@ public class PrivilegeBoundaryTests(ReefApiFactory factory)
     public async Task ChangingThePasswordSignsOutExistingTokens()
     {
         var (user, _) = await CreateUserAsync();
-        (await user.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await user.GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.OK);
 
         (await user.PostAsJsonAsync("/api/auth/change-password", new { currentPassword = Password, newPassword = "Another-Pass-456" }, _ct)).EnsureSuccessStatusCode();
 
-        (await user.GetAsync("/api/groups", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await user.GetAsync("/api/workflows", _ct)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Theory]
     [InlineData("POST", "/api/admin/users")]
     [InlineData("PUT", "/api/admin/users/{self}")]
     [InlineData("POST", "/api/admin/danger/reset-database")]
-    [InlineData("GET", "/api/profiles/interpreters")]
+    [InlineData("GET", "/api/admin/interpreters")]
     public async Task UsersAreRefusedBeforeTheRequestIsRead(string method, string path)
     {
         var (user, id) = await CreateUserAsync();

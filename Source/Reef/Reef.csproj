@@ -65,12 +65,21 @@
     <WebSource Include="$(WebDir)/src/**/*;$(WebDir)/index.html;$(WebDir)/package.json;$(WebDir)/package-lock.json;$(WebDir)/vite.config.ts" />
   </ItemGroup>
 
-  <Target Name="BuildWeb" BeforeTargets="BeforeBuild" Condition="'$(SkipWebBuild)' != 'true' And Exists('$(WebDir)/package.json')" Inputs="@(WebSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html">
+  <Target Name="BuildWeb" BeforeTargets="BeforeBuild;ResolveProjectStaticWebAssets" Condition="'$(SkipWebBuild)' != 'true' And Exists('$(WebDir)/package.json')" Inputs="@(WebSource)" Outputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html">
     <Exec Command="npm ci --no-audit --no-fund" WorkingDirectory="$(WebDir)" Condition="!Exists('$(WebDir)/node_modules')" />
-    <Exec Command="npm run build" WorkingDirectory="$(WebDir)" />
+    <Exec Command="npm run build" WorkingDirectory="$(WebDir)" EnvironmentVariables="REEF_KEEP_ASSETS=1" />
   </Target>
 
-  <Target Name="IncludeWebOutput" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild">
+  <Target Name="ResetWebAssetManifests" AfterTargets="BuildWeb" BeforeTargets="BeforeBuild;ResolveProjectStaticWebAssets" Condition="Exists('$(MSBuildProjectDirectory)/wwwroot/app/index.html')" Inputs="$(MSBuildProjectDirectory)/wwwroot/app/index.html" Outputs="$(IntermediateOutputPath)webassets.stamp">
+    <ItemGroup>
+      <StaleWebAssetFiles Include="$(IntermediateOutputPath)staticwebassets*;$(IntermediateOutputPath)*.dswa.cache.json;$(IntermediateOutputPath)compressed/**" />
+    </ItemGroup>
+    <Delete Files="@(StaleWebAssetFiles)" />
+    <MakeDir Directories="$(IntermediateOutputPath)" />
+    <Touch Files="$(IntermediateOutputPath)webassets.stamp" AlwaysCreate="true" />
+  </Target>
+
+  <Target Name="IncludeWebOutput" AfterTargets="ResetWebAssetManifests" BeforeTargets="BeforeBuild;ResolveProjectStaticWebAssets">
     <ItemGroup>
       <Content Remove="wwwroot/app/**" />
       <Content Include="wwwroot/app/**" />

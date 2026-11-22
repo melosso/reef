@@ -22,28 +22,19 @@ public class DashboardApiTests(ReefApiFactory factory)
         await cmd.ExecuteNonQueryAsync(_ct);
     }
 
-    private async Task<string> CreateProfileAsync(HttpClient client, string shopDb, string query)
+    private async Task<string> CreateWorkflowAsync(HttpClient client, string shopDb, string query, bool smartSync = false)
     {
         var connection = await client.PostAsJsonAsync("/api/connections", new { name = $"Shop {Guid.NewGuid():N}", type = "Sqlite", connectionString = $"Data Source={shopDb}", isActive = true, hash = "" }, _ct);
         connection.EnsureSuccessStatusCode();
         var connectionId = (await connection.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
-        var destinations = await client.GetFromJsonAsync<JsonArray>("/api/destinations", _ct);
-        var destinationId = destinations!.First(d => d!["type"]!.GetValue<string>() == "Local")!["id"]!.GetValue<string>();
-        var document = new JsonObject
-        {
-            ["kind"] = "export",
-            ["settings"] = new JsonObject { ["Name"] = $"Dashboard {Guid.NewGuid():N}", ["IsEnabled"] = true },
-            ["nodes"] = new JsonArray(
-                new JsonObject { ["id"] = "source", ["type"] = "source", ["x"] = 0, ["y"] = 0, ["config"] = new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = query } },
-                new JsonObject { ["id"] = "destination", ["type"] = "destination", ["x"] = 300, ["y"] = 0, ["config"] = new JsonObject { ["OutputDestinationId"] = destinationId, ["OutputFormat"] = "JSON" } })
-        };
-        var created = await client.PostAsJsonAsync("/api/profile-documents/export", document, _ct);
-        created.EnsureSuccessStatusCode();
-        return (await created.Content.ReadFromJsonAsync<JsonObject>(_ct))!["id"]!.GetValue<string>();
+        var query1 = TestWorkflows.Node("query", "query", new JsonObject { ["ConnectionId"] = connectionId, ["Query"] = query });
+        return smartSync
+            ? await TestWorkflows.CreateChainAsync(client, query1, TestWorkflows.Node("sync", "deltasync", new JsonObject { ["IdColumn"] = "OrderId" }))
+            : await TestWorkflows.CreateChainAsync(client, query1);
     }
 
-    private async Task RunAsync(HttpClient client, string profileId) =>
-        await client.PostAsJsonAsync($"/api/executions/execute/{profileId}", new { }, _ct);
+    private async Task RunAsync(HttpClient client, string workflowId) =>
+        await client.PostAsync($"/api/workflows/{workflowId}/run", null, _ct);
 
     private async Task<HttpClient> CreateUserClientAsync(HttpClient admin)
     {
@@ -55,21 +46,21 @@ public class DashboardApiTests(ReefApiFactory factory)
         return user;
     }
 
-    private static IEnumerable<string> ProfileIds(JsonObject attention, string section) =>
-        attention[section]!.AsArray().Select(i => i!["profileId"]!.GetValue<string>());
+    private static IEnumerable<string> WorkflowIds(JsonObject attention, string section) =>
+        attention[section]!.AsArray().Select(i => i!["workflowId"]!.GetValue<string>());
 
     [Fact]
-    public async Task AttentionListsFailedProfilesAndRowCountDropsForAnySignedInUser()
+    public async Task AttentionListsFailedWorkflowsAndRowCountDropsForAnySignedInUser()
     {
         var admin = await factory.CreateAdminClientAsync();
         var shopDb = Path.Combine(factory.DataFolder, $"dash-{Guid.NewGuid():N}.db");
         await ExecAsync(shopDb, "CREATE TABLE Orders (OrderId INTEGER PRIMARY KEY); INSERT INTO Orders VALUES (1), (2), (3), (4);");
 
-        var failing = await CreateProfileAsync(admin, shopDb, "SELECT * FROM MissingTable");
+        var failing = await CreateWorkflowAsync(admin, shopDb, "SELECT * FROM MissingTable");
         await RunAsync(admin, failing);
 
-        var dropping = await CreateProfileAsync(admin, shopDb, "SELECT * FROM Orders");
-        var delta = await CreateProfileAsync(admin, shopDb, "SELECT * FROM Orders");
+        var dropping = await CreateWorkflowAsync(admin, shopDb, "SELECT * FROM Orders");
+        var delta = await CreateWorkflowAsync(admin, shopDb, "SELECT * FROM Orders", smartSync: true);
         for (var i = 0; i < 3; i++)
         {
             await RunAsync(admin, dropping);
@@ -78,33 +69,32 @@ public class DashboardApiTests(ReefApiFactory factory)
         await ExecAsync(shopDb, "DELETE FROM Orders;");
         await RunAsync(admin, dropping);
         await RunAsync(admin, delta);
-        await ExecAsync(Path.Combine(factory.DataFolder, "Reef.db"), $"UPDATE Profiles SET DeltaSyncEnabled = 1 WHERE Ulid = '{delta}';");
 
         var user = await CreateUserClientAsync(admin);
         var response = await user.GetAsync("/api/dashboard/attention", _ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var attention = (await response.Content.ReadFromJsonAsync<JsonObject>(_ct))!;
-        ProfileIds(attention, "failed").Should().Contain(failing).And.NotContain(dropping);
-        ProfileIds(attention, "anomalies").Should().Contain(dropping).And.NotContain(delta);
-        attention["anomalies"]!.AsArray().First(a => a!["profileId"]!.GetValue<string>() == dropping)!["reason"]!.GetValue<string>().Should().Be("rows");
+        WorkflowIds(attention, "failed").Should().Contain(failing).And.NotContain(dropping);
+        WorkflowIds(attention, "anomalies").Should().Contain(dropping).And.NotContain(delta);
+        attention["anomalies"]!.AsArray().First(a => a!["workflowId"]!.GetValue<string>() == dropping)!["reason"]!.GetValue<string>().Should().Be("rows");
         attention["last24h"]!["failed"]!.GetValue<int>().Should().BeGreaterThan(0);
         attention["upNext"].Should().NotBeNull();
     }
 
     [Fact]
-    public async Task FailedProfileLeavesAttentionAfterASuccessfulRun()
+    public async Task FailedWorkflowLeavesAttentionAfterASuccessfulRun()
     {
         var admin = await factory.CreateAdminClientAsync();
         var shopDb = Path.Combine(factory.DataFolder, $"dash-{Guid.NewGuid():N}.db");
-        var profile = await CreateProfileAsync(admin, shopDb, "SELECT * FROM Orders");
-        await RunAsync(admin, profile);
+        var workflow = await CreateWorkflowAsync(admin, shopDb, "SELECT * FROM Orders");
+        await RunAsync(admin, workflow);
 
-        ProfileIds((await admin.GetFromJsonAsync<JsonObject>("/api/dashboard/attention", _ct))!, "failed").Should().Contain(profile);
+        WorkflowIds((await admin.GetFromJsonAsync<JsonObject>("/api/dashboard/attention", _ct))!, "failed").Should().Contain(workflow);
 
         await ExecAsync(shopDb, "CREATE TABLE Orders (OrderId INTEGER PRIMARY KEY); INSERT INTO Orders VALUES (1);");
-        await RunAsync(admin, profile);
+        await RunAsync(admin, workflow);
 
-        ProfileIds((await admin.GetFromJsonAsync<JsonObject>("/api/dashboard/attention", _ct))!, "failed").Should().NotContain(profile);
+        WorkflowIds((await admin.GetFromJsonAsync<JsonObject>("/api/dashboard/attention", _ct))!, "failed").Should().NotContain(workflow);
     }
 }

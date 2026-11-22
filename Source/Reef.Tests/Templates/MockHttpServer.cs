@@ -23,6 +23,7 @@ public sealed class MockHttpServer : IDisposable
     public string? LastAuthorizationHeader { get; private set; }
     public string? LastContentTypeHeader { get; private set; }
     public int RequestCount { get; private set; }
+    public Func<Uri, string>? Respond { get; set; }
 
     public MockHttpServer()
     {
@@ -74,7 +75,7 @@ public sealed class MockHttpServer : IDisposable
                 RequestCount++;
 
                 ctx.Response.StatusCode = _statusCode;
-                var bytes = Encoding.UTF8.GetBytes(_responseBody);
+                var bytes = Encoding.UTF8.GetBytes(Respond?.Invoke(ctx.Request.Url!) ?? _responseBody);
                 ctx.Response.ContentLength64 = bytes.Length;
                 await ctx.Response.OutputStream.WriteAsync(bytes);
                 ctx.Response.OutputStream.Close();

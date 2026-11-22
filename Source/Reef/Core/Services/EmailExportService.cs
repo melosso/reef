@@ -8,6 +8,7 @@ using Reef.Core.TemplateEngines;
 using Reef.Core.DocumentGeneration;
 using Reef.Core.Destinations;
 using Serilog;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Services;
 
@@ -174,7 +175,7 @@ public class EmailExportService
 
             if (queryResults == null || queryResults.Count == 0)
             {
-                Log.Information("No query results to email from profile {ProfileId}", profile.Id);
+                Log.Information("No query results to email");
                 return (true, "No rows returned from query", 0, 0, new List<ProfileExecutionSplit>(), _emptyFailures);
             }
 
@@ -222,8 +223,8 @@ public class EmailExportService
                     .GroupBy(r => SafeGetValue(r, profile.SplitKeyColumn)?.ToString() ?? "unknown")
                     .ToList();
 
-                Log.Information("Sending {Count} emails (grouped by split key '{SplitKey}') from profile {ProfileId}",
-                    groupedResults.Count, profile.SplitKeyColumn, profile.Id);
+                Log.Information("Sending {Count} emails (grouped by split key '{SplitKey}')",
+                    groupedResults.Count, profile.SplitKeyColumn);
 
                 foreach (var group in groupedResults)
                 {
@@ -296,8 +297,8 @@ public class EmailExportService
                 if (useHardcodedRecipient || allSameRecipient)
                 {
                     // Send ALL rows in ONE email
-                    Log.Information("Sending 1 email with {RowCount} rows from profile {ProfileId}",
-                        queryResults.Count, profile.Id);
+                    Log.Information("Sending 1 email with {RowCount} rows",
+                        queryResults.Count);
 
                     var result = await SendEmailBatchAsync(
                         profile,
@@ -344,8 +345,8 @@ public class EmailExportService
                 else
                 {
                     // Send one email per row (different recipients)
-                    Log.Information("Sending {Count} emails (one per row, different recipients) from profile {ProfileId}",
-                        queryResults.Count, profile.Id);
+                    Log.Information("Sending {Count} emails (one per row, different recipients)",
+                        queryResults.Count);
 
                     for (int i = 0; i < queryResults.Count; i++)
                     {
@@ -405,8 +406,8 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error("Failed to export query results as email from profile {ProfileId}: {Error}",
-                profile.Id, ex.Message);
+            Log.Error("Failed to export query results as email: {Error}",
+                ex.Message);
             return (false, $"Email export failed: {ex.Message}", 0, 0, new List<ProfileExecutionSplit>(), new List<(string, string)>());
         }
     }
@@ -434,7 +435,7 @@ public class EmailExportService
                 attachments.Count == 0)
             {
                 var errorMsg = $"Failsafe triggered: No attachments were generated, but attachment config requires attachments. Email not sent.";
-                Log.Warning(errorMsg + " Profile: {ProfileName} ({ProfileId})", profile.Name, profile.Id);
+                Log.Warning(errorMsg);
                 return (false, errorMsg);
             }
 
@@ -608,8 +609,8 @@ public class EmailExportService
                         if (result.Success)
                         {
                             sendCount++;
-                            Log.Information("Email {Number} sent to {Recipient} from profile {ProfileId}",
-                                i + 1, MaskEmailForLog(recipient), profile.Id);
+                            Log.Information("Email {Number} sent to {Recipient}",
+                                i + 1, MaskEmailForLog(recipient));
                         }
                         else
                         {
@@ -691,8 +692,8 @@ public class EmailExportService
                         {
                             await smtp.SendAsync(message);
                             sendCount++;
-                            Log.Information("Email {Number} sent to {Recipient} from profile {ProfileId}",
-                                i + 1, MaskEmailForLog(recipient), profile.Id);
+                            Log.Information("Email {Number} sent to {Recipient}",
+                                i + 1, MaskEmailForLog(recipient));
                         }
                         catch (SmtpCommandException ex)
                         {
@@ -762,8 +763,8 @@ public class EmailExportService
                     var result = await emailProvider.SendEmailAsync(message, emailConfig);
                     if (result.Success)
                     {
-                        Log.Information("Email sent successfully to {Recipient} from profile {ProfileId}",
-                            MaskEmailForLog(toRecipient), profile.Id);
+                        Log.Information("Email sent successfully to {Recipient}",
+                            MaskEmailForLog(toRecipient));
                         return (true, null);
                     }
                     else
@@ -774,16 +775,16 @@ public class EmailExportService
 
                 await smtp.SendAsync(message);
 
-                Log.Information("Email sent successfully to {Recipient} from profile {ProfileId}",
-                    MaskEmailForLog(toRecipient), profile.Id);
+                Log.Information("Email sent successfully to {Recipient}",
+                    MaskEmailForLog(toRecipient));
 
                 return (true, null);
             }
         }
         catch (Exception ex)
         {
-            Log.Error("Failed to send email batch from profile {ProfileId}: {Error}",
-                profile.Id, ex.Message);
+            Log.Error("Failed to send email batch: {Error}",
+                ex.Message);
             return (false, ex.Message);
         }
     }
@@ -898,7 +899,7 @@ public class EmailExportService
 
         if (attachmentConfig.DocumentTemplate == null)
         {
-            Log.Warning("DocumentTemplate attachment config is null for profile {ProfileId}", profile.Id);
+            Log.Warning("DocumentTemplate attachment config is null");
             return attachments;
         }
 
@@ -912,16 +913,16 @@ public class EmailExportService
             var template = _queryTemplateService.GetByIdAsync(templateId).GetAwaiter().GetResult();
             if (template == null)
             {
-                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment in profile {ProfileId}",
-                    templateId, profile.Id);
+                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment",
+                    templateId);
                 return attachments;
             }
 
             if (generatePerRow)
             {
                 // Mode 1: Generate one document per row (invoice approval scenario)
-                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) for profile {ProfileId} using template {TemplateId}",
-                    rows.Count, profile.Id, templateId);
+                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) using template {TemplateId}",
+                    rows.Count, templateId);
 
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -1003,20 +1004,19 @@ public class EmailExportService
                     }
                     catch (Exception rowEx)
                     {
-                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index} in profile {ProfileId}",
-                            i + 1, profile.Id);
+                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index}",
+                            i + 1);
                         // Continue with next row
                     }
                 }
 
-                Log.Information("Generating {Count} DocumentTemplate attachments completed for profile {ProfileId}",
-                    attachments.Count, profile.Id);
+                Log.Information("Generating {Count} DocumentTemplate attachments completed",
+                    attachments.Count);
             }
             else
             {
                 // Mode 2: Generate one document with all rows (picklist scenario - original behavior)
-                Log.Information("Generating DocumentTemplate attachment for profile {ProfileId} using template {TemplateId}",
-                    profile.Id, templateId);
+                Log.Information("Generating DocumentTemplate attachment using template {TemplateId}", templateId);
 
                 // Determine filename
                 string filename;
@@ -1075,8 +1075,8 @@ public class EmailExportService
 
                 attachments.Add(attachment);
 
-                Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes) for profile {ProfileId}",
-                    attachment.Filename, attachment.Content.Length, profile.Id);
+                Log.Information("Generated DocumentTemplate attachment '{Filename}' ({Size} bytes)",
+                    attachment.Filename, attachment.Content.Length);
 
                 // Clean up temporary file after reading into memory
                 try
@@ -1092,7 +1092,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error("Failed to generate DocumentTemplate attachment for profile {ProfileId}: {Error}", profile.Id, ex.Message);
+            Log.Error("Failed to generate DocumentTemplate attachment: {Error}", ex.Message);
         }
 
         return attachments;
@@ -1129,7 +1129,7 @@ public class EmailExportService
 
         if (attachmentConfig.DocumentTemplate == null)
         {
-            Log.Warning("DocumentTemplate attachment config is null for profile {ProfileId}", profile.Id);
+            Log.Warning("DocumentTemplate attachment config is null");
             return preGeneratedAttachments;
         }
 
@@ -1143,16 +1143,16 @@ public class EmailExportService
             var template = _queryTemplateService.GetByIdAsync(templateId).GetAwaiter().GetResult();
             if (template == null)
             {
-                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment in profile {ProfileId}",
-                    templateId, profile.Id);
+                Log.Warning("Template {TemplateId} not found for DocumentTemplate attachment",
+                    templateId);
                 return preGeneratedAttachments;
             }
 
             if (generatePerRow)
             {
                 // Generate one document per row
-                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) for approval in profile {ProfileId}",
-                    rows.Count, profile.Id);
+                Log.Information("Generating {Count} DocumentTemplate attachments (one per row) for approval",
+                    rows.Count);
 
                 for (int i = 0; i < rows.Count; i++)
                 {
@@ -1229,16 +1229,15 @@ public class EmailExportService
                     }
                     catch (Exception rowEx)
                     {
-                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index} in profile {ProfileId} (approval flow)",
-                            i + 1, profile.Id);
+                        Log.Error(rowEx, "Failed to generate DocumentTemplate attachment for row {Index} (approval flow)",
+                            i + 1);
                     }
                 }
             }
             else
             {
                 // Generate one document with all rows
-                Log.Information("Generating 1 combined DocumentTemplate attachment for approval in profile {ProfileId} using template {TemplateId}",
-                    profile.Id, templateId);
+                Log.Information("Generating 1 combined DocumentTemplate attachment for approval using template {TemplateId}", templateId);
 
                 try
                 {
@@ -1310,16 +1309,16 @@ public class EmailExportService
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Failed to generate combined DocumentTemplate attachment for profile {ProfileId} (approval flow): {Error}", profile.Id, ex.Message);
+                    Log.Error("Failed to generate combined DocumentTemplate attachment (approval flow): {Error}", ex.Message);
                 }
             }
 
-            Log.Information("Generated {Count} DocumentTemplate attachment(s) for approval in profile {ProfileId}",
-                preGeneratedAttachments.Count, profile.Id);
+            Log.Information("Generated {Count} DocumentTemplate attachment(s) for approval",
+                preGeneratedAttachments.Count);
         }
         catch (Exception ex)
         {
-            Log.Error("Error generating DocumentTemplate attachments for approval in profile {ProfileId}: {Error}", profile.Id, ex.Message);
+            Log.Error("Error generating DocumentTemplate attachments for approval: {Error}", ex.Message);
         }
 
         return preGeneratedAttachments;
@@ -1342,7 +1341,7 @@ public class EmailExportService
             {
                 if (config.MissingFileStrategy == "Fail")
                     throw new InvalidOperationException($"Attachment file '{name}' was not found.");
-                Log.Warning("Attachment file {File} was not found for profile {ProfileId}, sending without it", name, profile.Id);
+                Log.Warning("Attachment file {File} was not found, sending without it", name);
                 continue;
             }
             attachments.Add(new EmailAttachment { Filename = name, Content = File.ReadAllBytes(path), ContentType = MimeTypes.GetMimeType(name) });
@@ -1414,7 +1413,7 @@ public class EmailExportService
         {
             if (queryResults == null || queryResults.Count == 0)
             {
-                Log.Information("No query results to render for email approval from profile {ProfileId}", profile.Id);
+                Log.Information("No query results to render for email approval");
                 return (renderedEmails, errors);
             }
 
@@ -1433,8 +1432,8 @@ public class EmailExportService
                     .GroupBy(r => SafeGetValue(r, profile.SplitKeyColumn)?.ToString() ?? "unknown")
                     .ToList();
 
-                Log.Information("Rendering {Count} emails for approval (grouped by split key '{SplitKey}') from profile {ProfileId}",
-                    groupedResults.Count, profile.SplitKeyColumn, profile.Id);
+                Log.Information("Rendering {Count} emails for approval (grouped by split key '{SplitKey}')",
+                    groupedResults.Count, profile.SplitKeyColumn);
 
                 foreach (var group in groupedResults)
                 {
@@ -1450,7 +1449,7 @@ public class EmailExportService
 
                         if (string.IsNullOrEmpty(recipients))
                         {
-                            Log.Warning("No recipients found for group with split key '{SplitKey}' in profile {ProfileId}", group.Key, profile.Id);
+                            Log.Warning("No recipients found for group with split key '{SplitKey}'", group.Key);
                             continue;
                         }
 
@@ -1517,7 +1516,7 @@ public class EmailExportService
                             {
                                 var errorMsg = $"Failsafe triggered: No attachments were generated for split key '{group.Key}', skipping email creation.";
                                 errors.Add(errorMsg);
-                                Log.Warning(errorMsg + " Profile: {ProfileName} ({ProfileId})", profile.Name, profile.Id);
+                                Log.Warning(errorMsg);
                                 continue; // Skip this grouped email
                             }
                         }
@@ -1565,7 +1564,7 @@ public class EmailExportService
 
                         if (string.IsNullOrEmpty(recipients))
                         {
-                            Log.Warning("No recipients found for row in profile {ProfileId}", profile.Id);
+                            Log.Warning("No recipients found for row");
                             continue;
                         }
 
@@ -1645,8 +1644,7 @@ public class EmailExportService
                             // Check failsafe: if enabled and no attachments were generated, skip this row
                             if (rowAttachmentConfig.Failsafe == "RequireAttachments" && preGeneratedAttachments.Count == 0)
                             {
-                                Log.Warning("Failsafe triggered: No attachments were generated for row, skipping email creation. Profile: {ProfileName} ({ProfileId})",
-                                    profile.Name, profile.Id);
+                                Log.Warning("Failsafe triggered: No attachments were generated for row, skipping email creation");
                                 continue; // Skip this row's email
                             }
                         }
@@ -1697,7 +1695,7 @@ public class EmailExportService
         }
         catch (Exception ex)
         {
-            Log.Error("Failed to render emails for approval from profile {ProfileId}: {Error}", profile.Id, ex.Message);
+            Log.Error("Failed to render emails for approval: {Error}", ex.Message);
             errors.Add(ex.Message);
             return (renderedEmails, errors);
         }

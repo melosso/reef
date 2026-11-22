@@ -52,7 +52,7 @@
     <option value="">All levels</option>
     {#each ['Debug', 'Information', 'Warning', 'Error', 'Fatal'] as l (l)}<option value={l}>{l}</option>{/each}
   </select>
-  <label class="check"><input type="checkbox" role="switch" bind:checked={live} />Refresh every 5 seconds</label>
+  <label class="check"><input type="checkbox" bind:checked={live} />Refresh every 5 seconds</label>
   <span class="spacer"></span>
   <button type="button" class="btn" onclick={load}>Refresh</button>
 </div>
@@ -65,10 +65,10 @@
         <tr>
           <td class="nowrap">{formatDateTime(log.timestamp ?? log.Timestamp)}</td>
           <td class={levelClass(lvl)}>{lvl}</td>
-          <td class="msg"
-            >{log.message ?? log.Message}{#if log.exception ?? log.Exception}<pre class="code">{log.exception ??
-                  log.Exception}</pre>{/if}</td
-          >
+          <td class="msg">
+            {log.message ?? log.Message}{#if log.exception ?? log.Exception}<pre class="code plain">{log.exception ??
+                  log.Exception}</pre>{/if}
+          </td>
         </tr>
       {:else}
         <tr><td colspan="3" class="empty">No log entries</td></tr>

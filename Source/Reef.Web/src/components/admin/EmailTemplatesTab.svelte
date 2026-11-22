@@ -7,8 +7,8 @@
   import { tooltip } from '../../lib/tooltip';
 
   const TYPES: [string, string][] = [
-    ['ProfileSuccess', 'Profile succeeded'],
-    ['ProfileFailure', 'Profile failed'],
+    ['ProfileSuccess', 'Workflow succeeded'],
+    ['ProfileFailure', 'Workflow failed'],
     ['JobSuccess', 'Job succeeded'],
     ['JobFailure', 'Job failed'],
     ['NewUser', 'User created'],
@@ -84,9 +84,9 @@
 <div class="fields">
   <div class="field narrow">
     <label for="e-type">Notification</label>
-    <select id="e-type" bind:value={type}
-      ><option value="">Choose</option>{#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}</select
-    >
+    <select id="e-type" bind:value={type}>
+      <option value="">Choose</option>{#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}
+    </select>
   </div>
   {#if t}
     <div class="field">

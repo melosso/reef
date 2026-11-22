@@ -53,7 +53,7 @@ p {
 
 .num {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.93em;
   font-variant-numeric: tabular-nums;
 }
 .muted {
@@ -86,6 +86,10 @@ button {
   color: var(--ink);
 }
 
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
 input[type='number'],
 input.number {
   font-family: var(--mono);
@@ -130,48 +134,6 @@ label.check {
   color: var(--ink);
   margin: 0;
 }
-input[role='switch'] {
-  appearance: none;
-  position: relative;
-  flex: none;
-  width: 28px;
-  height: 16px;
-  margin: 0;
-  border: 1px solid var(--line-strong);
-  border-radius: 8px;
-  background: var(--line-strong);
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-input[role='switch']::before {
-  content: '';
-  position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--surface);
-  transition: transform 0.15s;
-}
-input[role='switch']:checked {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-input[role='switch']:checked::before {
-  transform: translateX(12px);
-}
-input[role='switch']:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-@media (prefers-reduced-motion: reduce) {
-  input[role='switch'],
-  input[role='switch']::before {
-    transition: none;
-  }
-}
-
 .field {
   display: flex;
   flex-direction: column;
@@ -230,9 +192,15 @@ input[role='switch']:disabled {
 }
 .btn[disabled],
 .btn[aria-disabled='true'] {
-  opacity: 0.55;
+  color: var(--muted);
   cursor: default;
   pointer-events: none;
+}
+.btn.primary[disabled],
+.btn.primary[aria-disabled='true'] {
+  border-color: var(--line-strong);
+  background: var(--hover);
+  color: var(--muted);
 }
 .btn[aria-busy='true'] {
   cursor: progress;
@@ -303,11 +271,13 @@ input[role='switch']:disabled {
   gap: 8px;
 }
 .toolbar input[type='search'] {
-  width: 280px;
+  flex: 0 1 280px;
+  min-width: 140px;
 }
 .toolbar select {
   width: auto;
-  min-width: 140px;
+  flex: 0 1 auto;
+  min-width: 120px;
 }
 .toolbar .spacer {
   flex: 1;
@@ -342,9 +312,15 @@ table.data {
 table.data th,
 table.data td {
   text-align: left;
-  padding: 9px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+}
+.panel > table.data :is(th, td):first-child {
+  padding-left: 16px;
+}
+.panel > table.data :is(th, td):last-child {
+  padding-right: 16px;
 }
 table.data th {
   font-size: 12px;
@@ -442,6 +418,9 @@ table.data th button {
   flex-direction: column;
   gap: 18px;
 }
+body:has(.sheet-foot) [data-sonner-toaster][data-y-position='bottom'] {
+  bottom: 72px !important;
+}
 .sheet-foot {
   display: flex;
   justify-content: flex-end;
@@ -511,4 +490,33 @@ pre.code {
 
 .code-ref {
   margin-left: 8px;
+}
+
+@media (max-width: 1100px) {
+  table.data .secondary {
+    display: none;
+  }
+  .wide-label {
+    display: none;
+  }
+}
+
+pre.plain {
+  font-family: var(--font);
+  font-size: 13px;
+}
+
+table.data td.actions .btn.icon {
+  padding: 3px;
+}
+
+table.data .trunc {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[hidden] {
+  display: none !important;
 }

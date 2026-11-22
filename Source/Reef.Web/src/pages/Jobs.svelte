@@ -11,17 +11,11 @@
   import { navigate } from '../lib/router.svelte';
   import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
-  import type { Connection } from '../models/Connection';
-  import type { Destination } from '../models/Destination';
-  import type { ExportProfile } from '../models/ExportProfile';
-  import type { ImportProfile } from '../models/ImportProfile';
   import type { Job } from '../models/Job';
-  import type { ExportExecution } from '../models/ExportExecution';
   import type { JobExecution } from '../models/JobExecution';
   import type { JobOutcome } from '../models/JobOutcome';
   import { jobOutcome } from '../lib/jobOutcome';
   import type { PagedResult } from '../models/PagedResult';
-  import type { ProfileGroup } from '../models/ProfileGroup';
   import type { QueueMetrics } from '../models/QueueMetrics';
   import type { Webhook } from '../models/Webhook';
 
@@ -39,15 +33,18 @@
   const PRIORITIES = ['Low', 'Normal', 'High', 'Critical'];
   const PRIORITY_NAMES: Record<string, number> = { Low: 0, Normal: 1, High: 2, Critical: 3 };
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  const FILTERS_KEY = 'reef_jobs_filters_v2';
+  const FILTERS_KEY = 'reef_jobs_filters_v3';
+  const TASKS: Record<string, string> = {
+    Cleanup: 'Clean up old files and runs',
+    HealthCheck: 'Health check',
+    BackupDatabase: 'Back up the database',
+  };
 
   interface Form {
     id?: string;
     name: string;
     description: string;
     type: string;
-    profile: string;
-    destinationId: string;
     scheduleType: number;
     cronExpression: string;
     intervalMinutes: number;
@@ -67,7 +64,7 @@
     (typeof v === 'string' ? (map[v] ?? Number.parseInt(v, 10)) : v) ?? 0;
 
   function stored() {
-    const empty = { search: '', health: '', status: '', profile: '', connection: '', group: '' };
+    const empty = { search: '', health: '', status: '' };
     try {
       return { ...empty, ...JSON.parse(localStorage.getItem(FILTERS_KEY) ?? '{}') };
     } catch {
@@ -76,11 +73,6 @@
   }
 
   let jobs = $state<Job[]>([]);
-  let profiles = $state<ExportProfile[]>([]);
-  let importProfiles = $state<ImportProfile[]>([]);
-  let destinations = $state<Destination[]>([]);
-  let connections = $state<Connection[]>([]);
-  let groups = $state<ProfileGroup[]>([]);
   let metrics = $state<QueueMetrics | null>(null);
   let loaded = $state(false);
   let filters = $state(stored());
@@ -97,19 +89,11 @@
   });
 
   async function load() {
-    const [j, p, ip, d] = await Promise.all([
-      api.get<Job[] | PagedResult<Job>>('/api/jobs').catch((e) => {
-        notify.fail(e, 'jobs');
-        return [];
-      }),
-      api.get<ExportProfile[]>('/api/profiles').catch(() => []),
-      api.get<ImportProfile[]>('/api/profiles?type=import').catch(() => []),
-      api.get<Destination[]>('/api/destinations').catch(() => []),
-    ]);
+    const j = await api.get<Job[] | PagedResult<Job>>('/api/jobs').catch((e) => {
+      notify.fail(e, 'jobs');
+      return [];
+    });
     jobs = Array.isArray(j) ? j : (j?.data ?? []);
-    profiles = p ?? [];
-    importProfiles = ip ?? [];
-    destinations = d ?? [];
     loaded = true;
     const paused = jobs.filter(isPaused).length;
     if (paused)
@@ -123,14 +107,6 @@
   $effect(() => {
     load();
     loadMetrics();
-    api
-      .get<Connection[]>('/api/connections')
-      .then((c) => (connections = c ?? []))
-      .catch(() => {});
-    api
-      .get<ProfileGroup[]>('/api/groups')
-      .then((g) => (groups = g ?? []))
-      .catch(() => {});
     const timer = setInterval(loadMetrics, 15000);
     return () => clearInterval(timer);
   });
@@ -148,9 +124,7 @@
     return { label: 'Healthy', kind: 'ok', hint: 'No recent failures' };
   }
 
-  function profileOf(j: Job) {
-    return profiles.find((p) => p.id === j.profileId) ?? importProfiles.find((p) => p.id === j.importProfileId);
-  }
+  const taskOf = (j: Job) => TASKS[String(j.type)] ?? String(j.type);
 
   function schedule(j: Job): string {
     const t = num(j.scheduleType, SCHEDULE_NAMES);
@@ -173,15 +147,10 @@
       if (h === 'healthy' && (f >= 3 || paused || !j.isEnabled)) return false;
       if (h === 'disabled' && j.isEnabled) return false;
       if (filters.status !== '' && num(j.status, STATUS_NAMES) !== Number(filters.status)) return false;
-      if (filters.profile && String(j.profileId) !== filters.profile) return false;
-      const profile = profiles.find((p) => p.id === j.profileId);
-      if (filters.connection && String(profile?.connectionId) !== filters.connection) return false;
-      if (filters.group && String(profile?.groupId) !== filters.group) return false;
       const term = filters.search.trim().toLowerCase();
-      const linked = profileOf(j);
       return (
         !term ||
-        [j.name, linked?.name ?? j.profileName, linked?.code].some((v) =>
+        [j.name, taskOf(j)].some((v) =>
           String(v ?? '')
             .toLowerCase()
             .includes(term),
@@ -194,9 +163,7 @@
     return {
       name: '',
       description: '',
-      type: 'ProfileExecution',
-      profile: '',
-      destinationId: '',
+      type: 'Cleanup',
       scheduleType: 0,
       cronExpression: '',
       intervalMinutes: 60,
@@ -225,9 +192,7 @@
         id: j.id,
         name: j.name,
         description: j.description ?? '',
-        type: j.type ?? 'ProfileExecution',
-        profile: j.importProfileId ? `import:${j.importProfileId}` : j.profileId ? `export:${j.profileId}` : '',
-        destinationId: j.destinationId ? String(j.destinationId) : '',
+        type: String(j.type ?? 'Cleanup'),
         scheduleType: num(j.scheduleType, SCHEDULE_NAMES),
         cronExpression: j.cronExpression ?? '',
         intervalMinutes: j.intervalMinutes ?? 60,
@@ -262,23 +227,16 @@
     records.close();
   }
 
-  const selectedProfile = $derived(form?.profile.startsWith('export:') ? profiles.find((p) => p.id === form!.profile.split(':')[1]) : null);
-  const emailProfile = $derived(!!selectedProfile?.isEmailExport);
-
   async function save(e: SubmitEvent) {
     e.preventDefault();
     if (!form) return;
     busy = 'save';
-    const [kind, idText] = form.profile ? form.profile.split(':') : ['', ''];
     const t = form.scheduleType;
     const body = {
       ...(form.id ? { id: form.id } : {}),
       name: form.name,
       description: form.description,
       type: form.type,
-      profileId: kind === 'export' ? idText : null,
-      importProfileId: kind === 'import' ? idText : null,
-      destinationId: !emailProfile && form.destinationId ? form.destinationId : null,
       scheduleType: t,
       cronExpression: t === 1 ? form.cronExpression || null : null,
       intervalMinutes: t === 2 ? Number(form.intervalMinutes) || null : null,
@@ -315,17 +273,6 @@
 
   const latestExecution = (id: string) => api.get<JobExecution>(`/api/jobs/${id}/executions/latest`).catch(() => null);
 
-  async function outcomeOf(j: Job, execution: JobExecution): Promise<JobOutcome> {
-    const outcome = jobOutcome(execution);
-    if (outcome !== 'success' || !j.profileId) return outcome;
-    let executionId: string | undefined;
-    try {
-      executionId = JSON.parse(execution.outputData ?? '{}').executionId;
-    } catch {}
-    const run = executionId ? await api.get<ExportExecution>(`/api/executions/${executionId}`).catch(() => null) : null;
-    return jobOutcome(execution, run);
-  }
-
   async function trigger(j: Job) {
     const key = `job-run-${j.id}`;
     busy = `run-${j.id}`;
@@ -337,7 +284,7 @@
       for (let i = 0; i < 120 && outcome === 'running'; i++) {
         await new Promise((r) => setTimeout(r, 1000));
         execution = await latestExecution(j.id);
-        if (execution && execution.id > before) outcome = await outcomeOf(j, execution);
+        if (execution && execution.id > before) outcome = jobOutcome(execution);
       }
       if (outcome === 'running') notify.info(`${j.name} is still running`, { key });
       else {
@@ -438,18 +385,18 @@
     {#if metrics}
       <div class="queue" aria-label="Queue">
         <span><Activity size={14} /> Queue</span>
-        <span
-          >Active <span class="num">{formatNumber(metrics.activeJobs)}</span> of
-          <span class="num">{formatNumber(metrics.maxConcurrentJobs)}</span></span
-        >
+        <span>
+          Active <span class="num">{formatNumber(metrics.activeJobs)}</span> of
+          <span class="num">{formatNumber(metrics.maxConcurrentJobs)}</span>
+        </span>
         <span>Waiting <span class="num">{formatNumber(metrics.queueDepth)}</span></span>
         <span>Free slots <span class="num">{formatNumber(metrics.availableSlots)}</span></span>
         <span>Processed <span class="num">{formatNumber(metrics.totalDequeued)}</span></span>
       </div>
     {/if}
 
-    <div class="toolbar">
-      <input type="search" placeholder="Search job or profile" aria-label="Search jobs" bind:value={filters.search} />
+    <div class="toolbar" hidden={loaded && jobs.length === 0}>
+      <input type="search" placeholder="Search job or task" aria-label="Search jobs" bind:value={filters.search} />
       <select aria-label="Health" bind:value={filters.health}>
         <option value="">All health</option><option value="auto-paused">Auto-paused</option><option value="failing">Failing</option>
         <option value="warning">Warning</option><option value="healthy">Healthy</option><option value="disabled">Off</option>
@@ -458,56 +405,46 @@
         <option value="">All statuses</option>
         {#each Object.entries(STATUS) as [value, [label]] (value)}<option {value}>{label}</option>{/each}
       </select>
-      <select aria-label="Profile" bind:value={filters.profile}>
-        <option value="">All profiles</option>
-        {#each profiles as p (p.id)}<option value={String(p.id)}>{p.name}</option>{/each}
-      </select>
-      <select aria-label="Connection" bind:value={filters.connection}>
-        <option value="">All connections</option>
-        {#each connections as c (c.id)}<option value={String(c.id)}>{c.name}</option>{/each}
-      </select>
-      <select aria-label="Group" bind:value={filters.group}>
-        <option value="">All groups</option>
-        {#each groups as g (g.id)}<option value={String(g.id)}>{g.name}</option>{/each}
-      </select>
       {#if Object.values(filters).some(Boolean)}<button
           type="button"
           class="link"
-          onclick={() => (filters = { search: '', health: '', status: '', profile: '', connection: '', group: '' })}>Clear filters</button
-        >{/if}
+          onclick={() => (filters = { search: '', health: '', status: '' })}
+        >
+          Clear filters
+        </button>{/if}
     </div>
 
     <div class="table-wrap">
       <table class="data">
-        <thead
-          ><tr
-            ><th>Name</th><th>Profile</th><th>Schedule</th><th>Status</th><th>Health</th><th>Last run</th><th>Next run</th><th
-              ><span class="sr">Actions</span></th
-            ></tr
-          ></thead
-        >
+        <thead>
+          <tr>
+            <th>Name</th><th>Task</th><th>Schedule</th><th>Status</th><th>Health</th><th class="secondary">Last run</th><th>
+              Next run
+            </th><th>
+              <span class="sr">Actions</span>
+            </th>
+          </tr>
+        </thead>
         <tbody>
           {#each visible as j (j.id)}
             {@const h = health(j)}
             {@const s = STATUS[num(j.status, STATUS_NAMES)] ?? ['Unknown', 'idle']}
-            {@const linked = profileOf(j)}
             <tr
               class="clickable"
               onclick={(e) => {
                 if (!(e.target as Element).closest('button, a')) records.open(j.id);
               }}
             >
-              <td
-                ><span class="strong">{j.name}</span>{#if j.description}<span class="sub">{j.description}</span>{/if}</td
-              >
-              <td
-                >{linked?.name ?? j.profileName ?? ''}{#if j.importProfileId}
-                  <span class="muted">Import</span>{/if}</td
-              >
+              <td>
+                <span class="strong" use:tooltip={j.description}>{j.name}</span>
+              </td>
+              <td>{taskOf(j)}</td>
               <td>{schedule(j)}</td>
               <td><StatusMark kind={s[1]} label={s[0]} /></td>
               <td><span use:tooltip={h.hint}><StatusMark kind={h.kind} label={h.label} /></span></td>
-              <td><span use:tooltip={formatDateTime(j.lastRunTime)}>{j.lastRunTime ? formatRelative(j.lastRunTime) : 'Never'}</span></td>
+              <td class="secondary">
+                <span use:tooltip={formatDateTime(j.lastRunTime)}>{j.lastRunTime ? formatRelative(j.lastRunTime) : 'Never'}</span>
+              </td>
               <td><span use:tooltip={formatDateTime(j.nextRunTime)}>{j.nextRunTime ? formatRelative(j.nextRunTime) : ''}</span></td>
               <td class="actions">
                 <button
@@ -520,60 +457,71 @@
                   aria-busy={busy === `run-${j.id}`}
                   use:tooltip={outcomes[j.id] ? OUTCOME_LABEL[outcomes[j.id]] : 'Run now'}
                   onclick={() => trigger(j)}
-                  >{#if outcomes[j.id] === 'success'}<CircleCheck size={15} />{:else if outcomes[j.id] === 'partial'}<TriangleAlert
-                      size={15}
-                    />{:else if outcomes[j.id] === 'failed'}<X size={15} />{:else}<Play size={15} />{/if}</button
                 >
+                  {#if outcomes[j.id] === 'success'}<CircleCheck size={15} />{:else if outcomes[j.id] === 'partial'}<TriangleAlert
+                      size={15}
+                    />{:else if outcomes[j.id] === 'failed'}<X size={15} />{:else}<Play size={15} />{/if}
+                </button>
                 {#if isPaused(j)}<button
                     type="button"
                     class="btn ghost icon"
                     aria-label="Resume {j.name}"
                     use:tooltip={'Resume'}
-                    onclick={() => act(j, 'resume', `${j.name} resumed`)}><RotateCcw size={15} /></button
-                  >{/if}
+                    onclick={() => act(j, 'resume', `${j.name} resumed`)}
+                  >
+                    <RotateCcw size={15} />
+                  </button>{/if}
                 {#if (j.consecutiveFailures || 0) > 0}<button
                     type="button"
                     class="btn ghost icon"
                     aria-label="Acknowledge failures of {j.name}"
                     use:tooltip={'Acknowledge failures'}
-                    onclick={() => act(j, 'acknowledge-failures', 'Failures acknowledged')}><CircleCheck size={15} /></button
-                  >{/if}
+                    onclick={() => act(j, 'acknowledge-failures', 'Failures acknowledged')}
+                  >
+                    <CircleCheck size={15} />
+                  </button>{/if}
                 <button
                   type="button"
                   class="btn ghost icon"
                   aria-label="History of {j.name}"
                   use:tooltip={'Execution history'}
-                  onclick={() => navigate(`/executions?job=${j.id}`)}><History size={15} /></button
+                  onclick={() => navigate(`/executions?job=${j.id}`)}
                 >
+                  <History size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon"
                   aria-label="Edit {j.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => records.open(j.id)}><Pencil size={15} /></button
+                  onclick={() => records.open(j.id)}
                 >
+                  <Pencil size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon danger"
                   aria-label="Delete {j.name}"
                   use:tooltip={'Delete'}
-                  onclick={() => remove(j)}><Trash2 size={15} /></button
+                  onclick={() => remove(j)}
                 >
+                  <Trash2 size={15} />
+                </button>
               </td>
             </tr>
           {:else}
-            <tr
-              ><td colspan="8" class="empty">
+            <tr>
+              <td colspan="8" class="empty">
                 {#if !loaded}Loading jobs
                 {:else if jobs.length === 0}
                   <div class="empty-state">
                     <h2>No jobs</h2>
-                    <p>A job runs a profile on a schedule, an interval or a webhook call.</p>
+                    <p>A job runs a maintenance task on a schedule: cleanup, health check or database backup.</p>
                     <button type="button" class="btn primary" onclick={() => records.open('new')}>New job</button>
                   </div>
                 {:else}No job matches the filters.{/if}
-              </td></tr
-            >
+              </td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -586,9 +534,9 @@
     {#if form.id}
       <div class="tabs" role="tablist">
         <button type="button" role="tab" aria-selected={tab === 'settings'} onclick={() => (tab = 'settings')}>Settings</button>
-        <button type="button" role="tab" aria-selected={tab === 'webhooks'} onclick={() => (tab = 'webhooks')}
-          >Webhooks <span class="num muted">{hooks.length}</span></button
-        >
+        <button type="button" role="tab" aria-selected={tab === 'webhooks'} onclick={() => (tab = 'webhooks')}>
+          Webhooks <span class="num muted">{hooks.length}</span>
+        </button>
       </div>
     {/if}
     {#if tab === 'settings'}
@@ -598,33 +546,16 @@
           <label for="j-desc">Description</label><textarea id="j-desc" rows="2" bind:value={form.description}></textarea>
         </div>
         <div class="field">
-          <label for="j-profile">Profile</label>
-          <select id="j-profile" bind:value={form.profile}>
-            <option value="">Choose</option>
-            <optgroup label="Export profiles"
-              >{#each profiles as p (p.id)}<option value="export:{p.id}">{p.name}</option>{/each}</optgroup
-            >
-            {#if importProfiles.length}<optgroup label="Import profiles"
-                >{#each importProfiles as p (p.id)}<option value="import:{p.id}">{p.name}</option>{/each}</optgroup
-              >{/if}
-          </select>
-        </div>
-        <div class="field">
-          <label
-            for="j-dest"
-            use:tooltip={emailProfile ? 'Email profiles send through their email destination' : 'Overrides the destination of the profile'}
-            >Destination</label
-          >
-          <select id="j-dest" bind:value={form.destinationId} disabled={emailProfile}>
-            <option value="">Profile destination</option>
-            {#each destinations.filter((d) => d.type !== 'Email') as d (d.id)}<option value={String(d.id)}>{d.name}</option>{/each}
+          <label for="j-task">Task</label>
+          <select id="j-task" bind:value={form.type}>
+            {#each Object.entries(TASKS) as [value, label] (value)}<option {value}>{label}</option>{/each}
           </select>
         </div>
         <div class="field">
           <label for="j-sched">Schedule</label>
-          <select id="j-sched" bind:value={form.scheduleType}
-            >{#each SCHEDULES as label, i (i)}<option value={i}>{label}</option>{/each}</select
-          >
+          <select id="j-sched" bind:value={form.scheduleType}>
+            {#each SCHEDULES as label, i (i)}<option value={i}>{label}</option>{/each}
+          </select>
         </div>
         {#if form.scheduleType === 1}
           <div class="field">
@@ -637,25 +568,25 @@
           </div>
         {:else if form.scheduleType === 2}
           <div class="field">
-            <label for="j-int">Interval in minutes</label><input id="j-int" type="number" min="1" bind:value={form.intervalMinutes} />
+            <label for="j-int">Interval in minutes</label><input id="j-int" type="number" bind:value={form.intervalMinutes} />
           </div>
         {:else if form.scheduleType >= 3}
           {#if form.scheduleType === 4}
             <fieldset class="days">
-              <legend>Days</legend>{#each DAYS as day, i (day)}<label class="check"
-                  ><input
+              <legend>Days</legend>{#each DAYS as day, i (day)}<label class="check">
+                  <input
                     type="checkbox"
                     checked={form.weekDays.includes(i)}
                     onchange={(e) => {
                       form!.weekDays = e.currentTarget.checked ? [...form!.weekDays, i] : form!.weekDays.filter((d) => d !== i);
                     }}
-                  />{day}</label
-                >{/each}
+                  />{day}
+                </label>{/each}
             </fieldset>
           {/if}
           {#if form.scheduleType === 5}
             <div class="field">
-              <label for="j-mday">Day of the month</label><input id="j-mday" type="number" min="1" max="31" bind:value={form.monthDay} />
+              <label for="j-mday">Day of the month</label><input id="j-mday" type="number" bind:value={form.monthDay} />
             </div>
           {/if}
           <div class="field">
@@ -669,45 +600,40 @@
         {/if}
         <div class="grid2">
           <div class="field">
-            <label for="j-prio">Priority</label><select id="j-prio" bind:value={form.priority}
-              >{#each PRIORITIES as label, i (i)}<option value={i}>{label}</option>{/each}</select
-            >
+            <label for="j-prio">Priority</label><select id="j-prio" bind:value={form.priority}>
+              {#each PRIORITIES as label, i (i)}<option value={i}>{label}</option>{/each}
+            </select>
           </div>
           <div class="field">
-            <label for="j-retry">Retries</label><input id="j-retry" type="number" min="0" max="10" bind:value={form.maxRetries} />
+            <label for="j-retry">Retries</label><input id="j-retry" type="number" bind:value={form.maxRetries} />
           </div>
         </div>
         <div class="field">
-          <label for="j-timeout">Timeout in minutes</label><input
-            id="j-timeout"
-            type="number"
-            min="1"
-            max="1440"
-            bind:value={form.timeoutMinutes}
-          />
+          <label for="j-timeout">Timeout in minutes</label><input id="j-timeout" type="number" bind:value={form.timeoutMinutes} />
         </div>
         <div class="field">
           <label for="j-tags">Tags</label><input id="j-tags" bind:value={form.tags} use:tooltip={'Comma-separated'} />
         </div>
         <label class="check"><input type="checkbox" bind:checked={form.allowConcurrent} />Allow concurrent runs</label>
-        <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />Enabled</label>
-        <label class="check" use:tooltip={'Pause the job after 10 consecutive failures'}
-          ><input type="checkbox" bind:checked={form.autoPauseEnabled} />Auto-pause on repeated failures</label
-        >
+        <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />On</label>
+        <label class="check" use:tooltip={'Pause the job after 10 consecutive failures'}>
+          <input type="checkbox" bind:checked={form.autoPauseEnabled} />Auto-pause on repeated failures
+        </label>
       </form>
     {:else}
       <div class="fields">
         <p class="muted">A webhook runs this job on an HTTP POST to its URL.</p>
         {#each hooks as hook (hook.id)}
           <div class="hook">
-            <span class="num token">{hook.token}</span>
+            <span class="token">{hook.token}</span>
             <span class="muted">{hook.isActive ? 'On' : 'Off'}, <span class="num">{hook.triggerCount ?? 0}</span> calls</span>
             <span class="links">
-              <button type="button" class="link" onclick={() => copyText(`curl -X POST ${location.origin}/webhooks/${hook.token}`)}
-                ><Copy size={12} /> curl</button
-              >
-              <button type="button" class="link" onclick={() => hookAction('toggle', hook)}>{hook.isActive ? 'Turn off' : 'Turn on'}</button
-              >
+              <button type="button" class="link" onclick={() => copyText(`curl -X POST ${location.origin}/webhooks/${hook.token}`)}>
+                <Copy size={12} /> curl
+              </button>
+              <button type="button" class="link" onclick={() => hookAction('toggle', hook)}>
+                {hook.isActive ? 'Turn off' : 'Turn on'}
+              </button>
               <button type="button" class="link" onclick={() => hookAction('regenerate', hook)}>New token</button>
               <button type="button" class="link danger" onclick={() => hookAction('delete', hook)}>Delete</button>
             </span>
@@ -752,15 +678,6 @@
   .strong {
     font-weight: 500;
     display: block;
-  }
-  .sub {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    max-width: 320px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .queue {
     display: flex;

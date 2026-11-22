@@ -15,98 +15,28 @@ public class DestinationSourceAdapter(DestinationService destinationService)
 {
     private static Serilog.ILogger Log => Serilog.Log.ForContext<DestinationSourceAdapter>();
 
-    /// <summary>
-    /// If profile.SourceDestinationId is set, resolve the destination and merge its config
-    /// into the profile's SourceType and SourceConfig. Otherwise returns profile unchanged.
-    /// </summary>
-    public async Task<ImportProfile> ResolveSourceConfigAsync(
-        ImportProfile profile,
+    public async Task<ImportSourceOptions> ResolveSourceConfigAsync(
+        ImportSourceOptions options,
         CancellationToken ct = default)
     {
-        if (!profile.SourceDestinationId.HasValue)
-            return profile;
+        if (!options.SourceDestinationId.HasValue)
+            return options;
 
-        var dest = await destinationService.GetByIdForExecutionAsync(profile.SourceDestinationId.Value);
+        var dest = await destinationService.GetByIdForExecutionAsync(options.SourceDestinationId.Value);
         if (dest is null)
         {
             Log.Warning("DestinationSourceAdapter: destination {Id} not found, using inline source config",
-                profile.SourceDestinationId.Value);
-            return profile;
+                options.SourceDestinationId.Value);
+            return options;
         }
 
         var sourceType = MapDestinationTypeToSourceType(dest.Type);
-        var mergedConfig = TranslateToSourceConfig(dest.Type, dest.ConfigurationJson, profile.SourceConfig);
+        var mergedConfig = TranslateToSourceConfig(dest.Type, dest.ConfigurationJson, options.SourceConfig);
 
         Log.Debug("DestinationSourceAdapter: resolved destination '{Name}' ({Type}) → sourceType={SourceType}",
             dest.Name, dest.Type, sourceType);
 
-        // Return a copy of the profile with the translated source info.
-        // Profile-level fields like SourceFilePath, HttpMethod, HttpDataRootPath etc. are preserved.
-        return new ImportProfile
-        {
-            Id = profile.Id,
-            Name = profile.Name,
-            GroupId = profile.GroupId,
-            SourceType = sourceType,
-            SourceDestinationId = profile.SourceDestinationId,
-            SourceConfig = mergedConfig,
-            SourceFilePath = profile.SourceFilePath,
-            SourceFilePattern = profile.SourceFilePattern,
-            SourceFileSelection = profile.SourceFileSelection,
-            ArchiveAfterImport = profile.ArchiveAfterImport,
-            ArchivePath = profile.ArchivePath,
-            HttpMethod = profile.HttpMethod,
-            HttpBodyTemplate = profile.HttpBodyTemplate,
-            HttpPaginationEnabled = profile.HttpPaginationEnabled,
-            HttpPaginationConfig = profile.HttpPaginationConfig,
-            HttpDataRootPath = profile.HttpDataRootPath,
-            SourceFormat = profile.SourceFormat,
-            FormatConfig = profile.FormatConfig,
-            ColumnMappingsJson = profile.ColumnMappingsJson,
-            AutoMapColumns = profile.AutoMapColumns,
-            SkipUnmappedColumns = profile.SkipUnmappedColumns,
-            TargetType = profile.TargetType,
-            TargetConnectionId = profile.TargetConnectionId,
-            TargetTable = profile.TargetTable,
-            LocalTargetPath = profile.LocalTargetPath,
-            LocalTargetFormat = profile.LocalTargetFormat,
-            LocalTargetWriteMode = profile.LocalTargetWriteMode,
-            LoadStrategy = profile.LoadStrategy,
-            UpsertKeyColumns = profile.UpsertKeyColumns,
-            BatchSize = profile.BatchSize,
-            CommandTimeoutSeconds = profile.CommandTimeoutSeconds,
-            DeltaSyncEnabled = profile.DeltaSyncEnabled,
-            DeltaSyncReefIdColumn = profile.DeltaSyncReefIdColumn,
-            DeltaSyncHashAlgorithm = profile.DeltaSyncHashAlgorithm,
-            DeltaSyncTrackDeletes = profile.DeltaSyncTrackDeletes,
-            DeltaSyncDeleteStrategy = profile.DeltaSyncDeleteStrategy,
-            DeltaSyncDeleteColumn = profile.DeltaSyncDeleteColumn,
-            DeltaSyncDeleteValue = profile.DeltaSyncDeleteValue,
-            DeltaSyncRetentionDays = profile.DeltaSyncRetentionDays,
-            OnSourceFailure = profile.OnSourceFailure,
-            OnParseFailure = profile.OnParseFailure,
-            OnRowFailure = profile.OnRowFailure,
-            OnConstraintViolation = profile.OnConstraintViolation,
-            MaxFailedRowsBeforeAbort = profile.MaxFailedRowsBeforeAbort,
-            MaxFailedRowsPercent = profile.MaxFailedRowsPercent,
-            RollbackOnAbort = profile.RollbackOnAbort,
-            RetryCount = profile.RetryCount,
-            PreProcessType = profile.PreProcessType,
-            PreProcessConfig = profile.PreProcessConfig,
-            PreProcessRollbackOnFailure = profile.PreProcessRollbackOnFailure,
-            PostProcessType = profile.PostProcessType,
-            PostProcessConfig = profile.PostProcessConfig,
-            PostProcessSkipOnFailure = profile.PostProcessSkipOnFailure,
-            PostProcessRollbackOnFailure = profile.PostProcessRollbackOnFailure,
-            NotificationConfig = profile.NotificationConfig,
-            IsEnabled = profile.IsEnabled,
-            Hash = profile.Hash,
-            CreatedAt = profile.CreatedAt,
-            UpdatedAt = profile.UpdatedAt,
-            CreatedBy = profile.CreatedBy,
-            LastExecutedAt = profile.LastExecutedAt,
-            Code = profile.Code
-        };
+        return options with { SourceType = sourceType, SourceConfig = mergedConfig };
     }
 
     // Translation logic

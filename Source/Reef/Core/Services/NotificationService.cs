@@ -11,6 +11,7 @@ using Scriban;
 using Scriban.Runtime;
 using Serilog;
 using System.Text.Json;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Services;
 
@@ -128,6 +129,21 @@ public class NotificationService
         }
     }
 
+    // Workflow runs reuse profile templates
+    public Task SendWorkflowRunAsync(Reef.Core.Workflows.Models.WorkflowExecution run, string workflowName, CancellationToken ct = default)
+    {
+        var execution = new ProfileExecution
+        {
+            Id = run.Id, ProfileId = run.WorkflowId, ProfileName = workflowName, StartedAt = run.StartedAt, CompletedAt = run.CompletedAt, Status = run.Status,
+            ErrorMessage = run.ErrorMessage, RowCount = run.Nodes.Count == 0 ? 0 : run.Nodes.Max(n => n.RowCount), TriggeredBy = run.TriggerNodeId,
+            ExecutionTimeMs = run.CompletedAt is { } done ? (long)(done - run.StartedAt).TotalMilliseconds : null
+        };
+        var workflow = new Profile { Id = run.WorkflowId, Name = workflowName, Code = "", Query = "", Hash = "" };
+        return run.Status == Reef.Core.Workflows.Models.WorkflowRunStatus.Failed
+            ? SendExecutionFailureAsync(execution, workflow, ct)
+            : SendExecutionSuccessAsync(execution, workflow, ct);
+    }
+
     /// <summary>
     /// Send notification for successful profile execution
     /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
@@ -214,81 +230,7 @@ public class NotificationService
         }
     }
 
-    /// <summary>
-    /// Send notification for successful import profile execution
-    /// Uses throttling to prevent excessive emails (max once per 30 minutes per profile)
-    /// </summary>
-    public async Task SendImportExecutionSuccessAsync(ImportProfileExecution execution, ImportProfile profile, CancellationToken ct = default)
-    {
-        try
-        {
-            var settings = await GetNotificationSettingsAsync(ct);
-            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileSuccess)
-            {
-                return;
-            }
 
-            if (!_throttler.ShouldNotifyImportProfileSuccess(profile.Id))
-            {
-                Log.Debug("Import profile success notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
-                return;
-            }
-
-            var fallbackSubject = $"[Reef] Import '{profile.Name}' completed successfully";
-            var fallbackBody = BuildImportSuccessEmailBodyTemplate();
-            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileSuccess", fallbackSubject, fallbackBody);
-
-            var context = BuildImportSuccessEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
-            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
-            var renderedBody = await RenderEmailTemplateAsync(body, context);
-
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
-            Log.Information("Sent import success notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
-                execution.Id, profile.Code, profile.Name);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Error sending import success notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
-        }
-    }
-
-    /// <summary>
-    /// Send notification for failed import profile execution
-    /// Uses throttling to prevent excessive emails (max once per 5 minutes per profile)
-    /// </summary>
-    public async Task SendImportExecutionFailureAsync(ImportProfileExecution execution, ImportProfile profile, CancellationToken ct = default)
-    {
-        try
-        {
-            var settings = await GetNotificationSettingsAsync(ct);
-            if (settings == null || !settings.IsEnabled || !settings.NotifyOnImportProfileFailure)
-            {
-                return;
-            }
-
-            if (!_throttler.ShouldNotifyImportProfileFailure(profile.Id))
-            {
-                Log.Debug("Import profile failure notification throttled for profile {ProfileCode} ({ProfileName})", profile.Code, profile.Name);
-                return;
-            }
-
-            var fallbackSubject = $"[Reef] Import '{profile.Name}' execution failed";
-            var fallbackBody = BuildImportFailureEmailBodyTemplate();
-            var (subject, body, ctaButtonText, ctaUrlOverride) = await LoadTemplateAsync("ImportProfileFailure", fallbackSubject, fallbackBody);
-
-            var context = BuildImportFailureEmailContext(execution, profile, settings, ctaButtonText, ctaUrlOverride);
-            var renderedSubject = await RenderEmailTemplateAsync(subject, context);
-            var renderedBody = await RenderEmailTemplateAsync(body, context);
-
-            await SendSystemNotificationAsync(renderedSubject, renderedBody, settings, ct);
-            Log.Information("Sent import failure notification for execution {ExecutionId} (profile {ProfileCode} {ProfileName})",
-                execution.Id, profile.Code, profile.Name);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Error sending import failure notification for execution {ExecutionId}: {Error}", execution.Id, ex.Message);
-        }
-    }
 
     /// <summary>
     /// Send notification for job success

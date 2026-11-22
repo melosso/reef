@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Facts from '../executions/Facts.svelte';
+  import Facts from '../Facts.svelte';
   import { api } from '../../lib/api';
   import type { AdminMetrics } from '../../models/AdminMetrics';
   import type { GitHubRelease } from '../../models/GitHubRelease';
@@ -10,7 +10,6 @@
   let info = $state<SystemInfo | null>(null);
   let version = $state('');
   let latest = $state<{ tag: string; url: string } | null>(null);
-  let now = $state(new Date());
   let storage = $state<AdminMetrics['system'] | null>(null);
 
   $effect(() => {
@@ -33,8 +32,6 @@
         if (r?.tag_name) latest = { tag: r.tag_name, url: r.html_url ?? '' };
       })
       .catch(() => {});
-    const timer = setInterval(() => (now = new Date()), 1000);
-    return () => clearInterval(timer);
   });
 
   const clean = (v: string) => v.replace(/^v/i, '').split(/[+-]/)[0];
@@ -44,6 +41,14 @@
       clean(latest.tag) !== clean(version) &&
       clean(latest.tag).localeCompare(clean(version), undefined, { numeric: true }) > 0,
   );
+
+  function uptime(hours: number): string {
+    if (hours < 1) return 'Less than an hour';
+    const days = Math.floor(hours / 24);
+    const rest = hours % 24;
+    const h = `${rest} ${rest === 1 ? 'hour' : 'hours'}`;
+    return days ? `${days} ${days === 1 ? 'day' : 'days'} ${h}` : h;
+  }
 </script>
 
 <section class="panel">
@@ -51,17 +56,15 @@
   <div class="panel-body fields">
     <Facts
       items={[
-        ['Version', info?.version ?? version],
+        ['Version', (info?.version ?? version).split('+')[0]],
         ['Environment', info?.environment ?? 'Production'],
-        ['Uptime', info?.uptime?.days !== undefined ? `${info.uptime.days} days` : null],
+        ['Uptime', info?.uptime?.hours !== undefined ? uptime(info.uptime.hours) : null],
         [
           'Storage',
           storage
             ? `Database ${storage.databaseSizeMb ?? 0} MB of ${storage.databaseSizeThresholdMb || 1024} MB, exports ${storage.exportsSizeMb ?? 0} MB`
             : null,
         ],
-        ['Server time', now.toLocaleTimeString()],
-        ['Server date', now.toLocaleDateString()],
         ['Reported at', info?.timestamp ? formatDateTime(info.timestamp) : null],
       ]}
     />
@@ -69,6 +72,7 @@
       <p class="muted">
         {#if outdated}Version <span class="num">{latest.tag}</span> is available.
           <a href={latest.url} target="_blank" rel="noopener noreferrer">Release notes</a>
+        {:else if (info?.version ?? version).includes('-')}This is a prerelease build. Latest release <span class="num">{latest.tag}</span>.
         {:else}Reef is up to date. Latest release <span class="num">{latest.tag}</span>.{/if}
       </p>
     {/if}

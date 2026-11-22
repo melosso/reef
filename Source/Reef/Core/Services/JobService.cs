@@ -158,32 +158,24 @@ public class JobService
         return jobs;
     }
 
-    /// <summary>
-    /// Validates job configuration to prevent invalid combinations of ProfileId and DestinationId
-    /// </summary>
-    private async Task ValidateJobConfiguration(Job job)
+    private static void Validate(Job job)
     {
-        // If ProfileId is set (export profile), check if it's an Email export profile
-        if (job.ProfileId.HasValue && !job.ImportProfileId.HasValue)
-        {
-            using var conn = new SqliteConnection(_connectionString);
-            const string sql = "SELECT IsEmailExport FROM Profiles WHERE Id = @Id";
-
-            var isEmailExport = await conn.QueryFirstOrDefaultAsync<bool?>(sql, new { Id = job.ProfileId.Value });
-
-            // If profile exists and is an email export profile, DestinationId must be null
-            if (isEmailExport == true && job.DestinationId.HasValue)
-            {
-                throw new InvalidOperationException(
-                    "Cannot set a Destination for Email export profiles. Email profiles handle delivery internally.");
-            }
-        }
+        if (job.Type == JobType.ProfileExecution)
+            throw new InvalidOperationException("Profile jobs became schedule steps in workflows");
+        if (job.ScheduleType == ScheduleType.Interval && job.IntervalMinutes is not > 0)
+            throw new InvalidOperationException("Interval in minutes must be 1 or more");
+        if (job.ScheduleType == ScheduleType.Monthly && job.MonthDay is not (>= 1 and <= 31))
+            throw new InvalidOperationException("Day of the month must be between 1 and 31");
+        if (job.MaxRetries is < 0 or > 10)
+            throw new InvalidOperationException("Retries must be between 0 and 10");
+        if (job.TimeoutMinutes is < 1 or > 1440)
+            throw new InvalidOperationException("Timeout in minutes must be between 1 and 1440");
     }
 
     public async Task<Job> CreateAsync(Job job)
     {
+        Validate(job);
         // Validate job configuration before creating
-        await ValidateJobConfiguration(job);
 
         using var conn = new SqliteConnection(_connectionString);
 
@@ -231,13 +223,13 @@ public class JobService
 
     public async Task<bool> UpdateAsync(Job job)
     {
+        Validate(job);
         var jobLock = _jobLocks.GetOrAdd(job.Id, _ => new SemaphoreSlim(1, 1));
         await jobLock.WaitAsync();
         try
         {
             // Validate job configuration before updating
-            await ValidateJobConfiguration(job);
-
+    
             using var conn = new SqliteConnection(_connectionString);
 
             job.Hash = Reef.Helpers.HashHelper.ComputeDestinationHash(
@@ -1277,12 +1269,12 @@ public class JobService
         var executions = await conn.ExecuteAsync(
             "UPDATE JobExecutions SET Status = @Failed, CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = @Running", args);
         var jobs = await conn.ExecuteAsync("UPDATE Jobs SET Status = @Idle, ModifiedAt = @Now WHERE Status = @Running", args);
-        var runs = await conn.ExecuteAsync(
-            "UPDATE ProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
-        runs += await conn.ExecuteAsync(
-            "UPDATE ImportProfileExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running'", args);
+        var runs = await conn.ExecuteScalarAsync<int>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'WorkflowExecutions'") == 0 ? 0 : await conn.ExecuteAsync("""
+                UPDATE NodeRuns SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
+                UPDATE WorkflowExecutions SET Status = 'Failed', CompletedAt = @Now, ErrorMessage = 'Interrupted by restart' WHERE Status = 'Running';
+                """, args);
         if (executions + jobs + runs > 0)
-            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} profile runs interrupted by restart", jobs, executions, runs);
+            Log.Warning("Reset {Jobs} jobs, {Executions} job executions and {Runs} workflow runs interrupted by restart", jobs, executions, runs);
     }
 
     /// <summary>

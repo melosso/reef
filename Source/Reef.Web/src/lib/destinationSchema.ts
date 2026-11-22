@@ -180,7 +180,7 @@ export const DESTINATION_FIELDS: Record<string, DestField[]> = {
       when: smtp,
       options: [
         ['Basic', 'Username and password'],
-        ['OAuth2', 'OAuth 2.0 access token'],
+        ['OAuth2', 'OAuth 2.0'],
         ['None', 'None'],
       ],
     },

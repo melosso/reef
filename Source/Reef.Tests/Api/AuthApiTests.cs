@@ -16,6 +16,19 @@ public class AuthApiTests(ReefApiFactory factory)
     private async Task<HttpResponseMessage> LoginAsync(string username, string password) =>
         await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new { username, password }, _ct);
 
+    [Theory]
+    [InlineData("", HttpStatusCode.BadRequest)]
+    [InlineData("   ", HttpStatusCode.BadRequest)]
+    [InlineData("nobody@example.com", HttpStatusCode.NoContent)]
+    public async Task IdentifyRejectsABlankEmailWithoutRevealingAccounts(string username, HttpStatusCode expected)
+    {
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/identify", new { username }, _ct);
+
+        response.StatusCode.Should().Be(expected);
+        if (expected == HttpStatusCode.BadRequest)
+            (await response.Content.ReadFromJsonAsync<JsonObject>(_ct))!["errors"]![0]!["field"]!.GetValue<string>().Should().Be("Username");
+    }
+
     [Fact]
     public async Task SignInAcceptsTheAccountEmailAddress()
     {

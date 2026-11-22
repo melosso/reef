@@ -18,25 +18,19 @@ public class EmailApprovalService
     private readonly string _connectionString;
     private readonly AuditService _auditService;
     private readonly EmailExportService _emailExportService;
-    private readonly ProfileService _profileService;
     private readonly NotificationService _notificationService;
-    private readonly DeltaSyncService _deltaSyncService;
     private static Serilog.ILogger Log => Serilog.Log.ForContext<EmailApprovalService>();
 
     public EmailApprovalService(
         DatabaseConfig config,
         AuditService auditService,
         EmailExportService emailExportService,
-        ProfileService profileService,
-        NotificationService notificationService,
-        DeltaSyncService deltaSyncService)
+        NotificationService notificationService)
     {
         _connectionString = config.ConnectionString;
         _auditService = auditService;
         _emailExportService = emailExportService;
-        _profileService = profileService;
         _notificationService = notificationService;
-        _deltaSyncService = deltaSyncService;
     }
 
     /// <summary>
@@ -80,8 +74,8 @@ public class EmailApprovalService
     /// Stores the email details for later approval/rejection
     /// </summary>
     public async Task<int> CreatePendingApprovalAsync(
-        int profileId,
-        int profileExecutionId,
+        int? profileId,
+        int? profileExecutionId,
         string recipients,
         string subject,
         string htmlBody,
@@ -89,7 +83,8 @@ public class EmailApprovalService
         string? attachmentConfig = null,
         string? reefId = null,
         string? deltaSyncHash = null,
-        string? deltaSyncRowType = null)
+        string? deltaSyncRowType = null,
+        WorkflowApprovalSource? workflow = null)
     {
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
@@ -103,11 +98,11 @@ public class EmailApprovalService
 
             const string sql = @"
                 INSERT INTO PendingEmailApprovals (
-                    Guid, ProfileId, ProfileExecutionId, Recipients, CcAddresses, Subject, HtmlBody,
+                    Guid, ProfileId, ProfileExecutionId, WorkflowExecutionId, NodeId, DestinationId, ApproverRoles, Recipients, CcAddresses, Subject, HtmlBody,
                     AttachmentConfig, ReefId, DeltaSyncHash, DeltaSyncRowType, Status, CreatedAt, ExpiresAt, Hash
                 )
                 VALUES (
-                    @Guid, @ProfileId, @ProfileExecutionId, @Recipients, @CcAddresses, @Subject, @HtmlBody,
+                    @Guid, @ProfileId, @ProfileExecutionId, @WorkflowExecutionId, @NodeId, @DestinationId, @ApproverRoles, @Recipients, @CcAddresses, @Subject, @HtmlBody,
                     @AttachmentConfig, @ReefId, @DeltaSyncHash, @DeltaSyncRowType, 'Pending', @CreatedAt, @ExpiresAt, @Hash
                 );
                 SELECT last_insert_rowid();
@@ -118,6 +113,10 @@ public class EmailApprovalService
                 Guid = guid,
                 ProfileId = profileId,
                 ProfileExecutionId = profileExecutionId,
+                workflow?.WorkflowExecutionId,
+                workflow?.NodeId,
+                workflow?.DestinationId,
+                workflow?.ApproverRoles,
                 Recipients = recipients,
                 CcAddresses = ccAddresses,
                 Subject = subject,
@@ -129,19 +128,6 @@ public class EmailApprovalService
                 CreatedAt = DateTime.UtcNow.ToString("o"),
                 ExpiresAt = expiresAt.ToString("o"),
                 Hash = hash
-            });
-
-            // Update ProfileExecution with approval ID and status
-            const string updateExecutionSql = @"
-                UPDATE ProfileExecutions
-                SET ApprovalStatus = 'Pending', PendingEmailApprovalId = @ApprovalId
-                WHERE Id = @ExecutionId
-            ";
-
-            await connection.ExecuteAsync(updateExecutionSql, new
-            {
-                ApprovalId = approvalId,
-                ExecutionId = profileExecutionId
             });
 
             Log.Information("Created pending email approval {ApprovalId} for profile {ProfileId}, execution {ExecutionId}",
@@ -216,15 +202,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql + "; UPDATE ProfileExecutions SET ApprovedAt = @ApprovedAt WHERE Id = (SELECT ProfileExecutionId FROM PendingEmailApprovals WHERE Id = @ApprovalId)";
-
-                await connection.ExecuteAsync(updateExecutionSql, new
-                {
-                    ApprovalId = approvalId,
-                    ApprovedAt = DateTime.UtcNow.ToString("o")
-                });
-
                 // Note: Sensitive data redaction happens in ApprovedEmailSenderService
                 // after the email is successfully sent or fails, not here during approval
 
@@ -279,11 +256,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
-
-                await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
-
                 // Redact sensitive email content per security policy - keep only metadata
                 const string redactSql = @"
                     UPDATE PendingEmailApprovals
@@ -347,48 +319,6 @@ public class EmailApprovalService
 
             if (approval != null)
             {
-                // Immediately commit delta sync hash (don't wait for background service)
-                if (!string.IsNullOrEmpty(approval.DeltaSyncHash) && !string.IsNullOrEmpty(approval.ReefId))
-                {
-                    try
-                    {
-                        // Create a minimal DeltaSyncResult with just this one reef_id
-                        var deltaSyncResult = new DeltaSyncResult
-                        {
-                            NewRows = new List<Dictionary<string, object>>(),
-                            ChangedRows = new List<Dictionary<string, object>>(),
-                            UnchangedRows = new List<Dictionary<string, object>>(),
-                            DeletedReefIds = new List<string>(),
-                            TotalRowsProcessed = 1,
-                            NewHashState = new Dictionary<string, string>
-                            {
-                                [approval.ReefId] = approval.DeltaSyncHash
-                            }
-                        };
-
-                        Log.Information("Committing delta sync for skipped approval {ApprovalId}: ReefId='{ReefId}', Hash='{Hash}'",
-                            approvalId, approval.ReefId, approval.DeltaSyncHash);
-
-                        await _deltaSyncService.CommitDeltaSyncAsync(
-                            approval.ProfileId,
-                            approval.ProfileExecutionId,
-                            deltaSyncResult);
-
-                        Log.Information("Delta sync committed for skipped email {ApprovalId}, ReefId: {ReefId}",
-                            approvalId, approval.ReefId);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Failed to commit delta sync hash for skipped email {ApprovalId}", approvalId);
-                        // Don't throw - the background service can retry
-                    }
-                }
-
-                // Update ProfileExecution approval status
-                const string updateExecutionSql = ExecutionApprovalStatus.RefreshForApprovalSql;
-
-                await connection.ExecuteAsync(updateExecutionSql, new { ApprovalId = approvalId });
-
                 // Mark as processed
                 const string markProcessedSql = @"
                     UPDATE PendingEmailApprovals
@@ -457,7 +387,7 @@ public class EmailApprovalService
             // Get paginated results
             var offset = (pageNumber - 1) * pageSize;
             var sql = $@"
-                SELECT *
+                SELECT *, (SELECT w.Name FROM WorkflowExecutions e JOIN Workflows w ON w.Id = e.WorkflowId WHERE e.Id = PendingEmailApprovals.WorkflowExecutionId) AS WorkflowName
                 FROM PendingEmailApprovals
                 {whereClause}
                 ORDER BY CreatedAt DESC
@@ -661,15 +591,12 @@ public class EmailApprovalService
     /// Check if a user has permission to approve emails for a specific profile
     /// Validates against EmailApprovalRoles in profile configuration
     /// </summary>
-    public async Task<bool> UserCanApproveAsync(int profileId, int userId)
+    public async Task<bool> UserCanApproveAsync(PendingEmailApproval approval, int userId)
     {
+        var profileId = approval.ProfileId;
         try
         {
-            var profile = await _profileService.GetByIdAsync(profileId);
-            Log.Debug("UserCanApproveAsync: ProfileId={ProfileId}, EmailApprovalRequired={Required}, UserId={UserId}",
-                profileId, profile?.EmailApprovalRequired, userId);
-            if (profile == null || !profile.EmailApprovalRequired)
-                return false;
+            var roles = approval.ApproverRoles;
 
             // Get user role
             await using var connection = new SqliteConnection(_connectionString);
@@ -687,7 +614,7 @@ public class EmailApprovalService
             var allowedRoles = new List<string>();
             try
             {
-                allowedRoles = JsonSerializer.Deserialize<List<string>>(profile.EmailApprovalRoles ?? "[]") ?? new();
+                allowedRoles = JsonSerializer.Deserialize<List<string>>(string.IsNullOrWhiteSpace(roles) ? "[]" : roles) ?? new();
             }
             catch
             {

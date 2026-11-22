@@ -54,8 +54,10 @@
           <button
             type="button"
             aria-current={tab[0] === id ? 'page' : undefined}
-            onclick={() => navigate(id === 'system' ? '/admin' : `/admin/${id}`)}>{label}</button
+            onclick={() => navigate(id === 'system' ? '/admin' : `/admin/${id}`)}
           >
+            {label}
+          </button>
         {/each}
       {/each}
     </nav>
@@ -112,5 +114,22 @@
     background: var(--accent-soft);
     color: var(--accent-ink);
     font-weight: 500;
+  }
+  @media (max-width: 1024px) {
+    .admin {
+      flex-direction: column;
+    }
+    .tablist {
+      width: auto;
+      flex-direction: row;
+      flex-wrap: wrap;
+      padding: 8px 12px;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      overflow: visible;
+    }
+    .tablist h2 {
+      display: none;
+    }
   }
 </style>

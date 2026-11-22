@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
   import type { PasswordChangeResult } from '../models/PasswordChangeResult';
+  import { tooltip } from '../lib/tooltip';
   import type { TokenValidation } from '../models/TokenValidation';
   import { notify } from '../lib/notify';
   import { navigate } from '../lib/router.svelte';
@@ -47,7 +48,12 @@
         />
       </div>
       <div class="field">
-        <label for="pw-new">New password</label><input id="pw-new" type="password" autocomplete="new-password" bind:value={next} />
+        <label for="pw-new" use:tooltip={'At least 6 characters, different from the current password'}>New password</label><input
+          id="pw-new"
+          type="password"
+          autocomplete="new-password"
+          bind:value={next}
+        />
       </div>
     </div>
     <div class="foot"><button type="submit" class="btn primary" aria-busy={busy} disabled={busy}>Change password</button></div>

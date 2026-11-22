@@ -107,7 +107,7 @@ public class DestinationService
                 return (false, null, "Invalid destination configuration");
 
             // Extract relative path from source (preserves subdirectories from filename template)
-            var fileRelativePath = ExtractRelativePathFromTemp(sourceFilePath);
+            var fileRelativePath = Reef.Helpers.TempPaths.Relative(sourceFilePath);
             Log.Debug("DestinationService: Extracted relative path from temp: {RelativePath}", fileRelativePath);
 
             var fileName = Path.GetFileName(sourceFilePath);
@@ -333,52 +333,6 @@ public class DestinationService
         _encryption = encryption;
         _guard = guard;
         _configEncryption = new DestinationConfigEncryption(encryption);
-    }
-
-    /// <summary>
-    /// Extract relative path from temp file path
-    /// E.g., "C:\Temp\1\csv\file.csv" -> "csv\file.csv" (strips process folder)
-    /// E.g., "C:\Temp\reef_splits\orders\order_A.csv" -> "orders\order_A.csv"
-    /// </summary>
-    private string ExtractRelativePathFromTemp(string sourcePath)
-    {
-        try
-        {
-            var tempPath = Path.GetTempPath();
-            var tempPathNormalized = Path.GetFullPath(tempPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-            // Handle reef_splits subdirectory
-            var reefSplitsPath = Path.Combine(tempPath, "reef_splits");
-            if (sourcePath.StartsWith(reefSplitsPath, StringComparison.OrdinalIgnoreCase))
-            {
-                return sourcePath.Substring(reefSplitsPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            }
-
-            // Handle regular temp files
-            if (sourcePath.StartsWith(tempPathNormalized, StringComparison.OrdinalIgnoreCase))
-            {
-                var relativePath = sourcePath.Substring(tempPathNormalized.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                // Windows .NET temp path often has process-specific folders like "\1\", "\2\", etc.
-                // Strip the first folder if it's a single digit (process isolation folder)
-                var parts = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
-                if (parts.Length > 1 && parts[0].Length <= 2 && int.TryParse(parts[0], out _))
-                {
-                    // Skip the first part (process folder) and rejoin
-                    return string.Join(Path.DirectorySeparatorChar.ToString(), parts.Skip(1));
-                }
-
-                return relativePath;
-            }
-
-            // Fallback: just return the filename
-            return Path.GetFileName(sourcePath);
-        }
-        catch
-        {
-            // If anything goes wrong, fall back to just the filename
-            return Path.GetFileName(sourcePath);
-        }
     }
 
     /// <summary>
@@ -759,12 +713,12 @@ public class DestinationService
 
         // Check if destination is in use
         var inUse = await conn.ExecuteScalarAsync<int>(
-            new CommandDefinition("SELECT COUNT(*) FROM Profiles WHERE OutputDestinationId = @Id", new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(WorkflowUse.Sql("DestinationId"), new { Id = id }, cancellationToken: ct));
 
         if (inUse > 0)
         {
             throw new InvalidOperationException(
-                $"Cannot delete destination. It is used by {inUse} profile(s).");
+                $"Cannot delete destination. It is used by {inUse} workflow(s).");
         }
 
         var sql = "DELETE FROM Destinations WHERE Id = @Id";
@@ -1488,6 +1442,8 @@ public class DestinationService
     /// Returns a modified ConfigurationJson that merges the base Destination config with the
     /// Endpoint's overrides. The returned JSON can be passed directly to SaveToDestinationAsync.
     /// </summary>
+    private static readonly System.Text.Json.JsonSerializerOptions SkipNulls = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
+
     public string MergeWithEndpoint(Destination dest, DestinationEndpoint ep)
     {
         var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -1520,7 +1476,7 @@ public class DestinationService
                                 : cfg.Headers.Concat(extra).ToDictionary(k => k.Key, v => v.Value);
                         }
                     }
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             case DestinationType.Sftp:
@@ -1532,7 +1488,7 @@ public class DestinationService
 
                     if (!string.IsNullOrWhiteSpace(ep.RemotePath))
                         cfg.RemotePath = ep.RemotePath;
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             case DestinationType.S3:
@@ -1543,7 +1499,7 @@ public class DestinationService
 
                     if (!string.IsNullOrWhiteSpace(ep.KeyPrefix))
                         cfg.Prefix = ep.KeyPrefix;
-                    return System.Text.Json.JsonSerializer.Serialize(cfg);
+                    return System.Text.Json.JsonSerializer.Serialize(cfg, SkipNulls);
                 }
 
             default:

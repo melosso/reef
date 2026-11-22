@@ -58,6 +58,9 @@ public static class ConnectionsEndpoints
         [FromServices] PublicIdMap ids,
         HttpContext context)
     {
+        if (RequiredName.Check(connection.Name) is { } blank) return blank;
+        if (string.IsNullOrWhiteSpace(connection.ConnectionString))
+            return Results.BadRequest(new { message = "Enter a connection string", errors = new[] { new { field = "ConnectionString", message = "Enter a connection string" } } });
         try
         {
             var username = context.User.Identity?.Name ?? "Unknown";
@@ -89,6 +92,7 @@ public static class ConnectionsEndpoints
         [FromServices] AuditService auditService,
         HttpContext context)
     {
+        if (RequiredName.Check(connection.Name) is { } blank) return blank;
         try
         {
             connection.Id = id;

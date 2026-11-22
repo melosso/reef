@@ -11,10 +11,9 @@ describe('canonicalUrl', () => {
     ['/destinations', '?id=3', '/destinations/3'],
     ['/templates', '?id=7', '/templates/7'],
     ['/jobs', '?id=2', '/jobs/2'],
-    ['/executions', '?id=123', '/executions/export/123'],
-    ['/executions', '?importId=45', '/executions/import/45'],
-    ['/executions', '?profileId=12&jobId=2', '/executions?profile=export%3A12&job=2'],
-    ['/executions', '?profileId=import%3A9', '/executions?profile=import%3A9'],
+    ['/executions', '?id=01ARZ3NDEKTSV4RRFFQ69G5FAV', '/executions/01ARZ3NDEKTSV4RRFFQ69G5FAV'],
+    ['/profiles', '', '/workflows'],
+    ['/profiles/export/01ARZ3NDEKTSV4RRFFQ69G5FAV', '', '/workflows'],
     ['/email-approvals', '', '/approvals'],
     ['/email-approvals', '?tab=history', '/approvals/history'],
     ['/admin', '?tab=users', '/admin/users'],
@@ -30,9 +29,9 @@ describe('canonicalUrl', () => {
   it.each([
     ['/dashboard', ''],
     ['/jobs/2', ''],
-    ['/executions/import/45', '?page=2'],
+    ['/executions/01ARZ3NDEKTSV4RRFFQ69G5FAV', '?page=2'],
     ['/admin/users', ''],
-    ['/profiles/export/new', ''],
+    ['/workflows/new', ''],
   ])('%s%s is already canonical', (path, search) => {
     expect(canonicalUrl(path, search)).toBeNull();
   });

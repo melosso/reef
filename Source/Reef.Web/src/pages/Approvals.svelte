@@ -8,7 +8,6 @@
   import type { AttachmentConfig } from '../models/AttachmentConfig';
   import type { EmailApproval } from '../models/EmailApproval';
   import type { EmailPreview } from '../models/EmailPreview';
-  import type { ExportProfile } from '../models/ExportProfile';
   import type { PagedResult } from '../models/PagedResult';
   import { formatBytes, formatDateTime } from '../lib/format';
   import { notify } from '../lib/notify';
@@ -26,7 +25,6 @@
   const paging = urlPaging(25);
 
   let approvals = $state<EmailApproval[]>([]);
-  let profiles = $state<ExportProfile[]>([]);
   let loaded = $state(false);
   const selected = new SvelteSet<string>();
   let preview = $state<EmailPreview | null>(null);
@@ -45,10 +43,6 @@
   }
 
   $effect(() => {
-    api
-      .get<ExportProfile[]>('/api/profiles')
-      .then((p) => (profiles = p ?? []))
-      .catch(() => {});
     load();
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
@@ -65,7 +59,6 @@
   const allOnPage = $derived(pageItems.length > 0 && pageItems.every((a) => selected.has(a.guid)));
   const someOnPage = $derived(pageItems.some((a) => selected.has(a.guid)));
 
-  const profileName = (id: string) => profiles.find((p) => p.id === id)?.name ?? `Profile ${id}`;
   const redacted = (v: string | null | undefined) => v === '[REDACTED]';
 
   function attachments(config: string | null | undefined): ApprovalAttachment[] {
@@ -156,15 +149,15 @@
 <Page crumbs={[{ label: 'Approvals' }]}>
   <div class="page-body">
     <div class="tabs" role="tablist">
-      <button type="button" role="tab" aria-selected={tab === 'pending'} onclick={() => showTab(null)}
-        >Pending <span class="num">{lists.pending.length}</span></button
-      >
-      <button type="button" role="tab" aria-selected={tab === 'approved'} onclick={() => showTab('approved')}
-        >Approved <span class="num">{lists.approved.length}</span></button
-      >
-      <button type="button" role="tab" aria-selected={tab === 'history'} onclick={() => showTab('history')}
-        >History <span class="num">{lists.history.length}</span></button
-      >
+      <button type="button" role="tab" aria-selected={tab === 'pending'} onclick={() => showTab(null)}>
+        Pending <span class="num">{lists.pending.length}</span>
+      </button>
+      <button type="button" role="tab" aria-selected={tab === 'approved'} onclick={() => showTab('approved')}>
+        Approved <span class="num">{lists.approved.length}</span>
+      </button>
+      <button type="button" role="tab" aria-selected={tab === 'history'} onclick={() => showTab('history')}>
+        History <span class="num">{lists.history.length}</span>
+      </button>
     </div>
 
     {#if tab === 'pending' && selected.size}
@@ -180,16 +173,16 @@
       <table class="data">
         <thead>
           <tr>
-            {#if tab === 'pending'}<th class="sel"
-                ><input
-                  type="checkbox"
-                  aria-label="Select all on this page"
-                  checked={allOnPage}
-                  indeterminate={someOnPage && !allOnPage}
-                  onchange={toggleAll}
-                /></th
-              >{/if}
-            <th>Profile</th>
+            {#if tab === 'pending' && pageItems.length}<th class="sel">
+                {#if pageItems.length}<input
+                    type="checkbox"
+                    aria-label="Select all on this page"
+                    checked={allOnPage}
+                    indeterminate={someOnPage && !allOnPage}
+                    onchange={toggleAll}
+                  />{/if}
+              </th>{/if}
+            <th>Workflow</th>
             {#if tab === 'history'}<th>Status</th>{/if}
             <th>Recipients</th>
             {#if tab !== 'history'}<th>Subject</th>{/if}
@@ -207,20 +200,20 @@
                 if (!(e.target as Element).closest('button, input')) openPreview(a.guid);
               }}
             >
-              {#if tab === 'pending'}<td class="sel"
-                  ><input type="checkbox" aria-label="Select approval" checked={selected.has(a.guid)} onchange={() => toggle(a.guid)} /></td
-                >{/if}
-              <td class="strong">{profileName(a.profileId)}</td>
+              {#if tab === 'pending'}<td class="sel">
+                  <input type="checkbox" aria-label="Select approval" checked={selected.has(a.guid)} onchange={() => toggle(a.guid)} />
+                </td>{/if}
+              <td class="strong">{a.workflowName ?? 'Deleted workflow'}</td>
               {#if tab === 'history'}<td><StatusMark kind={statusKind(a.status)} label={statusLabel(a.status)} /></td>{/if}
-              <td class="trunc"
-                >{#if redacted(a.recipients)}<span class="muted">Redacted</span>{:else}{a.recipients}{/if}</td
-              >
-              {#if tab !== 'history'}<td class="trunc"
-                  >{#if redacted(a.subject)}<span class="muted">Redacted</span>{:else}{a.subject}{/if}</td
-                >{/if}
-              {#if tab === 'pending'}<td
-                  >{#if hasAttachments(a.attachmentConfig)}<span use:tooltip={'Has attachments'}><Paperclip size={14} /></span>{/if}</td
-                >{/if}
+              <td class="trunc">
+                {#if redacted(a.recipients)}<span class="muted">Redacted</span>{:else}{a.recipients}{/if}
+              </td>
+              {#if tab !== 'history'}<td class="trunc">
+                  {#if redacted(a.subject)}<span class="muted">Redacted</span>{:else}{a.subject}{/if}
+                </td>{/if}
+              {#if tab === 'pending'}<td>
+                  {#if hasAttachments(a.attachmentConfig)}<span use:tooltip={'Has attachments'}><Paperclip size={14} /></span>{/if}
+                </td>{/if}
               <td>{formatDateTime(tab === 'approved' ? a.approvedAt : a.createdAt)}</td>
               {#if tab === 'history'}<td>{a.sentAt ? formatDateTime(a.sentAt) : a.status === 'Failed' ? 'Failed' : 'Not sent'}</td>{/if}
               {#if tab === 'pending'}
@@ -230,44 +223,54 @@
                     class="btn ghost icon"
                     aria-label="Preview"
                     use:tooltip={'Preview'}
-                    onclick={() => openPreview(a.guid)}><Eye size={15} /></button
+                    onclick={() => openPreview(a.guid)}
                   >
+                    <Eye size={15} />
+                  </button>
                   <button
                     type="button"
                     class="btn ghost icon"
                     aria-label="Approve"
                     use:tooltip={'Approve and send'}
-                    onclick={() => ask('approve', [a.guid])}><Check size={15} /></button
+                    onclick={() => ask('approve', [a.guid])}
                   >
+                    <Check size={15} />
+                  </button>
                   <button
                     type="button"
                     class="btn ghost icon"
                     aria-label="Skip"
                     use:tooltip={'Skip. Commits the sync hash without sending.'}
-                    onclick={() => ask('skip', [a.guid])}><SkipForward size={15} /></button
+                    onclick={() => ask('skip', [a.guid])}
                   >
+                    <SkipForward size={15} />
+                  </button>
                   <button
                     type="button"
                     class="btn ghost icon danger"
                     aria-label="Reject"
                     use:tooltip={'Reject'}
-                    onclick={() => ask('reject', [a.guid])}><X size={15} /></button
+                    onclick={() => ask('reject', [a.guid])}
                   >
+                    <X size={15} />
+                  </button>
                 </td>
               {/if}
             </tr>
           {:else}
-            <tr
-              ><td colspan="8" class="empty"
-                >{!loaded
-                  ? 'Loading approvals'
-                  : tab === 'pending'
-                    ? 'No emails wait for approval.'
-                    : tab === 'approved'
-                      ? 'No approved emails wait for sending.'
-                      : 'No history'}</td
-              ></tr
-            >
+            <tr>
+              <td colspan="8" class="empty">
+                {#if !loaded}Loading approvals
+                {:else}
+                  <div class="empty-state">
+                    <h2>
+                      {tab === 'pending' ? 'No emails wait for approval' : tab === 'approved' ? 'No approved emails wait' : 'No history'}
+                    </h2>
+                    <p>An email step with Require approval holds its emails here until an approver sends or rejects them.</p>
+                  </div>
+                {/if}
+              </td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -276,13 +279,13 @@
     {#if pages > 1}
       <div class="pager">
         <span class="spacer"></span>
-        <button type="button" class="btn icon" aria-label="Previous page" disabled={paging.page <= 1} onclick={() => paging.page--}
-          ><ChevronLeft size={15} /></button
-        >
+        <button type="button" class="btn icon" aria-label="Previous page" disabled={paging.page <= 1} onclick={() => paging.page--}>
+          <ChevronLeft size={15} />
+        </button>
         <span class="num">{paging.page} / {pages}</span>
-        <button type="button" class="btn icon" aria-label="Next page" disabled={paging.page >= pages} onclick={() => paging.page++}
-          ><ChevronRight size={15} /></button
-        >
+        <button type="button" class="btn icon" aria-label="Next page" disabled={paging.page >= pages} onclick={() => paging.page++}>
+          <ChevronRight size={15} />
+        </button>
       </div>
     {/if}
   </div>

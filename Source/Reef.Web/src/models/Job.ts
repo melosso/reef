@@ -3,9 +3,6 @@ export interface Job {
   name: string;
   description: string;
   type: string;
-  profileId?: string | null;
-  importProfileId?: string | null;
-  profileName?: string | null;
   destinationId?: string | null;
   scheduleType: string | number;
   cronExpression?: string | null;

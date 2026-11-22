@@ -4,9 +4,9 @@
 [![Latest Release](https://img.shields.io/github/v/release/melosso/reef)](https://github.com/melosso/reef/releases/latest)
 [![Last commit](https://img.shields.io/github/last-commit/melosso/reef)](https://github.com/melosso/reef/commits/main)
 
-**Reef** is a low-code web platform built to orchestrate your data workflows. Query databases, transform payloads, and deliver files to any destination from a single dashboard. Effortlessly manage connections, export profiles, and automated schedules with zero scripting required.
+**Reef** is a low-code web platform built to orchestrate your data workflows. Query databases, transform payloads, and deliver files to any destination from a single dashboard. Build workflows on a canvas: triggers, queries, transforms, loops and deliveries, with schedules and webhooks and no scripting required.
 
-![Reef profile canvas with a query, transform and destination step](.github/images/screenshot.webp)
+![Reef workflow canvas with a query, transform and destination step](.github/images/screenshot.webp)
 
 ## What is Reef?
 
@@ -17,7 +17,7 @@ Reef automates data exports, integration pipelines, and background synchronizati
 
 **Key Capabilities**
 
-* **Database Connections**: Connect natively to PostgreSQL, MySQL, or SQL Server with reusable connection profiles.
+* **Database Connections**: Connect natively to PostgreSQL, MySQL, or SQL Server with reusable connections.
 * **Formats & Documents**: Export directly to JSON, XML, CSV, or YAML, or generate paginated PDF and DOCX files for invoices and reports.
 * **Destinations**: Deliver files to local storage, FTP/SFTP, AWS S3, Azure Blob, HTTP webhooks, SMB, or email.
 * **Automation**: Trigger jobs via cron expressions, fixed time intervals, or incoming webhooks.
@@ -100,14 +100,14 @@ Sign in with the admin account from the first-start log. Reef asks for a new pas
 
 ## How It Works
 
-You can centralize your database credentials easily; create one connection for many profiles. You can tag these profiles by assigning a `Group` to them. Then, create an export definition by creating a `Profile` that'll be assigned a destination and you'll be ready.
+Store database credentials once as a connection and reuse it in every workflow. A workflow starts from a manual, schedule or webhook trigger and runs its steps: query, fetch, parse, map, Smart Sync, split, template, if, switch, merge, loop, destination, email, write and command. Values in `{{ }}` read the current row and earlier steps, and in SQL they are sent as parameters.
 
 <summary>
 <details>Multiple destinations</details>
 
 We support various destinations:
 
-- **Local filesystem**: with date/profile variables
+- **Local filesystem**: with date and workflow variables
 - **FTP/SFTP**: with SSL and passive mode
 - **Cloud storage**: AWS S3, Azure Blob
 - **HTTP endpoints**: POST to REST APIs

@@ -39,9 +39,9 @@
       paging.page = 1;
     }}
   >
-    <option value="">All entity types</option><option value="Connection">Connection</option><option value="Profile">Profile</option><option
-      value="User">User</option
-    ><option value="ApiKey">API key</option>
+    <option value="">All entity types</option><option value="Connection">Connection</option><option value="Workflow">
+      Workflow
+    </option><option value="User">User</option><option value="ApiKey">API key</option>
   </select>
   <select
     aria-label="Action"
@@ -61,22 +61,22 @@
       {#each logs as l, i (i)}
         <tr>
           <td class="nowrap">{formatDateTime(pick(l, 'Timestamp'))}</td>
-          <td
-            >{pick(l, 'EntityType')}
+          <td>
+            {pick(l, 'EntityType')}
             <span class="num muted">{pick(l, 'EntityCode') || pick(l, 'EntityId')}</span>{#if pick(l, 'EntityName')}<div
                 class="muted small"
               >
                 {pick(l, 'EntityName')}
-              </div>{/if}</td
-          >
+              </div>{/if}
+          </td>
           <td>{pick(l, 'Action')}</td>
           <td>{pick(l, 'PerformedBy')}</td>
-          <td
-            >{#if pick(l, 'Changes')}<details>
+          <td>
+            {#if pick(l, 'Changes')}<details>
                 <summary>Show</summary>
                 <pre class="code">{pick(l, 'Changes')}</pre>
-              </details>{/if}</td
-          >
+              </details>{/if}
+          </td>
         </tr>
       {:else}
         <tr><td colspan="5" class="empty">No audit entries</td></tr>

@@ -10,7 +10,6 @@
   import { navigate } from '../lib/router.svelte';
   import { detailRoute } from '../lib/detailRoute.svelte';
   import { tooltip } from '../lib/tooltip';
-  import type { ExportProfile } from '../models/ExportProfile';
   import type { GitHubFile } from '../models/GitHubFile';
   import type { QueryTemplate } from '../models/QueryTemplate';
   import type { TemplatePreview } from '../models/TemplatePreview';
@@ -270,13 +269,6 @@
   }
 
   async function remove(t: QueryTemplate) {
-    const users = await api.get<ExportProfile[]>(`/api/profiles?templateId=${t.id}`).catch(() => []);
-    if (users?.length) {
-      notify.warning(
-        `${t.name} is used by ${users.length} ${users.length === 1 ? 'profile' : 'profiles'}: ${users.map((p) => p.name).join(', ')}. Turn the template off instead.`,
-      );
-      return;
-    }
     if (
       !(await confirm({
         title: `Delete ${t.name}?`,
@@ -421,7 +413,9 @@
 
 <Page crumbs={[{ label: 'Templates' }]}>
   {#snippet actions()}
-    <button type="button" class="btn" onclick={openGallery}><LibraryBig size={15} />Template gallery</button>
+    <button type="button" class="btn" aria-label="Template gallery" use:tooltip={'Template gallery'} onclick={openGallery}>
+      <LibraryBig size={15} /><span class="wide-label">Template gallery</span>
+    </button>
     <button type="button" class="btn primary" onclick={() => records.open('new')}><Plus size={15} />New template</button>
   {/snippet}
   <div class="page-body">
@@ -436,8 +430,11 @@
     </div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Name</th><th>Type</th><th>Format</th><th>Tags</th><th>Status</th><th><span class="sr">Actions</span></th></tr></thead
-        >
+        <thead>
+          <tr>
+            <th>Name</th><th>Type</th><th>Format</th><th class="secondary">Tags</th><th>Status</th><th><span class="sr">Actions</span></th>
+          </tr>
+        </thead>
         <tbody>
           {#each visible as t (t.id)}
             <tr
@@ -446,50 +443,56 @@
                 if (!(e.target as Element).closest('button')) records.open(t.id);
               }}
             >
-              <td
-                ><span class="strong">{t.name}</span>{#if t.description}<span class="sub">{t.description}</span>{/if}</td
-              >
+              <td>
+                <span class="strong" use:tooltip={t.description}>{t.name}</span>
+              </td>
               <td>{TYPE_LABEL[t.type] ?? t.type}</td>
               <td>{t.outputFormat}</td>
-              <td
-                >{(t.tags ?? '')
+              <td class="secondary">
+                {(t.tags ?? '')
                   .split(',')
                   .map((x: string) => x.trim())
                   .filter(Boolean)
-                  .join(', ')}</td
-              >
-              <td
-                ><button type="button" class="plain" use:tooltip={t.isActive ? 'Turn off' : 'Turn on'} onclick={() => toggleActive(t)}
-                  ><StatusMark kind={t.isActive ? 'ok' : 'off'} label={t.isActive ? 'On' : 'Off'} /></button
-                ></td
-              >
+                  .join(', ')}
+              </td>
+              <td>
+                <button type="button" class="plain" use:tooltip={t.isActive ? 'Turn off' : 'Turn on'} onclick={() => toggleActive(t)}>
+                  <StatusMark kind={t.isActive ? 'on' : 'off'} label={t.isActive ? 'On' : 'Off'} />
+                </button>
+              </td>
               <td class="actions">
                 <button
                   type="button"
                   class="btn ghost icon"
                   aria-label="Edit {t.name}"
                   use:tooltip={'Edit'}
-                  onclick={() => records.open(t.id)}><Pencil size={15} /></button
+                  onclick={() => records.open(t.id)}
                 >
+                  <Pencil size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon"
                   aria-label="Export {t.name} as TOML"
                   use:tooltip={'Export TOML'}
-                  onclick={() => exportToml(t)}><FileDown size={15} /></button
+                  onclick={() => exportToml(t)}
                 >
+                  <FileDown size={15} />
+                </button>
                 <button
                   type="button"
                   class="btn ghost icon danger"
                   aria-label="Delete {t.name}"
                   use:tooltip={'Delete'}
-                  onclick={() => remove(t)}><Trash2 size={15} /></button
+                  onclick={() => remove(t)}
                 >
+                  <Trash2 size={15} />
+                </button>
               </td>
             </tr>
           {:else}
-            <tr
-              ><td colspan="6" class="empty">
+            <tr>
+              <td colspan="6" class="empty">
                 {#if !loaded}Loading templates
                 {:else if templates.length === 0}
                   <div class="empty-state">
@@ -499,13 +502,15 @@
                       <button type="button" class="btn primary" onclick={() => records.open('new')}>New template</button><button
                         type="button"
                         class="btn"
-                        onclick={openGallery}>Template gallery</button
+                        onclick={openGallery}
                       >
+                        Template gallery
+                      </button>
                     </div>
                   </div>
                 {:else}No template matches the search.{/if}
-              </td></tr
-            >
+              </td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -520,9 +525,9 @@
         <div class="field"><label for="t-name">Name</label><input id="t-name" bind:value={form.name} autocomplete="off" /></div>
         <div class="field">
           <label for="t-type">Type</label>
-          <select id="t-type" value={form.type} onchange={(e) => changeType(e.currentTarget.value)}
-            >{#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}</select
-          >
+          <select id="t-type" value={form.type} onchange={(e) => changeType(e.currentTarget.value)}>
+            {#each TYPES as [value, label] (value)}<option {value}>{label}</option>{/each}
+          </select>
         </div>
       </div>
       <div class="field"><label for="t-desc">Description</label><input id="t-desc" bind:value={form.description} /></div>
@@ -531,8 +536,10 @@
           for="t-content"
           use:tooltip={form.type === 'ScribanTemplate' || form.type === 'DocumentTemplate'
             ? 'Insert row values with double braces around the column name'
-            : null}>Template</label
+            : null}
         >
+          Template
+        </label>
         <CodeEditor
           id="t-content"
           value={form.template}
@@ -557,14 +564,14 @@
       {#if form.type === 'DocumentTemplate'}
         <div class="grid2">
           <div class="field">
-            <label for="t-size">Page size</label><select id="t-size" bind:value={form.doc.pageSize}
-              ><option value="A4">A4</option><option value="Letter">Letter</option><option value="Legal">Legal</option></select
-            >
+            <label for="t-size">Page size</label><select id="t-size" bind:value={form.doc.pageSize}>
+              <option value="A4">A4</option><option value="Letter">Letter</option><option value="Legal">Legal</option>
+            </select>
           </div>
           <div class="field">
-            <label for="t-orient">Orientation</label><select id="t-orient" bind:value={form.doc.orientation}
-              ><option>Portrait</option><option>Landscape</option></select
-            >
+            <label for="t-orient">Orientation</label><select id="t-orient" bind:value={form.doc.orientation}>
+              <option>Portrait</option><option>Landscape</option>
+            </select>
           </div>
         </div>
         <label class="check"><input type="checkbox" bind:checked={form.doc.pageNumbers} />Page numbers</label>
@@ -574,9 +581,9 @@
       {/if}
       <div class="grid2">
         <div class="field">
-          <label for="t-format">Output format</label><select id="t-format" bind:value={form.outputFormat}
-            >{#each FORMATS[form.type] as f (f)}<option>{f}</option>{/each}</select
-          >
+          <label for="t-format">Output format</label><select id="t-format" bind:value={form.outputFormat}>
+            {#each FORMATS[form.type] as f (f)}<option>{f}</option>{/each}
+          </select>
         </div>
         <div class="field">
           <label for="t-tags">Tags</label><input
@@ -587,14 +594,14 @@
           />
         </div>
       </div>
-      <label class="check"><input type="checkbox" role="switch" bind:checked={form.isActive} />Active</label>
+      <label class="check"><input type="checkbox" bind:checked={form.isActive} />On</label>
       {#if preview !== null}
         <section class="fields">
           <h3 class="row">
             Preview <span class="grow"></span>
-            <button type="button" class="btn ghost icon" aria-label="Copy preview" onclick={() => copyText(preview!)}
-              ><Copy size={14} /></button
-            >
+            <button type="button" class="btn ghost icon" aria-label="Copy preview" onclick={() => copyText(preview!)}>
+              <Copy size={14} />
+            </button>
             <button
               type="button"
               class="btn ghost icon"
@@ -604,8 +611,10 @@
                 a.href = URL.createObjectURL(new Blob([preview!]));
                 a.download = `preview.${form!.outputFormat.toLowerCase()}`;
                 a.click();
-              }}><Download size={14} /></button
+              }}
             >
+              <Download size={14} />
+            </button>
           </h3>
           <pre class="code">{preview}</pre>
         </section>
@@ -627,13 +636,13 @@
         <thead><tr><th>Name</th><th>Type</th><th>Format</th></tr></thead>
         <tbody>
           {#each galleryItems as t (t.file)}
-            <tr class="clickable" onclick={() => pick(t)}
-              ><td class="strong">{t.name}</td><td>{TYPE_LABEL[t.type]}</td><td>{t.outputFormat}</td></tr
-            >
+            <tr class="clickable" onclick={() => pick(t)}>
+              <td class="strong">{t.name}</td><td>{TYPE_LABEL[t.type]}</td><td>{t.outputFormat}</td>
+            </tr>
           {:else}
-            <tr
-              ><td colspan="3" class="empty">{gallery.length ? 'No template matches the search.' : 'Loading templates from GitHub'}</td></tr
-            >
+            <tr>
+              <td colspan="3" class="empty">{gallery.length ? 'No template matches the search.' : 'Loading templates from GitHub'}</td>
+            </tr>
           {/each}
         </tbody>
       </table>
@@ -643,7 +652,7 @@
 
 {#if guidance}
   <Sheet title="Query for {guidance.name}" onclose={() => (guidance = null)} wide>
-    <p class="muted">The template expects the columns from this query. Paste the query into the source step of an export profile.</p>
+    <p class="muted">The template expects the columns from this query. Paste the query into a query step of a workflow.</p>
     {#each guidance.snippets as [db, sql], i (i)}
       <section class="fields">
         <h3 class="row">
@@ -651,8 +660,10 @@
             type="button"
             class="btn ghost icon"
             aria-label="Copy {db} query"
-            onclick={() => copyText(sql)}><Copy size={14} /></button
+            onclick={() => copyText(sql)}
           >
+            <Copy size={14} />
+          </button>
         </h3>
         <pre class="code">{sql}</pre>
       </section>
@@ -664,9 +675,11 @@
         class="btn primary"
         onclick={() => {
           guidance = null;
-          navigate('/profiles/export/new');
-        }}>New export profile</button
+          navigate('/workflows/new');
+        }}
       >
+        New workflow
+      </button>
     {/snippet}
   </Sheet>
 {/if}
@@ -675,15 +688,6 @@
   .strong {
     font-weight: 500;
     display: block;
-  }
-  .sub {
-    display: block;
-    font-size: 12px;
-    color: var(--muted);
-    max-width: 420px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
   .vrow {
     display: flex;

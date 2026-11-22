@@ -39,7 +39,7 @@ public static class AccountsCli
         if (!File.Exists(databasePath))
         {
             Console.Error.WriteLine($"No Reef database at \"{databasePath}\".");
-            Console.Error.WriteLine("Set Reef__DatabasePath or run this next to the Reef executable.");
+            Console.Error.WriteLine("Set DATABASE_PATH or run this next to the Reef executable.");
             return 1;
         }
 
@@ -257,7 +257,7 @@ public static class AccountsCli
         Console.WriteLine($"  {me} accounts mfa-reset <username|email>");
         Console.WriteLine($"  {me} accounts delete <username|email>");
         Console.WriteLine();
-        Console.WriteLine("Reads Reef:DatabasePath from appsettings.json or Reef__DatabasePath.");
+        Console.WriteLine("Reads DATABASE_PATH or Reef:DatabasePath from appsettings.json.");
         return exitCode;
     }
 }

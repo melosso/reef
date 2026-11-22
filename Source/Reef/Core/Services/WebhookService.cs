@@ -419,9 +419,10 @@ public class WebhookService
     /// <param name="maxRequests">Maximum requests allowed (0 = unlimited, 1 = only once per period)</param>
     /// <param name="windowHours">Time window in hours</param>
     /// <returns>True if request is allowed, false if rate limited</returns>
-    public bool CheckRateLimit(int webhookId, int maxRequests, int windowHours)
+    public bool CheckRateLimit(int webhookId, int maxRequests, int windowHours) => CheckRateLimit($"webhook_{webhookId}", maxRequests, windowHours);
+
+    public bool CheckRateLimit(string key, int maxRequests, int windowHours)
     {
-        var key = $"webhook_{webhookId}";
         var now = DateTime.UtcNow;
 
         var rateLimitInfo = _rateLimits.GetOrAdd(key, _ => new RateLimitInfo());
@@ -442,8 +443,8 @@ public class WebhookService
             // Check if under limit
             if (rateLimitInfo.Requests.Count >= maxRequests)
             {
-                Log.Warning("Rate limit exceeded for webhook {WebhookId} ({RequestCount}/{MaxRequests} in {WindowHours}h)",
-                    webhookId, rateLimitInfo.Requests.Count, maxRequests, windowHours);
+                Log.Warning("Rate limit exceeded for webhook {WebhookKey} ({RequestCount}/{MaxRequests} in {WindowHours}h)",
+                    key, rateLimitInfo.Requests.Count, maxRequests, windowHours);
                 return false;
             }
 
@@ -492,7 +493,7 @@ public class WebhookService
     /// </summary>
     public static string MaskToken(string token) => token.Length > 12 ? $"...{token[^4..]}" : "***";
 
-    private string GenerateWebhookToken()
+    public static string GenerateWebhookToken()
     {
         var bytes = new byte[32];
         using (var rng = RandomNumberGenerator.Create())
@@ -511,7 +512,7 @@ public class WebhookService
     /// <summary>
     /// Compute SHA256 hash of token for storage
     /// </summary>
-    private string ComputeTokenHash(string token)
+    public static string ComputeTokenHash(string token)
     {
         using var sha256 = SHA256.Create();
         var bytes = Encoding.UTF8.GetBytes(token);

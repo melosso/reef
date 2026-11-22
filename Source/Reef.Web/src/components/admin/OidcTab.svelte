@@ -57,7 +57,7 @@
       Reef supports one OpenID Connect provider, for example Pocket ID or Microsoft Entra ID. Sign-in matches accounts by username or
       verified email address.
     </p>
-    <label class="check"><input type="checkbox" role="switch" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
+    <label class="check"><input type="checkbox" bind:checked={form.isEnabled} />OIDC sign-in enabled</label>
     <div class="field">
       <label for="o-name" use:tooltip={'Displayed on the sign-in button'}>Provider name</label><input
         id="o-name"
@@ -80,8 +80,10 @@
           type="button"
           class="btn ghost icon"
           aria-label="Copy redirect URL"
-          onclick={() => copyText(redirectUri)}><Copy size={14} /></button
+          onclick={() => copyText(redirectUri)}
         >
+          <Copy size={14} />
+        </button>
       </div>
     </div>
     <div class="grid2">
@@ -101,9 +103,9 @@
       <div class="field"><label for="o-user">Username claim</label><input id="o-user" bind:value={form.usernameClaim} /></div>
       <div class="field"><label for="o-email">Email claim</label><input id="o-email" bind:value={form.emailClaim} /></div>
     </div>
-    <label class="check" use:tooltip={'Create a User account for OIDC identities without a matching Reef account'}
-      ><input type="checkbox" bind:checked={form.createAccounts} />Create accounts on first sign-in</label
-    >
+    <label class="check" use:tooltip={'Create a User account for OIDC identities without a matching Reef account'}>
+      <input type="checkbox" bind:checked={form.createAccounts} />Create accounts on first sign-in
+    </label>
     <div><button type="submit" class="btn primary" aria-busy={busy}>Save settings</button></div>
   </form>
 {/if}
