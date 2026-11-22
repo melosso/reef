@@ -24,6 +24,8 @@ public class DatabaseInitializer
     {
         using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync();
+        // Lets concurrent writers wait
+        await connection.ExecuteAsync("PRAGMA journal_mode=WAL");
 
         // Create all tables
         await CreateConnectionsTableAsync(connection);

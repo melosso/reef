@@ -41,6 +41,16 @@ public class WorkflowApiTests(ReefApiFactory factory)
     };
 
     [Fact]
+    public async Task ParallelSavesAllSucceed()
+    {
+        var (client, connectionId, destinationId) = await SetupAsync();
+
+        var saves = await Task.WhenAll(Enumerable.Range(0, 24).Select(_ => client.PostAsJsonAsync("/api/workflows", Branching(connectionId, destinationId), _ct)));
+
+        saves.Select(r => r.StatusCode).Should().AllBeEquivalentTo(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task WorkflowSavesAndReadsBackWithEdgesAndPublicIds()
     {
         var (client, connectionId, destinationId) = await SetupAsync();
