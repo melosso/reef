@@ -574,7 +574,7 @@ public partial class Program
         {
             status = "healthy",
             timestamp = DateTime.UtcNow,
-            version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown"
+            version = Reef.Helpers.AppVersion.Current
         }));
 
         // API endpoints
@@ -633,7 +633,7 @@ public partial class Program
                 INSERT INTO ApplicationStartup (StartupToken, StartedAt, MachineName, Version)
                 VALUES (@StartupToken, @StartedAt, @MachineName, @Version)";
 
-            var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown";
+            var version = Reef.Helpers.AppVersion.Current;
 
             await conn.ExecuteAsync(sql, new
             {
@@ -652,12 +652,4 @@ public partial class Program
             return null;
         }
     }
-}
-
-/// <summary>
-/// Database configuration
-/// </summary>
-public class DatabaseConfig
-{
-    public required string ConnectionString { get; init; }
 }
