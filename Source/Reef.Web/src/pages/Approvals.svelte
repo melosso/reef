@@ -260,13 +260,15 @@
           {:else}
             <tr>
               <td colspan="8" class="empty">
-                {!loaded
-                  ? 'Loading approvals'
-                  : tab === 'pending'
-                    ? 'No emails wait for approval.'
-                    : tab === 'approved'
-                      ? 'No approved emails wait for sending.'
-                      : 'No history'}
+                {#if !loaded}Loading approvals
+                {:else}
+                  <div class="empty-state">
+                    <h2>
+                      {tab === 'pending' ? 'No emails wait for approval' : tab === 'approved' ? 'No approved emails wait' : 'No history'}
+                    </h2>
+                    <p>An email step with Require approval holds its emails here until an approver sends or rejects them.</p>
+                  </div>
+                {/if}
               </td>
             </tr>
           {/each}
