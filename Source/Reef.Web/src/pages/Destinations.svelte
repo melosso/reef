@@ -519,12 +519,6 @@
   .strong {
     font-weight: 500;
   }
-  .trunc {
-    max-width: 320px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .section {
     margin-top: 8px;
     padding-top: 16px;

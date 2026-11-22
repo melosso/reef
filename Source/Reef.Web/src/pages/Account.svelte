@@ -221,7 +221,7 @@
               <div class="fields">
                 <div>
                   <span class="muted">Manual key</span>
-                  <div class="num key">{totp.key}</div>
+                  <div class="key">{totp.key}</div>
                 </div>
                 <form class="fields" onsubmit={confirmTotp}>
                   <div class="field">

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Panel, useNodesInitialized, useSvelteFlow, type XYPosition } from '@xyflow/svelte';
+  import { MiniMap, Panel, useNodesInitialized, useSvelteFlow, type XYPosition } from '@xyflow/svelte';
   import { Plus, Redo2, Undo2 } from '@lucide/svelte';
   import { tooltip } from '../lib/tooltip';
   import { stepIcon } from '../editor/icons';
@@ -63,13 +63,19 @@
     const node = flow.getNode(id);
     const pane = document.querySelector('.svelte-flow');
     if (!node || !pane) return;
-    const { x, y, zoom: scale } = flow.getViewport();
+    const { x, zoom: scale } = flow.getViewport();
+    const left = node.position.x * scale + x;
     const right = (node.position.x + (node.measured?.width ?? 220)) * scale + x;
-    const room = pane.clientWidth - panel - 32;
-    if (right > room) flow.setViewport({ x: x - (right - room), y, zoom: scale }, { duration: 200 });
+    const room = pane.clientWidth - panel;
+    if (right > room - 32 || left < 32)
+      flow.setCenter(node.position.x + (node.measured?.width ?? 220) / 2 + panel / 2 / scale, node.position.y + 40, {
+        zoom: scale,
+        duration: 200,
+      });
   }
 
   const initialized = useNodesInitialized();
+  const showMap = $derived(initialized.current && flow.getNodes().length > 8);
   let fitted = false;
 
   onMount(() => register((p) => flow.screenToFlowPosition(p), reveal));
@@ -80,12 +86,13 @@
     setTimeout(() => {
       flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
         const start = flow.getNodes().find((n) => (n.data as { trigger?: boolean }).trigger);
-        if (flow.getViewport().zoom < 0.5 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
+        if (flow.getViewport().zoom < 0.6 && start) flow.setCenter(start.position.x + 400, start.position.y + 60, { zoom: 0.8 });
       });
     }, 50);
   });
 </script>
 
+{#if catalog.length && showMap}<MiniMap position="bottom-left" pannable zoomable ariaLabel="Overview" />{/if}
 <Panel position="bottom-center">
   <div class="bar" role="toolbar" aria-label="Canvas">
     <button type="button" class="add" popovertarget={PALETTE_ID} use:tooltip={'Add step (/)'}><Plus size={14} />Add step</button>

@@ -166,9 +166,11 @@
           result: pass
             ? pass.status === 'Failed'
               ? (pass.errorMessage ?? 'Failed').split('\n')[0]
-              : pass.status === 'Skipped'
-                ? 'Skipped'
-                : `${pass.rowCount} ${pass.rowCount === 1 ? 'row' : 'rows'}${count > 1 ? `, ${count} passes` : ''}`
+              : def?.group === 'Triggers'
+                ? 'Started the run'
+                : pass.status === 'Skipped'
+                  ? 'Skipped'
+                  : `${pass.rowCount} ${pass.rowCount === 1 ? 'row' : 'rows'}${count > 1 ? `, ${count} passes` : ''}`
             : '',
           error: pass?.errorMessage ?? null,
         },
@@ -623,6 +625,9 @@
     --xy-edge-stroke: var(--edge);
     --xy-edge-stroke-width: 1.5;
     --xy-connectionline-stroke: var(--accent);
+    --xy-minimap-background-color: var(--surface);
+    --xy-minimap-mask-background-color: var(--shadow);
+    --xy-minimap-node-background-color: var(--line-strong);
     background: var(--bg);
   }
   .canvas :global(.svelte-flow__node.selected .card),

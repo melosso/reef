@@ -128,7 +128,9 @@
     </div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Workflow</th><th>Trigger</th><th>Status</th><th>Started</th><th>Duration</th></tr></thead>
+        <thead>
+          <tr><th>Workflow</th><th>Trigger</th><th>Status</th><th class="secondary">Reason</th><th>Started</th><th>Duration</th></tr>
+        </thead>
         <tbody>
           {#each runs as run (run.id)}
             <tr class="clickable" onclick={() => navigate(`/executions/${run.id}${location.search}`)}>
@@ -142,12 +144,13 @@
               <td>
                 <span use:tooltip={run.errorMessage}><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></span>
               </td>
+              <td class="muted trunc secondary">{run.errorMessage?.split('\n')[0] ?? ''}</td>
               <td><span use:tooltip={formatDateTime(run.startedAt)}>{formatRelative(run.startedAt)}</span></td>
               <td class="num">{duration(run)}</td>
             </tr>
           {:else}
             <tr>
-              <td colspan="5" class="empty">
+              <td colspan="6" class="empty">
                 {#if !loaded}Loading runs
                 {:else if workflowFilter || statusFilter}No run matches the filters.
                 {:else}

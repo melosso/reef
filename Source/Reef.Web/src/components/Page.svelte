@@ -47,39 +47,41 @@
 
 <div class="page">
   <header class="head">
-    <nav aria-label="Breadcrumb" class="crumbs">
-      {#each crumbs as crumb, i (i)}
-        {#if i > 0}<span aria-hidden="true">/</span>{/if}
-        {#if crumb.href && i < crumbs.length - 1}<a href={crumb.href}>{crumb.label}</a>
-        {:else if crumb.onrename && renaming}<input
-            class="rename"
-            aria-label="Name"
-            value={crumb.value ?? crumb.label}
-            use:autofocus
-            onblur={(e) => commit(crumb, e.currentTarget)}
-            onkeydown={(e) => {
-              if (e.key === 'Enter') commit(crumb, e.currentTarget);
-              else if (e.key === 'Escape') renaming = false;
-            }}
-          />
-        {:else if crumb.onrename}<span
-            class="current editable"
-            role="button"
-            tabindex="0"
-            aria-current="page"
-            aria-keyshortcuts="F2"
-            use:tooltip={'Double-click to rename'}
-            ondblclick={() => (renaming = true)}
-            onkeydown={(e) => {
-              if (e.key === 'F2') renaming = true;
-            }}
-          >
-            {crumb.label}
-          </span>
-        {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}
-      {/each}
-    </nav>
-    {#if status}<div class="status">{@render status()}</div>{/if}
+    <div class="left">
+      <nav aria-label="Breadcrumb" class="crumbs">
+        {#each crumbs as crumb, i (i)}
+          {#if i > 0}<span aria-hidden="true">/</span>{/if}
+          {#if crumb.href && i < crumbs.length - 1}<a href={crumb.href}>{crumb.label}</a>
+          {:else if crumb.onrename && renaming}<input
+              class="rename"
+              aria-label="Name"
+              value={crumb.value ?? crumb.label}
+              use:autofocus
+              onblur={(e) => commit(crumb, e.currentTarget)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') commit(crumb, e.currentTarget);
+                else if (e.key === 'Escape') renaming = false;
+              }}
+            />
+          {:else if crumb.onrename}<span
+              class="current editable"
+              role="button"
+              tabindex="0"
+              aria-current="page"
+              aria-keyshortcuts="F2"
+              use:tooltip={'Double-click to rename'}
+              ondblclick={() => (renaming = true)}
+              onkeydown={(e) => {
+                if (e.key === 'F2') renaming = true;
+              }}
+            >
+              {crumb.label}
+            </span>
+          {:else}<span class="current" aria-current={i === crumbs.length - 1 ? 'page' : undefined}>{crumb.label}</span>{/if}
+        {/each}
+      </nav>
+      {#if status}<div class="status">{@render status()}</div>{/if}
+    </div>
     <div class="center">
       <button type="button" class="command" onclick={openCommandBar} aria-keyshortcuts="Control+K">
         <Search size={15} />
@@ -87,8 +89,10 @@
         <kbd>Ctrl K</kbd>
       </button>
     </div>
-    {#if actions}<div class="actions">{@render actions()}</div>{/if}
-    <AccountMenu />
+    <div class="right">
+      {#if actions}<div class="actions">{@render actions()}</div>{/if}
+      <AccountMenu />
+    </div>
   </header>
   {@render children()}
 </div>
@@ -97,7 +101,8 @@
   .head {
     height: 56px;
     flex: none;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 14px;
     padding: 0 20px;
@@ -142,8 +147,17 @@
     color: var(--muted);
     white-space: nowrap;
   }
+  .left,
+  .right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+  .right {
+    justify-content: flex-end;
+  }
   .center {
-    flex: 1;
     display: flex;
     justify-content: center;
     min-width: 0;

@@ -395,7 +395,7 @@
       </div>
     {/if}
 
-    <div class="toolbar">
+    <div class="toolbar" hidden={loaded && jobs.length === 0}>
       <input type="search" placeholder="Search job or task" aria-label="Search jobs" bind:value={filters.search} />
       <select aria-label="Health" bind:value={filters.health}>
         <option value="">All health</option><option value="auto-paused">Auto-paused</option><option value="failing">Failing</option>
@@ -625,7 +625,7 @@
         <p class="muted">A webhook runs this job on an HTTP POST to its URL.</p>
         {#each hooks as hook (hook.id)}
           <div class="hook">
-            <span class="num token">{hook.token}</span>
+            <span class="token">{hook.token}</span>
             <span class="muted">{hook.isActive ? 'On' : 'Off'}, <span class="num">{hook.triggerCount ?? 0}</span> calls</span>
             <span class="links">
               <button type="button" class="link" onclick={() => copyText(`curl -X POST ${location.origin}/webhooks/${hook.token}`)}>

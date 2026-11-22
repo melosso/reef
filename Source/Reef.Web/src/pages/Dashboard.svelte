@@ -112,7 +112,14 @@
             </tbody>
           </table>
         {:else}
-          <div class="panel-body"><StatusMark kind="ok" label="The latest run of every workflow succeeded." /></div>
+          <div class="panel-body">
+            {#if attention.last24h.failed}
+              <StatusMark
+                kind="warn"
+                label="No workflow is failing now. {formatNumber(attention.last24h.failed)} earlier runs failed in the last 24 hours."
+              />
+            {:else}<StatusMark kind="ok" label="Every workflow's latest run succeeded." />{/if}
+          </div>
         {/if}
       </section>
 
@@ -146,7 +153,9 @@
             <tbody>
               {#each recentRuns as run (run.id)}
                 <tr class="clickable" onclick={() => navigate(`/executions/${run.id}`)}>
-                  <td class="mark"><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></td>
+                  <td class="mark">
+                    <span use:tooltip={run.errorMessage}><StatusMark kind={statusKind(run.status)} label={statusLabel(run.status)} /></span>
+                  </td>
                   <td class="strong">{run.workflowName ?? 'Deleted workflow'}</td>
                   <td class="when"><span use:tooltip={formatDateTime(run.startedAt)}>{formatRelative(run.startedAt)}</span></td>
                 </tr>

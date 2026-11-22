@@ -53,7 +53,7 @@ p {
 
 .num {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 0.92em;
   font-variant-numeric: tabular-nums;
 }
 .muted {
@@ -495,4 +495,15 @@ pre.plain {
 
 table.data td.actions .btn.icon {
   padding: 3px;
+}
+
+table.data .trunc {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[hidden] {
+  display: none !important;
 }

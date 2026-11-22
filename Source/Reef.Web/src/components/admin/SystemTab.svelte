@@ -72,6 +72,7 @@
       <p class="muted">
         {#if outdated}Version <span class="num">{latest.tag}</span> is available.
           <a href={latest.url} target="_blank" rel="noopener noreferrer">Release notes</a>
+        {:else if (info?.version ?? version).includes('-')}This is a prerelease build. Latest release <span class="num">{latest.tag}</span>.
         {:else}Reef is up to date. Latest release <span class="num">{latest.tag}</span>.{/if}
       </p>
     {/if}
