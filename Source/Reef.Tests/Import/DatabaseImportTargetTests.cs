@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Reef.Core.Models;
 using Reef.Core.Services;
 using Reef.Core.Targets;
+using Reef.Legacy.Models;
 
 namespace Reef.Tests.Import;
 

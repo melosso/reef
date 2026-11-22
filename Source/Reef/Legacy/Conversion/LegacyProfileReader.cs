@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Reef.Core.Models;
+using Reef.Legacy.Models;
 
 namespace Reef.Legacy.Conversion;
 

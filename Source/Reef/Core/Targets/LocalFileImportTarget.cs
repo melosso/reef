@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Reef.Core.Models;
 using Serilog;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Targets;
 

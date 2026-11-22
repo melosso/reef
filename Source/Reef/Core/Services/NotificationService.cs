@@ -11,6 +11,7 @@ using Scriban;
 using Scriban.Runtime;
 using Serilog;
 using System.Text.Json;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Services;
 

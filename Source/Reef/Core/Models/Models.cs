@@ -1,3 +1,5 @@
+using Reef.Legacy.Models;
+
 namespace Reef.Core.Models;
 
 /// <summary>
@@ -44,20 +46,6 @@ public class ApiKey
 }
 
 /// <summary>
-/// Profile group entity for organizing profiles into folders
-/// </summary>
-public class ProfileGroup
-{
-    public int Id { get; set; }
-    public required string Name { get; set; }
-    public int? ParentId { get; set; }
-    public string? Description { get; set; }
-    public int SortOrder { get; set; } = 0;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-}
-
-/// <summary>
 /// Connection entity for database connection strings
 /// </summary>
 public class Connection
@@ -74,195 +62,6 @@ public class Connection
     public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
     public DateTime? LastTestedAt { get; set; }
     public string? LastTestResult { get; set; }
-}
-
-/// <summary>
-/// Profile entity for query execution configuration
-/// </summary>
-public class Profile
-{
-    public int Id { get; set; }
-    public required string Name { get; set; }
-    public int ConnectionId { get; set; }
-    public int? GroupId { get; set; }
-    public required string Query { get; set; }
-    public string? ScheduleType { get; set; } // null, Cron, Interval, Webhook
-    public string? ScheduleCron { get; set; }
-    public int? ScheduleIntervalMinutes { get; set; }
-    public string OutputFormat { get; set; } = "JSON"; // JSON, XML, CSV, TAB, YAML
-    public string OutputDestinationType { get; set; } = "Local"; // Local, FTP, SFTP, S3, Azure
-    public string? OutputDestinationConfig { get; set; } // JSON configuration
-    public string? OutputPropertiesJson { get; set; } // Additional output properties
-    public int? OutputDestinationId { get; set; } // FK to Destinations table (optional)
-    public int? OutputDestinationEndpointId { get; set; } // FK to DestinationEndpoints table (optional)
-    public int? TemplateId { get; set; } // FK to QueryTemplates table (optional - for custom transformations)
-    public string? TransformationOptionsJson { get; set; } // JSON options for SQL Server native transformations (ForJsonOptions, ForXmlOptions)
-
-    // Pre-Processing Configuration
-    public string? PreProcessType { get; set; } // null, Query, StoredProcedure
-    public string? PreProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
-    public bool PreProcessRollbackOnFailure { get; set; } = true; // Rollback pre-processing if main query fails
-
-    // Post-Processing Configuration (enhanced existing)
-    public string? PostProcessType { get; set; } // null, Query, StoredProcedure, Webhook
-    public string? PostProcessConfig { get; set; } // JSON configuration (ProcessingConfig)
-    public string? CanvasLayoutJson { get; set; } // node positions and connections for the canvas editor
-    public bool PostProcessSkipOnFailure { get; set; } = true; // Skip post-processing if main query fails
-    public bool PostProcessRollbackOnFailure { get; set; } = false; // Rollback post-processing on its own failure
-    public bool PostProcessOnZeroRows { get; set; } = false; // Run post-processing even when query returns 0 rows (opt-in)
-
-    public string? NotificationConfig { get; set; } // JSON configuration
-
-    // Email Export Configuration
-    public bool IsEmailExport { get; set; } = false; // Flag: is this an email export profile?
-    public int? EmailTemplateId { get; set; } // FK to QueryTemplates table - Scriban template for email body
-    public string? EmailRecipientsColumn { get; set; } // Query column name for TO recipients (extracted from results)
-    public string? EmailRecipientsHardcoded { get; set; } // Hardcoded recipient email address
-    public bool UseHardcodedRecipients { get; set; } = false; // Flag: use hardcoded recipient instead of column
-    public string? EmailCcColumn { get; set; } // Query column name for CC recipients (extracted from results)
-    public string? EmailCcHardcoded { get; set; } // Hardcoded CC email address
-    public bool UseHardcodedCc { get; set; } = false; // Flag: use hardcoded CC instead of column
-    public string? EmailSubjectColumn { get; set; } // Query column name for email subject (extracted from results)
-    public string? EmailSubjectHardcoded { get; set; } // Hardcoded email subject
-    public bool UseHardcodedSubject { get; set; } = false; // Flag: use hardcoded subject instead of column
-    public int EmailSuccessThresholdPercent { get; set; } = 60; // Mark as succeeded if this % or more of emails succeed (prevents retries on partial failures)
-    public string? EmailAttachmentConfig { get; set; } // JSON configuration for email attachments (opt-in)
-
-    // Email Approval Workflow Configuration
-    public bool EmailApprovalRequired { get; set; } = false; // Enable/disable manual approval for emails
-    public string? EmailApprovalRoles { get; set; } // JSON array of roles allowed to approve (e.g., ["Admin", "User"])
-
-    public string? DependsOnProfileIds { get; set; } // Comma-separated profile IDs for dependencies
-    public bool IsEnabled { get; set; } = true;
-    public required string Hash { get; set; } // SHA256 for tamper detection
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-    public int? CreatedBy { get; set; } // FK to Users.Id (migrated from username string to User ID)
-    public DateTime? LastExecutedAt { get; set; }
-
-    // Delta Sync Configuration - Basic
-    public bool DeltaSyncEnabled { get; set; } = false;
-    public string? DeltaSyncReefIdColumn { get; set; }
-    public string? DeltaSyncHashAlgorithm { get; set; } = "SHA256";
-    public bool DeltaSyncTrackDeletes { get; set; } = false;
-    public int? DeltaSyncRetentionDays { get; set; }
-
-    // Delta Sync Configuration - Edge Case Handling
-    public string? DeltaSyncDuplicateStrategy { get; set; } = "Strict"; // Strict, Composite, Skip
-    public string? DeltaSyncNullStrategy { get; set; } = "Strict"; // Strict, Skip, Generate
-    public bool DeltaSyncResetOnSchemaChange { get; set; } = false;
-    public int? DeltaSyncNumericPrecision { get; set; } = 6; // Decimal places for floating point
-    public bool DeltaSyncRemoveNonPrintable { get; set; } = false; // Strip non-printable chars
-    public string? DeltaSyncReefIdNormalization { get; set; } = "Trim"; // Trim, Lowercase, RemoveWhitespace
-
-    // Advanced Output Options
-    public bool ExcludeReefIdFromOutput { get; set; } = true; // Don't include ReefId column in exports (internal use only)
-    public bool ExcludeSplitKeyFromOutput { get; set; } = false; // Don't include SplitKey column in exports (internal use only)
-
-    // Filename override for non-split executions
-    public string? FilenameTemplate { get; set; } = "{profile}_{timestamp}.{format}";
-
-    public bool SplitEnabled { get; set; } = false; // Enable multi-output splitting
-    public string? SplitKeyColumn { get; set; } // Column name to group rows by (e.g., CustomerId, DebtorCode)
-    public string? SplitFilenameTemplate { get; set; } = "{profile}_{splitkey}_{timestamp}.{format}"; // Filename template for split files
-    public int SplitBatchSize { get; set; } = 1; // Number of rows per file (1 = one file per split key, N = batch N rows per file)
-    public bool PostProcessPerSplit { get; set; } = false; // Run post-processing for each split
-    public bool EmailGroupBySplitKey { get; set; } = false; // For email exports: group rows by split key (one email per split key value)
-
-    // Unique human-readable short code, e.g. "P-A3F1" (set on creation, immutable)
-    public string Code { get; set; } = "";
-}
-
-/// <summary>
-/// Profile execution history entity
-/// </summary>
-public class ProfileExecution
-{
-    public int Id { get; set; }
-    public int ProfileId { get; set; }
-    public int? JobId { get; set; } // Optional: Which job triggered this execution
-    public string? ProfileName { get; set; } // Profile name from JOIN with Profiles table
-    public string? ProfileCode { get; set; } // Profile code from JOIN with Profiles table
-    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? CompletedAt { get; set; }
-    public string Status { get; set; } = "Running"; // Running, Success, Failed
-    public int? RowCount { get; set; }
-    public string? OutputPath { get; set; }
-    public long? FileSizeBytes { get; set; }
-    public string? ErrorMessage { get; set; }
-    public string? OutputMessage { get; set; } // Success messages like HTTP responses
-    public long? ExecutionTimeMs { get; set; }
-    public string? TriggeredBy { get; set; }
-
-    // Pre-Processing Phase Tracking
-    public DateTime? PreProcessStartedAt { get; set; }
-    public DateTime? PreProcessCompletedAt { get; set; }
-    public string? PreProcessStatus { get; set; } // null, Success, Failed, Skipped
-    public string? PreProcessError { get; set; }
-    public long? PreProcessTimeMs { get; set; }
-    public string? PreProcessStdout { get; set; } // Script type only
-    public string? PreProcessStderr { get; set; } // Script type only
-    public int? PreProcessExitCode { get; set; } // Script type only
-
-    // Post-Processing Phase Tracking
-    public DateTime? PostProcessStartedAt { get; set; }
-    public DateTime? PostProcessCompletedAt { get; set; }
-    public string? PostProcessStatus { get; set; } // null, Success, Failed, Skipped
-    public string? PostProcessError { get; set; }
-    public long? PostProcessTimeMs { get; set; }
-    public string? PostProcessStdout { get; set; } // Script type only
-    public string? PostProcessStderr { get; set; } // Script type only
-    public int? PostProcessExitCode { get; set; } // Script type only
-
-    // Email Approval Workflow Tracking
-    public string? ApprovalStatus { get; set; } // null, Pending, Approved, Rejected, Sent (tracks approval status separately)
-    public int? PendingEmailApprovalId { get; set; } // FK to PendingEmailApprovals table (if email approval is required)
-    public DateTime? ApprovedAt { get; set; } // When email was approved
-
-    // Delta Sync Metrics
-    public int? DeltaSyncNewRows { get; set; }
-    public int? DeltaSyncChangedRows { get; set; }
-    public int? DeltaSyncDeletedRows { get; set; }
-    public int? DeltaSyncUnchangedRows { get; set; }
-    public int? DeltaSyncTotalHashedRows { get; set; }
-
-    // Multi-Output Splitting Tracking
-    public bool WasSplit { get; set; } = false; // Whether this execution used multi-output splitting
-    public int? SplitCount { get; set; } // Total number of splits generated
-    public int? SplitSuccessCount { get; set; } // Number of splits that succeeded
-    public int? SplitFailureCount { get; set; } // Number of splits that failed
-}
-
-
-/// <summary>
-/// Represents a single split from a multi-output profile execution
-/// </summary>
-public class ProfileExecutionSplit
-{
-    public int Id { get; set; }
-    public int ExecutionId { get; set; }
-    public string SplitKey { get; set; } = string.Empty;
-    public int RowCount { get; set; }
-    public string Status { get; set; } = "Running"; // Running, Success, Failed
-    public string? OutputPath { get; set; }
-    public long? FileSizeBytes { get; set; }
-    public string? ErrorMessage { get; set; }
-    public DateTime StartedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? CompletedAt { get; set; }
-}
-
-/// <summary>
-/// Per-send failure record for email export or other split-based executions
-/// </summary>
-public class ProfileExecutionError
-{
-    public int Id { get; set; }
-    public int ExecutionId { get; set; }
-    public string ErrorType { get; set; } = "Unknown";
-    public string? Phase { get; set; }
-    public string? Detail { get; set; }  // e.g. recipient address
-    public string ErrorMessage { get; set; } = "";
-    public DateTime OccurredAt { get; set; }
 }
 
 /// <summary>
@@ -295,34 +94,6 @@ public class AuditLog
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     public string? IpAddress { get; set; }
     public string? UserAgent { get; set; }
-}
-
-/// <summary>
-/// Profile dependency entity for execution chains
-/// </summary>
-public class ProfileDependency
-{
-    public int Id { get; set; }
-    public int ProfileId { get; set; }
-    public int DependsOnProfileId { get; set; }
-    public int ExecutionOrder { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-}
-
-/// <summary>
-/// Scheduled task entity for background scheduler
-/// </summary>
-public class ScheduledTask
-{
-    public int Id { get; set; }
-    public int ProfileId { get; set; }
-    public DateTime NextRunAt { get; set; }
-    public DateTime? LastRunAt { get; set; }
-    public bool IsRunning { get; set; } = false;
-    public int FailureCount { get; set; } = 0;
-    public string? LastError { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -585,8 +356,6 @@ public class TestConnectionResponse
     public string? Message { get; set; }
     public long? ResponseTimeMs { get; set; }
 }
-
-
 
 /// <summary>
 /// Delta sync configuration

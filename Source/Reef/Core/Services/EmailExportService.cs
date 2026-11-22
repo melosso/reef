@@ -8,6 +8,7 @@ using Reef.Core.TemplateEngines;
 using Reef.Core.DocumentGeneration;
 using Reef.Core.Destinations;
 using Serilog;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Services;
 

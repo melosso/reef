@@ -3,6 +3,7 @@ using Reef.Core.Exceptions;
 using Reef.Core.Models;
 using Reef.Core.Nodes;
 using Reef.Core.Workflows.Models;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.Security;
 

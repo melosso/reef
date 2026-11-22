@@ -2,6 +2,7 @@ using Reef.Core.Models;
 using Reef.Core.Models.Dashboard;
 using Reef.Core.Services;
 using Reef.Core.Workflows.Models;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.PublicIds;
 

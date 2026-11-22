@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Reef.Core.Models;
+using Reef.Legacy.Models;
 
 namespace Reef.Core.PublicIds;
 

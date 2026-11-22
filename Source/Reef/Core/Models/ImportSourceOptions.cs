@@ -1,3 +1,5 @@
+using Reef.Legacy.Models;
+
 namespace Reef.Core.Models;
 
 public record ImportSourceOptions

@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Reef.Core.Models;
 using Reef.Core.Workflows.Models;
+using Reef.Legacy.Models;
 
 namespace Reef.Legacy.Conversion;
 
