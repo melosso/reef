@@ -24,7 +24,14 @@
   const offset = (index: number, count: number) => `${((index + 1) * 100) / (count + 1)}%`;
 </script>
 
-<div class="card" class:selected class:invalid={card.invalid} class:trigger={card.trigger} aria-invalid={card.invalid ? 'true' : undefined}>
+<div
+  class="card"
+  class:selected
+  class:invalid={card.invalid}
+  class:failed={card.status === 'err'}
+  class:trigger={card.trigger}
+  aria-invalid={card.invalid ? 'true' : undefined}
+>
   {#each card.inputs as port, i (port)}
     <Handle type="target" position={Position.Left} id={port} style="top: {offset(i, card.inputs.length)}" />
     {#if card.inputs.length > 1}<span class="port in" style="top: {offset(i, card.inputs.length)}">{port}</span>{/if}
@@ -59,7 +66,8 @@
     border: 2px solid var(--accent);
     margin: -1px;
   }
-  .card.invalid {
+  .card.invalid,
+  .card.failed:not(.selected) {
     border-color: var(--err);
   }
   .head {

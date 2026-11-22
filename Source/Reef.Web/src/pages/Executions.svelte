@@ -15,6 +15,7 @@
   import { runWorkflow } from '../lib/workflows';
   import type { PagedResult } from '../models/PagedResult';
   import type { Workflow } from '../models/Workflow';
+  import type { WorkflowCatalog } from '../models/WorkflowCatalog';
   import type { WorkflowExecution } from '../models/WorkflowExecution';
 
   const paging = urlPaging(25);
@@ -23,6 +24,7 @@
   const statusFilter = $derived(route.query.get('status') ?? '');
 
   let workflows = $state<Workflow[]>([]);
+  let labels = $state<Record<string, string>>({});
   let runs = $state<WorkflowExecution[]>([]);
   let total = $state(0);
   let pages = $state(1);
@@ -50,6 +52,13 @@
       .get<Workflow[]>('/api/workflows')
       .then((list) => (workflows = list))
       .catch(() => []);
+  });
+
+  $effect(() => {
+    api
+      .get<WorkflowCatalog>('/api/workflows/catalog')
+      .then((c) => (labels = Object.fromEntries(c.nodes.map((d) => [d.type, d.label]))))
+      .catch(() => {});
   });
 
   $effect(() => {
@@ -85,11 +94,9 @@
     return run.completedAt ? formatDuration(Date.parse(run.completedAt) - Date.parse(run.startedAt)) : '';
   }
 
-  const TRIGGERS: Record<string, string> = { manual: 'Manual', schedule: 'Schedule', webhook: 'Webhook' };
-
   function stepName(nodeId: string, workflow = detailWorkflow): string {
     const node = workflow?.nodes.find((n) => n.id === nodeId);
-    return node?.name || (node ? (TRIGGERS[node.type] ?? nodeId) : nodeId);
+    return node?.name || (node ? (labels[node.type] ?? nodeId) : nodeId);
   }
 
   async function rerun() {

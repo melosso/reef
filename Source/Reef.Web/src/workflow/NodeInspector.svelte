@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { Copy, FlaskConical, Link, Maximize2, Minimize2, Play, Trash2, X } from '@lucide/svelte';
   import StatusMark from '../components/StatusMark.svelte';
   import { api } from '../lib/api';
@@ -94,6 +95,11 @@
     void node.id;
     test = null;
     hookUrl = null;
+  });
+
+  $effect(() => {
+    void node.id;
+    if (untrack(() => latest)?.status === 'Failed') tab = 'run';
   });
 
   const errorFor = (key: string) => errors.find((e) => e.nodeId === node.id && e.field === key)?.message;
@@ -239,7 +245,12 @@
         <FlaskConical size={14} />Test step
       </button>
     </div>
-    <ItemsTable outputs={output} empty="No output yet. Run the workflow or test this step." />
+    <ItemsTable
+      outputs={output}
+      empty={latest?.status === 'Failed'
+        ? 'This step failed. The error is on the Last run tab.'
+        : 'No output yet. Run the workflow or test this step.'}
+    />
   {/snippet}
   {#snippet runView()}
     {#if latest && run}
