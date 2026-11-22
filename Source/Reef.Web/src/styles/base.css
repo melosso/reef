@@ -418,6 +418,9 @@ table.data th button {
   flex-direction: column;
   gap: 18px;
 }
+body:has(.sheet-foot) [data-sonner-toaster][data-y-position='bottom'] {
+  bottom: 72px !important;
+}
 .sheet-foot {
   display: flex;
   justify-content: flex-end;

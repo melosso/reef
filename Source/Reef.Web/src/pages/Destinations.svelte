@@ -3,7 +3,7 @@
   import Page from '../components/Page.svelte';
   import Sheet from '../components/Sheet.svelte';
   import StatusMark from '../components/StatusMark.svelte';
-  import { api } from '../lib/api';
+  import { api, ApiError, type FieldError } from '../lib/api';
   import { confirm } from '../lib/confirm.svelte';
   import {
     DESTINATION_FIELDS,
@@ -124,7 +124,10 @@
     endpointForm = null;
   }
 
+  let errors = $state<FieldError[]>([]);
+
   function close() {
+    errors = [];
     dismiss();
     records.close();
   }
@@ -165,10 +168,12 @@
       };
       if (form.id) await api.put(`/api/destinations/${form.id}`, body);
       else await api.post('/api/destinations', body);
+      errors = [];
       notify.success(`${form.name} saved`, { key: 'dest-save' });
       close();
       await load();
     } catch (err) {
+      errors = err instanceof ApiError ? err.errors : [];
       notify.fail(err, 'dest-save');
     } finally {
       busy = null;
@@ -394,7 +399,14 @@
 {#if form}
   <Sheet title={form.id ? form.name || 'Destination' : 'New destination'} onclose={close}>
     <form id="destination-form" class="fields" onsubmit={save}>
-      <div class="field"><label for="d-name">Name</label><input id="d-name" bind:value={form.name} autocomplete="off" /></div>
+      <div class="field">
+        <label for="d-name">Name</label><input
+          id="d-name"
+          bind:value={form.name}
+          autocomplete="off"
+          aria-invalid={errors.some((x) => x.field === 'Name') ? 'true' : undefined}
+        />
+      </div>
       <div class="field">
         <label for="d-type">Type</label>
         <select id="d-type" value={form.type} onchange={(e) => changeType(e.currentTarget.value)}>

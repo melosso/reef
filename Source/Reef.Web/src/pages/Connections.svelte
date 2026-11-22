@@ -3,7 +3,7 @@
   import Page from '../components/Page.svelte';
   import Sheet from '../components/Sheet.svelte';
   import StatusMark from '../components/StatusMark.svelte';
-  import { api } from '../lib/api';
+  import { api, ApiError, type FieldError } from '../lib/api';
   import { confirm } from '../lib/confirm.svelte';
   import { formatDateTime, formatRelative } from '../lib/format';
   import { notify } from '../lib/notify';
@@ -96,6 +96,7 @@
   }
 
   function close() {
+    errors = [];
     dismiss();
     records.close();
   }
@@ -122,6 +123,9 @@
     }
   }
 
+  let errors = $state<FieldError[]>([]);
+  const invalid = (field: string) => (errors.some((x) => x.field === field) ? 'true' : undefined);
+
   async function save(e: SubmitEvent) {
     e.preventDefault();
     if (!form) return;
@@ -138,6 +142,7 @@
       const saved = form.id
         ? await api.put<Connection>(`/api/connections/${form.id}`, body)
         : await api.post<Connection>('/api/connections', body);
+      errors = [];
       notify.success(`${form.name} saved`, { key: 'conn-save' });
       const created = !form.id;
       const snapshot = { ...form, id: saved?.id ?? form.id };
@@ -145,6 +150,7 @@
       await load();
       if (created) test(snapshot, true);
     } catch (err) {
+      errors = err instanceof ApiError ? err.errors : [];
       notify.fail(err, 'conn-save');
     } finally {
       busy = null;
@@ -291,7 +297,9 @@
 {#if form}
   <Sheet title={form.id ? form.name || 'Connection' : 'New connection'} onclose={close}>
     <form id="connection-form" class="fields" onsubmit={save}>
-      <div class="field"><label for="c-name">Name</label><input id="c-name" bind:value={form.name} autocomplete="off" /></div>
+      <div class="field">
+        <label for="c-name">Name</label><input id="c-name" bind:value={form.name} autocomplete="off" aria-invalid={invalid('Name')} />
+      </div>
       <div class="field">
         <label for="c-type">Type</label>
         <select id="c-type" bind:value={form.type}>
@@ -311,6 +319,7 @@
           spellcheck="false"
           autocomplete="off"
           placeholder={form.id ? 'Saved and encrypted. Type a new connection string to replace it.' : ''}
+          aria-invalid={invalid('ConnectionString')}
           bind:value={form.connectionString}></textarea>
       </div>
       <div class="field">
