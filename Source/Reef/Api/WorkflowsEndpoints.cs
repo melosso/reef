@@ -35,6 +35,7 @@ public static class WorkflowsEndpoints
             var (data, total) = await runs.PageAsync(page, pageSize, workflowId, string.IsNullOrWhiteSpace(status) ? null : status, ct);
             return Results.Ok(new { data, totalCount = total, page, pageSize, totalPages = Math.Max(1, (total + pageSize - 1) / pageSize) });
         }).RequireAuthorization();
+        app.MapGet("/api/workflow-executions/latest", (WorkflowRunStore runs, CancellationToken ct) => runs.LatestPerWorkflowAsync(ct)).RequireAuthorization();
         app.MapGet("/api/workflow-executions/{id:ulid(WorkflowExecutions)}", async (int id, [FromServices] WorkflowRunStore runs, CancellationToken ct) =>
             await runs.GetAsync(id, ct) is { } run ? Results.Ok(run) : Results.NotFound()).RequireAuthorization();
     }

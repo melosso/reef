@@ -64,6 +64,13 @@ public class WorkflowRunStore(DatabaseConfig config)
         return ([.. runs], total);
     }
 
+    public async Task<List<WorkflowExecution>> LatestPerWorkflowAsync(CancellationToken ct = default)
+    {
+        await using var db = new SqliteConnection(config.ConnectionString);
+        return [.. await db.QueryAsync<WorkflowExecution>(new CommandDefinition(
+            "SELECT * FROM WorkflowExecutions WHERE Id IN (SELECT MAX(Id) FROM WorkflowExecutions GROUP BY WorkflowId)", cancellationToken: ct))];
+    }
+
     public async Task<List<WorkflowExecution>> ListAsync(int workflowId, int limit, CancellationToken ct = default)
     {
         await using var db = new SqliteConnection(config.ConnectionString);

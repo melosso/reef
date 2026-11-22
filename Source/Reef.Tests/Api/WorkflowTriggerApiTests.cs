@@ -160,5 +160,7 @@ public class WorkflowTriggerApiTests(ReefApiFactory factory)
         page["totalPages"]!.GetValue<int>().Should().Be(2);
         page["data"]!.AsArray().Should().HaveCount(2).And.OnlyContain(r => r!["workflowName"]!.GetValue<string>().StartsWith("Trigger ") && r["workflowId"]!.GetValue<string>() == id);
         (await client.GetAsync("/api/workflow-executions?workflowId=1", _ct)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var latest = (await client.GetFromJsonAsync<JsonArray>("/api/workflow-executions/latest", _ct))!;
+        latest.Where(r => r!["workflowId"]!.GetValue<string>() == id).Should().ContainSingle().Which!["id"]!.GetValue<string>().Should().Be(page["data"]![0]!["id"]!.GetValue<string>());
     }
 }

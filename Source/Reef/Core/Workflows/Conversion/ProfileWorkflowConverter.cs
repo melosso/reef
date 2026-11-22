@@ -41,7 +41,7 @@ public static class ProfileWorkflowConverter
         else
         {
             if (profile.SplitEnabled)
-                chain.Then("split", "split", Config(("Column", profile.SplitKeyColumn), ("FileName", profile.SplitFilenameTemplate),
+                chain.Then("split", "split", Config(("Column", profile.SplitKeyColumn), ("FileName", FileName(profile.SplitFilenameTemplate)),
                     ("ExcludeColumn", profile.ExcludeSplitKeyFromOutput)));
             if (profile.TemplateId is { } templateId)
                 chain.Then("template", "template", Config(("TemplateId", templateId), ("Options", profile.TransformationOptionsJson)));
@@ -58,7 +58,7 @@ public static class ProfileWorkflowConverter
                 }
                 chain.Then("destination", "destination", Config(
                     ("DestinationId", profile.OutputDestinationId), ("EndpointId", profile.OutputDestinationEndpointId), ("Format", format),
-                    ("FileName", profile.SplitEnabled && profile.TemplateId is not null ? null : profile.FilenameTemplate),
+                    ("FileName", profile.SplitEnabled && profile.TemplateId is not null ? null : FileName(profile.FilenameTemplate)),
                     ("RemoveOnFailure", profile.PostProcessRollbackOnFailure)));
             }
         }
@@ -120,7 +120,7 @@ public static class ProfileWorkflowConverter
             chain.Then($"copy{++number}", "destination", Config(
                 ("DestinationId", copy.DestinationId), ("EndpointId", copy.DestinationEndpointId),
                 ("Format", binary ? "Files" : Formats.Contains(copy.OutputFormat.ToUpperInvariant()) ? copy.OutputFormat.ToUpperInvariant() : "JSON"),
-                ("FileName", copy.FilenameTemplate), ("ContinueOnError", !copy.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))));
+                ("FileName", FileName(copy.FilenameTemplate)), ("ContinueOnError", !copy.OnFailure.Equals("Fail", StringComparison.OrdinalIgnoreCase))));
 
         if (Command(profile.PostProcessType, profile.PostProcessConfig, profile.TargetConnectionId, skipWhenEmpty: false) is { } post)
             chain.Then("post", "command", post);
@@ -168,4 +168,6 @@ public static class ProfileWorkflowConverter
         }
         return config;
     }
+
+    private static string? FileName(string? template) => template?.Replace("{profile}", "{workflow}", StringComparison.OrdinalIgnoreCase);
 }
