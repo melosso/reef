@@ -7,6 +7,7 @@
   interface CardData {
     label: string;
     name: string;
+    named: boolean;
     icon: string;
     summary: string;
     inputs: string[];
@@ -31,6 +32,7 @@
   class:invalid={card.invalid}
   class:failed={card.status === 'err' && !card.stale}
   class:trigger={card.trigger}
+  class:named={card.named}
   aria-invalid={card.invalid ? 'true' : undefined}
 >
   {#each card.inputs as port, i (port)}

@@ -144,7 +144,9 @@
       return textOf(node.config.Repeat) === 'Interval'
         ? `Every ${textOf(node.config.EveryMinutes)} min`
         : `Cron ${textOf(node.config.Cron)}`;
-    const first = def.fields.find((f) => visible(f, node.config) && (f.kind === 'select' || f.kind === 'code' || f.required));
+    const shown = def.fields.filter((f) => visible(f, node.config));
+    const code = shown.find((f) => f.kind === 'code' && textOf(getPath(node.config, f.key)).trim());
+    const first = code ?? shown.find((f) => f.kind === 'select' || f.kind === 'code' || f.required);
     if (!first) return '';
     const value = getPath(node.config, first.key);
     const choices = first.optionsSource ? options[first.optionsSource] : first.options;
@@ -175,6 +177,7 @@
         data: {
           label: def?.label ?? n.type,
           name: n.name || def?.label || n.type,
+          named: !!n.name,
           icon: def?.icon ?? '',
           summary: def ? summary(n, def) : 'Unknown step type',
           inputs: def?.inputs ?? [],
@@ -450,6 +453,7 @@
       <div
         class="canvas"
         class:inset={panel !== 'closed'}
+        class:far={zoom < 0.55}
         role="application"
         aria-label="Workflow canvas"
         ondragover={(e) => {
@@ -698,6 +702,17 @@
     --xy-minimap-mask-background-color: var(--shadow);
     --xy-minimap-node-background-color: var(--line-strong);
     background: var(--bg);
+  }
+  .canvas.far :global(.card:not(.failed) .foot),
+  .canvas.far :global(.card:is(.named, .trigger) .body),
+  .canvas.far :global(.card:not(.named, .trigger):has(.body) .head) {
+    display: none;
+  }
+  .canvas.far :global(.card .title),
+  .canvas.far :global(.card .body) {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
   }
   .canvas :global(.svelte-flow__node.selected .card),
   .canvas :global(.svelte-flow__node:focus-visible) {
