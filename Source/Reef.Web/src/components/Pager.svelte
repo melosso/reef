@@ -32,13 +32,13 @@
   >
     {#each sizes as n (n)}<option value={String(n)}>{n}</option>{/each}
   </select>
-  <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}
-    ><ChevronLeft size={15} /></button
-  >
+  <button type="button" class="btn icon" aria-label="Previous page" disabled={page <= 1} onclick={() => page--}>
+    <ChevronLeft size={15} />
+  </button>
   <span class="num">{page} / {Math.max(1, pages)}</span>
-  <button type="button" class="btn icon" aria-label="Next page" disabled={page >= pages} onclick={() => page++}
-    ><ChevronRight size={15} /></button
-  >
+  <button type="button" class="btn icon" aria-label="Next page" disabled={page >= pages} onclick={() => page++}>
+    <ChevronRight size={15} />
+  </button>
 </div>
 
 <style>

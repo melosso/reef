@@ -10,7 +10,6 @@
   let info = $state<SystemInfo | null>(null);
   let version = $state('');
   let latest = $state<{ tag: string; url: string } | null>(null);
-  let now = $state(new Date());
   let storage = $state<AdminMetrics['system'] | null>(null);
 
   $effect(() => {
@@ -33,8 +32,6 @@
         if (r?.tag_name) latest = { tag: r.tag_name, url: r.html_url ?? '' };
       })
       .catch(() => {});
-    const timer = setInterval(() => (now = new Date()), 1000);
-    return () => clearInterval(timer);
   });
 
   const clean = (v: string) => v.replace(/^v/i, '').split(/[+-]/)[0];
@@ -46,6 +43,7 @@
   );
 
   function uptime(hours: number): string {
+    if (hours < 1) return 'Less than an hour';
     const days = Math.floor(hours / 24);
     const rest = hours % 24;
     const h = `${rest} ${rest === 1 ? 'hour' : 'hours'}`;
@@ -67,7 +65,6 @@
             ? `Database ${storage.databaseSizeMb ?? 0} MB of ${storage.databaseSizeThresholdMb || 1024} MB, exports ${storage.exportsSizeMb ?? 0} MB`
             : null,
         ],
-        ['Server time', formatDateTime(now.toISOString())],
         ['Reported at', info?.timestamp ? formatDateTime(info.timestamp) : null],
       ]}
     />

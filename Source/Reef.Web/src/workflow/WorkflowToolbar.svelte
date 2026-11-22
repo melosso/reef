@@ -26,28 +26,69 @@
     onundo: () => void;
     onredo: () => void;
     onclose: () => void;
-    register: (toFlow: (p: XYPosition) => XYPosition) => void;
+    register: (toFlow: (p: XYPosition) => XYPosition, reveal: (id: string, panel: number) => void) => void;
   } = $props();
 
   const flow = useSvelteFlow();
   let menu: HTMLElement;
-  const groups = $derived(GROUPS.map((g) => ({ name: g, nodes: catalog.filter((d) => d.group === g) })).filter((g) => g.nodes.length));
+  let filter = $state('');
+  let active = $state(0);
+  let search = $state<HTMLInputElement>();
+  const matches = (d: WorkflowNodeDefinition) => `${d.label} ${d.group} ${d.tooltip}`.toLowerCase().includes(filter.trim().toLowerCase());
+  const groups = $derived(
+    GROUPS.map((g) => ({ name: g, nodes: catalog.filter((d) => d.group === g && matches(d)) })).filter((g) => g.nodes.length),
+  );
+  const flat = $derived(groups.flatMap((g) => g.nodes));
+
+  function pick(type: string) {
+    onadd(type);
+    menu.hidePopover();
+  }
+
+  function onsearchkey(e: KeyboardEvent) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      active = Math.min(flat.length - 1, active + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      active = Math.max(0, active - 1);
+    } else if (e.key === 'Enter' && flat[active]) {
+      e.preventDefault();
+      pick(flat[active].type);
+    }
+  }
+
+  // Keep the selected step clear of the panel
+  function reveal(id: string, panel: number) {
+    const node = flow.getNode(id);
+    const pane = document.querySelector('.svelte-flow');
+    if (!node || !pane) return;
+    const { x, y, zoom: scale } = flow.getViewport();
+    const right = (node.position.x + (node.measured?.width ?? 220)) * scale + x;
+    const room = pane.clientWidth - panel - 32;
+    if (right > room) flow.setViewport({ x: x - (right - room), y, zoom: scale }, { duration: 200 });
+  }
 
   const initialized = useNodesInitialized();
   let fitted = false;
 
-  onMount(() => register((p) => flow.screenToFlowPosition(p)));
+  onMount(() => register((p) => flow.screenToFlowPosition(p), reveal));
 
   $effect(() => {
     if (!initialized.current || fitted) return;
     fitted = true;
-    setTimeout(() => flow.fitView({ padding: '48px', maxZoom: 1 }), 50);
+    setTimeout(() => {
+      flow.fitView({ padding: '48px', maxZoom: 1 }).then(() => {
+        const start = flow.getNodes().find((n) => (n.data as { trigger?: boolean }).trigger);
+        if (flow.getViewport().zoom < 0.5 && start) flow.setCenter(start.position.x + 520, start.position.y + 60, { zoom: 0.6 });
+      });
+    }, 50);
   });
 </script>
 
 <Panel position="bottom-center">
   <div class="bar" role="toolbar" aria-label="Canvas">
-    <button type="button" class="add" popovertarget={PALETTE_ID}><Plus size={14} />Add step</button>
+    <button type="button" class="add" popovertarget={PALETTE_ID} use:tooltip={'Add step (/)'}><Plus size={14} />Add step</button>
     <span class="sep" aria-hidden="true"></span>
     <button type="button" class="tb icon" aria-label="Undo" disabled={!canUndo} use:tooltip={'Undo (Ctrl Z)'} onclick={onundo}>
       <Undo2 size={15} />
@@ -74,8 +115,24 @@
     aria-label="Steps"
     ontoggle={(e) => {
       if ((e as ToggleEvent).newState === 'closed') onclose();
+      else {
+        filter = '';
+        active = 0;
+        search?.focus();
+      }
     }}
   >
+    <input
+      bind:this={search}
+      bind:value={filter}
+      type="search"
+      class="filter"
+      placeholder="Find a step"
+      aria-label="Find a step"
+      oninput={() => (active = 0)}
+      onkeydown={onsearchkey}
+    />
+    {#if !flat.length}<p class="none">No step matches.</p>{/if}
     {#each groups as group (group.name)}
       <h3>{group.name}</h3>
       {#each group.nodes as def (def.type)}
@@ -83,16 +140,14 @@
         <button
           type="button"
           draggable="true"
+          class:active={flat[active]?.type === def.type}
           use:tooltip={{ text: def.tooltip, placement: 'right' }}
           ondragstart={(e) => {
             e.dataTransfer?.setData('application/x-reef-node', def.type);
             if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy';
             menu.hidePopover();
           }}
-          onclick={() => {
-            onadd(def.type);
-            menu.hidePopover();
-          }}
+          onclick={() => pick(def.type)}
         >
           <Icon size={15} />{def.label}
         </button>
@@ -213,7 +268,16 @@
     text-align: left;
     cursor: grab;
   }
-  .menu button:hover {
+  .menu button:hover,
+  .menu button.active {
     background: var(--hover);
+  }
+  .filter {
+    width: 100%;
+    margin-bottom: 4px;
+  }
+  .none {
+    padding: 8px 10px;
+    color: var(--muted);
   }
 </style>

@@ -57,9 +57,6 @@
     font-family: var(--font);
     cursor: pointer;
   }
-  .card.trigger {
-    border-radius: 14px var(--radius) var(--radius) 14px;
-  }
   .card.selected {
     border: 2px solid var(--accent);
     margin: -1px;

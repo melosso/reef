@@ -10,20 +10,28 @@
   import { tooltip } from '../lib/tooltip';
   import type { Workflow } from '../models/Workflow';
   import { forget } from '../lib/recent.svelte';
+  import { statusKind, statusLabel } from '../lib/status';
+  import type { WorkflowExecution } from '../models/WorkflowExecution';
   import { runWorkflow } from '../lib/workflows';
 
   const TRIGGERS: Record<string, string> = { manual: 'Manual', schedule: 'Schedule', webhook: 'Webhook' };
 
   let workflows = $state<Workflow[]>([]);
+  let lastRuns = $state<Record<string, WorkflowExecution>>({});
   let loaded = $state(false);
   let search = $state('');
   let busy = $state<string | null>(null);
 
   async function load() {
-    workflows = await api.get<Workflow[]>('/api/workflows').catch((e) => {
-      notify.fail(e, 'workflows');
-      return [];
-    });
+    const [list, latest] = await Promise.all([
+      api.get<Workflow[]>('/api/workflows').catch((e) => {
+        notify.fail(e, 'workflows');
+        return [];
+      }),
+      api.get<WorkflowExecution[]>('/api/workflow-executions/latest').catch(() => []),
+    ]);
+    workflows = list;
+    lastRuns = Object.fromEntries(latest.map((r) => [r.workflowId, r]));
     loaded = true;
   }
 
@@ -134,7 +142,9 @@
                   onchange={() => (selected = allVisible ? [] : visible.map((w) => w.id!))}
                 />{/if}
             </th>
-            <th>Name</th><th>Triggers</th><th class="secondary">Steps</th><th>Updated</th><th>Status</th><th>
+            <th>Name</th><th>Triggers</th><th class="secondary">Steps</th><th>Last run</th><th class="secondary">Updated</th><th>
+              Status
+            </th><th>
               <span class="sr">Actions</span>
             </th>
           </tr>
@@ -144,7 +154,7 @@
             <tr
               class="clickable"
               onclick={(e) => {
-                if (!(e.target as Element).closest('button, input')) navigate(`/workflows/${w.id}`);
+                if (!(e.target as Element).closest('button, input, a')) navigate(`/workflows/${w.id}`);
               }}
             >
               <td class="sel">
@@ -153,7 +163,15 @@
               <td class="strong">{w.name}</td>
               <td>{triggers(w)}</td>
               <td class="num secondary">{w.nodes.length}</td>
-              <td><span use:tooltip={formatDateTime(w.updatedAt)}>{formatRelative(w.updatedAt)}</span></td>
+              <td>
+                {#if lastRuns[w.id!]}
+                  {@const run = lastRuns[w.id!]}
+                  <a href="/executions/{run.id}" use:tooltip={run.errorMessage ?? formatDateTime(run.startedAt)}>
+                    <StatusMark kind={statusKind(run.status)} label="{statusLabel(run.status)} {formatRelative(run.startedAt)}" />
+                  </a>
+                {:else}<span class="muted">Never</span>{/if}
+              </td>
+              <td class="secondary"><span use:tooltip={formatDateTime(w.updatedAt)}>{formatRelative(w.updatedAt)}</span></td>
               <td>
                 <span use:tooltip={'Schedule and webhook triggers start the workflow only when it is on'}>
                   <StatusMark kind={w.active ? 'ok' : 'off'} label={w.active ? 'On' : 'Off'} />
@@ -184,7 +202,7 @@
             </tr>
           {:else}
             <tr>
-              <td colspan="7" class="empty">
+              <td colspan="8" class="empty">
                 {#if !loaded}Loading workflows
                 {:else if workflows.length === 0}
                   <div class="empty-state">

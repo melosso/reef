@@ -436,7 +436,7 @@
         {#each endpoints as ep (ep.id)}
           <div class="ep">
             <span class="grow">
-              {#if ep.method}<span class="num">{ep.method}</span>
+              {#if ep.method}<span class="strong">{ep.method}</span>
               {/if}<strong>{ep.name}</strong> <span class="muted">{ep.pathSuffix || ep.remotePath || ep.keyPrefix || ''}</span>
             </span>
             {#if form.type === 'Http'}<button type="button" class="link" onclick={() => testEndpoint(ep)}>Test</button>{/if}

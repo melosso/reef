@@ -308,7 +308,7 @@ table.data {
 table.data th,
 table.data td {
   text-align: left;
-  padding: 9px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
 }
@@ -491,4 +491,8 @@ pre.code {
 pre.plain {
   font-family: var(--font);
   font-size: 13px;
+}
+
+table.data td.actions .btn.icon {
+  padding: 3px;
 }

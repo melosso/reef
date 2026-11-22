@@ -28,8 +28,9 @@
   aria-label={toggleLabel}
   use:tooltip={toggleLabel}
   onclick={() => setTheme(isDark() ? 'light' : 'dark')}
-  >{#if isDark()}<Sun size={16} />{:else}<Moon size={16} />{/if}</button
 >
+  {#if isDark()}<Sun size={16} />{:else}<Moon size={16} />{/if}
+</button>
 <button type="button" class="avatar" popovertarget="account-menu" aria-label="Account menu">{initials}</button>
 <div id="account-menu" popover bind:this={menu} class="menu">
   <div class="who">

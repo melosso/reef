@@ -73,7 +73,7 @@
 </script>
 
 <div class="toolbar">
-  <p class="muted">API keys authenticate scripts and integrations with the <span class="num">X-Api-Key</span> header.</p>
+  <p class="muted">API keys authenticate scripts and integrations with the <strong>X-Api-Key</strong> header.</p>
   <span class="spacer"></span>
   <button type="button" class="btn primary" onclick={open}><Plus size={15} />New API key</button>
 </div>
@@ -120,7 +120,7 @@
       <h2 id="key-title">API key created</h2>
       <p class="muted">The key is displayed once. Store it in a password manager.</p>
       <div class="key">
-        <span class="num">{created}</span><button
+        <strong class="secret">{created}</strong><button
           type="button"
           class="btn ghost icon"
           aria-label="Copy API key"
@@ -156,6 +156,9 @@
 </dialog>
 
 <style>
+  .secret {
+    overflow-wrap: anywhere;
+  }
   .spacer {
     flex: 1;
   }

@@ -19,10 +19,7 @@
     margin: 0;
   }
   .facts div {
-    padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+    min-width: 0;
   }
   dt {
     font-size: 12px;

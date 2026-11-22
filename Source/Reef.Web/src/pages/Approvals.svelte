@@ -173,7 +173,7 @@
       <table class="data">
         <thead>
           <tr>
-            {#if tab === 'pending'}<th class="sel">
+            {#if tab === 'pending' && pageItems.length}<th class="sel">
                 {#if pageItems.length}<input
                     type="checkbox"
                     aria-label="Select all on this page"

@@ -134,8 +134,8 @@
     {#if tab === 'settings'}
       <div class="fields">
         <div class="field">
-          <label for="node-name">Name</label>
-          <input id="node-name" value={node.name ?? ''} placeholder={def.label} oninput={(e) => onrename(e.currentTarget.value)} />
+          <label for="node-name" use:tooltip={`Shown on the card. Empty uses ${def.label}`}>Name</label>
+          <input id="node-name" value={node.name ?? ''} oninput={(e) => onrename(e.currentTarget.value)} />
         </div>
         {#each fields as field (field.key)}
           <FieldControl {field} config={node.config} {options} error={errorFor(field.key)} onchange={() => onchange(field.key)} />

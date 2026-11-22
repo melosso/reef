@@ -43,7 +43,7 @@
         {#if pending.request.message}<p>{pending.request.message}</p>{/if}
         {#if pending.request.typed}
           <div class="field">
-            <label for="confirm-typed">Type <strong class="num">{pending.request.typed}</strong> to confirm</label>
+            <label for="confirm-typed">Type <strong>{pending.request.typed}</strong> to confirm</label>
             <input
               id="confirm-typed"
               bind:value={typed}
@@ -57,9 +57,9 @@
       </div>
       <div class="foot">
         <button type="button" class="btn" onclick={() => settle(false)}>Cancel</button>
-        <button type="submit" class="btn primary" class:danger-fill={pending.request.danger} disabled={blocked}
-          >{pending.request.confirm ?? 'Confirm'}</button
-        >
+        <button type="submit" class="btn primary" class:danger-fill={pending.request.danger} disabled={blocked}>
+          {pending.request.confirm ?? 'Confirm'}
+        </button>
       </div>
     </form>
   {/if}

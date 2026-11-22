@@ -68,9 +68,10 @@
         <div class="panel-head">
           <h2>Needs attention</h2>
           <span class="spacer"></span>
-          <span class="muted" use:tooltip={'Runs started in the last 24 hours'}>
-            {formatNumber(attention.last24h.runs)}
-            {attention.last24h.runs === 1 ? 'run' : 'runs'}, {formatNumber(attention.last24h.failed)} failed
+          <span class="muted">
+            Last 24 hours: {formatNumber(attention.last24h.runs)}
+            {attention.last24h.runs === 1 ? 'run' : 'runs'}{#if attention.last24h.failed},
+              <a class="failed" href="/executions?status=Failed">{formatNumber(attention.last24h.failed)} failed</a>{/if}
           </span>
         </div>
         {#if issues}
@@ -111,7 +112,7 @@
             </tbody>
           </table>
         {:else}
-          <div class="panel-body"><StatusMark kind="ok" label="All clear. Every workflow's latest run succeeded." /></div>
+          <div class="panel-body"><StatusMark kind="ok" label="The latest run of every workflow succeeded." /></div>
         {/if}
       </section>
 
@@ -161,6 +162,9 @@
 </Page>
 
 <style>
+  .failed {
+    color: var(--err);
+  }
   .spacer {
     flex: 1;
   }

@@ -47,6 +47,7 @@
   let nodes = $state.raw<Node[]>([]);
   let edges = $state.raw<Edge[]>([]);
   let toFlow: ((p: XYPosition) => XYPosition) | null = null;
+  let reveal: ((id: string, panel: number) => void) | null = null;
   const history = new History();
   let baseline = '';
   let revision = $state(0);
@@ -163,9 +164,11 @@
           trigger: def?.group === 'Triggers',
           status: pass ? (pass.status === 'Failed' ? 'err' : pass.status === 'Skipped' ? 'off' : 'ok') : null,
           result: pass
-            ? pass.status === 'Skipped'
-              ? 'Skipped'
-              : `${pass.rowCount} ${pass.rowCount === 1 ? 'row' : 'rows'}${count > 1 ? `, ${count} passes` : ''}`
+            ? pass.status === 'Failed'
+              ? (pass.errorMessage ?? 'Failed').split('\n')[0]
+              : pass.status === 'Skipped'
+                ? 'Skipped'
+                : `${pass.rowCount} ${pass.rowCount === 1 ? 'row' : 'rows'}${count > 1 ? `, ${count} passes` : ''}`
             : '',
           error: pass?.errorMessage ?? null,
         },
@@ -207,6 +210,7 @@
     selected = id;
     selectedEdge = null;
     panel = id ? 'node' : 'closed';
+    if (id) reveal?.(id, 420);
   }
 
   function close() {
@@ -333,6 +337,11 @@
       return;
     }
     if (typing || document.querySelector('dialog[open]')) return;
+    if (e.key === '/') {
+      e.preventDefault();
+      document.getElementById(PALETTE_ID)?.showPopover();
+      return;
+    }
     if (mod && e.key.toLowerCase() === 'z') {
       e.preventDefault();
       if (e.shiftKey) redo();
@@ -464,7 +473,10 @@
             onundo={undo}
             onredo={redo}
             onclose={() => setTimeout(() => (insertAt = null))}
-            register={(t) => (toFlow = t)}
+            register={(t, r) => {
+              toFlow = t;
+              reveal = r;
+            }}
           />
         </SvelteFlow>
       </div>
